@@ -48,62 +48,49 @@ export default function CategoriiViitorFields({
 
   const [tagInput, setTagInput] = useState("");
 
-  const [nameRo, setNameRo] = useState("");
-  const [descriptionRo, setDescriptionRo] = useState("");
-  const [nameEn, setNameEn] = useState("");
-  const [descriptionEn, setDescriptionEn] = useState("");
-  const [nameEs, setNameEs] = useState("");
-  const [descriptionEs, setDescriptionEs] = useState("");
-  const [nameIt, setNameIt] = useState("");
-  const [descriptionIt, setDescriptionIt] = useState("");
-  const [namePl, setNamePl] = useState("");
-  const [descriptionPl, setDescriptionPl] = useState("");
-  const [nameDe, setNameDe] = useState("");
-  const [descriptionDe, setDescriptionDe] = useState("");
-  const [nameHu, setNameHu] = useState("");
-  const [descriptionHu, setDescriptionHu] = useState("");
-  const [nameCs, setNameCs] = useState("");
-  const [descriptionCs, setDescriptionCs] = useState("");
-  const [nameSk, setNameSk] = useState("");
-  const [descriptionSk, setDescriptionSk] = useState("");
-  const [nameHr, setNameHr] = useState("");
-  const [descriptionHr, setDescriptionHr] = useState("");
-  const [nameRu, setNameRu] = useState("");
-  const [descriptionRu, setDescriptionRu] = useState("");
-  const [nameBg, setNameBg] = useState("");
-  const [descriptionBg, setDescriptionBg] = useState("");
-  const [nameEl, setNameEl] = useState("");
-  const [descriptionEl, setDescriptionEl] = useState("");
-  const [nameFr, setNameFr] = useState("");
-  const [descriptionFr, setDescriptionFr] = useState("");
+  const [numeRo, setNumeRo] = useState("");
+  const [numeEn, setNumeEn] = useState("");
+  const [numeEs, setNumeEs] = useState("");
+  const [numeIt, setNumeIt] = useState("");
+  const [numePl, setNumePl] = useState("");
+  const [numeDe, setNumeDe] = useState("");
+  const [numeHu, setNumeHu] = useState("");
+  const [numeCs, setNumeCs] = useState("");
+  const [numeSk, setNumeSk] = useState("");
+  const [numeHr, setNumeHr] = useState("");
+  const [numeRu, setNumeRu] = useState("");
+  const [numeBg, setNumeBg] = useState("");
+  const [numeEl, setNumeEl] = useState("");
+  const [numeFr, setNumeFr] = useState("");
 
   const languageFields = [
-    { id: "name-ro", label: "Nume ro", value: nameRo, setValue: setNameRo },
-    { id: "name-en", label: "Nume en", value: nameEn, setValue: setNameEn },
+    { id: "nume-ro", label: "Nume ro", value: numeRo, setValue: setNumeRo },
 
-    { id: "name-es", label: "Nume es", value: nameEs, setValue: setNameEs },
+    { id: "nume-en", label: "Nume en", value: numeEn, setValue: setNumeEn },
 
-    { id: "name-it", label: "Nume it", value: nameIt, setValue: setNameIt },
+    { id: "nume-es", label: "Nume es", value: numeEs, setValue: setNumeEs },
 
-    { id: "name-pl", label: "Nume pl", value: namePl, setValue: setNamePl },
+    { id: "nume-it", label: "Nume it", value: numeIt, setValue: setNumeIt },
 
-    { id: "name-de", label: "Nume de", value: nameDe, setValue: setNameDe },
+    { id: "nume-pl", label: "Nume pl", value: numePl, setValue: setNumePl },
 
-    { id: "name-hu", label: "Nume hu", value: nameHu, setValue: setNameHu },
+    { id: "nume-de", label: "Nume de", value: numeDe, setValue: setNumeDe },
 
-    { id: "name-cs", label: "Nume cs", value: nameCs, setValue: setNameCs },
+    { id: "nume-hu", label: "Nume hu", value: numeHu, setValue: setNumeHu },
 
-    { id: "name-sk", label: "Nume sk", value: nameSk, setValue: setNameSk },
+    { id: "nume-cs", label: "Nume cs", value: numeCs, setValue: setNumeCs },
 
-    { id: "name-hr", label: "Nume hr", value: nameHr, setValue: setNameHr },
+    { id: "nume-sk", label: "Nume sk", value: numeSk, setValue: setNumeSk },
 
-    { id: "name-ru", label: "Nume ru", value: nameRu, setValue: setNameRu },
+    { id: "nume-hr", label: "Nume hr", value: numeHr, setValue: setNumeHr },
 
-    { id: "name-bg", label: "Nume bg", value: nameBg, setValue: setNameBg },
+    { id: "nume-ru", label: "Nume ru", value: numeRu, setValue: setNumeRu },
 
-    { id: "name-el", label: "Nume el", value: nameEl, setValue: setNameEl },
+    { id: "nume-bg", label: "Nume bg", value: numeBg, setValue: setNumeBg },
 
-    { id: "name-fr", label: "Nume fr", value: nameFr, setValue: setNameFr },
+    { id: "nume-el", label: "Nume el", value: numeEl, setValue: setNumeEl },
+
+    { id: "nume-fr", label: "Nume fr", value: numeFr, setValue: setNumeFr },
   ];
 
   const handleTagInputChange = (e) => {

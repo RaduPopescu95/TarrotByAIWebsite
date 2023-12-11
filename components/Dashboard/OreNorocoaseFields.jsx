@@ -25,7 +25,7 @@ import ArticleEditor from "../QuillForm";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 
-export default function CartiViitorFields({ articleData, handleEditArticle }) {
+export default function OreNorocoaseFields({ articleData, handleEditArticle }) {
   const [content, setContent] = useState(""); // Starea pentru conținutul articolului
 
   // Funcția de actualizare a conținutului editorului
@@ -45,128 +45,128 @@ export default function CartiViitorFields({ articleData, handleEditArticle }) {
 
   const [tagInput, setTagInput] = useState("");
 
-  const [numeRo, setNumeRo] = useState("");
+  const [numarNorocos, setNumarNorocos] = useState(null);
+
   const [descriereRo, setDescriereRo] = useState("");
-  const [numeEn, setNumeEn] = useState("");
+
   const [descriereEn, setDescriereEn] = useState("");
-  const [numeEs, setNumeEs] = useState("");
+
   const [descriereEs, setDescriereEs] = useState("");
-  const [numeIt, setNumeIt] = useState("");
+
   const [descriereIt, setDescriereIt] = useState("");
-  const [numePl, setNumePl] = useState("");
+
   const [descrierePl, setDescrierePl] = useState("");
-  const [numeDe, setNumeDe] = useState("");
+
   const [descriereDe, setDescriereDe] = useState("");
-  const [numeHu, setNumeHu] = useState("");
+
   const [descriereHu, setDescriereHu] = useState("");
-  const [numeCs, setNumeCs] = useState("");
+
   const [descriereCs, setDescriereCs] = useState("");
-  const [numeSk, setNumeSk] = useState("");
+
   const [descriereSk, setDescriereSk] = useState("");
-  const [numeHr, setNumeHr] = useState("");
+
   const [descriereHr, setDescriereHr] = useState("");
-  const [numeRu, setNumeRu] = useState("");
+
   const [descriereRu, setDescriereRu] = useState("");
-  const [numeBg, setNumeBg] = useState("");
+
   const [descriereBg, setDescriereBg] = useState("");
-  const [numeEl, setNumeEl] = useState("");
+
   const [descriereEl, setDescriereEl] = useState("");
-  const [numeFr, setNumeFr] = useState("");
+
   const [descriereFr, setDescriereFr] = useState("");
 
   const languageFields = [
-    { id: "nume-ro", label: "Nume ro", value: numeRo, setValue: setNumeRo },
     {
       id: "descriere-ro",
       label: "Descriere ro",
       value: descriereRo,
       setValue: setDescriereRo,
     },
-    { id: "nume-en", label: "Nume en", value: numeEn, setValue: setNumeEn },
+
     {
       id: "descriere-en",
       label: "Descriere en",
       value: descriereEn,
       setValue: setDescriereEn,
     },
-    { id: "nume-es", label: "Nume es", value: numeEs, setValue: setNumeEs },
+
     {
       id: "descriere-es",
       label: "Descriere es",
       value: descriereEs,
       setValue: setDescriereEs,
     },
-    { id: "nume-it", label: "Nume it", value: numeIt, setValue: setNumeIt },
+
     {
       id: "descriere-it",
       label: "Descriere it",
       value: descriereIt,
       setValue: setDescriereIt,
     },
-    { id: "nume-pl", label: "Nume pl", value: numePl, setValue: setNumePl },
+
     {
       id: "descriere-pl",
       label: "Descriere pl",
       value: descrierePl,
       setValue: setDescrierePl,
     },
-    { id: "nume-de", label: "Nume de", value: numeDe, setValue: setNumeDe },
+
     {
       id: "descriere-de",
       label: "Descriere de",
       value: descriereDe,
       setValue: setDescriereDe,
     },
-    { id: "nume-hu", label: "Nume hu", value: numeHu, setValue: setNumeHu },
+
     {
       id: "descriere-hu",
       label: "Descriere hu",
       value: descriereHu,
       setValue: setDescriereHu,
     },
-    { id: "nume-cs", label: "Nume cs", value: numeCs, setValue: setNumeCs },
+
     {
       id: "descriere-cs",
       label: "Descriere cs",
       value: descriereCs,
       setValue: setDescriereCs,
     },
-    { id: "nume-sk", label: "Nume sk", value: numeSk, setValue: setNumeSk },
+
     {
       id: "descriere-sk",
       label: "Descriere sk",
       value: descriereSk,
       setValue: setDescriereSk,
     },
-    { id: "nume-hr", label: "Nume hr", value: numeHr, setValue: setNumeHr },
+
     {
       id: "descriere-hr",
       label: "Descriere hr",
       value: descriereHr,
       setValue: setDescriereHr,
     },
-    { id: "nume-ru", label: "Nume ru", value: numeRu, setValue: setNumeRu },
+
     {
       id: "descriere-ru",
       label: "Descriere ru",
       value: descriereRu,
       setValue: setDescriereRu,
     },
-    { id: "nume-bg", label: "Nume bg", value: numeBg, setValue: setNumeBg },
+
     {
       id: "descriere-bg",
       label: "Descriere bg",
       value: descriereBg,
       setValue: setDescriereBg,
     },
-    { id: "nume-el", label: "Nume el", value: numeEl, setValue: setNumeEl },
+
     {
       id: "descriere-el",
       label: "Descriere el",
       value: descriereEl,
       setValue: setDescriereEl,
     },
-    { id: "nume-fr", label: "Nume fr", value: numeFr, setValue: setNumeFr },
+
     {
       id: "descriere-fr",
       label: "Descriere fr",
@@ -252,7 +252,7 @@ export default function CartiViitorFields({ articleData, handleEditArticle }) {
           xs={12}
           sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
         >
-          <HorizontalLineWithText text={"Setări Media"} />
+          <HorizontalLineWithText text={"Oră norocoasă"} />
         </Grid>
 
         <Box
@@ -261,104 +261,69 @@ export default function CartiViitorFields({ articleData, handleEditArticle }) {
             paddingRight: "3%",
             paddingLeft: "3%",
             paddingBottom: "3%",
+            paddingTop: "3%",
             backgroundColor: "#2B2B2B",
             marginRight: "2%",
             marginLeft: "2%",
             borderRadius: "1%",
+            height: "auto",
           }}
         >
-          <Grid
-            item
-            xs={12}
-            sx={{
-              width: selectedImages.length > 0 || image ? "50%" : "100%",
-              height: "auto",
-              position: "relative",
+          <Box
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
             }}
           >
-            {selectedImages.length > 0 ? (
-              <div style={{ width: "50%" }}>
-                {selectedImages.map((item, index) => (
-                  <div
-                    key={index}
-                    style={{ marginBottom: "20px", position: "relative" }}
-                  >
-                    <img
-                      src={URL.createObjectURL(item)}
-                      alt={`Image ${index + 1}`}
-                      loading="lazy"
-                      style={{
-                        maxWidth: "100%",
-
-                        objectFit: "contain",
-                        // height:"400px"
-                        maxHeight: "400px",
-                      }}
-                    />
-                    <Fab
-                      size="small"
-                      color="secondary"
-                      aria-label="delete"
-                      onClick={() => handleImageDelete(index)}
-                      sx={{ position: "relative", bottom: 40, right: 5 }}
-                    >
-                      <DeleteIcon />
-                    </Fab>
-                  </div>
-                ))}
-              </div>
-            ) : image ? (
-              <div>
-                <div style={{ marginBottom: "20px", position: "relative" }}>
-                  <img
-                    src={image}
-                    alt={`Image`}
-                    loading="lazy"
-                    style={{
-                      maxWidth: "100%",
-
-                      objectFit: "contain",
-                      // height:"400px"
-                      maxHeight: "400px",
-                    }}
-                  />
-                  <Fab
-                    size="small"
-                    color="secondary"
-                    aria-label="delete"
-                    onClick={() => handleImageDelete(image)}
-                    sx={{ position: "relative", bottom: 40, right: 5 }}
-                  >
-                    <DeleteIcon />
-                  </Fab>
-                </div>
-              </div>
-            ) : (
-              <label
-                htmlFor="image-upload"
-                style={{
-                  padding: "20px",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  display: "block",
-                  marginBottom: 2,
-                  marginTop: 15,
-                }}
-              >
-                <input
-                  key={fileInputKey}
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageChange}
-                  style={{ display: "none" }}
-                />
-                <AddPhotoAlternateIcon sx={{ fontSize: 48, color: "#ccc" }} />
-                <p style={{ color: "white" }}>Select Images</p>
-              </label>
-            )}
-          </Grid>
+            <TextField
+              id="OraNorocos"
+              label="Oră norocoasă"
+              variant="outlined"
+              sx={{
+                width: "180px",
+                "& .MuiInputBase-root": {
+                  height: "120px",
+                  color: "#D3D3D3", // Text color
+                },
+                "& input": {
+                  color: "#D3D3D3", // Text color
+                },
+                "& .MuiInputBase-input": {
+                  textAlign: "center", // Center the text
+                  color: "#D3D3D3", // Ensuring text color is #D3D3D3
+                  fontSize: "50px", // Increase font size here
+                },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "10px", // Slightly rounded corners
+                },
+                "& fieldset": {
+                  borderColor: "#D3D3D3", // Border color
+                },
+                "&:hover fieldset, &.Mui-focused fieldset": {
+                  borderColor: "#D3D3D3", // Border color on hover and when focused
+                },
+                "& .MuiInputLabel-root": {
+                  color: "#D3D3D3", // Label color
+                },
+                "& .MuiInputLabel-root.Mui-focused": {
+                  color: "#D3D3D3", // Label color when focused
+                },
+                "& .MuiInputLabel-shrink": {
+                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position when shrunk
+                },
+                "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                  {
+                    borderColor: "#D3D3D3", // Ensure border color is #D3D3D3 when focused for outlined variant
+                  },
+                "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                  {
+                    borderColor: "#D3D3D3", // Ensure the border color is #D3D3D3 on hover for outlined variant
+                  },
+              }}
+            />
+          </Box>
         </Box>
         <Grid
           item
@@ -390,7 +355,7 @@ export default function CartiViitorFields({ articleData, handleEditArticle }) {
                 onChange={(event) => field.setValue(event.target.value)}
                 widthLabel="10%"
               />
-              {index % 2 === 1 && index < languageFields.length - 1 && (
+              {index < languageFields.length - 1 && (
                 <HorizontalLineWithText style={{ marginTop: "3%" }} />
               )}
             </React.Fragment>

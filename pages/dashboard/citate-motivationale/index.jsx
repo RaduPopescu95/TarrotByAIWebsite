@@ -1,8 +1,8 @@
 import React from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
-import ServicesTable from "../../ServicesTable";
 import Head from "next/head";
-import CategoriiViitorTable from "../../CategoriiViitorTable";
+import CitateMotivationaleFields from "../../../components/Dashboard/CitateMotivationaleFields";
+import CitateMotivationaleTable from "../../CitateMotivationaleTable";
 
 export default function index() {
   return (
@@ -14,7 +14,7 @@ export default function index() {
         selectedItem={"Citate Motivationale"}
         drawerText={"Citate Motivationale"}
       >
-        <CategoriiViitorTable />
+        <CitateMotivationaleTable />
       </CustomDrawer>
     </>
   );

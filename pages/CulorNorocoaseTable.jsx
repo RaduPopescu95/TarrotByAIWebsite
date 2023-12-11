@@ -41,8 +41,10 @@ import {
 import CustomServiceDialog from "../components/DialogBox/CustomServiceDialog";
 import AddCategoriiDialog from "../components/ProcessTable/CategoriiViitor/AddCategoriiDialog";
 import CategoriiViitorFields from "../components/Dashboard/CategoriiViitorFields";
+import CartiViitorFields from "../components/Dashboard/CartiViitorFields";
+import CuloriNorocoaseFields from "../components/Dashboard/CuloriNorocoaseFields";
 
-export default function CategoriiViitorTable() {
+export default function CuloriNorocoaseTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [db, setDb] = useState([]);
@@ -283,7 +285,7 @@ export default function CategoriiViitorTable() {
   return (
     <>
       {true ? (
-        <CategoriiViitorFields />
+        <CuloriNorocoaseFields />
       ) : (
         <>
           <Box component="main" className={classes.mainBox}>

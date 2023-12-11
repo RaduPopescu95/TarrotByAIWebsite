@@ -3,6 +3,7 @@ import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
 import ProcessTable from "../../ProcessTable";
 import Head from "next/head";
 import CartiViitorTable from "../../CartiViitorTable";
+import NumereNorocoaseTable from "../../NumereNorocoaseTable";
 
 export default function index() {
   return (
@@ -14,7 +15,7 @@ export default function index() {
         selectedItem={"Numere norocoase"}
         drawerText={"Numere norocoase"}
       >
-        <CartiViitorTable />
+        <NumereNorocoaseTable />
       </CustomDrawer>
     </>
   );

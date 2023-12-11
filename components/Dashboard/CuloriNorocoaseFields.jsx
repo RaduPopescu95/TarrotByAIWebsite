@@ -25,7 +25,10 @@ import ArticleEditor from "../QuillForm";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 
-export default function CartiViitorFields({ articleData, handleEditArticle }) {
+export default function CuloriNorocoaseFields({
+  articleData,
+  handleEditArticle,
+}) {
   const [content, setContent] = useState(""); // Starea pentru conținutul articolului
 
   // Funcția de actualizare a conținutului editorului
