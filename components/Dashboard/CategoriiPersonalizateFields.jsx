@@ -26,7 +26,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 import LoadingDialog from "../DialogBox/DialogLoader";
 
-export default function CitateMotivationaleFields({
+export default function CategoriiPersonalizateFields({
   handleUpload,
   handleEdit,
   handleShowSettings,
@@ -47,179 +47,109 @@ export default function CitateMotivationaleFields({
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
-  const [descriereRo, setDescriereRo] = useState(
-    dialogData.info ? dialogData.info.ro.descriere : ""
+  const [numeRo, setNumeRo] = useState(
+    dialogData.info ? dialogData.info.ro.nume : ""
   );
 
-  const [descriereEn, setDescriereEn] = useState(
-    dialogData.info ? dialogData.info.en.descriere : ""
+  const [numeEn, setNumeEn] = useState(
+    dialogData.info ? dialogData.info.en.nume : ""
   );
 
-  const [descriereEs, setDescriereEs] = useState(
-    dialogData.info ? dialogData.info.es.descriere : ""
+  const [numeEs, setNumeEs] = useState(
+    dialogData.info ? dialogData.info.es.nume : ""
   );
 
-  const [descriereIt, setDescriereIt] = useState(
-    dialogData.info ? dialogData.info.it.descriere : ""
+  const [numeIt, setNumeIt] = useState(
+    dialogData.info ? dialogData.info.it.nume : ""
   );
 
-  const [descrierePl, setDescrierePl] = useState(
-    dialogData.info ? dialogData.info.pl.descriere : ""
+  const [numePl, setNumePl] = useState(
+    dialogData.info ? dialogData.info.pl.nume : ""
   );
 
-  const [descriereDe, setDescriereDe] = useState(
-    dialogData.info ? dialogData.info.de.descriere : ""
+  const [numeDe, setNumeDe] = useState(
+    dialogData.info ? dialogData.info.de.nume : ""
   );
 
-  const [descriereHu, setDescriereHu] = useState(
-    dialogData.info ? dialogData.info.hu.descriere : ""
+  const [numeHu, setNumeHu] = useState(
+    dialogData.info ? dialogData.info.hu.nume : ""
   );
 
-  const [descriereCs, setDescriereCs] = useState(
-    dialogData.info ? dialogData.info.cs.descriere : ""
+  const [numeCs, setNumeCs] = useState(
+    dialogData.info ? dialogData.info.cs.nume : ""
   );
 
-  const [descriereSk, setDescriereSk] = useState(
-    dialogData.info ? dialogData.info.sk.descriere : ""
+  const [numeSk, setNumeSk] = useState(
+    dialogData.info ? dialogData.info.sk.nume : ""
   );
 
-  const [descriereHr, setDescriereHr] = useState(
-    dialogData.info ? dialogData.info.hr.descriere : ""
+  const [numeHr, setNumeHr] = useState(
+    dialogData.info ? dialogData.info.hr.nume : ""
   );
 
-  const [descriereRu, setDescriereRu] = useState(
-    dialogData.info ? dialogData.info.ru.descriere : ""
+  const [numeRu, setNumeRu] = useState(
+    dialogData.info ? dialogData.info.ru.nume : ""
   );
 
-  const [descriereBg, setDescriereBg] = useState(
-    dialogData.info ? dialogData.info.bg.descriere : ""
+  const [numeBg, setNumeBg] = useState(
+    dialogData.info ? dialogData.info.bg.nume : ""
   );
 
-  const [descriereEl, setDescriereEl] = useState(
-    dialogData.info ? dialogData.info.el.descriere : ""
+  const [numeEl, setNumeEl] = useState(
+    dialogData.info ? dialogData.info.el.nume : ""
   );
 
-  const [descriereFr, setDescriereFr] = useState(
-    dialogData.info ? dialogData.info.fr.descriere : ""
+  const [numeFr, setNumeFr] = useState(
+    dialogData.info ? dialogData.info.fr.nume : ""
   );
 
   const languageFields = [
-    {
-      id: "descriere-ro",
-      label: "Descriere ro",
-      value: descriereRo,
-      setValue: setDescriereRo,
-    },
+    { id: "nume-ro", label: "Nume ro", value: numeRo, setValue: setNumeRo },
 
-    {
-      id: "descriere-en",
-      label: "Descriere en",
-      value: descriereEn,
-      setValue: setDescriereEn,
-    },
+    { id: "nume-en", label: "Nume en", value: numeEn, setValue: setNumeEn },
 
-    {
-      id: "descriere-es",
-      label: "Descriere es",
-      value: descriereEs,
-      setValue: setDescriereEs,
-    },
+    { id: "nume-es", label: "Nume es", value: numeEs, setValue: setNumeEs },
 
-    {
-      id: "descriere-it",
-      label: "Descriere it",
-      value: descriereIt,
-      setValue: setDescriereIt,
-    },
+    { id: "nume-it", label: "Nume it", value: numeIt, setValue: setNumeIt },
 
-    {
-      id: "descriere-pl",
-      label: "Descriere pl",
-      value: descrierePl,
-      setValue: setDescrierePl,
-    },
+    { id: "nume-pl", label: "Nume pl", value: numePl, setValue: setNumePl },
 
-    {
-      id: "descriere-de",
-      label: "Descriere de",
-      value: descriereDe,
-      setValue: setDescriereDe,
-    },
+    { id: "nume-de", label: "Nume de", value: numeDe, setValue: setNumeDe },
 
-    {
-      id: "descriere-hu",
-      label: "Descriere hu",
-      value: descriereHu,
-      setValue: setDescriereHu,
-    },
+    { id: "nume-hu", label: "Nume hu", value: numeHu, setValue: setNumeHu },
 
-    {
-      id: "descriere-cs",
-      label: "Descriere cs",
-      value: descriereCs,
-      setValue: setDescriereCs,
-    },
+    { id: "nume-cs", label: "Nume cs", value: numeCs, setValue: setNumeCs },
 
-    {
-      id: "descriere-sk",
-      label: "Descriere sk",
-      value: descriereSk,
-      setValue: setDescriereSk,
-    },
+    { id: "nume-sk", label: "Nume sk", value: numeSk, setValue: setNumeSk },
 
-    {
-      id: "descriere-hr",
-      label: "Descriere hr",
-      value: descriereHr,
-      setValue: setDescriereHr,
-    },
+    { id: "nume-hr", label: "Nume hr", value: numeHr, setValue: setNumeHr },
 
-    {
-      id: "descriere-ru",
-      label: "Descriere ru",
-      value: descriereRu,
-      setValue: setDescriereRu,
-    },
+    { id: "nume-ru", label: "Nume ru", value: numeRu, setValue: setNumeRu },
 
-    {
-      id: "descriere-bg",
-      label: "Descriere bg",
-      value: descriereBg,
-      setValue: setDescriereBg,
-    },
+    { id: "nume-bg", label: "Nume bg", value: numeBg, setValue: setNumeBg },
 
-    {
-      id: "descriere-el",
-      label: "Descriere el",
-      value: descriereEl,
-      setValue: setDescriereEl,
-    },
+    { id: "nume-el", label: "Nume el", value: numeEl, setValue: setNumeEl },
 
-    {
-      id: "descriere-fr",
-      label: "Descriere fr",
-      value: descriereFr,
-      setValue: setDescriereFr,
-    },
+    { id: "nume-fr", label: "Nume fr", value: numeFr, setValue: setNumeFr },
   ];
 
   const handleUploadData = () => {
     setLoading(true);
     const data = {
-      ro: { descriere: descriereRo },
-      en: { descriere: descriereEn },
-      es: { descriere: descriereEs },
-      it: { descriere: descriereIt },
-      pl: { descriere: descrierePl },
-      de: { descriere: descriereDe },
-      hu: { descriere: descriereHu },
-      cs: { descriere: descriereCs },
-      sk: { descriere: descriereSk },
-      hr: { descriere: descriereHr },
-      ru: { descriere: descriereRu },
-      bg: { descriere: descriereBg },
-      el: { descriere: descriereEl },
-      fr: { descriere: descriereFr },
+      ro: { nume: numeRo },
+      en: { nume: numeEn },
+      es: { nume: numeEs },
+      it: { nume: numeIt },
+      pl: { nume: numePl },
+      de: { nume: numeDe },
+      hu: { nume: numeHu },
+      cs: { nume: numeCs },
+      sk: { nume: numeSk },
+      hr: { nume: numeHr },
+      ru: { nume: numeRu },
+      bg: { nume: numeBg },
+      el: { nume: numeEl },
+      fr: { nume: numeFr },
     };
     console.log(data);
 

@@ -55,20 +55,18 @@ export default function ProcessTable() {
   const classes = useStyles();
 
   const handleArticles = async () => {
-    setIsLoading(true);
-    const articlesDB = await handleGetArticles();
-
-    let rawArticles = [...articlesDB.articlesArray];
-    const sortedArticles = rawArticles.sort((a, b) => a.id - b.id);
-
-    if (articlesDB) {
-      setDb([...sortedArticles]);
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-      // Handle the case where articlesDB is undefined
-      // For example, display an error message or take appropriate action
-    }
+    // setIsLoading(true);
+    // const articlesDB = await handleGetArticles();
+    // let rawArticles = [...articlesDB.articlesArray];
+    // const sortedArticles = rawArticles.sort((a, b) => a.id - b.id);
+    // if (articlesDB) {
+    //   setDb([...sortedArticles]);
+    //   setIsLoading(false);
+    // } else {
+    //   setIsLoading(false);
+    //   // Handle the case where articlesDB is undefined
+    //   // For example, display an error message or take appropriate action
+    // }
   };
 
   const handleShowDialog = (

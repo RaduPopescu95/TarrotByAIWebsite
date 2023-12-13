@@ -101,8 +101,8 @@ function generateSiteMap(articles, services) {
 }
 
 export async function getServerSideProps({ res }) {
-  const articles = await handleGetArticles();
-  const services = await handleGetServices();
+  const articles = [];
+  const services = [];
 
   const sitemap = generateSiteMap(
     articles.articlesArray,

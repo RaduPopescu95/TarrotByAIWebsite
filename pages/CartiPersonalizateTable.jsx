@@ -13,11 +13,11 @@ import { auth, storage } from "../firebase";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 import { deleteObject, ref as storageRef } from "firebase/storage";
 
-import CategoriiViitorFields from "../components/Dashboard/CategoriiViitorFields";
+import CartiViitorFields from "../components/Dashboard/CartiViitorFields";
 import DeleteDialog from "../components/DialogBox/DeleteDialog";
-import CitateMotivationaleFields from "../components/Dashboard/CitateMotivationaleFields";
+import CartiPersonalizateFields from "../components/Dashboard/CartiPersonalizateFields";
 
-export default function CitateMotivationaleTable() {
+export default function CartiPersonalizateTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -34,11 +34,7 @@ export default function CitateMotivationaleTable() {
   const [searchValue, setSearchValue] = useState("");
 
   const handleSearchFilter = (value) => {
-    const lowerCaseValue = value.toLowerCase();
-    const filteredDb = db.filter((item) =>
-      item.info.ro.descriere.toLowerCase().includes(lowerCaseValue)
-    );
-
+    const filteredDb = db.filter((item) => item.info.ro.nume.includes(value));
     console.log(filteredDb);
     console.log(value);
     setSearchValue(value);
@@ -93,7 +89,7 @@ export default function CitateMotivationaleTable() {
 
   const handleGetData = async () => {
     setIsLoading(true);
-    const data = await getData("Others", "Citate-Motivationale");
+    const data = await getData("Citire-Personalizata", "Carti");
 
     let rawData = [...data.arr];
     const sortedArr = rawData.sort((a, b) => a.id - b.id);
@@ -144,7 +140,10 @@ export default function CitateMotivationaleTable() {
     const database = getDatabase();
 
     // 1. Ștergeți elementul din Firebase
-    const dataRef = ref(database, "Citire-Viitor/Categorii/" + dialogData.id);
+    const dataRef = ref(
+      database,
+      "Citire-Personalizata/Carti/" + dialogData.id
+    );
     remove(dataRef);
 
     // Creează o nouă matrice care exclude articolul cu ID-ul specificat
@@ -159,7 +158,7 @@ export default function CitateMotivationaleTable() {
     });
 
     // // Șterge toate nodurile existente sub "Services/"
-    const dbRef = ref(database, "Citire-Viitor/Categorii/");
+    const dbRef = ref(database, "Citire-Personalizata/Carti/");
     set(dbRef, {}).then(() => {
       // După ce toate nodurile sunt șterse, adaugă finalDb ca noile noduri copil
       finalDb.forEach((item) => {
@@ -168,15 +167,36 @@ export default function CitateMotivationaleTable() {
       });
     });
 
+    // Create a reference to the file to delete
+    const deletedRef = storageRef(
+      storage,
+      `images/Citire-Personalizata/${currentUser?.uid}/${dialogData.image.fileName}`
+    );
+
+    // Delete the file
+    deleteObject(deletedRef)
+      .then(() => {
+        console.log("File deleted successfully");
+      })
+      .catch((error) => {
+        console.log(
+          "Uh-oh, an error occurred! AT uploadImage DELETE...",
+          error
+        );
+      });
+
     // Actualizează starea db cu noua matrice filtrată
     setDb(finalDb);
     handleShowDialog();
     handleDelete();
   };
 
-  const handleEdit = async (info) => {
+  const handleEdit = async (info, image, initialImage, oldFileName) => {
     console.log("info....");
-
+    console.log(info);
+    console.log(image);
+    console.log(initialImage);
+    console.log(oldFileName);
     try {
       const dateTime = getCurrentDateTime();
 
@@ -184,15 +204,33 @@ export default function CitateMotivationaleTable() {
         if (item.id === dialogData.id) {
           console.log("is found");
           let data;
-
-          data = {
-            id: item.id,
-            info,
-            date: dateTime.date,
-            time: dateTime.time,
-          };
-
-          editData(data, "Others", "Citate-Motivationale", dialogData.id);
+          if (image.length === 0) {
+            data = {
+              id: item.id,
+              info,
+              image: initialImage,
+              date: dateTime.date,
+              time: dateTime.time,
+            };
+          } else {
+            const hasNewImage = image.length > 0;
+            const newImage = await uploadImage(
+              image,
+              initialImage,
+              true,
+              "Citire-Personalizata",
+              "",
+              oldFileName
+            );
+            data = {
+              id: dialogData.id,
+              info,
+              image: newImage,
+              date: dateTime.date,
+              time: dateTime.time,
+            };
+          }
+          editData(data, "Citire-Personalizata", "Carti", dialogData.id);
           return data;
         } else {
           console.log("is not found");
@@ -208,19 +246,28 @@ export default function CitateMotivationaleTable() {
     }
   };
 
-  const handleUpload = async (info) => {
+  const handleUpload = async (info, selectedImages) => {
     try {
       const dateTime = getCurrentDateTime();
+
+      const image = await uploadImage(
+        selectedImages,
+        [],
+        false,
+        "Citire-Personalizata",
+        "Carti"
+      );
 
       const data = {
         id: db.length + 1,
         info,
+        image,
         date: dateTime.date,
         time: dateTime.time,
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii
-      await writeData(data, "Others", "Citate-Motivationale");
+      await writeData(data, "Citire-Personalizata", "Carti");
 
       let newData = db;
 
@@ -246,7 +293,7 @@ export default function CitateMotivationaleTable() {
   return (
     <>
       {showSettings ? (
-        <CitateMotivationaleFields
+        <CartiPersonalizateFields
           handleEdit={handleEdit}
           handleUpload={handleUpload}
           handleShowSettings={handleShowSettings}
@@ -265,8 +312,6 @@ export default function CitateMotivationaleTable() {
                 handleShowSoloPopup={handleShowSoloPopup}
                 settingsRef={settingsRef}
                 db={db}
-                showNume={false}
-                showDesc={false}
                 handleSearchFilter={handleSearchFilter}
               />
               <TableToolbar />
@@ -282,7 +327,7 @@ export default function CitateMotivationaleTable() {
                       color: "white",
                     }}
                   >
-                    Nu sunt citate adăugate
+                    Nu sunt cărți adăugate
                   </Typography>
                 ) : (
                   <CustomTableContainer
@@ -290,8 +335,8 @@ export default function CitateMotivationaleTable() {
                     searchedDb={searchedDb}
                     searchValue={searchValue}
                     handleShowDialog={handleShowDialog}
-                    showNume={false}
-                    showDesc={true}
+                    showNume={true}
+                    showDesc={false}
                     sortConfig={sortConfig}
                     handleSort={handleSort}
                   />

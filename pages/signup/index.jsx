@@ -173,7 +173,7 @@ export default function SignUp() {
         .then((userCredential) => {
           // Signed up
           const user = userCredential.user;
-          route.push("/dashboard/articles");
+          route.push("/dashboard/citire-viitor-carti");
           // ...
         })
         .catch((error) => {

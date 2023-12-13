@@ -3,7 +3,16 @@ import { Typography, Grid } from "@mui/material";
 import { StyledTextField } from "../../styles/FormStyles";
 
 // The FieldRow component can be used for any text field within a form.
-const FieldRow = ({ id, name, label, value, onChange, widthLabel }) => {
+const FieldRow = ({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+  widthLabel,
+  isVideo,
+  noFirstLabel,
+}) => {
   return (
     <Grid
       item
@@ -16,9 +25,11 @@ const FieldRow = ({ id, name, label, value, onChange, widthLabel }) => {
         marginTop: "2%",
       }}
     >
-      <Typography sx={{ width: widthLabel, color: "#D3D3D3", mr: 2 }}>
-        {label}
-      </Typography>
+      {!noFirstLabel && (
+        <Typography sx={{ width: widthLabel, color: "#D3D3D3", mr: 2 }}>
+          {label}
+        </Typography>
+      )}
       <StyledTextField
         id={id}
         name={name}
@@ -28,6 +39,7 @@ const FieldRow = ({ id, name, label, value, onChange, widthLabel }) => {
         variant="outlined"
         value={value}
         onChange={onChange}
+        disabled={isVideo}
       />
     </Grid>
   );

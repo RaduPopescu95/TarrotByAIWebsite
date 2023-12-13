@@ -15,9 +15,9 @@ import { deleteObject, ref as storageRef } from "firebase/storage";
 
 import CategoriiViitorFields from "../components/Dashboard/CategoriiViitorFields";
 import DeleteDialog from "../components/DialogBox/DeleteDialog";
-import CitateMotivationaleFields from "../components/Dashboard/CitateMotivationaleFields";
+import CategoriiPersonalizateFields from "../components/Dashboard/CategoriiPersonalizateFields";
 
-export default function CitateMotivationaleTable() {
+export default function CategoriiPersonalizatTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -32,11 +32,10 @@ export default function CitateMotivationaleTable() {
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
-
   const handleSearchFilter = (value) => {
     const lowerCaseValue = value.toLowerCase();
     const filteredDb = db.filter((item) =>
-      item.info.ro.descriere.toLowerCase().includes(lowerCaseValue)
+      item.info.ro.nume.toLowerCase().includes(lowerCaseValue)
     );
 
     console.log(filteredDb);
@@ -93,7 +92,7 @@ export default function CitateMotivationaleTable() {
 
   const handleGetData = async () => {
     setIsLoading(true);
-    const data = await getData("Others", "Citate-Motivationale");
+    const data = await getData("Citire-Personalizata", "Categorii");
 
     let rawData = [...data.arr];
     const sortedArr = rawData.sort((a, b) => a.id - b.id);
@@ -144,7 +143,10 @@ export default function CitateMotivationaleTable() {
     const database = getDatabase();
 
     // 1. Ștergeți elementul din Firebase
-    const dataRef = ref(database, "Citire-Viitor/Categorii/" + dialogData.id);
+    const dataRef = ref(
+      database,
+      "Citire-Personalizata/Categorii/" + dialogData.id
+    );
     remove(dataRef);
 
     // Creează o nouă matrice care exclude articolul cu ID-ul specificat
@@ -159,7 +161,7 @@ export default function CitateMotivationaleTable() {
     });
 
     // // Șterge toate nodurile existente sub "Services/"
-    const dbRef = ref(database, "Citire-Viitor/Categorii/");
+    const dbRef = ref(database, "Citire-Personalizata/Categorii/");
     set(dbRef, {}).then(() => {
       // După ce toate nodurile sunt șterse, adaugă finalDb ca noile noduri copil
       finalDb.forEach((item) => {
@@ -192,7 +194,7 @@ export default function CitateMotivationaleTable() {
             time: dateTime.time,
           };
 
-          editData(data, "Others", "Citate-Motivationale", dialogData.id);
+          editData(data, "Citire-Personalizata", "Categorii", dialogData.id);
           return data;
         } else {
           console.log("is not found");
@@ -220,7 +222,7 @@ export default function CitateMotivationaleTable() {
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii
-      await writeData(data, "Others", "Citate-Motivationale");
+      await writeData(data, "Citire-Personalizata", "Categorii");
 
       let newData = db;
 
@@ -246,13 +248,14 @@ export default function CitateMotivationaleTable() {
   return (
     <>
       {showSettings ? (
-        <CitateMotivationaleFields
+        <CategoriiPersonalizateFields
           handleEdit={handleEdit}
           handleUpload={handleUpload}
           handleShowSettings={handleShowSettings}
           isEdit={isEdit}
           dialogData={dialogData}
           handleDelete={handleDelete}
+          handleSearchFilter={handleSearchFilter}
         />
       ) : (
         <>
@@ -263,11 +266,9 @@ export default function CitateMotivationaleTable() {
                 handleShowSettings={handleShowSettings}
                 handleShowAddContract={handleShowAddContract}
                 handleShowSoloPopup={handleShowSoloPopup}
+                handleSearchFilter={handleSearchFilter}
                 settingsRef={settingsRef}
                 db={db}
-                showNume={false}
-                showDesc={false}
-                handleSearchFilter={handleSearchFilter}
               />
               <TableToolbar />
               <Stack direction="column" alignItems="center">
@@ -282,7 +283,7 @@ export default function CitateMotivationaleTable() {
                       color: "white",
                     }}
                   >
-                    Nu sunt citate adăugate
+                    Nu sunt categorii adăugate
                   </Typography>
                 ) : (
                   <CustomTableContainer
@@ -290,8 +291,8 @@ export default function CitateMotivationaleTable() {
                     searchedDb={searchedDb}
                     searchValue={searchValue}
                     handleShowDialog={handleShowDialog}
-                    showNume={false}
-                    showDesc={true}
+                    showNume={true}
+                    showDesc={false}
                     sortConfig={sortConfig}
                     handleSort={handleSort}
                   />

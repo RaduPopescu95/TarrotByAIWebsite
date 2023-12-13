@@ -8,18 +8,26 @@ import {
 } from "firebase/storage";
 import { getBlobFromUri } from "./getBlobFromUri";
 
-export const uploadImage = async (images, initialImages, noNewImage) => {
+export const uploadImage = async (
+  images,
+  initialImages,
+  newImage,
+  firstLocation,
+  secondLocation,
+  oldFileName
+) => {
   const imageUpload = images[0];
   const authInstance = auth;
   const currentUser = authInstance.currentUser;
   let finalUri;
   const fileName = new Date().getTime();
   try {
-    if (!noNewImage) {
+    if (newImage) {
+      console.log("is new image...started delete");
       // Create a reference to the file to delete
       const deletedRef = ref(
         storage,
-        `images/articles/${currentUser?.uid}/${initialImages}`
+        `images/${firstLocation}/${currentUser?.uid}/${oldFileName}`
       );
 
       // Delete the file
@@ -44,7 +52,7 @@ export const uploadImage = async (images, initialImages, noNewImage) => {
 
     const imageRef = ref(
       storage,
-      `images/articles/${currentUser?.uid}/${fileName}`
+      `images/${firstLocation}/${currentUser?.uid}/${fileName}`
     );
 
     // Set the content type to image/jpeg

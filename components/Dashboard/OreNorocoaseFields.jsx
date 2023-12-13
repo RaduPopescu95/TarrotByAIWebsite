@@ -24,56 +24,80 @@ import HorizontalLineWithText from "../HorizontalLineText";
 import ArticleEditor from "../QuillForm";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
+import LoadingDialog from "../DialogBox/DialogLoader";
 
-export default function OreNorocoaseFields({ articleData, handleEditArticle }) {
-  const [content, setContent] = useState(""); // Starea pentru conținutul articolului
+export default function OreNorocoaseFields({
+  handleUpload,
+  handleEdit,
+  handleShowSettings,
+  isEdit,
+  dialogData,
+  handleDelete,
+}) {
+  const [ora, setOra] = useState(dialogData ? dialogData.ora : ""); // Starea pentru conținutul articolului
 
-  // Funcția de actualizare a conținutului editorului
-  const handleContentChange = (value) => {
-    setContent(value);
-  };
-
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [selectedImages, setSelectedImages] = useState([]);
-  const [image, setImage] = useState("");
-  const [tags, setTags] = useState([]);
+  const [image, setImage] = useState(dialogData.image ? dialogData.image : "");
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
-  const [tagInput, setTagInput] = useState("");
+  const [descriereRo, setDescriereRo] = useState(
+    dialogData.info ? dialogData.info.ro.descriere : ""
+  );
 
-  const [numarNorocos, setNumarNorocos] = useState(null);
+  const [descriereEn, setDescriereEn] = useState(
+    dialogData.info ? dialogData.info.en.descriere : ""
+  );
 
-  const [descriereRo, setDescriereRo] = useState("");
+  const [descriereEs, setDescriereEs] = useState(
+    dialogData.info ? dialogData.info.es.descriere : ""
+  );
 
-  const [descriereEn, setDescriereEn] = useState("");
+  const [descriereIt, setDescriereIt] = useState(
+    dialogData.info ? dialogData.info.it.descriere : ""
+  );
 
-  const [descriereEs, setDescriereEs] = useState("");
+  const [descrierePl, setDescrierePl] = useState(
+    dialogData.info ? dialogData.info.pl.descriere : ""
+  );
 
-  const [descriereIt, setDescriereIt] = useState("");
+  const [descriereDe, setDescriereDe] = useState(
+    dialogData.info ? dialogData.info.de.descriere : ""
+  );
 
-  const [descrierePl, setDescrierePl] = useState("");
+  const [descriereHu, setDescriereHu] = useState(
+    dialogData.info ? dialogData.info.hu.descriere : ""
+  );
 
-  const [descriereDe, setDescriereDe] = useState("");
+  const [descriereCs, setDescriereCs] = useState(
+    dialogData.info ? dialogData.info.cs.descriere : ""
+  );
 
-  const [descriereHu, setDescriereHu] = useState("");
+  const [descriereSk, setDescriereSk] = useState(
+    dialogData.info ? dialogData.info.sk.descriere : ""
+  );
 
-  const [descriereCs, setDescriereCs] = useState("");
+  const [descriereHr, setDescriereHr] = useState(
+    dialogData.info ? dialogData.info.hr.descriere : ""
+  );
 
-  const [descriereSk, setDescriereSk] = useState("");
+  const [descriereRu, setDescriereRu] = useState(
+    dialogData.info ? dialogData.info.ru.descriere : ""
+  );
 
-  const [descriereHr, setDescriereHr] = useState("");
+  const [descriereBg, setDescriereBg] = useState(
+    dialogData.info ? dialogData.info.bg.descriere : ""
+  );
 
-  const [descriereRu, setDescriereRu] = useState("");
+  const [descriereEl, setDescriereEl] = useState(
+    dialogData.info ? dialogData.info.el.descriere : ""
+  );
 
-  const [descriereBg, setDescriereBg] = useState("");
-
-  const [descriereEl, setDescriereEl] = useState("");
-
-  const [descriereFr, setDescriereFr] = useState("");
+  const [descriereFr, setDescriereFr] = useState(
+    dialogData.info ? dialogData.info.fr.descriere : ""
+  );
 
   const languageFields = [
     {
@@ -175,208 +199,183 @@ export default function OreNorocoaseFields({ articleData, handleEditArticle }) {
     },
   ];
 
-  const handleTagInputChange = (e) => {
-    setTagInput(e.target.value);
-  };
+  const handleUploadData = () => {
+    setLoading(true);
+    const data = {
+      ro: { descriere: descriereRo },
+      en: { descriere: descriereEn },
+      es: { descriere: descriereEs },
+      it: { descriere: descriereIt },
+      pl: { descriere: descrierePl },
+      de: { descriere: descriereDe },
+      hu: { descriere: descriereHu },
+      cs: { descriere: descriereCs },
+      sk: { descriere: descriereSk },
+      hr: { descriere: descriereHr },
+      ru: { descriere: descriereRu },
+      bg: { descriere: descriereBg },
+      el: { descriere: descriereEl },
+      fr: { descriere: descriereFr },
+    };
+    console.log(data);
 
-  const handleAddTag = () => {
-    if (tagInput.trim() === "") return;
-    setTags([...tags, tagInput.trim()]);
-    setTagInput("");
-  };
-
-  const handleDeleteTag = (tagToDelete) => {
-    const updatedTags = tags.filter((tag) => tag !== tagToDelete);
-    setTags(updatedTags);
-  };
-
-  const handleSave = () => {
-    console.log("articleData................");
-    console.log(articleData);
-    let img;
-    let initialImage = articleData.image.fileName;
-
-    if (selectedImages.length > 0) {
-      console.log("Selected images are over 0....");
-      img = selectedImages;
-      handleEditArticle(
-        articleData.id,
-        name,
-        title,
-        metaDescription,
-        img,
-        initialImage,
-        content,
-        tags,
-        false
-      );
+    if (isEdit) {
+      console.log("start edit...");
+      handleEdit(data, ora).then(() => {
+        setLoading(false);
+      });
     } else {
-      console.log("Selected images are NOT over 0....");
-      img = image;
-      let noNewImage = true;
-      handleEditArticle(
-        articleData.id,
-        name,
-        title,
-        metaDescription,
-        img,
-        initialImage,
-        content,
-        tags,
-        true
-      );
+      handleUpload(data, ora).then(() => {
+        setLoading(false);
+      });
     }
   };
 
-  const handleImageDelete = (index) => {
-    const updatedImages = [...selectedImages];
-    updatedImages.splice(index, 1);
-    setSelectedImages(updatedImages);
-    setImage("");
-  };
-
-  const handleImageChange = (event) => {
-    const files = event.target.files;
-    setSelectedImages([...selectedImages, ...Array.from(files)]);
-    setFileInputKey(Date.now()); // Reset the input to allow selecting more images
-  };
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <>
       <Grid container spacing={2} sx={{ padding: 1 }}>
-        <Grid
-          item
-          xs={12}
-          sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
-        >
-          <HorizontalLineWithText text={"Oră norocoasă"} />
-        </Grid>
+        <>
+          <Grid
+            item
+            xs={12}
+            sx={{
+              width: "100%",
 
-        <Box
-          style={{
-            width: "100%",
-            paddingRight: "3%",
-            paddingLeft: "3%",
-            paddingBottom: "3%",
-            paddingTop: "3%",
-            backgroundColor: "#2B2B2B",
-            marginRight: "2%",
-            marginLeft: "2%",
-            borderRadius: "1%",
-            height: "auto",
-          }}
-        >
-          <Box
-            style={{
               display: "flex",
-              justifyContent: "center",
+              justifyContent: "flex-end",
               alignItems: "center",
-              height: "100%",
             }}
           >
-            <TextField
-              id="OraNorocos"
-              label="Oră norocoasă"
-              variant="outlined"
-              sx={{
-                width: "180px",
-                "& .MuiInputBase-root": {
-                  height: "120px",
-                  color: "#D3D3D3", // Text color
-                },
-                "& input": {
-                  color: "#D3D3D3", // Text color
-                },
-                "& .MuiInputBase-input": {
-                  textAlign: "center", // Center the text
-                  color: "#D3D3D3", // Ensuring text color is #D3D3D3
-                  fontSize: "50px", // Increase font size here
-                },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "10px", // Slightly rounded corners
-                },
-                "& fieldset": {
-                  borderColor: "#D3D3D3", // Border color
-                },
-                "&:hover fieldset, &.Mui-focused fieldset": {
-                  borderColor: "#D3D3D3", // Border color on hover and when focused
-                },
-                "& .MuiInputLabel-root": {
-                  color: "#D3D3D3", // Label color
-                },
-                "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#D3D3D3", // Label color when focused
-                },
-                "& .MuiInputLabel-shrink": {
-                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position when shrunk
-                },
-                "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                  {
-                    borderColor: "#D3D3D3", // Ensure border color is #D3D3D3 when focused for outlined variant
-                  },
-                "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
-                  {
-                    borderColor: "#D3D3D3", // Ensure the border color is #D3D3D3 on hover for outlined variant
-                  },
+            {isEdit && (
+              <Button
+                variant="outlined"
+                onClick={handleDelete}
+                style={{
+                  position: "relative",
+                  top: 10,
+                  right: 10,
+                  marginRight: 10,
+                }}
+              >
+                Șterge
+              </Button>
+            )}
+            <Button
+              variant="text"
+              onClick={handleShowSettings}
+              style={{
+                position: "relative",
+                top: 10,
+                right: 10,
               }}
+            >
+              Închide
+            </Button>
+          </Grid>
+
+          <Grid
+            item
+            xs={12}
+            sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
+          >
+            <HorizontalLineWithText text={"Oră norocoasă"} />
+          </Grid>
+
+          <Box
+            style={{
+              width: "100%",
+              paddingRight: "3%",
+              paddingLeft: "3%",
+              paddingBottom: "3%",
+              backgroundColor: "#2B2B2B",
+              marginRight: "2%",
+              marginLeft: "2%",
+              borderRadius: "1%",
+            }}
+          >
+            <FieldRow
+              id={"Oră norocos"}
+              name={"Oră norocos"}
+              label={"Oră norocos"}
+              value={ora}
+              onChange={(event) => setOra(event.target.value)}
+              widthLabel="10%"
             />
           </Box>
-        </Box>
-        <Grid
-          item
-          xs={12}
-          sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
-        >
-          <HorizontalLineWithText text={"Setări Principale"} />
-        </Grid>
 
-        <Box
-          style={{
-            width: "100%",
-            paddingRight: "3%",
-            paddingLeft: "3%",
-            paddingBottom: "3%",
-            backgroundColor: "#2B2B2B",
-            marginRight: "2%",
-            marginLeft: "2%",
-            borderRadius: "1%",
-          }}
-        >
-          {languageFields.map((field, index) => (
-            <React.Fragment key={field.id}>
-              <FieldRow
-                id={field.id}
-                name={field.id}
-                label={field.label}
-                value={field.value}
-                onChange={(event) => field.setValue(event.target.value)}
-                widthLabel="10%"
-              />
-              {index < languageFields.length - 1 && (
-                <HorizontalLineWithText style={{ marginTop: "3%" }} />
-              )}
-            </React.Fragment>
-          ))}
-        </Box>
-        <Box
-          sx={{
-            width: "100%",
+          <Grid
+            item
+            xs={12}
+            sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
+          >
+            <HorizontalLineWithText text={"Setări Principale"} />
+          </Grid>
 
-            marginTop: 2,
-            justifyContent: "flex-end",
-            display: "flex",
-            paddingRight: "2%",
-          }}
-        >
-          <Button variant="contained" style={{ marginRight: 10 }}>
-            {" "}
-            Contained
-          </Button>
-          <Button variant="outlined">Outlined</Button>
-        </Box>
+          <Box
+            style={{
+              width: "100%",
+              paddingRight: "3%",
+              paddingLeft: "3%",
+              paddingBottom: "3%",
+              backgroundColor: "#2B2B2B",
+              marginRight: "2%",
+              marginLeft: "2%",
+              borderRadius: "1%",
+            }}
+          >
+            {languageFields.map((field, index) => (
+              <React.Fragment key={field.id}>
+                <FieldRow
+                  id={field.id}
+                  name={field.id}
+                  label={field.label}
+                  value={field.value}
+                  onChange={(event) => field.setValue(event.target.value)}
+                  widthLabel="10%"
+                />
+                {index < languageFields.length - 1 && (
+                  <HorizontalLineWithText style={{ marginTop: "3%" }} />
+                )}
+              </React.Fragment>
+            ))}
+          </Box>
+          <Box
+            sx={{
+              width: "100%",
+
+              marginTop: 2,
+              justifyContent: "flex-end",
+              display: "flex",
+              paddingRight: "2%",
+            }}
+          >
+            {isEdit ? (
+              <Button
+                variant="contained"
+                onClick={handleUploadData}
+                style={{ marginRight: 10 }}
+              >
+                {" "}
+                Actualizează
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleUploadData}
+                style={{ marginRight: 10 }}
+              >
+                {" "}
+                Salvează
+              </Button>
+            )}
+            <Button variant="outlined" onClick={handleShowSettings}>
+              Cancel
+            </Button>
+          </Box>
+          <LoadingDialog loading={loading} setLoading={setLoading} />
+        </>
       </Grid>
     </>
   );

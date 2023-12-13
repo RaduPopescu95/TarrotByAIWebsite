@@ -259,16 +259,16 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
-                    screen: "articles",
-                    text: "Carti",
-                    citire: "carti-personalizata",
+                    screen: "citire-personalizata-carti",
+                    text: "Carti-Citiri-Personalizate",
+                    citire: "Carti-Citiri-Personalizate",
                   })
                 }
               >
                 <ListItemIcon
                   sx={{
                     color:
-                      selectedItem === "carti-personalizata"
+                      selectedItem === "Carti-Citiri-Personalizate"
                         ? "#ffc045"
                         : "white",
                   }}
@@ -280,16 +280,16 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
-                    screen: "articles",
-                    text: "Categorii",
-                    citire: "categorii-personalizata",
+                    screen: "citire-personalizata-categorii",
+                    text: "Categorii-Citiri-Personalizate",
+                    citire: "Categorii-Citiri-Personalizate",
                   })
                 }
               >
                 <ListItemIcon
                   sx={{
                     color:
-                      selectedItem === "categorii-personalizata"
+                      selectedItem === "Categorii-Citiri-Personalizate"
                         ? "#ffc045"
                         : "white",
                   }}
@@ -301,15 +301,15 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
-                    screen: "services",
-                    text: "Variante de carti",
+                    screen: "citire-personalizata-variantecarti",
+                    text: "Variante de carti-Citiri-Personalizate",
                   })
                 }
               >
                 <ListItemIcon
                   sx={{
                     color:
-                      selectedItem === "Variante de carti"
+                      selectedItem === "Variante de carti-Citiri-Personalizate"
                         ? "#ffc045"
                         : "white",
                   }}
@@ -324,7 +324,7 @@ export default function CustomDrawer(props) {
               <Divider sx={{ my: 1 }} />
               {open && (
                 <ListItemText
-                  primary="Citiri personalizate"
+                  primary="Altele"
                   sx={{
                     color: "white",
                     marginLeft: "8%",

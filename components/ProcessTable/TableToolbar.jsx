@@ -14,8 +14,6 @@ import ContractsToolbar from "./ContractsToolbar";
 import * as icons from "../../data/Icons";
 
 export default function TableToolbar(props) {
-  console.log("table toolbarss..sas......");
-  console.log(props.toolbarTitle);
   return (
     <Box>
       <Divider />
@@ -39,6 +37,10 @@ export default function TableToolbar(props) {
                 handleShowAddContract={props.handleShowAddContract}
                 handleShowSoloPopup={props.handleShowSoloPopup}
                 settingsRef={props.settingsRef}
+                showNume={props.showNume}
+                showDesc={props.showDesc}
+                isElaiDownload={props.isElaiDownload}
+                handleSearchFilter={props.handleSearchFilter}
               />
             </Stack>
           </Toolbar>

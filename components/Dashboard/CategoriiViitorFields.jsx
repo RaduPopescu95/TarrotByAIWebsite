@@ -24,10 +24,15 @@ import HorizontalLineWithText from "../HorizontalLineText";
 import ArticleEditor from "../QuillForm";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
+import LoadingDialog from "../DialogBox/DialogLoader";
 
 export default function CategoriiViitorFields({
-  articleData,
-  handleEditArticle,
+  handleUpload,
+  handleEdit,
+  handleShowSettings,
+  isEdit,
+  dialogData,
+  handleDelete,
 }) {
   const [content, setContent] = useState(""); // Starea pentru conținutul articolului
 
@@ -35,33 +40,68 @@ export default function CategoriiViitorFields({
   const handleContentChange = (value) => {
     setContent(value);
   };
-
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [selectedImages, setSelectedImages] = useState([]);
-  const [image, setImage] = useState("");
-  const [tags, setTags] = useState([]);
+  const [image, setImage] = useState(dialogData.image ? dialogData.image : "");
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
-  const [tagInput, setTagInput] = useState("");
+  const [numeRo, setNumeRo] = useState(
+    dialogData.info ? dialogData.info.ro.nume : ""
+  );
 
-  const [numeRo, setNumeRo] = useState("");
-  const [numeEn, setNumeEn] = useState("");
-  const [numeEs, setNumeEs] = useState("");
-  const [numeIt, setNumeIt] = useState("");
-  const [numePl, setNumePl] = useState("");
-  const [numeDe, setNumeDe] = useState("");
-  const [numeHu, setNumeHu] = useState("");
-  const [numeCs, setNumeCs] = useState("");
-  const [numeSk, setNumeSk] = useState("");
-  const [numeHr, setNumeHr] = useState("");
-  const [numeRu, setNumeRu] = useState("");
-  const [numeBg, setNumeBg] = useState("");
-  const [numeEl, setNumeEl] = useState("");
-  const [numeFr, setNumeFr] = useState("");
+  const [numeEn, setNumeEn] = useState(
+    dialogData.info ? dialogData.info.en.nume : ""
+  );
+
+  const [numeEs, setNumeEs] = useState(
+    dialogData.info ? dialogData.info.es.nume : ""
+  );
+
+  const [numeIt, setNumeIt] = useState(
+    dialogData.info ? dialogData.info.it.nume : ""
+  );
+
+  const [numePl, setNumePl] = useState(
+    dialogData.info ? dialogData.info.pl.nume : ""
+  );
+
+  const [numeDe, setNumeDe] = useState(
+    dialogData.info ? dialogData.info.de.nume : ""
+  );
+
+  const [numeHu, setNumeHu] = useState(
+    dialogData.info ? dialogData.info.hu.nume : ""
+  );
+
+  const [numeCs, setNumeCs] = useState(
+    dialogData.info ? dialogData.info.cs.nume : ""
+  );
+
+  const [numeSk, setNumeSk] = useState(
+    dialogData.info ? dialogData.info.sk.nume : ""
+  );
+
+  const [numeHr, setNumeHr] = useState(
+    dialogData.info ? dialogData.info.hr.nume : ""
+  );
+
+  const [numeRu, setNumeRu] = useState(
+    dialogData.info ? dialogData.info.ru.nume : ""
+  );
+
+  const [numeBg, setNumeBg] = useState(
+    dialogData.info ? dialogData.info.bg.nume : ""
+  );
+
+  const [numeEl, setNumeEl] = useState(
+    dialogData.info ? dialogData.info.el.nume : ""
+  );
+
+  const [numeFr, setNumeFr] = useState(
+    dialogData.info ? dialogData.info.fr.nume : ""
+  );
 
   const languageFields = [
     { id: "nume-ro", label: "Nume ro", value: numeRo, setValue: setNumeRo },
@@ -93,132 +133,153 @@ export default function CategoriiViitorFields({
     { id: "nume-fr", label: "Nume fr", value: numeFr, setValue: setNumeFr },
   ];
 
-  const handleTagInputChange = (e) => {
-    setTagInput(e.target.value);
-  };
+  const handleUploadData = () => {
+    setLoading(true);
+    const data = {
+      ro: { nume: numeRo },
+      en: { nume: numeEn },
+      es: { nume: numeEs },
+      it: { nume: numeIt },
+      pl: { nume: numePl },
+      de: { nume: numeDe },
+      hu: { nume: numeHu },
+      cs: { nume: numeCs },
+      sk: { nume: numeSk },
+      hr: { nume: numeHr },
+      ru: { nume: numeRu },
+      bg: { nume: numeBg },
+      el: { nume: numeEl },
+      fr: { nume: numeFr },
+    };
+    console.log(data);
 
-  const handleAddTag = () => {
-    if (tagInput.trim() === "") return;
-    setTags([...tags, tagInput.trim()]);
-    setTagInput("");
-  };
-
-  const handleDeleteTag = (tagToDelete) => {
-    const updatedTags = tags.filter((tag) => tag !== tagToDelete);
-    setTags(updatedTags);
-  };
-
-  const handleSave = () => {
-    console.log("articleData................");
-    console.log(articleData);
-    let img;
-    let initialImage = articleData.image.fileName;
-
-    if (selectedImages.length > 0) {
-      console.log("Selected images are over 0....");
-      img = selectedImages;
-      handleEditArticle(
-        articleData.id,
-        name,
-        title,
-        metaDescription,
-        img,
-        initialImage,
-        content,
-        tags,
-        false
-      );
+    if (isEdit) {
+      console.log("start edit...");
+      handleEdit(data).then(() => {
+        setLoading(false);
+      });
     } else {
-      console.log("Selected images are NOT over 0....");
-      img = image;
-      let noNewImage = true;
-      handleEditArticle(
-        articleData.id,
-        name,
-        title,
-        metaDescription,
-        img,
-        initialImage,
-        content,
-        tags,
-        true
-      );
+      handleUpload(data).then(() => {
+        setLoading(false);
+      });
     }
   };
 
-  const handleImageDelete = (index) => {
-    const updatedImages = [...selectedImages];
-    updatedImages.splice(index, 1);
-    setSelectedImages(updatedImages);
-    setImage("");
-  };
-
-  const handleImageChange = (event) => {
-    const files = event.target.files;
-    setSelectedImages([...selectedImages, ...Array.from(files)]);
-    setFileInputKey(Date.now()); // Reset the input to allow selecting more images
-  };
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <>
       <Grid container spacing={2} sx={{ padding: 1 }}>
-        <Grid
-          item
-          xs={12}
-          sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
-        >
-          <HorizontalLineWithText text={"Setări Principale"} />
-        </Grid>
+        <>
+          <Grid
+            item
+            xs={12}
+            sx={{
+              width: "100%",
 
-        <Box
-          style={{
-            width: "100%",
-            paddingRight: "3%",
-            paddingLeft: "3%",
-            paddingBottom: "3%",
-            backgroundColor: "#2B2B2B",
-            marginRight: "2%",
-            marginLeft: "2%",
-            borderRadius: "1%",
-          }}
-        >
-          {languageFields.map((field, index) => (
-            <React.Fragment key={field.id}>
-              <FieldRow
-                id={field.id}
-                name={field.id}
-                label={field.label}
-                value={field.value}
-                onChange={(event) => field.setValue(event.target.value)}
-                widthLabel="10%"
-              />
-              {/* Add a horizontal line after each element except the last one */}
-              {index < languageFields.length - 1 && (
-                <HorizontalLineWithText style={{ marginTop: "3%" }} />
-              )}
-            </React.Fragment>
-          ))}
-        </Box>
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+            }}
+          >
+            {isEdit && (
+              <Button
+                variant="outlined"
+                onClick={handleDelete}
+                style={{
+                  position: "relative",
+                  top: 10,
+                  right: 10,
+                  marginRight: 10,
+                }}
+              >
+                Șterge
+              </Button>
+            )}
+            <Button
+              variant="text"
+              onClick={handleShowSettings}
+              style={{
+                position: "relative",
+                top: 10,
+                right: 10,
+              }}
+            >
+              Închide
+            </Button>
+          </Grid>
 
-        <Box
-          sx={{
-            width: "100%",
+          <Grid
+            item
+            xs={12}
+            sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
+          >
+            <HorizontalLineWithText text={"Setări Principale"} />
+          </Grid>
 
-            marginTop: 2,
-            justifyContent: "flex-end",
-            display: "flex",
-            paddingRight: "2%",
-          }}
-        >
-          <Button variant="contained" style={{ marginRight: 10 }}>
-            {" "}
-            Contained
-          </Button>
-          <Button variant="outlined">Outlined</Button>
-        </Box>
+          <Box
+            style={{
+              width: "100%",
+              paddingRight: "3%",
+              paddingLeft: "3%",
+              paddingBottom: "3%",
+              backgroundColor: "#2B2B2B",
+              marginRight: "2%",
+              marginLeft: "2%",
+              borderRadius: "1%",
+            }}
+          >
+            {languageFields.map((field, index) => (
+              <React.Fragment key={field.id}>
+                <FieldRow
+                  id={field.id}
+                  name={field.id}
+                  label={field.label}
+                  value={field.value}
+                  onChange={(event) => field.setValue(event.target.value)}
+                  widthLabel="10%"
+                />
+                {index < languageFields.length - 1 && (
+                  <HorizontalLineWithText style={{ marginTop: "3%" }} />
+                )}
+              </React.Fragment>
+            ))}
+          </Box>
+          <Box
+            sx={{
+              width: "100%",
+
+              marginTop: 2,
+              justifyContent: "flex-end",
+              display: "flex",
+              paddingRight: "2%",
+            }}
+          >
+            {isEdit ? (
+              <Button
+                variant="contained"
+                onClick={handleUploadData}
+                style={{ marginRight: 10 }}
+              >
+                {" "}
+                Actualizează
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleUploadData}
+                style={{ marginRight: 10 }}
+              >
+                {" "}
+                Salvează
+              </Button>
+            )}
+            <Button variant="outlined" onClick={handleShowSettings}>
+              Cancel
+            </Button>
+          </Box>
+          <LoadingDialog loading={loading} setLoading={setLoading} />
+        </>
       </Grid>
     </>
   );

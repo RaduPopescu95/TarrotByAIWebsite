@@ -2,6 +2,7 @@ import React from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
 import ServicesTable from "../../ServicesTable";
 import Head from "next/head";
+import CategoriiPersonalizatTable from "../../CategoriiPersonalizatTable";
 
 export default function index() {
   return (
@@ -9,8 +10,11 @@ export default function index() {
       <Head>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <CustomDrawer selectedItem={"Categorii"} drawerText={"Categorii"}>
-        <ServicesTable />
+      <CustomDrawer
+        selectedItem={"Categorii-Citiri-Personalizate"}
+        drawerText={"Categorii-Citiri-Personalizate"}
+      >
+        <CategoriiPersonalizatTable />
       </CustomDrawer>
     </>
   );

@@ -1,5 +1,6 @@
 import { styled } from "@mui/system";
 import TextField from "@mui/material/TextField";
+import { Select } from "@mui/material";
 
 const StyledTextField = styled(TextField, {
   name: "StyledTextField",
@@ -33,6 +34,57 @@ const StyledTextField = styled(TextField, {
   },
   "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
     borderColor: "#D3D3D3", // Ensure the border color is #D3D3D3 on hover for outlined variant
+  },
+});
+
+const StyledSelect = styled(Select, {
+  name: "StyledSelect",
+  slot: "Root",
+})({
+  width: "100%",
+  "& .MuiInputBase-root": {
+    height: 42,
+    top: 5,
+    borderRadius: 8,
+  },
+  "& .MuiMenu-paper": {
+    backgroundColor: "#D3D3D3", // Schimbă fundalul dropdown-ului
+  },
+  "& .MuiSelect-select": {
+    color: "#D3D3D3", // Text color
+  },
+  "& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#D3D3D3", // Border color
+  },
+  "&:hover .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#D3D3D3", // Border color on hover
+  },
+  "&.Mui-focused .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#D3D3D3", // Border color when focused
+  },
+  // Stiluri constante pentru InputLabel
+  "& + .MuiInputLabel-root": {
+    color: "#D3D3D3", // Label color constant
+  },
+  "&.Mui-focused + .MuiInputLabel-root": {
+    color: "#D3D3D3", // Label color remains the same when focused
+  },
+  "&:hover + .MuiInputLabel-root": {
+    color: "#D3D3D3", // Label color remains the same on hover
+  },
+  "& .MuiPaper-root": {
+    backgroundColor: "#D3D3D3",
+  },
+  "&.MuiOutlinedInput-root": {
+    "& fieldset": {
+      borderColor: "#D3D3D3",
+    },
+    "&:hover fieldset": {
+      borderColor: "#D3D3D3",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "#D3D3D3",
+    },
   },
 });
 
@@ -167,4 +219,5 @@ export {
   signUpLink,
   formControlStack,
   resetPasswordGridForm,
+  StyledSelect,
 };

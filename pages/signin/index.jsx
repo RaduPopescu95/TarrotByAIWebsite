@@ -89,7 +89,7 @@ export default function SignIn() {
           // Signed in
           // Change "/dashboard" to your desired route
           const user = userCredential.user;
-          route.push("/dashboard/articles");
+          route.push("/dashboard/citire-viitor-carti");
           // ...
         })
         .catch((error) => {
@@ -120,14 +120,12 @@ export default function SignIn() {
     console.log("START APP.TSX....");
 
     const unsubscribe = auth.onAuthStateChanged((user) => {
-     
       if (user) {
-        route.push("/dashboard/articles").then(() => {
+        route.push("/dashboard/citire-viitor-carti").then(() => {
           console.log("is user...");
           setIsLogged(true);
           setIsLoading(false);
-
-        })
+        });
       } else {
         console.log("is no user...");
         setIsLogged(false);
@@ -138,19 +136,19 @@ export default function SignIn() {
     return unsubscribe;
   }, []);
 
-  if(isLoading){
+  if (isLoading) {
     return (
       <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center", // Center horizontally
-        alignItems: "center", // Center vertically
-        height: "100vh", // Optional: Set a specific height for the centering container
-      }}
-    >
-      <CircularProgress />
-    </Box>
-    )
+        sx={{
+          display: "flex",
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          height: "100vh", // Optional: Set a specific height for the centering container
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (

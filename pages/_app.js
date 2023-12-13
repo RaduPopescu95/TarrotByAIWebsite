@@ -16,7 +16,7 @@ import "../vendors/animate-slider.css";
 import "../vendors/hamburger-menu.css";
 import "../vendors/animate-extends.css";
 import dynamic from "next/dynamic";
-import { DatabaseProvider } from "../context/DatabaseContext";
+
 import Script from "next/script";
 
 // Create your theme outside of the component to avoid re-creation on re-renders
@@ -65,12 +65,10 @@ function MyApp({ Component, pageProps }) {
       </Script>
 
       <CacheProvider value={createCache({ key: "css" })}>
-        <DatabaseProvider>
-          <ThemeProvider theme={defaultTheme}>
-            <CssBaseline />
-            <Component {...pageProps} />
-          </ThemeProvider>
-        </DatabaseProvider>
+        <ThemeProvider theme={defaultTheme}>
+          <CssBaseline />
+          <Component {...pageProps} />
+        </ThemeProvider>
       </CacheProvider>
     </>
   );

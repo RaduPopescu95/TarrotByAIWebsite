@@ -13,15 +13,21 @@ import { auth, storage } from "../firebase";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 import { deleteObject, ref as storageRef } from "firebase/storage";
 
-import CategoriiViitorFields from "../components/Dashboard/CategoriiViitorFields";
+import CartiViitorFields from "../components/Dashboard/CartiViitorFields";
 import DeleteDialog from "../components/DialogBox/DeleteDialog";
-import CitateMotivationaleFields from "../components/Dashboard/CitateMotivationaleFields";
+import CartiPersonalizateFields from "../components/Dashboard/CartiPersonalizateFields";
+import VarianteCartiPersonalizateFields from "../components/Dashboard/VarianteCartiPersonalizateFields";
+import { testString } from "../utils/strintText";
+import VariatieCartiContainer from "../components/ProcessTable/VariatieCartiContainer";
+import { generateElaiVideoAPI, renderElaiVideoAPI } from "../utils/apiUtils";
 
-export default function CitateMotivationaleTable() {
+export default function VarianteCartiPersonalizateTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [db, setDb] = useState([]);
+  const [categorii, setCategorii] = useState([]);
+  const [carti, setCarti] = useState([]);
   const [dialogData, setDialogData] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
   const [showSettings, setShowSettings] = React.useState(false);
@@ -45,61 +51,23 @@ export default function CitateMotivationaleTable() {
     setSearchedDb(filteredDb);
   };
 
-  // Starea inițială setată pentru fiecare coloană Sortare
-  const [sortConfig, setSortConfig] = useState({
-    id: { direction: "ascending" },
-    nume: { direction: "ascending" },
-    descriere: { direction: "ascending" },
-  });
-
-  const handleSort = (key) => {
-    console.log(db[0].info.ro[key]);
-    console.log(db[0]);
-    console.log(key);
-    const direction =
-      sortConfig[key].direction === "ascending" ? "descending" : "ascending";
-    setSortConfig({ ...sortConfig, [key]: { direction } });
-
-    const sortArray = (array) => {
-      return array.sort((a, b) => {
-        if (key === "id") {
-          if (a[key] < b[key]) {
-            return direction === "ascending" ? -1 : 1;
-          }
-          if (a[key] > b[key]) {
-            return direction === "ascending" ? 1 : -1;
-          }
-        } else {
-          if (a.info.ro[key] < b.info.ro[key]) {
-            return direction === "ascending" ? -1 : 1;
-          }
-          if (a.info.ro[key] > b.info.ro[key]) {
-            return direction === "ascending" ? 1 : -1;
-          }
-        }
-        return 0;
-      });
-    };
-
-    let sortedData;
-    if (searchValue.length > 0) {
-      sortedData = sortArray([...searchedDb]);
-      setSearchedDb(sortedData);
-    } else {
-      sortedData = sortArray([...db]);
-      setDb(sortedData);
-    }
-  };
-
   const handleGetData = async () => {
     setIsLoading(true);
-    const data = await getData("Others", "Citate-Motivationale");
+    const data = await getData("Citire-Personalizata", "VarianteCarti");
+    const dataCarti = await getData("Citire-Personalizata", "Carti");
+    const dataCategorii = await getData("Citire-Personalizata", "Categorii");
 
     let rawData = [...data.arr];
     const sortedArr = rawData.sort((a, b) => a.id - b.id);
+    let rawDataCarti = [...dataCarti.arr];
+    const sortedArrCarti = rawDataCarti.sort((a, b) => a.nume - b.nume);
+    let rawDataCategorii = [...dataCategorii.arr];
+    const sortedArrCategorii = rawDataCategorii.sort((a, b) => a.nume - b.nume);
 
     if (data) {
       setDb([...sortedArr]);
+      setCarti([...sortedArrCarti]);
+      setCategorii([...sortedArrCategorii]);
       setIsLoading(false);
     } else {
       setIsLoading(false);
@@ -144,7 +112,10 @@ export default function CitateMotivationaleTable() {
     const database = getDatabase();
 
     // 1. Ștergeți elementul din Firebase
-    const dataRef = ref(database, "Citire-Viitor/Categorii/" + dialogData.id);
+    const dataRef = ref(
+      database,
+      "Citire-Personalizata/VarianteCarti/" + dialogData.id
+    );
     remove(dataRef);
 
     // Creează o nouă matrice care exclude articolul cu ID-ul specificat
@@ -159,7 +130,7 @@ export default function CitateMotivationaleTable() {
     });
 
     // // Șterge toate nodurile existente sub "Services/"
-    const dbRef = ref(database, "Citire-Viitor/Categorii/");
+    const dbRef = ref(database, "Citire-Personalizata/VarianteCarti/");
     set(dbRef, {}).then(() => {
       // După ce toate nodurile sunt șterse, adaugă finalDb ca noile noduri copil
       finalDb.forEach((item) => {
@@ -174,9 +145,7 @@ export default function CitateMotivationaleTable() {
     handleDelete();
   };
 
-  const handleEdit = async (info) => {
-    console.log("info....");
-
+  const handleEdit = async (info, categorie, carte) => {
     try {
       const dateTime = getCurrentDateTime();
 
@@ -188,11 +157,18 @@ export default function CitateMotivationaleTable() {
           data = {
             id: item.id,
             info,
+            categorie,
+            carte,
             date: dateTime.date,
             time: dateTime.time,
           };
 
-          editData(data, "Others", "Citate-Motivationale", dialogData.id);
+          editData(
+            data,
+            "Citire-Personalizata",
+            "VarianteCarti",
+            dialogData.id
+          );
           return data;
         } else {
           console.log("is not found");
@@ -208,27 +184,37 @@ export default function CitateMotivationaleTable() {
     }
   };
 
-  const handleUpload = async (info) => {
+  const handleUpload = async (info, categorie, carte) => {
     try {
       const dateTime = getCurrentDateTime();
 
-      const data = {
-        id: db.length + 1,
-        info,
-        date: dateTime.date,
-        time: dateTime.time,
-      };
+      for (let item of Object.values(info)) {
+        if (item.descriere.length > 0) {
+          let response = await generateElaiVideoAPI(item.video, item.descriere);
+          console.log("response:", response._id);
+          renderElaiVideoAPI(response._id);
+          // console.log("video:", item.video);
+        }
+      }
+      // const data = {
+      //   id: db.length + 1,
+      //   info,
+      //   categorie,
+      //   carte,
+      //   date: dateTime.date,
+      //   time: dateTime.time,
+      // };
 
-      // Folosește await pentru a aștepta finalizarea promisiunii
-      await writeData(data, "Others", "Citate-Motivationale");
+      // // Folosește await pentru a aștepta finalizarea promisiunii
+      // await writeData(data, "Citire-Personalizata", "VarianteCarti");
 
-      let newData = db;
+      // let newData = db;
 
-      newData.push(data);
+      // newData.push(data);
 
-      setDb([...newData]);
+      // setDb([...newData]);
 
-      setShowSettings(!showSettings);
+      // setShowSettings(!showSettings);
     } catch (err) {
       console.log("Error handleUpload...", err);
     }
@@ -240,19 +226,23 @@ export default function CitateMotivationaleTable() {
 
   useEffect(() => {
     handleGetData();
+    // fetchData();
     // console.log(db);
   }, []);
 
   return (
     <>
       {showSettings ? (
-        <CitateMotivationaleFields
+        <VarianteCartiPersonalizateFields
           handleEdit={handleEdit}
           handleUpload={handleUpload}
           handleShowSettings={handleShowSettings}
           isEdit={isEdit}
           dialogData={dialogData}
           handleDelete={handleDelete}
+          carti={carti}
+          categorii={categorii}
+          firebaseDb={db}
         />
       ) : (
         <>
@@ -265,8 +255,7 @@ export default function CitateMotivationaleTable() {
                 handleShowSoloPopup={handleShowSoloPopup}
                 settingsRef={settingsRef}
                 db={db}
-                showNume={false}
-                showDesc={false}
+                isElaiDownload={true}
                 handleSearchFilter={handleSearchFilter}
               />
               <TableToolbar />
@@ -282,18 +271,14 @@ export default function CitateMotivationaleTable() {
                       color: "white",
                     }}
                   >
-                    Nu sunt citate adăugate
+                    Nu sunt cărți adăugate
                   </Typography>
                 ) : (
-                  <CustomTableContainer
+                  <VariatieCartiContainer
                     db={db}
+                    handleShowDialog={handleShowDialog}
                     searchedDb={searchedDb}
                     searchValue={searchValue}
-                    handleShowDialog={handleShowDialog}
-                    showNume={false}
-                    showDesc={true}
-                    sortConfig={sortConfig}
-                    handleSort={handleSort}
                   />
                 )}
               </Stack>

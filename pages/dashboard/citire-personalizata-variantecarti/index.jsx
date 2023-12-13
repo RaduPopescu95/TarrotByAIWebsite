@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
 import ProcessTable from "../../ProcessTable";
 import Head from "next/head";
+import VarianteCartiPersonalizateTable from "../../VarianteCartiPersonalizateTable";
 
 export default function index() {
   return (
@@ -9,8 +10,11 @@ export default function index() {
       <Head>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <CustomDrawer selectedItem={"Carti"} drawerText={"Carti"}>
-        <ProcessTable />
+      <CustomDrawer
+        selectedItem={"Variante de carti-Citiri-Personalizate"}
+        drawerText={"Variante de carti-Citiri-Personalizate"}
+      >
+        <VarianteCartiPersonalizateTable />
       </CustomDrawer>
     </>
   );
