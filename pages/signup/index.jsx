@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -16,7 +16,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import { Alert } from "@mui/material";
+import { Alert, CircularProgress } from "@mui/material";
 import { useRouter } from "next/router";
 import { auth } from "../../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -203,6 +203,24 @@ export default function SignUp() {
     }
   };
 
+  useEffect(() => {
+    route.push("/signin");
+  });
+
+  if (true) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          height: "100vh", // Optional: Set a specific height for the centering container
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
   return (
     <>
       <Head>

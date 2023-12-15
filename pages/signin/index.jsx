@@ -124,7 +124,7 @@ export default function SignIn() {
         route.push("/dashboard/citire-viitor-carti").then(() => {
           console.log("is user...");
           setIsLogged(true);
-          setIsLoading(false);
+        setIsLoading(false);
         });
       } else {
         console.log("is no user...");

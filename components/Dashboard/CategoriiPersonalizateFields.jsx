@@ -19,12 +19,14 @@ import {
 } from "@mui/material";
 import { StyledTextField } from "../../styles/FormStyles";
 import DeleteIcon from "@mui/icons-material/Delete";
+
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import HorizontalLineWithText from "../HorizontalLineText";
 import ArticleEditor from "../QuillForm";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 import LoadingDialog from "../DialogBox/DialogLoader";
+import GTranslateIcon from "@mui/icons-material/GTranslate";
 
 export default function CategoriiPersonalizateFields({
   handleUpload,
@@ -167,6 +169,79 @@ export default function CategoriiPersonalizateFields({
 
   const theme = useTheme();
 
+  // HANDLE TRANSLATE PAGE ON SCREEN AND GENERATE ELAI.IO FOR OTHER LANGUAGES THAT ARE NOT GENERATED
+  const handleTranslate = async (text, target) => {
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text, target }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      } else {
+        const data = await response.json();
+        return data;
+      }
+    } catch (err) {
+      console.error("Error on translate:", err);
+    }
+  };
+
+  //START THE DATA THAT NEESD TO TRANSLATE AND
+
+  const handleToTranslate = async (numeRoValue) => {
+    const languages = [
+      "en",
+      "es",
+      "it",
+      "pl",
+      "de",
+      "hu",
+      "cs",
+      "sk",
+      "hr",
+      "ru",
+      "bg",
+      "el",
+      "fr",
+    ];
+
+    // Creăm un obiect de mapare pentru funcțiile set
+    const setFunctions = {
+      en: setNumeEn,
+      es: setNumeEs,
+      it: setNumeIt,
+      pl: setNumePl,
+      de: setNumeDe,
+      hu: setNumeHu,
+      cs: setNumeCs,
+      sk: setNumeSk,
+      hr: setNumeHr,
+      ru: setNumeRu,
+      bg: setNumeBg,
+      el: setNumeEl,
+      fr: setNumeFr,
+    };
+
+    for (let l of languages) {
+      console.log(l);
+      const result = await handleTranslate(numeRoValue, l);
+
+      if (result.translation) {
+        console.log("translation", result.translation);
+
+        // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
+        if (setFunctions[l]) {
+          setFunctions[l](result.translation);
+        }
+      }
+    }
+  };
+
   return (
     <>
       <Grid container spacing={2} sx={{ padding: 1 }}>
@@ -231,14 +306,34 @@ export default function CategoriiPersonalizateFields({
           >
             {languageFields.map((field, index) => (
               <React.Fragment key={field.id}>
-                <FieldRow
-                  id={field.id}
-                  name={field.id}
-                  label={field.label}
-                  value={field.value}
-                  onChange={(event) => field.setValue(event.target.value)}
-                  widthLabel="10%"
-                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <FieldRow
+                    id={field.id}
+                    name={field.id}
+                    label={field.label}
+                    value={field.value}
+                    onChange={(event) => field.setValue(event.target.value)}
+                    widthLabel="10%"
+                  />
+                  {field.id === "nume-ro" && false && (
+                    <IconButton
+                      color="primary"
+                      aria-label="add an alarm"
+                      sx={{ position: "relative", left: 5, top: 15 }}
+                      onClick={() => handleToTranslate(numeRo)}
+                    >
+                      {" "}
+                      <GTranslateIcon />{" "}
+                    </IconButton>
+                  )}
+                </Box>
                 {index < languageFields.length - 1 && (
                   <HorizontalLineWithText style={{ marginTop: "3%" }} />
                 )}

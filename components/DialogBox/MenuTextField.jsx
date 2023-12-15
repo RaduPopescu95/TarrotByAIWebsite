@@ -8,7 +8,6 @@ import {
   Typography,
 } from "@mui/material";
 import { DialogTextField, useStyles } from "../../styles/DialogStyles";
-import { MenuChapters } from "../../data/data";
 
 export default function MenuTextField(props) {
   const classes = useStyles();
@@ -50,13 +49,7 @@ export default function MenuTextField(props) {
             ),
             classes: { notchedOutline: classes.noBorder },
           }}
-        >
-          {MenuChapters.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.value}
-            </MenuItem>
-          ))}
-        </DialogTextField>
+        ></DialogTextField>
       </div>
     </Box>
   );

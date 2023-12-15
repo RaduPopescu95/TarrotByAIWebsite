@@ -37,6 +37,7 @@ export default function VarianteCartiViitorFields({
   carti,
   categorii,
   firebaseDb,
+  noDelete,
 }) {
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [categorie, setCategorie] = useState(
@@ -69,115 +70,61 @@ export default function VarianteCartiViitorFields({
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
-  const [videoRo, setVideoRo] = useState(
-    dialogData.info
-      ? dialogData.info.ro.video
-      : `variation-${firebaseDb.length + 1}-lang-ro`
-  );
+  const nr = dialogData.info ? dialogData.id : firebaseDb.length + 1;
+
+  const [videoRo, setVideoRo] = useState(`variation-${nr}-lang-ro`);
   const [descriereRo, setDescriereRo] = useState(
     dialogData.info ? dialogData.info.ro.descriere : ``
   );
-  const [videoEn, setVideoEn] = useState(
-    dialogData.info
-      ? dialogData.info.en.video
-      : `variation-${firebaseDb.length + 1}-lang-en`
-  );
+  const [videoEn, setVideoEn] = useState(`variation-${nr}-lang-en`);
   const [descriereEn, setDescriereEn] = useState(
     dialogData.info ? dialogData.info.en.descriere : ``
   );
-  const [videoEs, setVideoEs] = useState(
-    dialogData.info
-      ? dialogData.info.es.video
-      : `variation-${firebaseDb.length + 1}-lang-es`
-  );
+  const [videoEs, setVideoEs] = useState(`variation-${nr}-lang-es`);
   const [descriereEs, setDescriereEs] = useState(
     dialogData.info ? dialogData.info.es.descriere : ``
   );
-  const [videoIt, setVideoIt] = useState(
-    dialogData.info
-      ? dialogData.info.it.video
-      : `variation-${firebaseDb.length + 1}-lang-it`
-  );
+  const [videoIt, setVideoIt] = useState(`variation-${nr}-lang-it`);
   const [descriereIt, setDescriereIt] = useState(
     dialogData.info ? dialogData.info.it.descriere : ``
   );
-  const [videoPl, setVideoPl] = useState(
-    dialogData.info
-      ? dialogData.info.pl.video
-      : `variation-${firebaseDb.length + 1}-lang-pl`
-  );
+  const [videoPl, setVideoPl] = useState(`variation-${nr}-lang-pl`);
   const [descrierePl, setDescrierePl] = useState(
     dialogData.info ? dialogData.info.pl.descriere : ``
   );
-  const [videoDe, setVideoDe] = useState(
-    dialogData.info
-      ? dialogData.info.de.video
-      : `variation-${firebaseDb.length + 1}-lang-de`
-  );
+  const [videoDe, setVideoDe] = useState(`variation-${nr}-lang-de`);
   const [descriereDe, setDescriereDe] = useState(
     dialogData.info ? dialogData.info.de.descriere : ``
   );
-  const [videoHu, setVideoHu] = useState(
-    dialogData.info
-      ? dialogData.info.hu.video
-      : `variation-${firebaseDb.length + 1}-lang-hu`
-  );
+  const [videoHu, setVideoHu] = useState(`variation-${nr}-lang-hu`);
   const [descriereHu, setDescriereHu] = useState(
     dialogData.info ? dialogData.info.hu.descriere : ``
   );
-  const [videoCs, setVideoCs] = useState(
-    dialogData.info
-      ? dialogData.info.cs.video
-      : `variation-${firebaseDb.length + 1}-lang-cs`
-  );
+  const [videoCs, setVideoCs] = useState(`variation-${nr}-lang-cs`);
   const [descriereCs, setDescriereCs] = useState(
     dialogData.info ? dialogData.info.cs.descriere : ``
   );
-  const [videoSk, setVideoSk] = useState(
-    dialogData.info
-      ? dialogData.info.sk.video
-      : `variation-${firebaseDb.length + 1}-lang-sk`
-  );
+  const [videoSk, setVideoSk] = useState(`variation-${nr}-lang-sk`);
   const [descriereSk, setDescriereSk] = useState(
     dialogData.info ? dialogData.info.sk.descriere : ``
   );
-  const [videoHr, setVideoHr] = useState(
-    dialogData.info
-      ? dialogData.info.hr.video
-      : `variation-${firebaseDb.length + 1}-lang-hr`
-  );
+  const [videoHr, setVideoHr] = useState(`variation-${nr}-lang-hr`);
   const [descriereHr, setDescriereHr] = useState(
     dialogData.info ? dialogData.info.hr.descriere : ``
   );
-  const [videoRu, setVideoRu] = useState(
-    dialogData.info
-      ? dialogData.info.ru.video
-      : `variation-${firebaseDb.length + 1}-lang-ru`
-  );
+  const [videoRu, setVideoRu] = useState(`variation-${nr}-lang-ru`);
   const [descriereRu, setDescriereRu] = useState(
     dialogData.info ? dialogData.info.ru.descriere : ``
   );
-  const [videoBg, setVideoBg] = useState(
-    dialogData.info
-      ? dialogData.info.bg.video
-      : `variation-${firebaseDb.length + 1}-lang-bg`
-  );
+  const [videoBg, setVideoBg] = useState(`variation-${nr}-lang-bg`);
   const [descriereBg, setDescriereBg] = useState(
     dialogData.info ? dialogData.info.bg.descriere : ``
   );
-  const [videoEl, setVideoEl] = useState(
-    dialogData.info
-      ? dialogData.info.el.video
-      : `variation-${firebaseDb.length + 1}-lang-el`
-  );
+  const [videoEl, setVideoEl] = useState(`variation-${nr}-lang-el`);
   const [descriereEl, setDescriereEl] = useState(
     dialogData.info ? dialogData.info.el.descriere : ``
   );
-  const [videoFr, setVideoFr] = useState(
-    dialogData.info
-      ? dialogData.info.fr.video
-      : `variation-${firebaseDb.length + 1}-lang-fr`
-  );
+  const [videoFr, setVideoFr] = useState(`variation-${nr}-lang-fr`);
   const [descriereFr, setDescriereFr] = useState(
     dialogData.info ? dialogData.info.fr.descriere : ``
   );
@@ -369,30 +316,115 @@ export default function VarianteCartiViitorFields({
   const handleUploadData = () => {
     setLoading(true);
     const data = {
-      ro: { video: videoRo, descriere: descriereRo },
-      en: { video: videoEn, descriere: descriereEn },
-      es: { video: videoEs, descriere: descriereEs },
-      it: { video: videoIt, descriere: descriereIt },
-      pl: { video: videoPl, descriere: descrierePl },
-      de: { video: videoDe, descriere: descriereDe },
-      hu: { video: videoHu, descriere: descriereHu },
-      cs: { video: videoCs, descriere: descriereCs },
-      sk: { video: videoSk, descriere: descriereSk },
-      hr: { video: videoHr, descriere: descriereHr },
-      ru: { video: videoRu, descriere: descriereRu },
-      bg: { video: videoBg, descriere: descriereBg },
-      el: { video: videoEl, descriere: descriereEl },
-      fr: { video: videoFr, descriere: descriereFr },
+      ro: {
+        video: videoRo,
+        descriere: descriereRo,
+        url: dialogData.info ? dialogData.info.ro.url : "",
+        _id: dialogData.info ? dialogData.info.ro._id : "",
+        isRendering: dialogData.info ? dialogData.info.ro.isRendering : false,
+      },
+      en: {
+        video: videoEn,
+        descriere: descriereEn,
+        url: dialogData.info ? dialogData.info.en.url : "",
+        _id: dialogData.info ? dialogData.info.en._id : "",
+        isRendering: dialogData.info ? dialogData.info.en.isRendering : false,
+      },
+      es: {
+        video: videoEs,
+        descriere: descriereEs,
+        url: dialogData.info ? dialogData.info.es.url : "",
+        _id: dialogData.info ? dialogData.info.es._id : "",
+        isRendering: dialogData.info ? dialogData.info.es.isRendering : false,
+      },
+      it: {
+        video: videoIt,
+        descriere: descriereIt,
+        url: dialogData.info ? dialogData.info.it.url : "",
+        _id: dialogData.info ? dialogData.info.it._id : "",
+        isRendering: dialogData.info ? dialogData.info.it.isRendering : false,
+      },
+      pl: {
+        video: videoPl,
+        descriere: descrierePl,
+        url: dialogData.info ? dialogData.info.pl.url : "",
+        _id: dialogData.info ? dialogData.info.pl._id : "",
+        isRendering: dialogData.info ? dialogData.info.pl.isRendering : false,
+      },
+      de: {
+        video: videoDe,
+        descriere: descriereDe,
+        url: dialogData.info ? dialogData.info.de.url : "",
+        _id: dialogData.info ? dialogData.info.de._id : "",
+        isRendering: dialogData.info ? dialogData.info.de.isRendering : false,
+      },
+      hu: {
+        video: videoHu,
+        descriere: descriereHu,
+        url: dialogData.info ? dialogData.info.hu.url : "",
+        _id: dialogData.info ? dialogData.info.hu._id : "",
+        isRendering: dialogData.info ? dialogData.info.hu.isRendering : false,
+      },
+      cs: {
+        video: videoCs,
+        descriere: descriereCs,
+        url: dialogData.info ? dialogData.info.cs.url : "",
+        _id: dialogData.info ? dialogData.info.cs._id : "",
+        isRendering: dialogData.info ? dialogData.info.cs.isRendering : false,
+      },
+      sk: {
+        video: videoSk,
+        descriere: descriereSk,
+        url: dialogData.info ? dialogData.info.sk.url : "",
+        _id: dialogData.info ? dialogData.info.sk._id : "",
+        isRendering: dialogData.info ? dialogData.info.sk.isRendering : false,
+      },
+      hr: {
+        video: videoHr,
+        descriere: descriereHr,
+        url: dialogData.info ? dialogData.info.hr.url : "",
+        _id: dialogData.info ? dialogData.info.hr._id : "",
+        isRendering: dialogData.info ? dialogData.info.hr.isRendering : false,
+      },
+      ru: {
+        video: videoRu,
+        descriere: descriereRu,
+        url: dialogData.info ? dialogData.info.ru.url : "",
+        _id: dialogData.info ? dialogData.info.ru._id : "",
+        isRendering: dialogData.info ? dialogData.info.ru.isRendering : false,
+      },
+      bg: {
+        video: videoBg,
+        descriere: descriereBg,
+        url: dialogData.info ? dialogData.info.bg.url : "",
+        _id: dialogData.info ? dialogData.info.bg._id : "",
+        isRendering: dialogData.info ? dialogData.info.bg.isRendering : false,
+      },
+      el: {
+        video: videoEl,
+        descriere: descriereEl,
+        url: dialogData.info ? dialogData.info.el.url : "",
+        _id: dialogData.info ? dialogData.info.el._id : "",
+        isRendering: dialogData.info ? dialogData.info.el.isRendering : false,
+      },
+      fr: {
+        video: videoFr,
+        descriere: descriereFr,
+        url: dialogData.info ? dialogData.info.fr.url : "",
+        _id: dialogData.info ? dialogData.info.fr._id : "",
+        isRendering: dialogData.info ? dialogData.info.fr.isRendering : false,
+      },
     };
     console.log("start...");
-    console.log(categorie);
-    console.log(carte);
+    console.log(dialogData.info);
 
     if (isEdit) {
+      console.log("Edit...");
       handleEdit(data, categorie, carte).then(() => {
         setLoading(false);
       });
     } else {
+      console.log("Upload...");
       handleUpload(data, categorie, carte).then(() => {
         setLoading(false);
       });
@@ -416,7 +448,7 @@ export default function VarianteCartiViitorFields({
               alignItems: "center",
             }}
           >
-            {isEdit && (
+            {isEdit && !noDelete && (
               <Button
                 variant="outlined"
                 onClick={handleDelete}
@@ -488,8 +520,8 @@ export default function VarianteCartiViitorFields({
             </Grid>
 
             <DropdownFieldRow
-              id="language-select"
-              name="language"
+              id="Carti-select"
+              name="Carti"
               label="Carti"
               value={carte.id}
               onChange={handleChange}
@@ -506,8 +538,8 @@ export default function VarianteCartiViitorFields({
             </Grid>
 
             <DropdownFieldRow
-              id="language-select"
-              name="language"
+              id="Categorie-select"
+              name="Categorie"
               label="Categorie"
               value={categorie.id}
               onChange={handleChange}

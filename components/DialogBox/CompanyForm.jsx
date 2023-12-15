@@ -17,7 +17,6 @@ export default function CompanyForm() {
           justifyContent="center"
           alignItems="center"
         >
-          <icons.DescriptionOutlinedIcon />
           <CustomDivider />
         </Stack>
         <Stack>

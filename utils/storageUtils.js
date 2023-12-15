@@ -7,6 +7,7 @@ import {
   updateMetadata, // Import this module
 } from "firebase/storage";
 import { getBlobFromUri } from "./getBlobFromUri";
+import { writeImg } from "./realtimeUtils";
 
 export const uploadImage = async (
   images,
@@ -133,3 +134,15 @@ export const uploadImageServices = async (
   }
   return { finalUri, fileName };
 };
+
+export async function getUrlImageApi() {
+  const imageRef = ref(storage, `images/PozaApi/apiimage.jpeg`);
+  try {
+    const url = await getDownloadURL(imageRef);
+    writeImg(url);
+    return url;
+  } catch (error) {
+    console.error(error);
+    return null; // sau gestionează eroarea după cum consideri necesar
+  }
+}

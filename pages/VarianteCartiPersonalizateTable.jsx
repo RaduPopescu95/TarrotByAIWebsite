@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Stack,
+  Typography,
+} from "@mui/material";
 import TableToolbar from "../components/ProcessTable/TableToolbar";
 
 import IconInSelect from "../components/ProcessTable/IconInSelect";
@@ -20,6 +26,7 @@ import VarianteCartiPersonalizateFields from "../components/Dashboard/VarianteCa
 import { testString } from "../utils/strintText";
 import VariatieCartiContainer from "../components/ProcessTable/VariatieCartiContainer";
 import { generateElaiVideoAPI, renderElaiVideoAPI } from "../utils/apiUtils";
+import { checkDescription } from "../utils/commonUtils";
 
 export default function VarianteCartiPersonalizateTable() {
   // const { db } = useMockup();
@@ -41,8 +48,11 @@ export default function VarianteCartiPersonalizateTable() {
 
   const handleSearchFilter = (value) => {
     const lowerCaseValue = value.toLowerCase();
-    const filteredDb = db.filter((item) =>
-      item.info.ro.descriere.toLowerCase().includes(lowerCaseValue)
+    const filteredDb = db.filter(
+      (item) =>
+        item.info.ro.descriere.toLowerCase().includes(lowerCaseValue) ||
+        item.info.ro.video.toLowerCase().includes(lowerCaseValue) ||
+        item.info.ro.video.toLowerCase().includes(`variation-${lowerCaseValue}`)
     );
 
     console.log(filteredDb);
@@ -50,7 +60,7 @@ export default function VarianteCartiPersonalizateTable() {
     setSearchValue(value);
     setSearchedDb(filteredDb);
   };
-
+  // GET DATA FROM FIREBASE (AND URL TO ELAI.IO THAT IS IN FIREBASE)
   const handleGetData = async () => {
     setIsLoading(true);
     const data = await getData("Citire-Personalizata", "VarianteCarti");
@@ -82,10 +92,16 @@ export default function VarianteCartiPersonalizateTable() {
       setDialogData({});
       setIsEdit(false);
       handleShowSettings();
+      setSearchedDb([]);
+      setSearchValue("");
     } else {
+      console.log("item...");
+      console.log(item.info.ro);
       setIsEdit(true);
       setDialogData(item);
       handleShowSettings();
+      setSearchedDb([]);
+      setSearchValue("");
     }
   };
 
@@ -145,7 +161,12 @@ export default function VarianteCartiPersonalizateTable() {
     handleDelete();
   };
 
+  //EDIT INFO FIREBASE AND ELAI.IO
+
   const handleEdit = async (info, categorie, carte) => {
+    console.log("info url that is comming for the test equals....");
+    console.log(info.url);
+    // ("657bfed264df067abaef327b");
     try {
       const dateTime = getCurrentDateTime();
 
@@ -153,6 +174,7 @@ export default function VarianteCartiPersonalizateTable() {
         if (item.id === dialogData.id) {
           console.log("is found");
           let data;
+          let fData;
 
           data = {
             id: item.id,
@@ -163,13 +185,28 @@ export default function VarianteCartiPersonalizateTable() {
             time: dateTime.time,
           };
 
+          const finalData = await checkDescription(data, dialogData);
+          console.log(
+            "----------------------------------------------------------------"
+          );
+          console.log(finalData.isRendering);
+          fData = {
+            id: item.id,
+            info,
+            categorie,
+            carte,
+            date: dateTime.date,
+            time: dateTime.time,
+            isRendering: finalData.isRendering,
+          };
+
           editData(
-            data,
+            fData,
             "Citire-Personalizata",
             "VarianteCarti",
             dialogData.id
           );
-          return data;
+          return fData;
         } else {
           console.log("is not found");
           return item;
@@ -184,37 +221,45 @@ export default function VarianteCartiPersonalizateTable() {
     }
   };
 
+  //UPLOAD INFO TO FIREBASE AND ELAI.IO
+
   const handleUpload = async (info, categorie, carte) => {
     try {
       const dateTime = getCurrentDateTime();
+      console.log("info", info);
+      console.log("categorie", categorie);
+      console.log("carte", carte);
 
       for (let item of Object.values(info)) {
         if (item.descriere.length > 0) {
           let response = await generateElaiVideoAPI(item.video, item.descriere);
           console.log("response:", response._id);
-          renderElaiVideoAPI(response._id);
+          await renderElaiVideoAPI(response._id);
           // console.log("video:", item.video);
         }
       }
-      // const data = {
-      //   id: db.length + 1,
-      //   info,
-      //   categorie,
-      //   carte,
-      //   date: dateTime.date,
-      //   time: dateTime.time,
-      // };
 
-      // // Folosește await pentru a aștepta finalizarea promisiunii
-      // await writeData(data, "Citire-Personalizata", "VarianteCarti");
+      const data = {
+        id: db.length + 1,
+        info,
+        categorie,
+        carte,
+        date: dateTime.date,
+        time: dateTime.time,
+        firstUpload: true,
+        isRendering: false,
+      };
 
-      // let newData = db;
+      // Folosește await pentru a aștepta finalizarea promisiunii
+      await writeData(data, "Citire-Personalizata", "VarianteCarti");
 
-      // newData.push(data);
+      let newData = db;
 
-      // setDb([...newData]);
+      newData.push(data);
 
-      // setShowSettings(!showSettings);
+      setDb([...newData]);
+
+      setShowSettings(!showSettings);
     } catch (err) {
       console.log("Error handleUpload...", err);
     }
@@ -230,6 +275,65 @@ export default function VarianteCartiPersonalizateTable() {
     // console.log(db);
   }, []);
 
+  // HANDLE TRANSLATE PAGE ON SCREEN AND GENERATE ELAI.IO FOR OTHER LANGUAGES THAT ARE NOT GENERATED
+  const handleTranslate = async (text, target, videoNumberComplet) => {
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text, target }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Translation:", data);
+      // GENERATE ELAI.IO VIDEO
+      console.log("videoNumberComplet:", videoNumberComplet);
+      let res = await generateElaiVideoAPI(
+        videoNumberComplet,
+        data.translation
+      );
+      console.log("res:", res._id);
+      renderElaiVideoAPI(res._id);
+    } catch (err) {
+      console.error("Error on translate:", err);
+    }
+  };
+  //START THE VIDEOS THAT NEED TO TRANSLATE AND GENERATE IN ELAI.IO
+  const handleVideosToTranslate = async (items) => {
+    console.log(items.length);
+    let itemIndex = 0; // Inițializează indexul pentru item
+
+    for (const item of items) {
+      console.log(`Procesând item-ul cu indexul: ${itemIndex}`); // Afișează indexul curent
+      const info = item.info;
+
+      for (const language in info) {
+        const languageDetails = info[language];
+        const number = info["ro"].videoNumber;
+        let videoNumberComplet = `variation-${number}-lang-${language}`;
+
+        if (
+          languageDetails._id.length === 0 ||
+          languageDetails.descriere.length === 0
+        ) {
+          // Logica ta existentă
+          await handleTranslate(
+            info["ro"].descriere,
+            language,
+            videoNumberComplet
+          );
+        }
+      }
+
+      itemIndex++; // Incrementează indexul după fiecare item procesat
+    }
+  };
+
   return (
     <>
       {showSettings ? (
@@ -243,6 +347,7 @@ export default function VarianteCartiPersonalizateTable() {
           carti={carti}
           categorii={categorii}
           firebaseDb={db}
+          noDelete={true}
         />
       ) : (
         <>
@@ -259,6 +364,7 @@ export default function VarianteCartiPersonalizateTable() {
                 handleSearchFilter={handleSearchFilter}
               />
               <TableToolbar />
+
               <Stack direction="column" alignItems="center">
                 {isLoading ? (
                   <CircularProgress />
@@ -275,6 +381,7 @@ export default function VarianteCartiPersonalizateTable() {
                   </Typography>
                 ) : (
                   <VariatieCartiContainer
+                    handleVideosToTranslate={handleVideosToTranslate}
                     db={db}
                     handleShowDialog={handleShowDialog}
                     searchedDb={searchedDb}

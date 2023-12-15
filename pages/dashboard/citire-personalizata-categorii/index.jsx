@@ -1,6 +1,6 @@
 import React from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
-import ServicesTable from "../../ServicesTable";
+
 import Head from "next/head";
 import CategoriiPersonalizatTable from "../../CategoriiPersonalizatTable";
 

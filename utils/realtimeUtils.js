@@ -67,3 +67,34 @@ export const writeData = (data, locationName, secondLocationName) => {
     console.log("Error on writeServiceData...", err);
   }
 };
+
+export const writeImg = (imgUrl) => {
+  const db = getDatabase();
+
+  set(ref(db, `ApiImage/imgUrl`), imgUrl);
+};
+
+export const getUrlImg = async () => {
+  let url = "";
+  try {
+    const dbRef = ref(getDatabase());
+
+    const snapshot = await get(child(dbRef, `ApiImage`));
+    let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
+
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnapshot) => {
+        // Get the object inside the snapshot and push it into the array
+        const item = childSnapshot.val();
+        url = item;
+      });
+    } else {
+      console.log("No data available");
+    }
+
+    return url;
+  } catch (error) {
+    console.error(error);
+    return url;
+  }
+};

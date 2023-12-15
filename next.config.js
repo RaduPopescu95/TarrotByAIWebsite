@@ -1,5 +1,8 @@
 const ESLintPlugin = require("eslint-webpack-plugin");
 const { i18n } = require("./next-i18next.config");
+const gracefulFs = require("graceful-fs");
+
+gracefulFs.gracefulify(require("fs"));
 
 module.exports = {
   i18n,

@@ -16,9 +16,6 @@ export default function FilterToolbarMenu() {
     >
       <Button
         variant="outlined"
-        startIcon={
-          <icons.FilterAltOutlinedIcon fontSize={"medium"} color="warning" />
-        }
         sx={{
           border: 0,
           textTransform: "Capitalize",

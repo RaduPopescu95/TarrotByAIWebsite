@@ -5,10 +5,30 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 import * as styles from "../../components/ResetPassword/FormStyles";
 import ResetPasswordForm from "../../components/ResetPassword/ResetPasswordForm";
-import { Grid } from "@mui/material";
+import { Box, CircularProgress, Grid } from "@mui/material";
 import Head from "next/head";
+import { useRouter } from "next/router";
 
 export default function ResetPassword() {
+  const route = useRouter();
+  React.useEffect(() => {
+    route.push("/signin");
+  });
+
+  if (true) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          height: "100vh", // Optional: Set a specific height for the centering container
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
   return (
     <>
       <Head>

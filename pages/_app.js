@@ -6,7 +6,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CacheProvider } from "@emotion/react";
 import createCache from "@emotion/cache";
 import CssBaseline from "@mui/material/CssBaseline";
-import { appWithTranslation } from "next-i18next";
+
 import appTheme from "../theme/appTheme";
 
 /* CSS Imports */
@@ -74,4 +74,4 @@ function MyApp({ Component, pageProps }) {
   );
 }
 
-export default appWithTranslation(MyApp);
+export default MyApp;

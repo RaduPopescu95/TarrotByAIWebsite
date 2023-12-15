@@ -11,8 +11,6 @@ import {
   useTheme,
 } from "@mui/material";
 
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
 //   return {
@@ -22,14 +20,6 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 //     revalidate: 5, // Regenerează pagina la fiecare 10 secunde dacă este accesată
 //   };
 // }
-
-export async function getServerSideProps({ locale }) {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale, ["common"])),
-    },
-  };
-}
 
 function Landing(props) {
   const { classes, cx } = useSpacing();

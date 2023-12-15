@@ -144,7 +144,10 @@ export default function CitateMotivationaleTable() {
     const database = getDatabase();
 
     // 1. Ștergeți elementul din Firebase
-    const dataRef = ref(database, "Citire-Viitor/Categorii/" + dialogData.id);
+    const dataRef = ref(
+      database,
+      "Others/Citate-Motivationale/" + dialogData.id
+    );
     remove(dataRef);
 
     // Creează o nouă matrice care exclude articolul cu ID-ul specificat
@@ -159,7 +162,7 @@ export default function CitateMotivationaleTable() {
     });
 
     // // Șterge toate nodurile existente sub "Services/"
-    const dbRef = ref(database, "Citire-Viitor/Categorii/");
+    const dbRef = ref(database, "Others/Citate-Motivationale/");
     set(dbRef, {}).then(() => {
       // După ce toate nodurile sunt șterse, adaugă finalDb ca noile noduri copil
       finalDb.forEach((item) => {

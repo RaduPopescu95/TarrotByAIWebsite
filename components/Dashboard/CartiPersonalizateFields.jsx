@@ -50,187 +50,87 @@ export default function CartiViitorFields({
   const [numeRo, setNumeRo] = useState(
     dialogData.info ? dialogData.info.ro.nume : ""
   );
-  const [descriereRo, setDescriereRo] = useState(
-    dialogData.info ? dialogData.info.ro.descriere : ""
-  );
+
   const [numeEn, setNumeEn] = useState(
     dialogData.info ? dialogData.info.en.nume : ""
   );
-  const [descriereEn, setDescriereEn] = useState(
-    dialogData.info ? dialogData.info.en.descriere : ""
-  );
+
   const [numeEs, setNumeEs] = useState(
     dialogData.info ? dialogData.info.es.nume : ""
   );
-  const [descriereEs, setDescriereEs] = useState(
-    dialogData.info ? dialogData.info.es.descriere : ""
-  );
+
   const [numeIt, setNumeIt] = useState(
     dialogData.info ? dialogData.info.it.nume : ""
   );
-  const [descriereIt, setDescriereIt] = useState(
-    dialogData.info ? dialogData.info.it.descriere : ""
-  );
+
   const [numePl, setNumePl] = useState(
     dialogData.info ? dialogData.info.pl.nume : ""
   );
-  const [descrierePl, setDescrierePl] = useState(
-    dialogData.info ? dialogData.info.pl.descriere : ""
-  );
+
   const [numeDe, setNumeDe] = useState(
     dialogData.info ? dialogData.info.de.nume : ""
   );
-  const [descriereDe, setDescriereDe] = useState(
-    dialogData.info ? dialogData.info.de.descriere : ""
-  );
+
   const [numeHu, setNumeHu] = useState(
     dialogData.info ? dialogData.info.hu.nume : ""
   );
-  const [descriereHu, setDescriereHu] = useState(
-    dialogData.info ? dialogData.info.hu.descriere : ""
-  );
+
   const [numeCs, setNumeCs] = useState(
     dialogData.info ? dialogData.info.cs.nume : ""
   );
-  const [descriereCs, setDescriereCs] = useState(
-    dialogData.info ? dialogData.info.cs.descriere : ""
-  );
+
   const [numeSk, setNumeSk] = useState(
     dialogData.info ? dialogData.info.sk.nume : ""
   );
-  const [descriereSk, setDescriereSk] = useState(
-    dialogData.info ? dialogData.info.sk.descriere : ""
-  );
+
   const [numeHr, setNumeHr] = useState(
     dialogData.info ? dialogData.info.hr.nume : ""
   );
-  const [descriereHr, setDescriereHr] = useState(
-    dialogData.info ? dialogData.info.hr.descriere : ""
-  );
+
   const [numeRu, setNumeRu] = useState(
     dialogData.info ? dialogData.info.ru.nume : ""
   );
-  const [descriereRu, setDescriereRu] = useState(
-    dialogData.info ? dialogData.info.ru.descriere : ""
-  );
+
   const [numeBg, setNumeBg] = useState(
     dialogData.info ? dialogData.info.bg.nume : ""
   );
-  const [descriereBg, setDescriereBg] = useState(
-    dialogData.info ? dialogData.info.bg.descriere : ""
-  );
+
   const [numeEl, setNumeEl] = useState(
     dialogData.info ? dialogData.info.el.nume : ""
   );
-  const [descriereEl, setDescriereEl] = useState(
-    dialogData.info ? dialogData.info.el.descriere : ""
-  );
+
   const [numeFr, setNumeFr] = useState(
     dialogData.info ? dialogData.info.fr.nume : ""
-  );
-  const [descriereFr, setDescriereFr] = useState(
-    dialogData.info ? dialogData.info.fr.descriere : ""
   );
 
   const languageFields = [
     { id: "nume-ro", label: "Nume ro", value: numeRo, setValue: setNumeRo },
-    {
-      id: "descriere-ro",
-      label: "Descriere ro",
-      value: descriereRo,
-      setValue: setDescriereRo,
-    },
+
     { id: "nume-en", label: "Nume en", value: numeEn, setValue: setNumeEn },
-    {
-      id: "descriere-en",
-      label: "Descriere en",
-      value: descriereEn,
-      setValue: setDescriereEn,
-    },
+
     { id: "nume-es", label: "Nume es", value: numeEs, setValue: setNumeEs },
-    {
-      id: "descriere-es",
-      label: "Descriere es",
-      value: descriereEs,
-      setValue: setDescriereEs,
-    },
+
     { id: "nume-it", label: "Nume it", value: numeIt, setValue: setNumeIt },
-    {
-      id: "descriere-it",
-      label: "Descriere it",
-      value: descriereIt,
-      setValue: setDescriereIt,
-    },
+
     { id: "nume-pl", label: "Nume pl", value: numePl, setValue: setNumePl },
-    {
-      id: "descriere-pl",
-      label: "Descriere pl",
-      value: descrierePl,
-      setValue: setDescrierePl,
-    },
+
     { id: "nume-de", label: "Nume de", value: numeDe, setValue: setNumeDe },
-    {
-      id: "descriere-de",
-      label: "Descriere de",
-      value: descriereDe,
-      setValue: setDescriereDe,
-    },
+
     { id: "nume-hu", label: "Nume hu", value: numeHu, setValue: setNumeHu },
-    {
-      id: "descriere-hu",
-      label: "Descriere hu",
-      value: descriereHu,
-      setValue: setDescriereHu,
-    },
+
     { id: "nume-cs", label: "Nume cs", value: numeCs, setValue: setNumeCs },
-    {
-      id: "descriere-cs",
-      label: "Descriere cs",
-      value: descriereCs,
-      setValue: setDescriereCs,
-    },
+
     { id: "nume-sk", label: "Nume sk", value: numeSk, setValue: setNumeSk },
-    {
-      id: "descriere-sk",
-      label: "Descriere sk",
-      value: descriereSk,
-      setValue: setDescriereSk,
-    },
+
     { id: "nume-hr", label: "Nume hr", value: numeHr, setValue: setNumeHr },
-    {
-      id: "descriere-hr",
-      label: "Descriere hr",
-      value: descriereHr,
-      setValue: setDescriereHr,
-    },
+
     { id: "nume-ru", label: "Nume ru", value: numeRu, setValue: setNumeRu },
-    {
-      id: "descriere-ru",
-      label: "Descriere ru",
-      value: descriereRu,
-      setValue: setDescriereRu,
-    },
+
     { id: "nume-bg", label: "Nume bg", value: numeBg, setValue: setNumeBg },
-    {
-      id: "descriere-bg",
-      label: "Descriere bg",
-      value: descriereBg,
-      setValue: setDescriereBg,
-    },
+
     { id: "nume-el", label: "Nume el", value: numeEl, setValue: setNumeEl },
-    {
-      id: "descriere-el",
-      label: "Descriere el",
-      value: descriereEl,
-      setValue: setDescriereEl,
-    },
+
     { id: "nume-fr", label: "Nume fr", value: numeFr, setValue: setNumeFr },
-    {
-      id: "descriere-fr",
-      label: "Descriere fr",
-      value: descriereFr,
-      setValue: setDescriereFr,
-    },
   ];
 
   const handleImageDelete = (index) => {
@@ -249,20 +149,20 @@ export default function CartiViitorFields({
   const handleUploadData = () => {
     setLoading(true);
     const data = {
-      ro: { nume: numeRo, descriere: descriereRo },
-      en: { nume: numeEn, descriere: descriereEn },
-      es: { nume: numeEs, descriere: descriereEs },
-      it: { nume: numeIt, descriere: descriereIt },
-      pl: { nume: numePl, descriere: descrierePl },
-      de: { nume: numeDe, descriere: descriereDe },
-      hu: { nume: numeHu, descriere: descriereHu },
-      cs: { nume: numeCs, descriere: descriereCs },
-      sk: { nume: numeSk, descriere: descriereSk },
-      hr: { nume: numeHr, descriere: descriereHr },
-      ru: { nume: numeRu, descriere: descriereRu },
-      bg: { nume: numeBg, descriere: descriereBg },
-      el: { nume: numeEl, descriere: descriereEl },
-      fr: { nume: numeFr, descriere: descriereFr },
+      ro: { nume: numeRo },
+      en: { nume: numeEn },
+      es: { nume: numeEs },
+      it: { nume: numeIt },
+      pl: { nume: numePl },
+      de: { nume: numeDe },
+      hu: { nume: numeHu },
+      cs: { nume: numeCs },
+      sk: { nume: numeSk },
+      hr: { nume: numeHr },
+      ru: { nume: numeRu },
+      bg: { nume: numeBg },
+      el: { nume: numeEl },
+      fr: { nume: numeFr },
     };
     console.log(data);
     console.log("image...", dialogData.images);
@@ -482,7 +382,7 @@ export default function CartiViitorFields({
                   onChange={(event) => field.setValue(event.target.value)}
                   widthLabel="10%"
                 />
-                {index % 2 === 1 && index < languageFields.length - 1 && (
+                {index < languageFields.length - 1 && (
                   <HorizontalLineWithText style={{ marginTop: "3%" }} />
                 )}
               </React.Fragment>

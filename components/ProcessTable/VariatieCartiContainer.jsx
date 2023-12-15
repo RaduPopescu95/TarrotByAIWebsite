@@ -10,6 +10,7 @@ import {
   Pagination,
   Box,
   Typography,
+  Button,
 } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
@@ -62,6 +63,13 @@ export default function VariatieCartiContainer(props) {
   }`;
   return (
     <TableContainer component={Paper} sx={{ backgroundColor: "#252525" }}>
+      <Button
+        onClick={() => {
+          props.handleVideosToTranslate(currentItems);
+        }}
+      >
+        Translate page
+      </Button>
       <Table sx={{ minWidth: 650 }} aria-label="simple table">
         <TableHead>
           <TableRow>
@@ -84,11 +92,28 @@ export default function VariatieCartiContainer(props) {
               }}
             >
               <TableCell style={cellStyle}>{row.id}</TableCell>
-              {languages.map((lang) => (
-                <TableCell key={lang} align="center" style={cellStyle}>
-                  {renderLanguageCell(row.info[lang].url)}
-                </TableCell>
-              ))}
+              {row.isRendering ? (
+                <Box
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: "4%",
+                    paddingTop: "1%",
+                  }}
+                >
+                  <Typography style={{ color: "white" }}>
+                    Rendering on Elai, please wait...
+                  </Typography>
+                </Box>
+              ) : (
+                languages.map((lang) => (
+                  <TableCell key={lang} align="center" style={cellStyle}>
+                    {renderLanguageCell(row.info[lang].url)}
+                  </TableCell>
+                ))
+              )}
+              {}
             </TableRow>
           ))}
         </TableBody>

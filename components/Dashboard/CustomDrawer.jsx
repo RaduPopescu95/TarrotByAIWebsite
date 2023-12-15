@@ -165,11 +165,11 @@ export default function CustomDrawer(props) {
             </Typography>
 
             <img
-              alt="Matteale Consulting logo"
-              src="/matlogo.png"
+              alt="Logo Cristina Zurba"
+              src="/LogoPngTransparent.png"
               width={540}
               height={460}
-              style={{ marginTop: 10, height: "7%", width: "7%" }}
+              style={{ marginTop: 10, height: "4%", width: "4%" }}
             />
           </Toolbar>
         </AppBar>
@@ -414,6 +414,27 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText primary="Ore norocoase" sx={{ color: "white" }} />
               </ListItemButton>
+              {/* <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "poza-api",
+                    text: "Poza API Elai.io",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color:
+                      selectedItem === "Poza API Elai.io" ? "#ffc045" : "white",
+                  }}
+                >
+                  <QueryBuilderIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Poza API Elai.io"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton> */}
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>

@@ -3,6 +3,7 @@ import { Box, Button, InputAdornment, Stack, TextField } from "@mui/material";
 import * as icons from "../../data/Icons";
 import { useStyles } from "../../styles/ProcessTableStyles";
 import {
+  createImgApiUrl,
   deleteFirebaseVariatiiCarti,
   fetchDataReplaceFirebase,
 } from "../../utils/apiUtils";
@@ -10,6 +11,7 @@ import FieldRow from "../Dashboard/FieldRow";
 import { StyledTextField } from "../../styles/FormStyles";
 import SearchIcon from "@mui/icons-material/Search";
 import { useState } from "react";
+import { getUrlImg } from "../../utils/realtimeUtils";
 
 export default function RightToolbarMenu(props) {
   const [value, setValue] = useState("");
@@ -17,6 +19,12 @@ export default function RightToolbarMenu(props) {
   const handleSearch = (val) => {
     setValue(val);
     props.handleSearchFilter(val);
+  };
+
+  const handleUrl = async () => {
+    console.log("start....");
+    const urlImage = await getUrlImg();
+    console.log(urlImage);
   };
   return (
     <>
@@ -104,6 +112,31 @@ export default function RightToolbarMenu(props) {
             // onClick={() => deleteFirebaseVariatiiCarti()}
           >
             Download ELAI
+          </Button>
+        )}
+        {props.isElaiDownload && (
+          <Button
+            variant="contained"
+            sx={{
+              fontSize: "15px",
+              fontWeight: "700",
+              backgroundColor: "transparent",
+              color: "white",
+              width: "auto",
+              textTransform: "none",
+              border: "1px solid #d3a03e",
+              transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
+              "&:hover": {
+                backgroundColor: "#ffc045", // Culorea de fundal pentru hover
+                border: "1px solid ##ffc045", // Adaugă o bordură la hover
+              },
+            }}
+            className={classes.buttonHeader}
+            // onClick={handleUrl}
+            onClick={() => createImgApiUrl()}
+            // onClick={() => deleteFirebaseVariatiiCarti()}
+          >
+            Create Elai Photo
           </Button>
         )}
       </Stack>

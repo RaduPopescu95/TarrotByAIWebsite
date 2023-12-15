@@ -1,7 +1,10 @@
 import { getDatabase, ref, remove } from "firebase/database";
-import { getData, writeData } from "./realtimeUtils";
+import { getData, getUrlImg, writeData, writeImg } from "./realtimeUtils";
 import { getCurrentDateTime } from "./timeUtils";
 import { testString } from "./strintText";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { storage } from "../firebase";
+import { getUrlImageApi } from "./storageUtils";
 
 let finalArr = [];
 
@@ -16,6 +19,7 @@ export const fetchDataReplaceFirebase = async () => {
   console.log("START FETCH DATA.....");
   let dt = await getData("Citire-Personalizata", "VarianteCarti");
   finalArr = [...dt.arr];
+
   try {
     const page = Math.floor(Math.random() * 10) + 1;
     const options = {
@@ -27,7 +31,7 @@ export const fetchDataReplaceFirebase = async () => {
     };
 
     const response = await fetch(
-      `https://apis.elai.io/api/v1/videos?page=19&limit=100`,
+      `https://apis.elai.io/api/v1/videos?page=1&limit=100`,
       options
     );
     const jsonResponse = await response.json();
@@ -64,7 +68,9 @@ export const fetchDataReplaceFirebase = async () => {
                     descriere: video.slides[0].speech,
                     _id: video._id,
                     url: video.url,
+                    isRendering: false,
                   };
+                  finalArr[i].isRendering = false;
                   console.log(finalArr[i].info);
                   await writeData(
                     finalArr[i],
@@ -83,84 +89,98 @@ export const fetchDataReplaceFirebase = async () => {
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   en: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   es: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   it: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   pl: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   de: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   hu: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   cs: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   sk: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   hr: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   ru: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   bg: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   el: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                   fr: {
                     video: "",
                     descriere: "",
                     _id: "",
                     url: "",
+                    isRendering: false,
                   },
                 };
 
@@ -171,6 +191,7 @@ export const fetchDataReplaceFirebase = async () => {
                   carte: {},
                   date: dateTime.date,
                   time: dateTime.time,
+                  isRendering: false,
                 };
 
                 // Verificați dacă un element cu același id există deja în finalArr
@@ -315,149 +336,137 @@ export const fetchDataReplaceFirebase = async () => {
   }
 };
 
-export const generateElaiVideoAPI = async (videoName, descriere) => {
-  const options = {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      Authorization: "Bearer yB5iR69LtOdxenvBDcSw0roJYHCxXmhG",
-    },
-    body: JSON.stringify({
-      name: videoName,
-      public: true,
-      data: {
-        musicName: "Crumpled Letters",
-        musicUrl:
-          "https://elai-media.s3.eu-west-2.amazonaws.com/music/mixkit-crumpled-letters-1170.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAW6FMUIGA6NPIQQ5B%2F20230926%2Feu-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230926T085903Z&X-Amz-Expires=604800&X-Amz-Signature=612e854bc65da2c02655339a00eb73c138e1a2e25db5ba63d0e34a4c6af11417&X-Amz-SignedHeaders=host&response-cache-control=public%2C%20max-age%3D31536000%2C%20immutable",
-        musicVolume: 0.04,
-        format: "1_1",
-        musicShift: 0,
-        resolution: "1080p",
-      },
-      slides: [
-        {
-          id: 1,
-          avatar: {
-            id: "cristina",
-            name: "Cristina",
-            gender: "female",
-            canvas:
-              "https://d3u63mhbhkevz8.cloudfront.net/custom/christina/christina.png",
-          },
-          speech: descriere,
-          language: "Romanian",
-          voice: "rehVMocqgFIcwyRvsVgP:eleven_multilingual_v2",
-          voiceType: "text",
-          voiceProvider: "ElevenLabs",
-          animation: "fade_in",
-          canvas: {
-            version: "5.3.0",
-            objects: [
-              {
-                type: "image",
-                version: "5.3.0",
-                originX: "left",
-                originY: "top",
-                left: 0,
-                top: 0,
-                width: 2560,
-                height: 1440,
-                fill: "rgb(0,0,0)",
-                stroke: null,
-                strokeWidth: 0,
-                strokeDashArray: null,
-                strokeLineCap: "butt",
-                strokeDashOffset: 0,
-                strokeLineJoin: "miter",
-                strokeUniform: false,
-                strokeMiterLimit: 4,
-                scaleX: 0.25,
-                scaleY: 0.25,
-                angle: 0,
-                flipX: false,
-                flipY: false,
-                opacity: 1,
-                shadow: null,
-                visible: true,
-                backgroundColor: "",
-                fillRule: "nonzero",
-                paintFirst: "fill",
-                globalCompositeOperation: "source-over",
-                skewX: 0,
-                skewY: 0,
-                cropX: 0,
-                cropY: 0,
-                id: 1205361136110,
-                animation: {
-                  type: null,
-                  startTime: 0,
-                  exitType: null,
-                },
-                src: "https://d3u63mhbhkevz8.cloudfront.net/production/uploads/6509c0f1861a7b24c025c825/pexels-felix-mittermeier-956981_wrc25q.jpg?Expires=1696204800&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9kM3U2M21oYmhrZXZ6OC5jbG91ZGZyb250Lm5ldC9wcm9kdWN0aW9uL3VwbG9hZHMvNjUwOWMwZjE4NjFhN2IyNGMwMjVjODI1L3BleGVscy1mZWxpeC1taXR0ZXJtZWllci05NTY5ODFfd3JjMjVxLmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTY5NjIwNDgwMH19fV19&Signature=odKbsc-gisZ-pK%7EMVqEHAUybCyTfjUlog6hBy0HWtMOdHNZ5zzNaqzmI6lZ-lwrAi1Q6l46yl7RHsIHzL3rBH8MOBHtWh9i6FafVuIhNaIGKG3dZxa26MeujQCN0NL64a2TnpmtGl4%7Ew0DmQHtUPOa3WYRtnKvgoxXbY3M4PxR0Rqz81B%7Er8Yfnyt3lOQpMHdq3%7E8CQ9BohY0Ro-lIheujId4UKQQKlxsz3g2QYx69f2HBm30udh6xa7HSeEQZYt0PVcrDjQ2aADPN-mUwkvCpuIiIoNbK3Iym-EjIYrqSz05GqRE%7Ex2%7Eg1wOGBP3ngJ29dHSrzWiW07erMxjSUGOA__&Key-Pair-Id=K1Y7U91AR6T7E5",
-                crossOrigin: "anonymous",
-                filters: [],
-                bg: true,
-              },
-              {
-                type: "avatar",
-                version: "5.3.0",
-                originX: "left",
-                originY: "top",
-                left: 171.19612152,
-                top: 95.59442362,
-                width: 1215,
-                height: 1080,
-                fill: "#4868FF",
-                stroke: null,
-                strokeWidth: 0,
-                strokeDashArray: null,
-                strokeLineCap: "butt",
-                strokeDashOffset: 0,
-                strokeLineJoin: "miter",
-                strokeUniform: false,
-                strokeMiterLimit: 4,
-                scaleX: 0.24520803,
-                scaleY: 0.24520803,
-                angle: 0,
-                flipX: false,
-                flipY: false,
-                opacity: 1,
-                shadow: null,
-                visible: true,
-                backgroundColor: "",
-                fillRule: "nonzero",
-                paintFirst: "fill",
-                globalCompositeOperation: "source-over",
-                skewX: 0,
-                skewY: 0,
-                cropX: 0,
-                cropY: 0,
-                src: "https://d3u63mhbhkevz8.cloudfront.net/custom/christina/christina.png",
-                crossOrigin: null,
-                filters: [],
-                avatarType: "transparent",
-                animation: {
-                  type: null,
-                  startTime: 0,
-                },
-              },
-            ],
-            background: "#ffffff",
-          },
-        },
-      ],
-    }),
-  };
+export const createImgApiUrl = async () => {
+  let urlImage;
 
+  urlImage = await getUrlImageApi();
+  console.log(urlImage);
+
+  writeImg(urlImage);
+};
+
+export const generateElaiVideoAPI = async (videoName, descriere) => {
   try {
+    const urlImage = getUrlImg();
+    console.log(urlImage);
+    const options = {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        Authorization: "Bearer yB5iR69LtOdxenvBDcSw0roJYHCxXmhG",
+      },
+      body: JSON.stringify({
+        name: videoName,
+        data: {
+          format: "1_1",
+          musicShift: 0,
+          resolution: "1080p",
+        },
+        slides: [
+          {
+            id: 1,
+            avatar: {
+              id: "cristina",
+              name: "Cristina",
+              gender: "female",
+              canvas:
+                "https://d3u63mhbhkevz8.cloudfront.net/custom/christina/christina.png",
+            },
+            speech: descriere,
+            language: "Romanian",
+            voice: "rehVMocqgFIcwyRvsVgP:eleven_multilingual_v2",
+            voiceType: "text",
+            voiceProvider: "ElevenLabs",
+            animation: "fade_in",
+            canvas: {
+              version: "5.3.0",
+              objects: [
+                {
+                  id: 1,
+                  type: "image",
+                  src: "https://firebasestorage.googleapis.com/v0/b/tarrot-590ee.appspot.com/o/images%2FPozaApi%2Fapiimage.jpeg?alt=media&token=8b1a2a21-1471-46e8-85a8-13c5f1671027",
+                  top: 0,
+                  left: -67,
+                  scaleX: 0.5,
+                  scaleY: 0.5,
+                  // avatarType: "transparent",
+                  version: 2,
+                },
+                {
+                  type: "avatar",
+                  version: "5.3.0",
+                  originX: "left",
+                  originY: "top",
+                  left: 171.19612152,
+                  top: 95.59442362,
+                  width: 1215,
+                  height: 1080,
+                  fill: "#4868FF",
+                  stroke: null,
+                  strokeWidth: 0,
+                  strokeDashArray: null,
+                  strokeLineCap: "butt",
+                  strokeDashOffset: 0,
+                  strokeLineJoin: "miter",
+                  strokeUniform: false,
+                  strokeMiterLimit: 4,
+                  scaleX: 0.24520803,
+                  scaleY: 0.24520803,
+                  angle: 0,
+                  flipX: false,
+                  flipY: false,
+                  opacity: 1,
+                  shadow: null,
+                  visible: true,
+                  backgroundColor: "",
+                  fillRule: "nonzero",
+                  paintFirst: "fill",
+                  globalCompositeOperation: "source-over",
+                  skewX: 0,
+                  skewY: 0,
+                  cropX: 0,
+                  cropY: 0,
+                  src: "https://d3u63mhbhkevz8.cloudfront.net/custom/christina/christina.png",
+                  crossOrigin: null,
+                  filters: [],
+                  avatarType: "transparent",
+                  animation: {
+                    type: null,
+                    startTime: 0,
+                  },
+                },
+              ],
+              background: "#ffffff",
+            },
+          },
+        ],
+      }),
+    };
+
     const response = await fetch("https://apis.elai.io/api/v1/videos", options);
     const res = await response.json();
     return res; // res va fi returnat când promisiunea este rezolvată
   } catch (err) {
-    console.error(err);
+    console.error("error...generateElaiVideoAPI..", err);
     return null; // sau orice altă valoare care indică o eroare
   }
+};
+
+export const deleteElaiVideoAPI = async (videoId) => {
+  console.log("videoId...", videoId);
+  const options = {
+    method: "DELETE",
+    headers: {
+      accept: "application/json",
+      Authorization: "Bearer yB5iR69LtOdxenvBDcSw0roJYHCxXmhG",
+    },
+  };
+
+  fetch(`https://apis.elai.io/api/v1/videos/${videoId}`, options)
+    .then((response) => response.json())
+    .then((response) => console.log(response))
+    .catch((err) => console.error(err));
 };
 
 export const renderElaiVideoAPI = async (videoId) => {
@@ -472,5 +481,5 @@ export const renderElaiVideoAPI = async (videoId) => {
   fetch(`https://apis.elai.io/api/v1/videos/render/${videoId}`, options)
     .then((response) => response.json())
     .then((response) => console.log("response...to render.........", response))
-    .catch((err) => console.error(err));
+    .catch((err) => console.error("error at fetch renderelaivideoapi...", err));
 };

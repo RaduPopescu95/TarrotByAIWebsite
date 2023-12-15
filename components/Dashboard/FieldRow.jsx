@@ -12,6 +12,7 @@ const FieldRow = ({
   widthLabel,
   isVideo,
   noFirstLabel,
+  otherStyles
 }) => {
   return (
     <Grid

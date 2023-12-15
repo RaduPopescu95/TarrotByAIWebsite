@@ -1,0 +1,1135 @@
+[debug] [2023-12-15T13:28:41.032Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:28:41.034Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:28:41.034Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:28:41.034Z] Platform:      win32
+[debug] [2023-12-15T13:28:41.034Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:28:41.035Z] Time:          Fri Dec 15 2023 15:28:41 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:28:41.035Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:28:41.085Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:28:41.086Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:28:41.086Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:28:41.087Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:28:41.087Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:28:41.087Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:28:42.018Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:28:42.019Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:28:42.019Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:28:42.019Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:28:42.940Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:28:42.940Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:28:42.942Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:28:43.315Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:28:43.315Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:28:46.232Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:28:46.234Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:28:47.345Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:28:47.345Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:28:47.345Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 
+[debug] [2023-12-15T13:28:48.422Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:28:48.422Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:28:48.423Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee/webApps/-/config [none]
+[debug] [2023-12-15T13:28:49.309Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee/webApps/-/config 200
+[debug] [2023-12-15T13:28:49.309Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee/webApps/-/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info]  ⚠ Compiled with warnings
+
+
+[info] ./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./pages/dashboard/index.jsx
+
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/90) ...
+
+[info]    Generating static pages (22/90) 
+
+[info]    Generating static pages (44/90) 
+
+[info]    Generating static pages (67/90) 
+
+[info]  ✓ Generating static pages (90/90) 
+
+[info] [Error: EMFILE: too many open files, open 'D:\NextJs\TarrotByAI\node_modules\@mui\icons-material\SignalCellularConnectedNoInternet1BarSharp.js'] {
+  errno: -4066,
+  code: 'EMFILE',
+  syscall: 'open',
+  path: 'D:\\NextJs\\TarrotByAI\\node_modules\\@mui\\icons-material\\SignalCellularConnectedNoInternet1BarSharp.js'
+}
+
+[debug] [2023-12-15T13:29:34.387Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2023-12-15T13:29:52.143Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:29:52.144Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:29:52.145Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:29:52.145Z] Platform:      win32
+[debug] [2023-12-15T13:29:52.145Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:29:52.145Z] Time:          Fri Dec 15 2023 15:29:52 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:29:52.146Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:29:52.193Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:29:52.193Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:29:52.193Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:29:52.195Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:29:52.195Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:29:52.195Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:29:53.100Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:29:53.101Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:29:53.101Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:29:53.101Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:29:53.960Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:29:53.961Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:29:53.962Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:29:54.300Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:29:54.300Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:29:57.141Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:29:57.143Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:29:58.197Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:29:58.198Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:29:58.199Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config [none]
+[debug] [2023-12-15T13:29:59.022Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config 200
+[debug] [2023-12-15T13:29:59.023Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info]  ⚠ Compiled with warnings
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./pages/dashboard/index.jsx
+
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/90) ...
+
+[info]    Generating static pages (22/90) 
+
+[info]    Generating static pages (44/90) 
+
+[info]    Generating static pages (67/90) 
+
+[info]  ✓ Generating static pages (90/90) 
+
+[info] [Error: EMFILE: too many open files, open 'D:\NextJs\TarrotByAI\node_modules\@mui\icons-material\SignalCellularConnectedNoInternet1BarOutlined.js'] {
+  errno: -4066,
+  code: 'EMFILE',
+  syscall: 'open',
+  path: 'D:\\NextJs\\TarrotByAI\\node_modules\\@mui\\icons-material\\SignalCellularConnectedNoInternet1BarOutlined.js'
+}
+
+[debug] [2023-12-15T13:30:42.402Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2023-12-15T13:34:46.180Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:34:46.181Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:34:46.181Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:34:46.182Z] Platform:      win32
+[debug] [2023-12-15T13:34:46.182Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:34:46.186Z] Time:          Fri Dec 15 2023 15:34:46 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:34:46.186Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:34:46.236Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:34:46.237Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:34:46.237Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:34:46.239Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:34:46.239Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:34:46.239Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:34:47.181Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:34:47.181Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:34:47.182Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:34:47.182Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:34:48.107Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:34:48.108Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:34:48.108Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:34:48.520Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:34:48.520Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:34:51.844Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:34:51.846Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:34:53.296Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:34:53.297Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:34:53.297Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config [none]
+[debug] [2023-12-15T13:34:54.100Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config 200
+[debug] [2023-12-15T13:34:54.101Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info] Failed to compile.
+
+
+[info] ./components/QuillForm.jsx
+Module not found: Can't resolve 'react-quill/dist/quill.snow.css'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/Dashboard/CartiPersonalizateFields.jsx
+./pages/CartiPersonalizateTable.jsx
+
+
+> Build failed because of webpack errors
+
+[debug] [2023-12-15T13:35:07.991Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2023-12-15T13:39:03.858Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:39:03.860Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:39:03.860Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:39:03.860Z] Platform:      win32
+[debug] [2023-12-15T13:39:03.861Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:39:03.865Z] Time:          Fri Dec 15 2023 15:39:03 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:39:03.865Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:39:03.927Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:39:03.927Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:39:03.927Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:39:03.929Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:39:03.929Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:39:03.929Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:39:04.807Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:39:04.808Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:39:04.809Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:39:04.809Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:39:05.679Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:39:05.679Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:39:05.681Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:39:06.067Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:39:06.067Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:39:09.185Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:39:09.188Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:39:10.529Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:39:10.530Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:39:10.530Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config [none]
+[debug] [2023-12-15T13:39:11.469Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config 200
+[debug] [2023-12-15T13:39:11.469Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info]  ⚠ Compiled with warnings
+
+
+[info] ./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./pages/dashboard/index.jsx
+
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/90) ...
+
+[info]    Generating static pages (22/90) 
+
+[info]    Generating static pages (44/90) 
+
+[info]    Generating static pages (67/90) 
+
+[info]  ✓ Generating static pages (90/90) 
+
+[info] [Error: EMFILE: too many open files, open 'D:\NextJs\TarrotByAI\node_modules\@mui\icons-material\SignalCellularConnectedNoInternet0BarTwoTone.js'] {
+  errno: -4066,
+  code: 'EMFILE',
+  syscall: 'open',
+  path: 'D:\\NextJs\\TarrotByAI\\node_modules\\@mui\\icons-material\\SignalCellularConnectedNoInternet0BarTwoTone.js'
+}
+
+[debug] [2023-12-15T13:40:25.978Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2023-12-15T13:50:04.196Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:50:04.197Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:50:04.198Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:50:04.198Z] Platform:      win32
+[debug] [2023-12-15T13:50:04.198Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:50:04.199Z] Time:          Fri Dec 15 2023 15:50:04 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:50:04.199Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:50:04.252Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:50:04.252Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:50:04.252Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:50:04.254Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:50:04.254Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:50:04.254Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:50:05.179Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:50:05.179Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:50:05.180Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:50:05.180Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:50:06.090Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:50:06.090Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:50:06.092Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:50:06.457Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:50:06.457Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:50:09.335Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:50:09.337Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:50:10.456Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:50:10.456Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:50:10.457Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config [none]
+[debug] [2023-12-15T13:50:11.402Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config 200
+[debug] [2023-12-15T13:50:11.402Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info]  ⚠ Compiled with warnings
+
+
+[info] ./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/ProcessTable/FilterToolbarMenu.jsx
+Attempted import error: 'UnfoldMoreOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/FilterToolbarMenu.jsx
+./components/ProcessTable/TableToolbar.jsx
+
+./data/data.jsx
+Attempted import error: 'GridViewIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./data/data.jsx
+Attempted import error: 'SmartToyOutlinedIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/ProcessTable/FilterToolbarMenu.jsx
+Attempted import error: 'UnfoldMoreOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/FilterToolbarMenu.jsx
+./components/ProcessTable/TableToolbar.jsx
+./pages/CartiPersonalizateTable.jsx
+
+./data/data.jsx
+Attempted import error: 'GridViewIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./data/data.jsx
+Attempted import error: 'SmartToyOutlinedIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./pages/dashboard/index.jsx
+
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/90) ...
+
+[info]    Generating static pages (22/90) 
+
+[info]    Generating static pages (44/90) 
+
+[info]    Generating static pages (67/90) 
+
+[info]  ✓ Generating static pages (90/90) 
+
+[info] [Error: EMFILE: too many open files, open 'D:\NextJs\TarrotByAI\node_modules\@mui\icons-material\SignalCellularAltOutlined.js'] {
+  errno: -4066,
+  code: 'EMFILE',
+  syscall: 'open',
+  path: 'D:\\NextJs\\TarrotByAI\\node_modules\\@mui\\icons-material\\SignalCellularAltOutlined.js'
+}
+
+[debug] [2023-12-15T13:50:56.265Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2023-12-15T13:54:22.847Z] ----------------------------------------------------------------------
+[debug] [2023-12-15T13:54:22.848Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\radu.popescu\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2023-12-15T13:54:22.848Z] CLI Version:   12.6.2
+[debug] [2023-12-15T13:54:22.848Z] Platform:      win32
+[debug] [2023-12-15T13:54:22.848Z] Node Version:  v16.17.1
+[debug] [2023-12-15T13:54:22.849Z] Time:          Fri Dec 15 2023 15:54:22 GMT+0200 (Eastern European Standard Time)
+[debug] [2023-12-15T13:54:22.849Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2023-12-15T13:54:22.894Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2023-12-15T13:54:22.895Z] > authorizing via signed-in user (mobitoolsro@gmail.com)
+[debug] [2023-12-15T13:54:22.895Z] [iam] checking project tarrot-590ee for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2023-12-15T13:54:22.896Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions [none]
+[debug] [2023-12-15T13:54:22.896Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions x-goog-quota-user=projects/tarrot-590ee
+[debug] [2023-12-15T13:54:22.896Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:54:23.781Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions 200
+[debug] [2023-12-15T13:54:23.781Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tarrot-590ee:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2023-12-15T13:54:23.781Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2023-12-15T13:54:23.782Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:54:24.633Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2023-12-15T13:54:24.633Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/tarrot-590ee/serviceAccounts/tarrot-590ee@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2023-12-15T13:54:24.634Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee [none]
+[debug] [2023-12-15T13:54:25.042Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee 200
+[debug] [2023-12-15T13:54:25.042Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tarrot-590ee {"projectId":"tarrot-590ee","projectNumber":"76318868979","displayName":"Tarrot","name":"projects/tarrot-590ee","resources":{"hostingSite":"tarrot-590ee","realtimeDatabaseInstance":"tarrot-590ee-default-rtdb","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west"},"state":"ACTIVE","etag":"1_44208fb2-695a-4fe8-a3a3-c79cbeb98665"}
+[debug] [2023-12-15T13:54:27.788Z] defaultcredentials: writing to file C:\Users\radu.popescu\AppData\Roaming\firebase\mobitoolsro_gmail_com_application_default_credentials.json
+[debug] [2023-12-15T13:54:27.791Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites pageToken=&pageSize=10
+[debug] [2023-12-15T13:54:28.893Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites 200
+[debug] [2023-12-15T13:54:28.893Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/tarrot-590ee/sites {"sites":[{"name":"projects/tarrot-590ee/sites/tarrot-590ee","defaultUrl":"https://tarrot-590ee.web.app","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","type":"DEFAULT_SITE"}]}
+[debug] [2023-12-15T13:54:28.894Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config [none]
+[debug] [2023-12-15T13:54:29.753Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config 200
+[debug] [2023-12-15T13:54:29.753Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:76318868979:web:9c923de91e9d4795bdfe86/config {"projectId":"tarrot-590ee","appId":"1:76318868979:web:9c923de91e9d4795bdfe86","databaseURL":"https://tarrot-590ee-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"tarrot-590ee.appspot.com","locationId":"europe-west","apiKey":"AIzaSyB4zVjD4zGNdjXw90cMudPB74mE-FHRXkE","authDomain":"tarrot-590ee.firebaseapp.com","messagingSenderId":"76318868979"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[info]  ⚠ Invalid next.config.js options detected: 
+
+[info]  ⚠     Unrecognized key(s) in object: 'fallbackLng' at "i18n"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info]    Creating an optimized production build ...
+
+[info]    Disabled SWC as replacement for Babel because of custom Babel configuration ".babelrc" https://nextjs.org/docs/messages/swc-disabled
+
+[info]    Using external babel configuration from D:\NextJs\TarrotByAI\.babelrc
+
+[info]  ⚠ Compiled with warnings
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+
+./components/ProcessTable/ContractsToolbar.jsx
+Attempted import error: 'StartOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/ContractsToolbar.jsx
+./components/ProcessTable/TableToolbar.jsx
+
+./components/ProcessTable/FilterToolbarMenu.jsx
+Attempted import error: 'UnfoldMoreOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/FilterToolbarMenu.jsx
+./components/ProcessTable/TableToolbar.jsx
+
+./data/data.jsx
+Attempted import error: 'GridViewIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./data/data.jsx
+Attempted import error: 'SmartToyOutlinedIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+./components/DialogBox/CustomDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/CustomServiceDialog.jsx
+Attempted import error: 'gridContainerBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/DialogBox/LeftForm.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftForm.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./components/DialogBox/LeftFormService.jsx
+Attempted import error: 'mainStartFormBox' is not exported from '../../styles/MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./components/DialogBox/LeftFormService.jsx
+./components/DialogBox/CustomServiceDialog.jsx
+./pages/ServicesTable.jsx
+
+./components/ProcessTable/ContractsToolbar.jsx
+Attempted import error: 'StartOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/ContractsToolbar.jsx
+./components/ProcessTable/TableToolbar.jsx
+./pages/CartiPersonalizateTable.jsx
+
+./components/ProcessTable/FilterToolbarMenu.jsx
+Attempted import error: 'UnfoldMoreOutlinedIcon' is not exported from '../../data/Icons' (imported as 'icons').
+
+Import trace for requested module:
+./components/ProcessTable/FilterToolbarMenu.jsx
+./components/ProcessTable/TableToolbar.jsx
+./pages/CartiPersonalizateTable.jsx
+
+./data/data.jsx
+Attempted import error: 'GridViewIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./data/data.jsx
+Attempted import error: 'SmartToyOutlinedIcon' is not exported from './Icons' (imported as 'icons').
+
+Import trace for requested module:
+./data/data.jsx
+./components/DialogBox/CustomDialog.jsx
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeEditArticle' is not exported from '../utils/realtimeUtils' (imported as 'writeEditArticle').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ProcessTable.jsx
+Attempted import error: 'writeArticleData' is not exported from '../utils/realtimeUtils' (imported as 'writeArticleData').
+
+Import trace for requested module:
+./pages/ProcessTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'handleGetServices' is not exported from '../utils/realtimeUtils' (imported as 'handleGetServices').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeEditService' is not exported from '../utils/realtimeUtils' (imported as 'writeEditService').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/ServicesTable.jsx
+Attempted import error: 'writeServiceData' is not exported from '../utils/realtimeUtils' (imported as 'writeServiceData').
+
+Import trace for requested module:
+./pages/ServicesTable.jsx
+
+./pages/dashboard/index.jsx
+Attempted import error: 'mainBox' is not exported from './MainScreenStyles' (imported as 'styles').
+
+Import trace for requested module:
+./pages/dashboard/index.jsx
+
+[info]    Collecting page data ...
+
+[info] 
+
+[info]    Generating static pages (0/90) ...
+
+[info]    Generating static pages (22/90) 
+
+[info]    Generating static pages (44/90) 
+
+[info]    Generating static pages (67/90) 
+
+[info]  ✓ Generating static pages (90/90) 
+
+[info] [Error: EMFILE: too many open files, open 'D:\NextJs\TarrotByAI\node_modules\@mui\icons-material\SignalCellular2BarRounded.js'] {
+  errno: -4066,
+  code: 'EMFILE',
+  syscall: 'open',
+  path: 'D:\\NextJs\\TarrotByAI\\node_modules\\@mui\\icons-material\\SignalCellular2BarRounded.js'
+}
+
+[debug] [2023-12-15T13:55:10.760Z] Error: ENOENT: no such file or directory, open 'D:\NextJs\TarrotByAI\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
