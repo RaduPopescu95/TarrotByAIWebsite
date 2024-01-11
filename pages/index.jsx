@@ -19,7 +19,7 @@ import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
 // import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import { constantServices } from "../data/servicesData";
+import { constantServices, menuOptions } from "../data/servicesData";
 import { colors } from "../utils/colors";
 import { useAuth } from "../context/AuthContext";
 // export async function getStaticProps() {
@@ -164,8 +164,8 @@ const MediaCardConstantService = ({ item }) => {
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        minHeight: "285px", // Ajustează această valoare după necesitate
-        minWidth: "330px", // Ajustează această valoare după necesitate
+        minHeight: "255px", // Ajustează această valoare după necesitate
+        minWidth: "300px", // Ajustează această valoare după necesitate
       }}
     >
       <img
@@ -185,9 +185,10 @@ const MediaCardConstantService = ({ item }) => {
           position: "relative",
           color: "white",
           zIndex: 1,
+          fontSize: 20,
         }}
       >
-        Textul tău aici
+        {item.text}
       </span>
     </div>
   );
@@ -256,7 +257,7 @@ export function Landing({ services }) {
         </section>
 
         <section>
-          <div style={{ paddingTop: "7%" }} className={classes.wraperSection}>
+          <div style={{ paddingTop: "9%" }} className={classes.wraperSection}>
             <Grid
               container
               rowSpacing={isMobile ? 5 : 5}
@@ -267,14 +268,14 @@ export function Landing({ services }) {
                 alignItems: "center",
               }}
             >
-              {constantServices.map((item, index) => {
+              {menuOptions.map((item, index) => {
                 return (
                   <Grid
                     key={index}
                     item
                     xs={12}
-                    sm={6}
-                    md={6}
+                    sm={4}
+                    md={4}
                     sx={{
                       display: "flex",
                       justifyContent: "center",

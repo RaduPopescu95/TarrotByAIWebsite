@@ -96,7 +96,8 @@ export default function SignInSide() {
         <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
           <Box
             sx={{
-              my: 8,
+              mt: 1,
+              mb: 8,
               mx: 4,
               display: "flex",
               flexDirection: "column",
@@ -105,13 +106,13 @@ export default function SignInSide() {
           >
             <Image
               src="/LogoPngTransparent.png"
-              width={120}
-              height={120}
+              width={100}
+              height={100}
               alt="Picture of the author"
             />
 
             <Typography component="h1" variant="h5">
-              Sign in
+              Register Account
             </Typography>
             <Box
               component="form"
@@ -119,6 +120,26 @@ export default function SignInSide() {
               onSubmit={handleSubmit}
               sx={{ mt: 1 }}
             >
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="first-name"
+                label="First Name"
+                name="first-name"
+                autoComplete="first-name"
+                autoFocus
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="last-name"
+                label="Last Name"
+                name="last-name"
+                autoComplete="last-name"
+                autoFocus
+              />
               <TextField
                 margin="normal"
                 required
@@ -139,33 +160,20 @@ export default function SignInSide() {
                 id="password"
                 autoComplete="current-password"
               />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                id="confirmPassword"
+                autoComplete="confirm-password"
+              />
               {/* <FormControlLabel
                 control={<Checkbox value="remember" color="primary" />}
                 label="Remember me"
               /> */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  height: "70px",
-                  backgroundColor: "transparent",
-                  borderColor: colors.primary3,
-                  borderWidth: "2px",
-                  borderStyle: "solid", // Adaugă stilul bordurii
-                  color: colors.primary3,
-                  "&:hover": {
-                    backgroundColor: "transparent", // Menține fundalul transparent la hover
-                    boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.25)", // Adaugă umbra la hover
-                    // borderWidth: "3px",
-                    // Adăugați aici orice alte stiluri pentru hover, dacă este necesar
-                  },
-                }}
-              >
-                Continue without account
-              </Button>
 
               <Button
                 type="submit"
@@ -186,17 +194,12 @@ export default function SignInSide() {
                   },
                 }}
               >
-                Sign In
+                Register
               </Button>
               <Grid container>
-                <Grid item xs>
-                  <Link href="#" variant="body2">
-                    Forgot password?
-                  </Link>
-                </Grid>
                 <Grid item>
                   <Link href="#" variant="body2">
-                    {"Don't have an account? Sign Up"}
+                    {"Have an account? Log in"}
                   </Link>
                 </Grid>
               </Grid>

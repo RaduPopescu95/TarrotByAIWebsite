@@ -9,7 +9,7 @@ import PersonIcon from "@mui/icons-material/Person";
 
 function NavBar({ fixed }) {
   const { classes } = useStyles();
-  const navData = ["Home", "About", "Contact"];
+  const navData = ["", "citire-personalizata", "Contact"];
 
   const { t, i18n } = useTranslation("common");
   return (
@@ -27,9 +27,9 @@ function NavBar({ fixed }) {
                 (e.target.style.borderBottomColor = "transparent")
               }
             >
-              {item === "Home" ? (
+              {item === "" ? (
                 <StarBorderIcon className={classes.iconHover} />
-              ) : item === "About" ? (
+              ) : item === "citire-personalizata" ? (
                 <StyleIcon className={classes.iconHover} />
               ) : (
                 <PersonIcon className={classes.iconHover} />
