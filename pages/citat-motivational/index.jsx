@@ -23,6 +23,7 @@ import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
+import { useApiData } from "../../context/ApiContext";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -64,6 +65,8 @@ export function NumarNorocos() {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const { citateMotivationale } = useApiData();
+
   const cardTextStyles = {
     display: "-webkit-box",
     WebkitBoxOrient: "vertical",
@@ -74,8 +77,22 @@ export function NumarNorocos() {
     maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
   };
 
+  const [zilnicCitateMotivationale, setZilnicCitateMotivationale] =
+    React.useState({});
+
   React.useEffect(() => {
-    if (currentUser) {
+    if (citateMotivationale.arr && citateMotivationale.arr.length > 0) {
+      const randomIndex = Math.floor(
+        Math.random() * citateMotivationale.arr.length
+      );
+      console.log(citateMotivationale.arr[randomIndex]);
+      console.log(citateMotivationale.arr[randomIndex]);
+      setZilnicCitateMotivationale(citateMotivationale.arr[randomIndex]);
+    }
+  }, [citateMotivationale.arr]);
+
+  React.useEffect(() => {
+    if (!currentUser && !isGuestUser) {
       router.push("login");
     }
   }, []);
@@ -158,24 +175,8 @@ export function NumarNorocos() {
                   />
                   <h1>Citat motivational al zilei</h1>
                   <p style={{ textAlign: "justify", fontSize: 18 }}>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    Duis aute irure dolor in reprehenderit in voluptate velit
-                    esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
-                    occaecat cupidatat non proident, sunt in culpa qui officia
-                    deserunt mollit anim id est laborum. Vestibulum ante ipsum
-                    primis in faucibus orci luctus et ultrices posuere cubilia
-                    curae; Donec vel sapien eget felis tempus convallis.
-                    Maecenas molestie magna non est bibendum non venenatis nisl
-                    tempor. Suspendisse dictum feugiat nisl ut dapibus. Mauris
-                    iaculis porttitor posuere. Praesent id metus massa, ut
-                    blandit odio. Proin quis tortor orci. Etiam at risus et
-                    justo dignissim congue. Donec congue lacinia dui, a
-                    porttitor lectus condimentum laoreet. Nunc eu ullamcorper
-                    orci. Quisque eget odio ac lectus vestibulum faucibus eget
-                    in metus. In pellentesque faucibus vestib
+                    {zilnicCitateMotivationale.info &&
+                      zilnicCitateMotivationale.info.ro.descriere}
                   </p>
                 </div>
               </Grid>

@@ -15,7 +15,7 @@ import Head from "next/head";
 import { AnimatePresence, motion } from "framer-motion";
 
 import Image from "next/image";
-
+import StyleIcon from "@mui/icons-material/Style";
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
 // import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -23,6 +23,10 @@ import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
+import { useApiData } from "../../context/ApiContext";
+import { toUrlSlug } from "../../utils/commonUtils";
+import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
+import { Shuffle } from "@mui/icons-material";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -50,18 +54,50 @@ const MediaCardConstantService = ({
   isMiddleCard,
   index,
   flipAllCards,
+  setImageCard,
+  setItem,
 }) => {
-  const { t: tCommon } = useTranslation("common");
-  const { t: tServices } = useTranslation("services");
-  const route = useRouter();
-  const maxLines = 4;
+  const {
+    oreNorocoase,
+    numereNorocoase,
+    culoriNorocoase,
+    citateMotivationale,
+
+    varianteCarti,
+    categoriiPersonalizate,
+    cartiPersonalizate,
+    shuffleCartiPersonalizate,
+    shuffledCartiPersonalizate,
+    setShuffledCartiPersonalizate,
+    loading,
+    error,
+    fetchData,
+    triggerExitAnimation,
+    startExitAnimation,
+    resetExitAnimation,
+    categoriiViitor,
+    cartiViitor,
+    shuffleCartiViitor,
+    shuffledCartiViitor,
+    setShuffledCartiViitor,
+    setLoading,
+  } = useApiData();
+
+  // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
+  const card = shuffledCartiViitor[index % shuffledCartiViitor.length];
+
+  console.log("carti viitor...", cartiViitor);
+  console.log("Card...", shuffledCartiViitor);
+  console.log("Card...", card);
 
   // Starea pentru a gestiona afișarea fundalului alternativ
   const [flipped, setFlipped] = React.useState(false);
 
   // Funcția pentru a schimba starea la click pe card
-  const handleFlip = () => {
-    setFlipped(!flipped);
+  const handleClick = () => {
+    console.log(item);
+    setItem(card);
+    setImageCard(card && card.image.finalUri);
   };
 
   // Actualizează starea flipped bazată pe prop-ul flipAllCards
@@ -75,12 +111,16 @@ const MediaCardConstantService = ({
   const delay = index * 0.15; // De exemplu, întârziere de 0.1 secunde pentru fiecare card
   const variants = {
     initial: { x: -200, opacity: 0 },
+    exit: {
+      x: 200,
+      opacity: 0,
+      transition: { duration: 0.5, delay: delay }, // Măriți durata animației de ieșire
+    },
     animate: {
       x: 0,
       opacity: 1,
       transition: { duration: 0.5, delay: delay },
     },
-    exit: { x: 200, opacity: 0 },
   };
 
   const frontVariants = {
@@ -107,12 +147,13 @@ const MediaCardConstantService = ({
         bottom: isMiddleCard ? 30 : 0,
         paddingRight: "11%",
         perspective: "1000px", // Adaugă perspectivă pentru efectul 3D
+        cursor: "pointer",
       }}
       variants={variants}
       initial="initial"
       animate="animate"
       exit="exit"
-      onClick={handleFlip}
+      onClick={handleClick}
     >
       {/* Partea din față a cartonașului */}
       <motion.div
@@ -142,6 +183,7 @@ const MediaCardConstantService = ({
       </motion.div>
 
       {/* Partea din spate a cartonașului */}
+
       <motion.div
         style={{
           position: "absolute",
@@ -155,19 +197,22 @@ const MediaCardConstantService = ({
         initial="initial"
         animate="animate"
       >
-        <img
-          src={"/card-back.png"}
-          alt={item.text}
-          style={{
-            objectFit: "cover",
-            width: "auto",
-            height: "100%", // Ajustează dacă este necesar pentru a se potrivi nevoilor tale
-            position: "absolute",
-            top: 0,
-            left: 0,
-          }}
-        />
+        {card && (
+          <img
+            src={card.image.finalUri}
+            alt={item.text}
+            style={{
+              objectFit: "cover",
+              width: "auto",
+              height: "100%", // Ajustează dacă este necesar pentru a se potrivi nevoilor tale
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+          />
+        )}
       </motion.div>
+
       <span
         style={{
           position: "relative",
@@ -178,23 +223,50 @@ const MediaCardConstantService = ({
           marginTop: "auto", // Împinge textul în partea de jos a containerului
         }}
       >
-        {item.text}
+        {item.info.ro.nume}
       </span>
     </motion.div>
   );
 };
 
 export function CitirePersonalizata({ services }) {
+  const {
+    oreNorocoase,
+    numereNorocoase,
+    culoriNorocoase,
+    citateMotivationale,
+
+    varianteCarti,
+    categoriiPersonalizate,
+    cartiPersonalizate,
+    shuffleCartiPersonalizate,
+    shuffledCartiPersonalizate,
+    setShuffledCartiPersonalizate,
+    loading,
+    error,
+    fetchData,
+    triggerExitAnimation,
+    startExitAnimation,
+    resetExitAnimation,
+    categoriiViitor,
+    cartiViitor,
+    shuffleCartiViitor,
+    shuffledCartiViitor,
+    setShuffledCartiViitor,
+    setLoading,
+  } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
+  const [item, setItem] = React.useState({});
+  const [imageCard, setImageCard] = React.useState("");
 
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://www.cristinazurba.ro";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
@@ -203,18 +275,37 @@ export function CitirePersonalizata({ services }) {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const cardTextStyles = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: maxLines,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    lineHeight: "1.4em", // Înălțimea unei linii
-    maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
-  };
+  const [visibleCards, setVisibleCards] = React.useState(
+    new Array(categoriiViitor.arr.length).fill(true)
+  );
 
   React.useEffect(() => {
-    if (currentUser) {
+    setVisibleCards(new Array(categoriiViitor.arr.length).fill(true));
+  }, [shuffleCartiViitor]);
+
+  // Declanșarea animației de ieșire
+  React.useEffect(() => {
+    if (triggerExitAnimation) {
+      setVisibleCards(new Array(categoriiViitor.arr.length).fill(false));
+    }
+  }, [triggerExitAnimation, categoriiViitor.arr.length]);
+
+  const isFirstEntry = React.useRef(true);
+
+  React.useEffect(() => {
+    if (isFirstEntry.current) {
+      setLoading(true);
+      shuffleCartiViitor();
+      console.log("Executat doar la prima intrare în acest ecran");
+
+      // Setează flag-ul pe false, astfel încât logica să nu se mai execute la următoarele intrări
+      isFirstEntry.current = false;
+    }
+  }, []); // Array gol de dependențe pentru a rula doar la montare
+
+  React.useEffect(() => {
+    console.log("categoriiViitor........//asdas......", categoriiViitor);
+    if (!currentUser && !isGuestUser) {
       router.push("login");
     }
   }, []);
@@ -224,7 +315,7 @@ export function CitirePersonalizata({ services }) {
     const delay = constantServices.length * 0.15 + 0.5; // Ajustează această valoare dacă este necesar
     const timer = setTimeout(() => {
       setFlipAllCards(true);
-    }, delay * 1000);
+    }, delay * 2700);
 
     return () => clearTimeout(timer);
   }, []);
@@ -232,6 +323,12 @@ export function CitirePersonalizata({ services }) {
   // Stil pentru cardurile din mijloc
   const middleCardStyle = {
     marginTop: "-20px", // Ajustează această valoare după necesitate
+  };
+
+  // Spinner animation
+  const spinnerAnimation = {
+    rotate: 360,
+    transition: { duration: 1.5, repeat: Infinity, ease: "linear" },
   };
 
   return (
@@ -263,64 +360,92 @@ export function CitirePersonalizata({ services }) {
           <Header />
         </section>
 
-        <section>
-          <div style={{ paddingTop: "7%" }} className={classes.wraperSection}>
-            <Grid
-              container
-              rowSpacing={isMobile ? 5 : 5}
-              columnSpacing={0}
-              sx={{
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                top: 30,
-                position: "relative",
-                paddingLeft: 10,
-                paddingRight: 10,
-              }}
-            >
-              <AnimatePresence>
-                {futureOptions.map((item, index) => {
-                  // Aplică stilul de sus pentru cardurile din mijloc
-                  const isLastItem = index === constantServices.length - 2;
-                  const isFifthItem = index === constantServices.length - 4;
-                  const isMiddleCard =
-                    index % 3 === 1 && !isLastItem && !isFifthItem; // Verifică dacă cardul este pe poziția din mijloc în rând
-                  return (
-                    <React.Fragment key={index}>
-                      {isLastItem && (
-                        // Adaugă un element gol/spacer înainte de ultimul card
-                        <Grid item xs={12} sm={4} md={4} />
-                      )}
-                      {isFifthItem && (
-                        // Adaugă un element gol/spacer înainte de ultimul card
-                        <Grid item xs={12} sm={4} md={4} />
-                      )}
-                      <Grid
-                        item
-                        xs={12}
-                        sm={4}
-                        md={4}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
-                        <MediaCardConstantService
-                          item={item}
-                          isMiddleCard={isMiddleCard}
-                          index={index}
-                          flipAllCards={flipAllCards}
-                        />
-                      </Grid>
-                    </React.Fragment>
-                  );
-                })}
-              </AnimatePresence>
-            </Grid>
+        {loading ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100vh",
+            }}
+          >
+            <motion.div animate={spinnerAnimation}>
+              <StyleIcon style={{ fontSize: 80, color: "white" }} />
+            </motion.div>
           </div>
-        </section>
+        ) : (
+          <section>
+            <div style={{ paddingTop: "7%" }} className={classes.wraperSection}>
+              <Grid
+                container
+                rowSpacing={isMobile ? 5 : 5}
+                columnSpacing={0}
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  top: 30,
+                  position: "relative",
+                  paddingLeft: 10,
+                  paddingRight: 10,
+                }}
+              >
+                <AnimatePresence>
+                  {categoriiViitor.arr &&
+                    categoriiViitor.arr.map((item, index) => {
+                      // Aplică stilul de sus pentru cardurile din mijloc
+                      const isLastItem = index === constantServices.length - 2;
+                      const isFifthItem = index === constantServices.length - 4;
+                      const isMiddleCard =
+                        index % 3 === 1 && !isLastItem && !isFifthItem; // Verifică dacă cardul este pe poziția din mijloc în rând
+                      if (!visibleCards[index]) {
+                        return null; // Nu afișa cardul dacă visibleCards la acest index este false
+                      }
+                      return (
+                        <React.Fragment key={index}>
+                          {isLastItem && (
+                            // Adaugă un element gol/spacer înainte de ultimul card
+                            <Grid item xs={12} sm={4} md={4} />
+                          )}
+                          {isFifthItem && (
+                            // Adaugă un element gol/spacer înainte de ultimul card
+                            <Grid item xs={12} sm={4} md={4} />
+                          )}
+                          <Grid
+                            item
+                            xs={12}
+                            sm={4}
+                            md={4}
+                            sx={{
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <MediaCardConstantService
+                              item={item}
+                              isMiddleCard={isMiddleCard}
+                              index={index}
+                              flipAllCards={flipAllCards}
+                              setItem={setItem}
+                              setImageCard={setImageCard}
+                            />
+                          </Grid>
+                        </React.Fragment>
+                      );
+                    })}
+                </AnimatePresence>
+              </Grid>
+            </div>
+          </section>
+        )}
+
+        <CitireViitorDialog
+          item={item}
+          setItem={setItem}
+          imageCard={imageCard}
+          setImageCard={setImageCard}
+        />
         {/* <section>
           <Footer />
         </section> */}

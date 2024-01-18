@@ -7,7 +7,7 @@ import {
   handleUploadFirestore,
   handleUploadFirestoreSubcollection,
 } from "../utils/firestoreUtils";
-import { authentication } from "../../firebase";
+import { authentication } from "../firebase";
 
 const ApiDataContext = createContext();
 
@@ -83,7 +83,7 @@ export const ApiDataProvider = ({ children }) => {
         };
 
         // Apelează funcția ajutătoare pentru a amesteca array-ul de cărți
-        let shuffledArray = shuffleArray([...cartiPersonalizate]);
+        let shuffledArray = shuffleArray([...cartiPersonalizate.arr]);
 
         // Completează sau taie array-ul pentru a avea exact numărul dorit de cărți
         while (shuffledArray.length < 8) {
@@ -122,7 +122,6 @@ export const ApiDataProvider = ({ children }) => {
   const shuffleCartiViitor = () => {
     console.log("Shuffle Carti Viitor Start");
     // Inițiază animația de ieșire
-    startExitAnimation();
 
     // Așteaptă finalizarea animației de ieșire înainte de a amesteca cărțile
     setTimeout(() => {
@@ -145,7 +144,7 @@ export const ApiDataProvider = ({ children }) => {
       };
 
       // Apelează funcția ajutătoare pentru a amesteca array-ul de cărți
-      let shuffledArray = shuffleArray([...cartiViitor]);
+      let shuffledArray = shuffleArray([...cartiViitor.arr]);
 
       // Completează sau taie array-ul pentru a avea exact numărul dorit de cărți
       while (shuffledArray.length < 7) {
@@ -192,18 +191,57 @@ export const ApiDataProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Preia datele din fiecare categorie si le salveaza in state
-      setCartiPersonalizate(await getData("Citire-Personalizata", "Carti"));
-      setCategoriiPersonalizate(
-        await getData("Citire-Personalizata", "Categorii")
-      );
+      // Funcție separată pentru handleGetFirestore
+
       // setVarianteCarti(await handleGetFirestore("VarianteCarti"));
-      setCartiViitor(await getData("Citire-Viitor", "Carti"));
-      setCategoriiViitor(await getData("Citire-Viitor", "Categorii"));
-      setCitateMotivationale(await getData("Others", "Citate-Motivationale"));
-      setCuloriNorocoase(await getData("Others", "Culori-Norocoase"));
-      setNumereNorocoase(await getData("Others", "Numere-Norocoase"));
-      setOreNorocoase(await getData("Others", "Ore-Norocoase"));
+
+      // Funcție pentru a obține datele fie din localStorage, fie de la Firebase
+
+      // Actualizează sau obține contorul de accesări
+      let accessCount = parseInt(localStorage.getItem("accessCount") || "0");
+      accessCount += 1;
+      localStorage.setItem("accessCount", accessCount.toString());
+
+      // Verifică dacă trebuie să actualizezi datele (la a 7-a accesare)
+      const shouldRefreshData = accessCount % 20 === 0;
+
+      const getDataOrFetch = async (category, key) => {
+        console.log("Start fetch from firebase real time or localstorage");
+        const storageKey = `${category}-${key}`;
+        const cachedData = localStorage.getItem(storageKey);
+
+        if (cachedData && !shouldRefreshData) {
+          console.log(
+            "fetching because is the 10th enter.....",
+            shouldRefreshData
+          );
+          console.log("Enter count is...........", accessCount);
+          console.log("Fetching from --------localstorage--------");
+          return JSON.parse(cachedData); // Datele sunt în localStorage
+        } else {
+          console.log("Fetching from !!!!!!!Firebase!!!!!!!!!!");
+          const data = await getData(category, key); // Datele sunt preluate de la Firebase
+          localStorage.setItem(storageKey, JSON.stringify(data));
+          return data;
+        }
+      };
+
+      // Preia datele din fiecare categorie si le salveaza in state
+
+      setCartiPersonalizate(
+        await getDataOrFetch("Citire-Personalizata", "Carti")
+      );
+      setCategoriiPersonalizate(
+        await getDataOrFetch("Citire-Personalizata", "Categorii")
+      );
+      setCartiViitor(await getDataOrFetch("Citire-Viitor", "Carti"));
+      setCategoriiViitor(await getDataOrFetch("Citire-Viitor", "Categorii"));
+      setCitateMotivationale(
+        await getDataOrFetch("Others", "Citate-Motivationale")
+      );
+      setCuloriNorocoase(await getDataOrFetch("Others", "Culori-Norocoase"));
+      setNumereNorocoase(await getDataOrFetch("Others", "Numere-Norocoase"));
+      setOreNorocoase(await getDataOrFetch("Others", "Ore-Norocoase"));
 
       setLoading(false);
     } catch (err) {

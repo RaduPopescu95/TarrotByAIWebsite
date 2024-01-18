@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { authentication } from "../firebase";
+import { handleGetUserInfo } from "../utils/handleFirebaseQuery";
 
 const AuthContext = createContext();
 

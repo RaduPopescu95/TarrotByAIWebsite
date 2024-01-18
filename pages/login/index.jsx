@@ -14,6 +14,14 @@ import Typography from "@mui/material/Typography";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Image from "next/image";
 import { colors } from "../../utils/colors";
+import { useRouter } from "next/router";
+import { useAuth } from "../../context/AuthContext";
+import { retrieveTypeOfUser } from "../../utils/getFirebaseData";
+import { emailWithoutSpace } from "../../utils/strintText";
+import { Alert } from "@mui/material";
+import { handleFirebaseAuthError } from "../../utils/authUtils";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { authentication } from "../../firebase";
 
 function Copyright(props) {
   return (
@@ -38,13 +46,56 @@ function Copyright(props) {
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
+  const { currentUser, isGuestUser, setAsGuestUser } = useAuth();
+  const [message, setMessage] = React.useState("email");
+  const [showSnackback, setShowSnackback] = React.useState(false);
+  const router = useRouter();
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get("email"),
+    const email = data.get("email");
+    const password = data.get("password");
+
+    const emailNew = emailWithoutSpace(email);
+    console.log("login with...", {
+      email: emailNew,
       password: data.get("password"),
     });
+
+    signInWithEmailAndPassword(authentication, emailNew, password)
+      .then(async (userCredentials) => {
+        console.log("userCredentials...", userCredentials.user.uid);
+        router.push("/");
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        const errorMessage = handleFirebaseAuthError(error);
+        // Aici puteți folosi errorMessage pentru a afișa un snackbar sau un alert
+        setShowSnackback(true);
+        setMessage(errorMessage);
+
+        console.log("error on sign in user...", error.message);
+        console.log("error on sign in user...", error.code);
+      });
+  };
+
+  const handleLoginAsGuest = async () => {
+    try {
+      // Setează valoarea pentru a indica că utilizatorul este un guest user
+
+      setAsGuestUser(true);
+
+      router.push("/");
+
+      console.log("Utilizatorul este acum setat ca guest user.");
+    } catch (error) {
+      // Gestionează orice erori care pot apărea la scrierea în AsyncStorage
+      console.error(
+        "Eroare la setarea guest user-ului în AsyncStorage:",
+        error
+      );
+    }
   };
 
   return (
@@ -144,13 +195,13 @@ export default function SignInSide() {
                 label="Remember me"
               /> */}
               <Button
-                type="submit"
                 fullWidth
+                onClick={handleLoginAsGuest}
                 variant="contained"
                 sx={{
                   mt: 3,
                   mb: 2,
-                  height: "70px",
+                  height: "60px",
                   backgroundColor: "transparent",
                   borderColor: colors.primary3,
                   borderWidth: "2px",
@@ -190,12 +241,12 @@ export default function SignInSide() {
               </Button>
               <Grid container>
                 <Grid item xs>
-                  <Link href="#" variant="body2">
+                  <Link href="/forgotpassword" variant="body2">
                     Forgot password?
                   </Link>
                 </Grid>
                 <Grid item>
-                  <Link href="#" variant="body2">
+                  <Link href="/register" variant="body2">
                     {"Don't have an account? Sign Up"}
                   </Link>
                 </Grid>
@@ -204,6 +255,19 @@ export default function SignInSide() {
             </Box>
           </Box>
         </Grid>
+        {showSnackback && (
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "center",
+              position: "absolute",
+              bottom: 20,
+            }}
+          >
+            <Alert severity="info">{message}</Alert>
+          </Box>
+        )}
       </Grid>
     </ThemeProvider>
   );

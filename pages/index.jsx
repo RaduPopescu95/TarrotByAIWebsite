@@ -5,7 +5,14 @@ import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Container,
+  Grid,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import Header from "../components/Header";
 // import Footer from "../components/Footer";
 
@@ -22,6 +29,9 @@ import { useTranslation } from "next-i18next";
 import { constantServices, menuOptions } from "../data/servicesData";
 import { colors } from "../utils/colors";
 import { useAuth } from "../context/AuthContext";
+import { useApiData } from "../context/ApiContext";
+import { collection, doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -157,8 +167,9 @@ const MediaCardConstantService = ({ item }) => {
   };
 
   return (
-    <div
-      style={{
+    <Box
+      onClick={() => route.push(item.route)}
+      sx={{
         borderRadius: 1,
         display: "flex",
         alignItems: "center",
@@ -166,6 +177,13 @@ const MediaCardConstantService = ({ item }) => {
         position: "relative",
         minHeight: "255px", // Ajustează această valoare după necesitate
         minWidth: "300px", // Ajustează această valoare după necesitate
+        cursor: "pointer",
+        borderRadius: "18px",
+        transition: "all 0.3s ease", // Adaugă tranziție pentru efect neted
+        "&:hover": {
+          boxShadow: "0px 10px 10px rgba(0,0,0,0.2)", // Umbra la hover,
+          backgroundColor: "transparent",
+        },
       }}
     >
       <img
@@ -190,12 +208,27 @@ const MediaCardConstantService = ({ item }) => {
       >
         {item.text}
       </span>
-    </div>
+    </Box>
   );
 };
 
 export function Landing({ services }) {
   const { currentUser, isGuestUser } = useAuth();
+  const {
+    oreNorocoase,
+    numereNorocoase,
+    culoriNorocoase,
+    citateMotivationale,
+    categoriiViitor,
+    cartiViitor,
+    categoriiPersonalizate,
+    cartiPersonalizate,
+    loading,
+    varianteCarti,
+    error,
+    fetchData,
+    zilnicCitateMotivationale,
+  } = useApiData();
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
 
@@ -221,11 +254,55 @@ export function Landing({ services }) {
     maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
   };
 
+  const handleAddToFirestore = async () => {
+    const types = [
+      { name: "OreNorocoase", arr: oreNorocoase },
+      { name: "NumereNorocoase", arr: numereNorocoase },
+      { name: "CuloriNorocoase", arr: culoriNorocoase },
+      { name: "CitateMotivationale", arr: citateMotivationale },
+      { name: "CategoriiViitor", arr: categoriiViitor },
+      { name: "CartiViitor", arr: cartiViitor },
+      { name: "CategoriiPersonalizate", arr: categoriiPersonalizate },
+      { name: "CartiPersonalizate", arr: cartiPersonalizate },
+    ];
+
+    for (const type of types) {
+      if (type.arr && type.arr.arr.length > 0) {
+        console.log(`${type.name}.....xxx,,xxx...`, type.arr);
+
+        const collectionName = type.name;
+        // const ref = doc(collection(db, collectionName));
+
+        // await setDoc(ref, type.arr);
+      }
+    }
+  };
+
   React.useEffect(() => {
-    if (currentUser) {
+    // handleAddToFirestore();
+
+    console.log(`test.....xxx,,xxx......`, numereNorocoase);
+
+    if (!currentUser && !isGuestUser) {
       router.push("login");
     }
   }, []);
+
+  if ((!currentUser && !isGuestUser) || loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          width: "100%",
+        }}
+      >
+        <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
+      </div>
+    );
+  }
 
   return (
     <>

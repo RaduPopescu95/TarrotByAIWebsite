@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "pages/api/translate.js", "utils/handleFirebaseQuery.js", "utils/colors.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "pages/api/translate.js", "utils/handleFirebaseQuery.js", "utils/colors.js", "utils/firestoreUtils.js", "utils/deleteFirebaseData.js", "utils/authUtils.js", "utils/getFirebaseData.js"],
   "exclude": ["node_modules"]
 }

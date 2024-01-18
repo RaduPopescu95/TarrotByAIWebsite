@@ -17,6 +17,7 @@ import { useTranslation } from "next-i18next";
 import multiple from "./data/multiple";
 import { Button, Typography } from "@mui/material";
 import link from "../../public/text/link";
+import { useAuth } from "../../context/AuthContext";
 
 function Mixed(props) {
   const [fixed, setFixed] = useState(false);
@@ -27,6 +28,7 @@ function Mixed(props) {
   const { home } = props;
   const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+  const { userData } = useAuth();
   const { t, i18n } = useTranslation();
 
   const buttonStyle = {
@@ -109,11 +111,19 @@ function Mixed(props) {
             >
               <div
                 className={classes.logo}
-                style={{ paddingLeft: isMobile && 10 }}
+                style={{
+                  paddingLeft: isMobile ? 10 : 10,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
               >
                 <a href={link.starter.home}>
                   <Logo type="landscape" fixed={fixed} />
                 </a>
+                <Typography style={{ color: "white" }}>
+                  Bine ai venit, {userData.first_name && userData.first_name}!
+                </Typography>
               </div>
               {isMobile && (
                 <IconButton

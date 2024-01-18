@@ -23,6 +23,7 @@ import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
+import { useApiData } from "../../context/ApiContext";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -49,6 +50,8 @@ export function NumarNorocos() {
   const { currentUser, isGuestUser } = useAuth();
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
+  const { culoriNorocoase } = useApiData();
+  const [zilnicCuloriNorocoase, setZilnicCuloriNorocoase] = React.useState({});
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
 
@@ -64,18 +67,18 @@ export function NumarNorocos() {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const cardTextStyles = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: maxLines,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    lineHeight: "1.4em", // Înălțimea unei linii
-    maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
-  };
+  React.useEffect(() => {
+    if (culoriNorocoase.arr && culoriNorocoase.arr.length > 0) {
+      const randomIndex = Math.floor(
+        Math.random() * culoriNorocoase.arr.length
+      );
+      console.log("test...", culoriNorocoase.arr[randomIndex].image.finalUri);
+      setZilnicCuloriNorocoase(culoriNorocoase.arr[randomIndex]);
+    }
+  }, [culoriNorocoase.arr]);
 
   React.useEffect(() => {
-    if (currentUser) {
+    if (!currentUser && !isGuestUser) {
       router.push("login");
     }
   }, []);
@@ -121,7 +124,7 @@ export function NumarNorocos() {
 
         <section>
           <div
-            style={{ paddingTop: "5%", height: isMobile ? "auto" : "100%" }}
+            style={{ paddingTop: "5%", height: isMobile ? "auto" : "100vh" }}
             className={classes.wraperSection}
           >
             <Grid
@@ -149,13 +152,16 @@ export function NumarNorocos() {
                     flexDirection: "column",
                   }}
                 >
-                  <Image
-                    src="/preassets/ALBASTRU NOU .png"
-                    width={280}
-                    height={280}
-                    alt="Picture of the author"
-                    style={{ marginTop: 10 }}
-                  />
+                  {zilnicCuloriNorocoase.image && (
+                    <img
+                      src={zilnicCuloriNorocoase.image.finalUri}
+                      width={280}
+                      height={280}
+                      alt="Picture of the author"
+                      style={{ marginTop: 10 }}
+                    />
+                  )}
+
                   <div
                     style={{
                       display: "flex",
@@ -168,27 +174,14 @@ export function NumarNorocos() {
                     }}
                   >
                     <h1>Culoarea norocoasă a zilei</h1>
-                    <h2>Bej</h2>
+                    <h2>
+                      {zilnicCuloriNorocoase.info &&
+                        zilnicCuloriNorocoase.info.ro.nume}
+                    </h2>
                   </div>
                   <p style={{ textAlign: "justify", fontSize: 18 }}>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    Duis aute irure dolor in reprehenderit in voluptate velit
-                    esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
-                    occaecat cupidatat non proident, sunt in culpa qui officia
-                    deserunt mollit anim id est laborum. Vestibulum ante ipsum
-                    primis in faucibus orci luctus et ultrices posuere cubilia
-                    curae; Donec vel sapien eget felis tempus convallis.
-                    Maecenas molestie magna non est bibendum non venenatis nisl
-                    tempor. Suspendisse dictum feugiat nisl ut dapibus. Mauris
-                    iaculis porttitor posuere. Praesent id metus massa, ut
-                    blandit odio. Proin quis tortor orci. Etiam at risus et
-                    justo dignissim congue. Donec congue lacinia dui, a
-                    porttitor lectus condimentum laoreet. Nunc eu ullamcorper
-                    orci. Quisque eget odio ac lectus vestibulum faucibus eget
-                    in metus. In pellentesque faucibus vestib
+                    {zilnicCuloriNorocoase.info &&
+                      zilnicCuloriNorocoase.info.ro.descriere}
                   </p>
                 </div>
               </Grid>

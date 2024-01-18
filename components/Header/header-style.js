@@ -1,4 +1,5 @@
 import { makeStyles } from "tss-react/mui";
+import { colors } from "../../utils/colors";
 
 const flagIcon = {
   width: 16,
@@ -100,6 +101,12 @@ const headerStyles = makeStyles({ uniqId: "header" })(
       "&:hover": {
         fontSize: "80px", // Mărimea la hover
       },
+    },
+    iconHovered: {
+      fontSize: "70px",
+      backgroundColor: "rgba(255, 255, 255, 1)",
+      color: colors.primary3,
+      borderRadius: 15,
     },
 
     headerContent: {

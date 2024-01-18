@@ -6,35 +6,84 @@ import { useTranslation } from "next-i18next";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StyleIcon from "@mui/icons-material/Style";
 import PersonIcon from "@mui/icons-material/Person";
+import { useAuth } from "../../../context/AuthContext";
+import { useApiData } from "../../../context/ApiContext";
+import { useRouter } from "next/router";
+import { colors } from "../../../utils/colors";
 
 function NavBar({ fixed }) {
   const { classes } = useStyles();
-  const navData = ["", "citire-personalizata", "Contact"];
+  const navData = ["", "citire-personalizata", "settings"];
+  const { shuffleCartiViitor, startExitAnimation, setLoading } = useApiData();
+  const router = useRouter(); // Utilizați useRouter
+
+  // Verificați dacă calea URL-ului curent este una dintre cele specificate
+  const isCurrentPathSpecial =
+    router.pathname === "/citire-viitor" ||
+    router.pathname === "/citire-personalizata";
 
   const { t, i18n } = useTranslation("common");
+
+  const handleStyleIconClick = () => {
+    console.log("Star....exit...");
+    startExitAnimation(); // Declanșează animația de ieșire
+    setTimeout(() => {
+      setLoading(true);
+      shuffleCartiViitor(); // Amestecă cărțile după finalizarea animației
+    }, 1100); // Durata animației de ieșire, ajustează conform nevoilor
+  };
+
   return (
     <ul>
       {navData.map((item, index) => {
+        const isActive = router.pathname === `/${item.toLowerCase()}`;
         return (
           <li key={index}>
-            <Link
-              href={`/${item.toLowerCase()}`}
-              style={{
-                color: "white",
-              }}
-              onMouseEnter={(e) => (e.target.style.borderBottomColor = "#FFF")}
-              onMouseLeave={(e) =>
-                (e.target.style.borderBottomColor = "transparent")
-              }
-            >
-              {item === "" ? (
-                <StarBorderIcon className={classes.iconHover} />
-              ) : item === "citire-personalizata" ? (
-                <StyleIcon className={classes.iconHover} />
-              ) : (
-                <PersonIcon className={classes.iconHover} />
-              )}
-            </Link>
+            {item === "citire-personalizata" && isCurrentPathSpecial ? (
+              <StyleIcon
+                className={isActive ? classes.iconHovered : classes.iconHover}
+                onClick={handleStyleIconClick}
+                style={{
+                  color: isActive ? "white" : colors.primary3,
+                  fontSize: isActive ? "70px" : "60px",
+                  backgroundColor: "rgba(255, 255, 255, 1)",
+                  color: colors.primary3,
+                  borderRadius: 15,
+                }}
+              />
+            ) : (
+              // Restul logicii rămâne neschimbat
+              <Link
+                href={`/${item.toLowerCase()}`}
+                style={{ color: "white" }}
+                onMouseEnter={(e) =>
+                  (e.target.style.borderBottomColor = "#FFF")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.borderBottomColor = "transparent")
+                }
+              >
+                {item === "" ? (
+                  <StarBorderIcon
+                    className={
+                      isActive ? classes.iconHovered : classes.iconHover
+                    }
+                  />
+                ) : item === "citire-personalizata" ? (
+                  <StyleIcon
+                    className={
+                      isActive ? classes.iconHovered : classes.iconHover
+                    }
+                  />
+                ) : (
+                  <PersonIcon
+                    className={
+                      isActive ? classes.iconHovered : classes.iconHover
+                    }
+                  />
+                )}
+              </Link>
+            )}
           </li>
         );
       })}

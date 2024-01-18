@@ -14,6 +14,16 @@ import Typography from "@mui/material/Typography";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Image from "next/image";
 import { colors } from "../../utils/colors";
+import { useRouter } from "next/router";
+import {
+  handleChangeEmail,
+  handleChangePassword,
+  handleLogout,
+} from "../../utils/authUtils";
+import { useAuth } from "../../context/AuthContext";
+import PasswordDialog from "../../components/PasswordDialog/PasswordDialog";
+import { handleUpdateFirestore } from "../../utils/firestoreUtils";
+import { Alert } from "@mui/material";
 
 function Copyright(props) {
   return (
@@ -38,13 +48,124 @@ function Copyright(props) {
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
+  const { currentUser, isGuestUser, setAsGuestUser, setUserData, userData } =
+    useAuth();
+  const [emailError, setEmailError] = React.useState("");
+  const [passwordError, setPasswordError] = React.useState("");
+  const [message, setMessage] = React.useState("email");
+  const [showSnackback, setShowSnackback] = React.useState(false);
+
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [registerType, setRegisterType] = React.useState("email");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [modalVisibleDelete, setModalVisibleDelete] = React.useState(false);
+
+  const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [last_name, setLastName] = React.useState("");
+  const [first_name, setFirstName] = React.useState("");
+
+  const [snackMessage, setSnackMessage] = React.useState("");
+
+  const router = useRouter();
+
+  const handleResetForm = () => {
+    setEmail("");
+    setConfirmPassword("");
+    setPassword("");
+    setLastName("");
+    setFirstName("");
+  };
+
   const handleSubmit = (event) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get("email"),
-      password: data.get("password"),
-    });
+    if (event) {
+      event.preventDefault();
+    }
+
+    let copyUserData = { ...userData };
+
+    console.log("password...", password);
+    console.log("currentPassword...", currentPassword);
+    console.log("confirmPassword...", confirmPassword);
+    //change password
+    if (
+      password &&
+      currentPassword.length == 0 &&
+      password === confirmPassword
+    ) {
+      console.log("first");
+      setModalVisible(true);
+    } else if (password && currentPassword.length > 0) {
+      console.log("second");
+      handleChangePassword(currentPassword, password).then(() => {
+        setMessage("Password changed successfully");
+        setShowSnackback(!showSnackback);
+        setModalVisible(!modalVisible);
+        handleResetForm();
+      });
+    }
+
+    //change email
+    if (email && currentPassword.length == 0) {
+      console.log("first");
+      setModalVisible(true);
+    } else if (email && currentPassword.length > 0) {
+      console.log("second");
+      handleChangeEmail(currentPassword, email).then((message) => {
+        if (message.length > 0) {
+          setMessage(message);
+        } else {
+          setMessage(
+            "Please check your new e-mail inbox or spam to verify the new e-mail"
+          );
+        }
+        setShowSnackback(!showSnackback);
+        setModalVisible(!modalVisible);
+        handleResetForm();
+      });
+    }
+
+    if (first_name) {
+      copyUserData.first_name = first_name;
+
+      const userLocation = `Users/${
+        userData.owner_uid ? userData.owner_uid : ""
+      }`; // Calea către document
+      setUserData(copyUserData);
+      handleUpdateFirestore(userLocation, copyUserData)
+        .then(() => {
+          console.log("Document successfully updated!");
+          setMessage("Name updated successfully");
+          setShowSnackback(!showSnackback);
+          handleResetForm();
+        })
+        .catch((error) => {
+          console.error("Error updating document: ", error);
+        });
+    }
+
+    if (last_name) {
+      copyUserData.last_name = last_name;
+
+      const userLocation = `Users/${
+        userData.owner_uid ? userData.owner_uid : ""
+      }`; // Calea către document
+      // setUserData(newData);
+      console.log("TEst...here", copyUserData);
+      setUserData(copyUserData);
+      handleUpdateFirestore(userLocation, copyUserData)
+        .then(() => {
+          console.log("Document successfully updated!");
+          setMessage("Name updated successfully");
+          setShowSnackback(!showSnackback);
+          handleResetForm();
+        })
+        .catch((error) => {
+          console.error("Error updating document: ", error);
+        });
+    }
   };
 
   return (
@@ -91,7 +212,7 @@ export default function SignInSide() {
             </Typography>
           </div>
         </Grid>
-        {true ? (
+        {isGuestUser ? (
           <Grid
             item
             xs={12}
@@ -141,6 +262,12 @@ export default function SignInSide() {
                 sx={{ mt: 1, width: "80%" }}
               >
                 <Button
+                  onClick={() => {
+                    handleLogout().then(() => {
+                      setAsGuestUser(false);
+                      router.push("login");
+                    });
+                  }}
                   type="submit"
                   fullWidth
                   variant="contained"
@@ -211,6 +338,8 @@ export default function SignInSide() {
                   name="first-name"
                   autoComplete="first-name"
                   autoFocus
+                  onChange={(e) => setFirstName(e.target.value)}
+                  value={first_name}
                 />
                 <TextField
                   margin="normal"
@@ -221,6 +350,8 @@ export default function SignInSide() {
                   name="last-name"
                   autoComplete="last-name"
                   autoFocus
+                  onChange={(e) => setLastName(e.target.value)}
+                  value={last_name}
                 />
                 <TextField
                   margin="normal"
@@ -231,16 +362,20 @@ export default function SignInSide() {
                   name="email"
                   autoComplete="email"
                   autoFocus
+                  onChange={(e) => setEmail(e.target.value)}
+                  value={email}
                 />
                 <TextField
                   margin="normal"
                   required
                   fullWidth
-                  name="newpassword"
+                  name="newPassword"
                   label="New Password"
-                  type="newpassword"
-                  id="newpassword"
+                  type="password"
+                  id="newPassword"
                   autoComplete="current-password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  value={password}
                 />
                 <TextField
                   margin="normal"
@@ -251,6 +386,8 @@ export default function SignInSide() {
                   type="password"
                   id="confirmPassword"
                   autoComplete="confirm-password"
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={confirmPassword}
                 />
                 {/* <FormControlLabel
       control={<Checkbox value="remember" color="primary" />}
@@ -280,20 +417,48 @@ export default function SignInSide() {
                 </Button>
                 <Grid container>
                   <Grid item xs>
-                    <Link href="#" variant="body2">
+                    <Button
+                      variant="body2"
+                      onClick={() => {
+                        handleLogout().then(() => {
+                          setAsGuestUser(false);
+                          router.push("/login");
+                        });
+                      }}
+                    >
                       Sign out
-                    </Link>
+                    </Button>
                   </Grid>
                   <Grid item>
-                    <Link href="#" variant="body2">
-                      {"Delete account"}
-                    </Link>
+                    <Button variant="body2">{"Delete account"}</Button>
                   </Grid>
                 </Grid>
                 <Copyright sx={{ mt: 5 }} />
               </Box>
             </Box>
           </Grid>
+        )}
+        <PasswordDialog
+          setModalVisible={setModalVisible}
+          modalVisible={modalVisible}
+          currentPassword={currentPassword}
+          setCurrentPassword={setCurrentPassword}
+          handleSubmit={handleSubmit}
+        />
+        {showSnackback && (
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              position: "absolute",
+              bottom: 20,
+              left: "40%",
+            }}
+          >
+            <Alert severity="info">{message}</Alert>
+          </Box>
         )}
       </Grid>
     </ThemeProvider>

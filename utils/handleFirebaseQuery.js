@@ -1,5 +1,5 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { authentication, db } from "../../firebase";
+import { authentication, db } from "../firebase";
 
 export const handleGetUserInfo = async () => {
   let userData;

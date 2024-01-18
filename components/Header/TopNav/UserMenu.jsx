@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import Button from "@mui/material/Button";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+import AppleIcon from "@mui/icons-material/Apple";
 
 import PhoneIcon from "@mui/icons-material/Phone";
 
@@ -17,10 +18,7 @@ function UserMenu(props) {
 
   return (
     <div className={classes.userMenu}>
-      <div style={{ display: "flex", alignItems: "center" }}>
-        {/* <PhoneIcon
-          style={{ color: "white", fontSize: 22, margin: "0px 8px 0px 0px" }}
-        /> */}
+      <div style={{ display: "flex", alignItems: "center", width: "110px" }}>
         {/* <Button
           href={"Tel:+40345404753"}
           style={{
@@ -34,6 +32,11 @@ function UserMenu(props) {
           +40 345 404 753
         </Button> */}
         <Settings />
+        <img
+          src={"/gplay.png"}
+          style={{ width: "40px", height: "40px", marginRight: 10 }}
+        />
+        <img src={"/appstore.png"} style={{ width: "40px", height: "40px" }} />
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ import { useTranslation } from "next-i18next";
 import { constantServices } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
+import { useApiData } from "../../context/ApiContext";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -214,7 +215,7 @@ export function CitirePersonalizata({ services }) {
   };
 
   React.useEffect(() => {
-    if (currentUser) {
+    if (!currentUser && !isGuestUser) {
       router.push("login");
     }
   }, []);

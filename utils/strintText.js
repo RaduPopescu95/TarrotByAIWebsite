@@ -10,3 +10,11 @@ export const normalizeString = (str) => {
     .toLowerCase()
     .trim();
 };
+
+export const emailWithoutSpace = (email) => {
+  const newEmail = email.replace(/\s/g, "");
+
+  return newEmail;
+};
+
+
