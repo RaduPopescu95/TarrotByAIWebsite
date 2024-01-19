@@ -55,9 +55,6 @@ export const ApiDataProvider = ({ children }) => {
   // Funcția de amestecare și completare a cărților PERSONALIZATE
   const shuffleCartiPersonalizate = () => {
     try {
-      // Inițiază animația de ieșire
-      startExitAnimation();
-
       setTimeout(() => {
         setLoading(true);
       }, 1000);
@@ -203,7 +200,7 @@ export const ApiDataProvider = ({ children }) => {
       localStorage.setItem("accessCount", accessCount.toString());
 
       // Verifică dacă trebuie să actualizezi datele (la a 7-a accesare)
-      const shouldRefreshData = accessCount % 20 === 0;
+      const shouldRefreshData = accessCount % 50 === 0;
 
       const getDataOrFetch = async (category, key) => {
         console.log("Start fetch from firebase real time or localstorage");

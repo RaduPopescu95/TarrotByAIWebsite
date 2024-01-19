@@ -121,9 +121,15 @@ function Mixed(props) {
                 <a href={link.starter.home}>
                   <Logo type="landscape" fixed={fixed} />
                 </a>
-                <Typography style={{ color: "white" }}>
-                  Bine ai venit, {userData.first_name && userData.first_name}!
-                </Typography>
+                {userData ? (
+                  <Typography style={{ color: "white" }}>
+                    Bine ai venit, {userData && userData.first_name}!
+                  </Typography>
+                ) : (
+                  <Typography style={{ color: "white" }}>
+                    Bine ai venit !
+                  </Typography>
+                )}
               </div>
               {isMobile && (
                 <IconButton

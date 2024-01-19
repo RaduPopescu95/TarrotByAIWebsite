@@ -108,6 +108,28 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
     overflow: "hidden",
     background: "black",
   },
+  cardImg: {
+    objectFit: "cover",
+    width: "auto",
+    height: "10rem", // Ajustează dacă este necesar pentru a se potrivi nevoilor tale
+    top: 0,
+    left: 0,
+    [theme.breakpoints.up("xs")]: {
+      height: "7rem",
+    },
+    [theme.breakpoints.up("sm")]: {
+      height: "10rem",
+    },
+    [theme.breakpoints.up("md")]: {
+      height: "10rem",
+    },
+    [theme.breakpoints.up("lg")]: {
+      height: "10rem",
+    },
+    [theme.breakpoints.up("xl")]: {
+      height: "10rem",
+    },
+  },
 
   spaceBottom: {
     marginBottom: sectionMargin(6),

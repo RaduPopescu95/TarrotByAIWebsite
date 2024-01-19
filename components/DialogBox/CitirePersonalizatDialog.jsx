@@ -20,11 +20,12 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-export default function CitireViitorDialog({
+export default function CitirePersonalizatDialog({
   setImageCard,
   imageCard,
   setItem,
   item,
+  handleVideoEnd,
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -35,7 +36,7 @@ export default function CitireViitorDialog({
   const handleClose = () => {
     console.log("item...", item);
     setOpen(false);
-    setImageCard("");
+
     setItem({});
   };
   const { classes, cx } = useSpacing();
@@ -47,7 +48,7 @@ export default function CitireViitorDialog({
     <React.Fragment>
       <Dialog
         fullScreen
-        open={imageCard.length > 0 ? true : false}
+        open={item.info ? true : false}
         onClose={handleClose}
         TransitionComponent={Transition}
       >
@@ -98,15 +99,26 @@ export default function CitireViitorDialog({
                       flexDirection: "column",
                     }}
                   >
-                    {imageCard && (
-                      <img
-                        src={imageCard}
-                        width={280}
-                        height={280}
-                        alt="Picture of the author"
-                        style={{ marginTop: 10 }}
+                    {/* <video
+                      src={item.info && item.info.ro.url}
+                      width={280}
+                      height={280}
+                      alt="Picture of the author"
+                      style={{ marginTop: 10 }}
+                    /> */}
+
+                    <video
+                      width="280"
+                      height="280"
+                      controls
+                      onEnded={handleVideoEnd}
+                      autoPlay
+                    >
+                      <source
+                        src={item.info && item.info.ro.url}
+                        type="video/mp4"
                       />
-                    )}
+                    </video>
 
                     <div
                       style={{
@@ -119,7 +131,7 @@ export default function CitireViitorDialog({
                         marginTop: 20,
                       }}
                     >
-                      <h2>{item.info && item.info.ro.nume}</h2>
+                      <h2>{item.info && item.carte.info.ro.nume}</h2>
                     </div>
                     <p
                       style={{

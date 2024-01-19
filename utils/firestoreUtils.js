@@ -128,7 +128,8 @@ export const handleGetFirestoreSingleArrayData = async (location) => {
 };
 
 export const handleQueryFirestore = async (location, carte, categorie) => {
-  console.log("start query firestore...");
+  console.log("start query firestore carte...", carte);
+  console.log("start query firestore categorei...", categorie);
   let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
   const q = query(
     collection(db, location),

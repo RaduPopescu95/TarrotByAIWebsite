@@ -85,6 +85,7 @@ const MediaCardConstantService = ({
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
   const card = shuffledCartiViitor[index % shuffledCartiViitor.length];
+  const { classes, cx } = useSpacing();
 
   console.log("carti viitor...", cartiViitor);
   console.log("Card...", shuffledCartiViitor);
@@ -92,6 +93,9 @@ const MediaCardConstantService = ({
 
   // Starea pentru a gestiona afișarea fundalului alternativ
   const [flipped, setFlipped] = React.useState(false);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Funcția pentru a schimba starea la click pe card
   const handleClick = () => {
@@ -142,10 +146,11 @@ const MediaCardConstantService = ({
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        minHeight: "160px",
-        minWidth: "auto",
+        height: "auto",
+        width: "auto",
+
         bottom: isMiddleCard ? 30 : 0,
-        paddingRight: "11%",
+
         perspective: "1000px", // Adaugă perspectivă pentru efectul 3D
         cursor: "pointer",
       }}
@@ -160,8 +165,9 @@ const MediaCardConstantService = ({
         style={{
           position: "absolute",
           backfaceVisibility: "hidden",
-          width: "100%", // Asigură-te că ocupă întregul container
+          width: "auto",
           height: "100%",
+
           /* Restul stilurilor pentru față */
         }}
         variants={frontVariants}
@@ -171,14 +177,7 @@ const MediaCardConstantService = ({
         <img
           src={"/card-back.png"}
           alt={item.text}
-          style={{
-            objectFit: "cover",
-            width: "auto",
-            height: "100%", // Ajustează dacă este necesar pentru a se potrivi nevoilor tale
-            position: "absolute",
-            top: 0,
-            left: 0,
-          }}
+          className={classes.cardImg}
         />
       </motion.div>
 
@@ -186,12 +185,11 @@ const MediaCardConstantService = ({
 
       <motion.div
         style={{
-          position: "absolute",
+          // position: "relative",
           backfaceVisibility: "hidden",
           transform: "rotateY(180deg)",
           width: "100%",
           height: "100%",
-          /* Restul stilurilor pentru spate */
         }}
         variants={backVariants}
         initial="initial"
@@ -201,30 +199,36 @@ const MediaCardConstantService = ({
           <img
             src={card.image.finalUri}
             alt={item.text}
-            style={{
-              objectFit: "cover",
-              width: "auto",
-              height: "100%", // Ajustează dacă este necesar pentru a se potrivi nevoilor tale
-              position: "absolute",
-              top: 0,
-              left: 0,
-            }}
+            className={classes.cardImg}
           />
         )}
       </motion.div>
 
-      <span
+      <div
         style={{
-          position: "relative",
-          color: "white",
-          zIndex: 1,
-          top: 30,
-          left: 10,
-          marginTop: "auto", // Împinge textul în partea de jos a containerului
+          backgroundColor: colors.primary3,
+          padding: "0.3rem",
+          borderRadius: 5,
         }}
       >
-        {item.info.ro.nume}
-      </span>
+        <Typography
+          style={{
+            position: "relative", // Poziționare absolută în raport cu părintele relativ
+            bottom: "0%", // Poziționează textul la jumătatea înălțimii containerului părinte
+            left: 0, // Aliniază la stânga containerului părinte
+            // bottom: -40, // Aliniază la dreapta containerului părinte
+            textAlign: "center", // Centrează textul orizontal
+            // maxWidth: "100%", // limitează lățimea maximă
+            // whiteSpace: "nowrap", // împiedică întreruperea textului
+            // overflow: "hidden", // ascunde textul care depășește lățimea maximă
+            textOverflow: "ellipsis", // adaugă '...' dacă textul este prea lung
+            color: colors.white,
+            fontSize: isMobile ? 5 : 15,
+          }}
+        >
+          {item.info.ro.nume}
+        </Typography>
+      </div>
     </motion.div>
   );
 };
@@ -354,6 +358,7 @@ export function CitirePersonalizata({ services }) {
       <div
         style={{
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+          minHeight: "100vh",
         }}
       >
         <section>
@@ -366,16 +371,24 @@ export function CitirePersonalizata({ services }) {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              height: "100vh",
+              height: "100%",
             }}
           >
             <motion.div animate={spinnerAnimation}>
-              <StyleIcon style={{ fontSize: 80, color: "white" }} />
+              <StyleIcon
+                style={{ fontSize: 80, color: "white", height: "100vh" }}
+              />
             </motion.div>
           </div>
         ) : (
           <section>
-            <div style={{ paddingTop: "7%" }} className={classes.wraperSection}>
+            <div
+              style={{
+                paddingTop: isDesktop ? "8%" : "30%",
+                height: "100%",
+              }}
+              className={classes.wraperSection}
+            >
               <Grid
                 container
                 rowSpacing={isMobile ? 5 : 5}
@@ -386,8 +399,9 @@ export function CitirePersonalizata({ services }) {
                   alignItems: "center",
                   top: 30,
                   position: "relative",
-                  paddingLeft: 10,
-                  paddingRight: 10,
+                  paddingLeft: isDesktop ? 10 : 0,
+                  paddingRight: isDesktop ? 10 : 0,
+                  height: "100%",
                 }}
               >
                 <AnimatePresence>
@@ -405,15 +419,15 @@ export function CitirePersonalizata({ services }) {
                         <React.Fragment key={index}>
                           {isLastItem && (
                             // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={12} sm={4} md={4} />
+                            <Grid item xs={4} sm={4} md={4} />
                           )}
                           {isFifthItem && (
                             // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={12} sm={4} md={4} />
+                            <Grid item xs={4} sm={4} md={4} />
                           )}
                           <Grid
                             item
-                            xs={12}
+                            xs={4}
                             sm={4}
                             md={4}
                             sx={{
