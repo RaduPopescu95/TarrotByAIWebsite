@@ -20,25 +20,54 @@ import { authentication, db } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import { doc, setDoc } from "firebase/firestore";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
-import { Alert } from "@mui/material";
+import { Alert, useMediaQuery, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "react-i18next";
+import Header from "../../components/Header";
+import Settings from "../../components/Header/TopNav/Settings";
 
 function Copyright(props) {
   return (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      align="center"
-      {...props}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+      }}
     >
-      {"Copyright © "}
-      <Link color="inherit" href="https://mui.com/">
-        Cristina Zurba
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"Copyright © "}
+        <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
+        {"."}
+      </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"dezvoltat de "}
+        <Link color="inherit" href="https://webappdynamicx.ro/">
+          Web App Dynamicx
+        </Link>{" "}
+        {"."}
+      </Typography>
+    </div>
   );
+}
+
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
 }
 
 // TODO remove, this demo shouldn't need to reset the theme.
@@ -51,8 +80,12 @@ export default function SignInSide() {
   const [passwordError, setPasswordError] = React.useState("");
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
+  const { t } = useTranslation("common");
   const { setUserData } = useAuth();
   const router = useRouter();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -128,8 +161,12 @@ export default function SignInSide() {
 
   return (
     <ThemeProvider theme={defaultTheme}>
-      <Grid container component="main" sx={{ height: "100vh" }}>
+      <Grid container component="main" sx={{ height: "100vh", zIndex: 5 }}>
         <CssBaseline />
+        <section>
+          <Header isOnlySettngs={true} />
+        </section>
+
         <Grid
           item
           xs={false}
@@ -140,6 +177,7 @@ export default function SignInSide() {
             backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            zIndex: 5,
           }}
         >
           <div
@@ -149,6 +187,8 @@ export default function SignInSide() {
               alignItems: "center",
               flexDirection: "column",
               height: "100%",
+              paddingTop: "3%",
+              paddingBottom: "3%",
             }}
           >
             <Image
@@ -165,14 +205,26 @@ export default function SignInSide() {
               style={{ top: 20, position: "relative", height: 450, width: 400 }}
             />
             <Typography variant="h4" style={{ color: colors.primary3 }}>
-              Bine ai venit la
+              {t("welcomeTo")}
             </Typography>
-            <Typography variant="h1" style={{ color: colors.primary3 }}>
-              Tarot by AI
+            <Typography
+              variant="h1"
+              style={{ color: colors.primary3, fontSize: isMobile ? 60 : 80 }}
+            >
+              {t("tarotByAi")}
             </Typography>
           </div>
         </Grid>
-        <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
+        <Grid
+          item
+          xs={12}
+          sm={8}
+          md={5}
+          // component={Paper}
+          elevation={6}
+          square
+          sx={{ zIndex: 5 }}
+        >
           <Box
             sx={{
               mt: 1,
@@ -181,6 +233,7 @@ export default function SignInSide() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              zIndex: 5,
             }}
           >
             <Image
@@ -191,40 +244,43 @@ export default function SignInSide() {
             />
 
             <Typography component="h1" variant="h5">
-              Register Account
+              {t("signUp")}
             </Typography>
+
             <Box
               component="form"
               noValidate
               onSubmit={handleSubmit}
-              sx={{ mt: 1 }}
+              sx={{ mt: 1, zIndex: 5 }}
             >
               <TextField
                 margin="normal"
                 required
                 fullWidth
                 id="first-name"
-                label="First Name"
+                label={t("firstName")}
                 name="first-name"
                 autoComplete="first-name"
                 autoFocus
+                style={{ zIndex: 5 }}
               />
               <TextField
                 margin="normal"
                 required
                 fullWidth
                 id="last-name"
-                label="Last Name"
+                label={t("lastName")}
                 name="last-name"
                 autoComplete="last-name"
                 autoFocus
+                style={{ zIndex: 5 }}
               />
               <TextField
                 margin="normal"
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t("email")}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -236,7 +292,7 @@ export default function SignInSide() {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t("password")}
                 type="password"
                 id="password"
                 autoComplete="current-password"
@@ -248,7 +304,7 @@ export default function SignInSide() {
                 required
                 fullWidth
                 name="confirmPassword"
-                label="Confirm Password"
+                label={t("confirmPassword")}
                 type="password"
                 id="confirmPassword"
                 autoComplete="confirm-password"
@@ -279,13 +335,23 @@ export default function SignInSide() {
                   },
                 }}
               >
-                Register
+                {t("signUp")}
               </Button>
               <Grid container>
-                <Grid item>
-                  <Link href="#" variant="body2">
-                    {"Have an account? Log in"}
-                  </Link>
+                <Grid item style={{ display: "flex", flexDirection: "row" }}>
+                  <Typography href="#" variant="body2">
+                    {t("alreadyAccount")}
+                  </Typography>
+                  <Typography
+                    onClick={() => router.push("/login")}
+                    variant="body2"
+                    style={{
+                      color: "blue",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t("registerLogin")}
+                  </Typography>
                 </Grid>
               </Grid>
               <Copyright sx={{ mt: 5 }} />

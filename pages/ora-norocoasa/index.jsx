@@ -18,12 +18,13 @@ import Image from "next/image";
 
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
-// import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
+import languageDetector from "../../lib/languageDetector";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -34,15 +35,13 @@ import { useApiData } from "../../context/ApiContext";
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
+}
 
 // ... rest of your code
 
@@ -51,7 +50,7 @@ export function CitateMotivationale() {
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
   const { oreNorocoase } = useApiData();
-
+  const detectedLng = languageDetector.detect();
   const [flipAllCards, setFlipAllCards] = React.useState(false);
 
   const [zilnicOreNorocoase, setZilnicOreNorocoase] = React.useState({});
@@ -124,6 +123,7 @@ export function CitateMotivationale() {
       <div
         style={{
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+          height: isMobile ? "100vh" : "100%",
         }}
       >
         <section>
@@ -132,7 +132,10 @@ export function CitateMotivationale() {
 
         <section>
           <div
-            style={{ paddingTop: "7%", height: isMobile ? "auto" : null }}
+            style={{
+              paddingTop: isMobile ? "15%" : "7%",
+              height: isMobile ? "100%" : "100vh",
+            }}
             className={classes.wraperSection}
           >
             <Grid
@@ -158,6 +161,7 @@ export function CitateMotivationale() {
                     width: "100%",
                     height: "100%",
                     flexDirection: "column",
+                    marginBottom: "60px",
                   }}
                 >
                   <div
@@ -182,10 +186,15 @@ export function CitateMotivationale() {
                     alt="Picture of the author"
                     style={{ marginTop: 10 }}
                   />
-                  <p style={{ textAlign: "justify", fontSize: 18 }}>
-                    {zilnicOreNorocoase.info &&
-                      zilnicOreNorocoase.info.ro.descriere}
-                  </p>
+                  {zilnicOreNorocoase.info && (
+                    <p style={{ textAlign: "justify", fontSize: 18 }}>
+                      {detectedLng === "hi"
+                        ? zilnicOreNorocoase.info.hu.descriere
+                        : detectedLng === "id"
+                          ? zilnicOreNorocoase.info.ru.descriere
+                          : zilnicOreNorocoase.info[detectedLng].descriere}
+                    </p>
+                  )}
                 </div>
               </Grid>
             </Grid>

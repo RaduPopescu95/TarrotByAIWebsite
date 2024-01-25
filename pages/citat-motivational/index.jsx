@@ -18,12 +18,13 @@ import Image from "next/image";
 
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
-// import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
+import languageDetector from "../../lib/languageDetector";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -34,15 +35,13 @@ import { useApiData } from "../../context/ApiContext";
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+}
 
 // ... rest of your code
 
@@ -50,7 +49,7 @@ export function NumarNorocos() {
   const { currentUser, isGuestUser } = useAuth();
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
-
+  const detectedLng = languageDetector.detect();
   const [flipAllCards, setFlipAllCards] = React.useState(false);
 
   const router = useRouter();
@@ -138,7 +137,11 @@ export function NumarNorocos() {
 
         <section>
           <div
-            style={{ paddingTop: "7%", height: isMobile ? "auto" : null }}
+            style={{
+              paddingTop: "7%",
+              height: "100vh",
+              marginBottom: "60px",
+            }}
             className={classes.wraperSection}
           >
             <Grid
@@ -173,11 +176,17 @@ export function NumarNorocos() {
                     alt="Picture of the author"
                     style={{ marginTop: 10 }}
                   />
-                  <h1>Citat motivational al zilei</h1>
-                  <p style={{ textAlign: "justify", fontSize: 18 }}>
-                    {zilnicCitateMotivationale.info &&
-                      zilnicCitateMotivationale.info.ro.descriere}
-                  </p>
+                  <h1>{t("motivationalQuoteOfTheDay")}</h1>
+                  {zilnicCitateMotivationale.info && (
+                    <p style={{ textAlign: "justify", fontSize: 18 }}>
+                      {detectedLng === "hi"
+                        ? zilnicCitateMotivationale.info.hu.descriere
+                        : detectedLng === "id"
+                          ? zilnicCitateMotivationale.info.ru.descriere
+                          : zilnicCitateMotivationale.info[detectedLng]
+                              .descriere}
+                    </p>
+                  )}
                 </div>
               </Grid>
             </Grid>

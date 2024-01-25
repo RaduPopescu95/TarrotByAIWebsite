@@ -9,7 +9,7 @@ import { useStyles } from "../../styles/ProcessTableStyles";
 import { editData, getData, writeData } from "../../utils/realtimeUtils";
 import { getCurrentDateTime } from "../../utils/timeUtils";
 import { uploadImage } from "../../utils/storageUtils";
-import { auth, storage } from "../../firebase";
+import { authentication, storage } from "../../firebase";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 import { deleteObject, ref as storageRef } from "firebase/storage";
 
@@ -139,7 +139,7 @@ export default function CartiViitorTable() {
   };
 
   const confirmDelete = () => {
-    const authInstance = auth;
+    const authInstance = authentication;
     const currentUser = authInstance.currentUser;
     const database = getDatabase();
 

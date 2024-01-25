@@ -17,11 +17,3 @@ export const futureOptions = [
   { text: "text6" },
   { text: "text7" },
 ];
-export const menuOptions = [
-  { text: "Citire personalizată", route: "/citire-personalizata" },
-  { text: "Citire de viitor", route: "/citire-viitor" },
-  { text: "Numărul norocos", route: "/numar-norocos" },
-  { text: "Culoarea norocoasă", route: "/culoare-norocoasa" },
-  { text: "Ore Norocoase", route: "/ora-norocoasa" },
-  { text: "Citate Motivaționale", route: "/citat-motivational" },
-];

@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import * as styles from "./MainScreenStyles";
 import CustomDrawer from "../../components/Dashboard/CustomDrawer";
 import { useEffect } from "react";
-import { auth, authentication } from "../../firebase";
+import { authentication } from "../../firebase";
 import { redirect } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/router";

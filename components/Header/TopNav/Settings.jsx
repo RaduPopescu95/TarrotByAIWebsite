@@ -13,6 +13,7 @@ import useStyles from "../header-style";
 import i18nextConfig from "../../../next-i18next.config";
 import LanguageSwitch from "../../LangSwitch/Menu";
 import { Divider } from "@mui/material";
+import { colors } from "../../../utils/colors";
 
 function Settings(props) {
   const { classes } = useStyles();
@@ -42,6 +43,18 @@ function Settings(props) {
   const flagImages = {
     en: "/flags/english.png",
     ro: "/flags/romania.png",
+    bg: "/flags/bulgaria.png",
+    hr: "/flags/croatia.png",
+    cs: "/flags/czech.png",
+    fr: "/flags/france.png",
+    de: "/flags/germany.png",
+    el: "/flags/greece.png",
+    hi: "/flags/india.png",
+    id: "/flags/indonesia.png",
+    it: "/flags/italy.png",
+    pl: "/flags/poland.png",
+    sk: "/flags/slovakia.png",
+    es: "/flags/spanish.png",
     // Adaugă aici alte limbi și căile către imaginile lor
   };
 
@@ -75,7 +88,12 @@ function Settings(props) {
       >
         {({ TransitionProps }) => (
           <Grow {...TransitionProps}>
-            <Paper>
+            <Paper
+              style={{
+                backgroundColor: props.isWhiteBg && colors.primary3,
+                zIndex: 10,
+              }}
+            >
               <ClickAwayListener onClickAway={handleClose}>
                 <List
                   component="nav"

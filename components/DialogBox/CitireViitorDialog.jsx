@@ -15,6 +15,7 @@ import { Grid, useMediaQuery, useTheme } from "@mui/material";
 import { useSpacing } from "../../theme/common";
 import { useApiData } from "../../context/ApiContext";
 import { colors } from "../../utils/colors";
+import languageDetector from "../../lib/languageDetector";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -27,6 +28,7 @@ export default function CitireViitorDialog({
   item,
 }) {
   const [open, setOpen] = React.useState(false);
+  const detectedLng = languageDetector.detect();
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -65,12 +67,13 @@ export default function CitireViitorDialog({
         </AppBar>
         <div
           style={{
+            overflow: "auto",
             backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
           }}
         >
           <section>
             <div
-              style={{ paddingTop: "5%", height: isMobile ? "auto" : "100vh" }}
+              style={{ paddingTop: "2%", height: isMobile ? "auto" : "100vh" }}
               className={classes.wraperSection}
             >
               <Grid
@@ -101,7 +104,7 @@ export default function CitireViitorDialog({
                     {imageCard && (
                       <img
                         src={imageCard}
-                        width={280}
+                        width={180}
                         height={280}
                         alt="Picture of the author"
                         style={{ marginTop: 10 }}
@@ -115,21 +118,39 @@ export default function CitireViitorDialog({
                         alignItems: "center",
                         flexDirection: "column",
 
-                        height: "100px",
+                        height: "auto",
                         marginTop: 20,
                       }}
                     >
-                      <h2>{item.info && item.info.ro.nume}</h2>
+                      {item.info && (
+                        <h2
+                          style={{
+                            color: colors.primary3,
+                          }}
+                        >
+                          {item.info && detectedLng === "hi"
+                            ? item.info.hu.nume
+                            : detectedLng === "id"
+                              ? item.info.ru.nume
+                              : item.info[detectedLng].nume}
+                        </h2>
+                      )}
+                      {item.info && (
+                        <p
+                          style={{
+                            textAlign: "justify",
+                            fontSize: 18,
+                            color: colors.primary3,
+                          }}
+                        >
+                          {detectedLng === "hi"
+                            ? item.info.hu.descriere
+                            : detectedLng === "id"
+                              ? item.info.ru.descriere
+                              : item.info[detectedLng].descriere}
+                        </p>
+                      )}
                     </div>
-                    <p
-                      style={{
-                        textAlign: "justify",
-                        fontSize: 18,
-                        color: "white",
-                      }}
-                    >
-                      {item.info && item.info.ro.descriere}
-                    </p>
                   </div>
                 </Grid>
               </Grid>

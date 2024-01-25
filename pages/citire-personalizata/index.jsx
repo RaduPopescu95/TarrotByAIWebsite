@@ -18,7 +18,7 @@ import Image from "next/image";
 import StyleIcon from "@mui/icons-material/Style";
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
-// import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
@@ -34,6 +34,7 @@ import {
 } from "../../utils/firestoreUtils";
 import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
+import languageDetector from "../../lib/languageDetector";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -44,15 +45,13 @@ import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonali
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
+}
 
 // ... rest of your code
 
@@ -90,6 +89,7 @@ const MediaCardConstantService = ({
     setShuffledCartiViitor,
     setLoading,
   } = useApiData();
+  const detectedLng = languageDetector.detect();
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
   const card =
@@ -214,6 +214,7 @@ const MediaCardConstantService = ({
 
   return (
     <motion.div
+      onClick={() => getVariantaCarti(index)}
       style={{
         borderRadius: 1,
         display: "flex",
@@ -233,7 +234,6 @@ const MediaCardConstantService = ({
       initial="initial"
       animate="animate"
       exit="exit"
-      onClick={getVariantaCarti}
     >
       {/* Partea din față a cartonașului */}
       <motion.div
@@ -306,7 +306,11 @@ const MediaCardConstantService = ({
             fontSize: isMobile ? 5 : 15,
           }}
         >
-          {item.info.ro.nume}
+          {detectedLng === "hi"
+            ? item.info.hu.nume
+            : detectedLng === "id"
+              ? item.info.ru.nume
+              : item.info[detectedLng].nume}
         </Typography>
       </div>
     </motion.div>
@@ -340,7 +344,7 @@ export function CitirePersonalizata({ services }) {
     setLoading,
   } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common", "services");
+  const { t } = useTranslation("common");
   const { classes, cx } = useSpacing();
   const { currentNumber, updateNumber } = useNumberContext();
 
@@ -440,7 +444,7 @@ export function CitirePersonalizata({ services }) {
     console.log("currentNumber...", currentNumber);
     switch (currentNumber) {
       case 1:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(4);
         updateNumber(4);
         break;
       case 4:
@@ -558,6 +562,7 @@ export function CitirePersonalizata({ services }) {
       </Head>
       <div
         style={{
+          overflow: "auto",
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
           minHeight: "100vh",
         }}
@@ -587,6 +592,7 @@ export function CitirePersonalizata({ services }) {
               style={{
                 paddingTop: isDesktop ? "8%" : "30%",
                 height: "100%",
+                marginBottom: "60px",
               }}
               className={classes.wraperSection}
             >
@@ -619,7 +625,7 @@ export function CitirePersonalizata({ services }) {
                         <React.Fragment key={index}>
                           {isLastItem && (
                             // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={12} sm={4} md={4} />
+                            <Grid item xs={4} sm={4} md={4} />
                           )}
                           <Grid
                             item

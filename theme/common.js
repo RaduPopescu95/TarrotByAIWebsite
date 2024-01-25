@@ -20,6 +20,28 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
       padding: "120px 15px",
     },
   },
+  MediaCardConstantServiceBox: {
+    [theme.breakpoints.up("xs")]: {
+      minHeight: "130px", // Ajustează această valoare după necesitate
+      minWidth: "160px", // Ajustează această valoare după necesitate
+    },
+    [theme.breakpoints.up("sm")]: {
+      minHeight: "130px", // Ajustează această valoare după necesitate
+      minWidth: "160px", // Ajustează această valoare după necesitate
+    },
+    [theme.breakpoints.up("md")]: {
+      minHeight: "255px", // Ajustează această valoare după necesitate
+      minWidth: "300px", // Ajustează această valoare după necesitate
+    },
+    [theme.breakpoints.up("lg")]: {
+      minHeight: "255px", // Ajustează această valoare după necesitate
+      minWidth: "300px", // Ajustează această valoare după necesitate
+    },
+    [theme.breakpoints.up("xl")]: {
+      minHeight: "255px", // Ajustează această valoare după necesitate
+      minWidth: "300px", // Ajustează această valoare după necesitate
+    },
+  },
   bannerWrapper1: {
     [theme.breakpoints.up("xs")]: {
       padding: "50px 15px",

@@ -13,7 +13,7 @@ import {
 import * as styles from "./FormStyles";
 import LockResetIcon from "@mui/icons-material/LockReset";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../firebase";
+import { authentication } from "../../firebase";
 import TextBox from "./TextBox";
 import TextFieldBox from "./TextFieldBox";
 import FormFooter from "./FormFooter";
@@ -25,7 +25,7 @@ export default function ResetPasswordForm(props) {
 
   const handleResetPass = () => {
     setIsResetting(true);
-    const authentication = auth;
+    const authentication = authentication;
     sendPasswordResetEmail(authentication, email)
       .then(() => {
         setEmail("");

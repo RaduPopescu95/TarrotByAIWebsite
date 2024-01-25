@@ -24,7 +24,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
-// import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, menuOptions } from "../data/servicesData";
 import { colors } from "../utils/colors";
@@ -42,119 +42,23 @@ import { db } from "../firebase";
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
-
-// ... rest of your imports
-
-const MediaCard = ({ item }) => {
-  const { t } = useTranslation("common", "services");
-  const route = useRouter();
-  const maxLines = 4; // Numărul maxim de rânduri dorit
-
-  const cardTextStyles = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: maxLines,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    lineHeight: "1.4em", // Înălțimea unei linii
-    maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
   };
-
-  return (
-    <Card
-      elevation={0}
-      sx={{
-        width: 345, // Use a fixed width instead of maxWidth
-        borderRadius: 1,
-        minHeight: 400,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      }}
-    >
-      <div style={{ height: "200px", position: "relative", width: "100%" }}>
-        <img
-          src={item.image.finalUri}
-          alt={item.title}
-          style={{ objectFit: "cover", width: "100%", height: "100%" }}
-        />
-      </div>
-      <CardContent
-        sx={{
-          height: "170px", // Fixed height of the content area
-          padding: "24px",
-          overflow: "hidden", // Ensures text doesn't overflow
-        }}
-      >
-        <Typography gutterBottom variant="h5" component="div" color="white">
-          {item.name}
-        </Typography>
-        <Typography
-          gutterBottom
-          color="white"
-          variant="body2"
-          style={{
-            ...cardTextStyles, // your existing styles
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 4,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {item.metaDescription}
-        </Typography>
-      </CardContent>
-
-      <CardActions>
-        <Link
-          href={{
-            pathname: "/services/[slug]",
-            query: { slug: `${item.id}-${toUrlSlug(item.name)}` },
-          }}
-          as={`/services/${item.id}-${toUrlSlug(item.name)}`}
-          passHref={false}
-        >
-          <Button
-            sx={{
-              fontSize: "15px",
-              fontWeight: "700",
-              backgroundColor: "transparent",
-              color: "white",
-              width: "100%",
-              textTransform: "none",
-              border: "1px solid #d3a03e",
-              transition: "background-color 0.3s",
-              "&:hover": {
-                backgroundColor: "rgba(211, 160, 62, 0.1)",
-                border: "1px solid #d3a03e",
-              },
-              marginTop: 2,
-            }}
-          >
-            {t("LearnMore")}
-          </Button>
-        </Link>
-      </CardActions>
-    </Card>
-  );
-};
+}
 
 // ... rest of your code
 
 const MediaCardConstantService = ({ item }) => {
   const { t: tCommon } = useTranslation("common");
-  const { t: tServices } = useTranslation("services");
+  const { classes, cx } = useSpacing();
   const route = useRouter();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const maxLines = 4;
   const cardTextStyles = {
     display: "-webkit-box",
@@ -175,8 +79,7 @@ const MediaCardConstantService = ({ item }) => {
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        minHeight: "255px", // Ajustează această valoare după necesitate
-        minWidth: "300px", // Ajustează această valoare după necesitate
+
         cursor: "pointer",
         borderRadius: "18px",
         transition: "all 0.3s ease", // Adaugă tranziție pentru efect neted
@@ -185,6 +88,7 @@ const MediaCardConstantService = ({ item }) => {
           backgroundColor: "transparent",
         },
       }}
+      className={classes.MediaCardConstantServiceBox}
     >
       <img
         src={"/dash-frame.png"}
@@ -203,7 +107,8 @@ const MediaCardConstantService = ({ item }) => {
           position: "relative",
           color: "white",
           zIndex: 1,
-          fontSize: 20,
+          fontSize: isMobile ? 13 : 20,
+          width: isMobile ? "50%" : "auto",
         }}
       >
         {item.text}
@@ -231,6 +136,23 @@ export function Landing({ services }) {
   } = useApiData();
   const { t } = useTranslation("common", "services");
   const { classes, cx } = useSpacing();
+
+  // const menuOptions = [
+  //   { text: "asdadds", route: "/citire-personalizata" },
+  //   { text: "asdadds", route: "/citire-viitor" },
+  //   { text: "asdadds", route: "/numar-norocos" },
+  //   { text: "asdadds", route: "/culoare-norocoasa" },
+  //   { text: "asdadds", route: "/ora-norocoasa" },
+  //   { text: "asdadds", route: "/citat-motivational" },
+  // ];
+  const menuOptions = [
+    { text: t("personalReading"), route: "/citire-personalizata" },
+    { text: t("futureReading"), route: "/citire-viitor" },
+    { text: t("luckyNumber"), route: "/numar-norocos" },
+    { text: t("luckyColor"), route: "/culoare-norocoasa" },
+    { text: t("luckyHours"), route: "/ora-norocoasa" },
+    { text: t("motivationalQuotes"), route: "/citat-motivational" },
+  ];
 
   const router = useRouter();
 
@@ -278,31 +200,31 @@ export function Landing({ services }) {
     }
   };
 
-  React.useEffect(() => {
-    // handleAddToFirestore();
+  // React.useEffect(() => {
+  //   // handleAddToFirestore();
 
-    console.log(`test.....xxx,,xxx......`, numereNorocoase);
+  //   console.log(`test.....xxx,,xxx......`, numereNorocoase);
 
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
-  }, []);
+  //   if (!currentUser && !isGuestUser) {
+  //     router.push("login");
+  //   }
+  // }, []);
 
-  if ((!currentUser && !isGuestUser) || loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          width: "100%",
-        }}
-      >
-        <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
-      </div>
-    );
-  }
+  // if ((!currentUser && !isGuestUser) || loading) {
+  //   return (
+  //     <div
+  //       style={{
+  //         display: "flex",
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         height: "100vh",
+  //         width: "100%",
+  //       }}
+  //     >
+  //       <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
@@ -334,7 +256,10 @@ export function Landing({ services }) {
         </section>
 
         <section>
-          <div style={{ paddingTop: "9%" }} className={classes.wraperSection}>
+          <div
+            style={{ paddingTop: isMobile ? "25%" : "9%" }}
+            className={classes.wraperSection}
+          >
             <Grid
               container
               rowSpacing={isMobile ? 5 : 5}
@@ -350,7 +275,7 @@ export function Landing({ services }) {
                   <Grid
                     key={index}
                     item
-                    xs={12}
+                    xs={6}
                     sm={4}
                     md={4}
                     sx={{

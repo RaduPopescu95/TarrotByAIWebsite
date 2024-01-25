@@ -40,7 +40,7 @@ export default function ResetPassword() {
           xs={12}
           sm={12}
           md={12}
-          component={Paper}
+          // component={Paper}
           sx={styles.confirmationGrid}
         >
           <ResetPasswordForm

@@ -12,7 +12,7 @@ import { useRouter } from "next/router";
 import { colors } from "../../../utils/colors";
 import { useNumberContext } from "../../../context/NumberContext";
 
-function NavBar({ fixed }) {
+function NavBar({ fixed, style, fontSize }) {
   const { classes } = useStyles();
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
@@ -47,7 +47,7 @@ function NavBar({ fixed }) {
   };
 
   return (
-    <ul>
+    <ul style={style}>
       {navData.map((item, index) => {
         const isActive = router.pathname === `/${item.toLowerCase()}`;
         return (
@@ -58,7 +58,7 @@ function NavBar({ fixed }) {
                 onClick={handleStyleIconClick}
                 style={{
                   color: isActive ? "white" : colors.primary3,
-                  fontSize: isActive ? "70px" : "60px",
+                  fontSize: fontSize ? fontSize : isActive ? "70px" : "60px",
                   backgroundColor: "rgba(255, 255, 255, 1)",
                   color: colors.primary3,
                   borderRadius: 15,
@@ -80,18 +80,21 @@ function NavBar({ fixed }) {
               >
                 {item === "" ? (
                   <StarBorderIcon
+                    style={{ fontSize }}
                     className={
                       isActive ? classes.iconHovered : classes.iconHover
                     }
                   />
                 ) : item === "citire-personalizata" ? (
                   <StyleIcon
+                    style={{ fontSize }}
                     className={
                       isActive ? classes.iconHovered : classes.iconHover
                     }
                   />
                 ) : (
                   <PersonIcon
+                    style={{ fontSize }}
                     className={
                       isActive ? classes.iconHovered : classes.iconHover
                     }

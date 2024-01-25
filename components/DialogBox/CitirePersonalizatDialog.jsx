@@ -15,6 +15,7 @@ import { Grid, useMediaQuery, useTheme } from "@mui/material";
 import { useSpacing } from "../../theme/common";
 import { useApiData } from "../../context/ApiContext";
 import { colors } from "../../utils/colors";
+import languageDetector from "../../lib/languageDetector";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -28,6 +29,7 @@ export default function CitirePersonalizatDialog({
   handleVideoEnd,
 }) {
   const [open, setOpen] = React.useState(false);
+  const detectedLng = languageDetector.detect();
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -66,87 +68,110 @@ export default function CitirePersonalizatDialog({
         </AppBar>
         <div
           style={{
+            overflow: "auto",
             backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+            height: isMobile ? "100vh" : "100%",
           }}
         >
-          <section>
-            <div
-              style={{ paddingTop: "5%", height: isMobile ? "auto" : "100vh" }}
-              className={classes.wraperSection}
+          <div
+            style={{ paddingTop: "2%", height: isMobile ? "100%" : "100vh" }}
+            className={classes.wraperSection}
+          >
+            <Grid
+              container
+              rowSpacing={isMobile ? 5 : 5}
+              columnSpacing={0}
+              sx={{
+                display: "flex",
+                justifyContent: "flex-start",
+                alignItems: "center",
+                // top: 30,
+                position: "relative",
+                paddingLeft: isMobile ? 5 : 10,
+                paddingRight: isMobile ? 5 : 10,
+              }}
             >
-              <Grid
-                container
-                rowSpacing={isMobile ? 5 : 5}
-                columnSpacing={0}
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                  top: 30,
-                  position: "relative",
-                  paddingLeft: isMobile ? 5 : 10,
-                  paddingRight: isMobile ? 5 : 10,
-                }}
-              >
-                <Grid item xs={12} sm={12} md={12}>
+              <Grid item xs={12} sm={12} md={12}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    height: "100%",
+                    flexDirection: "column",
+                  }}
+                >
+                  <img
+                    src={item.info && item.carte.image.finalUri}
+                    width={100}
+                    height={150}
+                    alt="Picture of the author"
+                    style={{ marginBottom: 10 }}
+                  />
+
+                  <video
+                    width="280"
+                    height="280"
+                    controls
+                    onEnded={handleVideoEnd}
+                    autoPlay
+                    style={{ borderRadius: 10 }}
+                  >
+                    {item.info && (
+                      <source
+                        src={
+                          detectedLng === "hi"
+                            ? item.info.hu.url
+                            : detectedLng === "id"
+                              ? item.info.ru.url
+                              : item.info[detectedLng].url
+                        }
+                        type="video/mp4"
+                      />
+                    )}
+                  </video>
+
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      width: "100%",
-                      height: "100%",
                       flexDirection: "column",
+
+                      height: "100px",
+                      marginTop: 20,
                     }}
                   >
-                    {/* <video
-                      src={item.info && item.info.ro.url}
-                      width={280}
-                      height={280}
-                      alt="Picture of the author"
-                      style={{ marginTop: 10 }}
-                    /> */}
-
-                    <video
-                      width="280"
-                      height="280"
-                      controls
-                      onEnded={handleVideoEnd}
-                      autoPlay
-                    >
-                      <source
-                        src={item.info && item.info.ro.url}
-                        type="video/mp4"
-                      />
-                    </video>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        flexDirection: "column",
-
-                        height: "100px",
-                        marginTop: 20,
-                      }}
-                    >
-                      <h2>{item.info && item.carte.info.ro.nume}</h2>
-                    </div>
+                    {item.carte && (
+                      <h2 style={{ color: colors.primary3 }}>
+                        {detectedLng === "hi"
+                          ? item.carte.info.hu.nume
+                          : detectedLng === "id"
+                            ? item.carte.info.ru.nume
+                            : item.carte.info[detectedLng].nume}
+                      </h2>
+                    )}
+                  </div>
+                  {item.info && (
                     <p
                       style={{
                         textAlign: "justify",
                         fontSize: 18,
-                        color: "white",
+                        color: colors.primary3,
                       }}
                     >
-                      {item.info && item.info.ro.descriere}
+                      {detectedLng === "hi"
+                        ? item.info.hu.descriere
+                        : detectedLng === "id"
+                          ? item.info.ru.descriere
+                          : item.info[detectedLng].descriere}
                     </p>
-                  </div>
-                </Grid>
+                  )}
+                </div>
               </Grid>
-            </div>
-          </section>
+            </Grid>
+          </div>
         </div>
       </Dialog>
     </React.Fragment>

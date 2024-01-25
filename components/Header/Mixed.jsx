@@ -18,6 +18,7 @@ import multiple from "./data/multiple";
 import { Button, Typography } from "@mui/material";
 import link from "../../public/text/link";
 import { useAuth } from "../../context/AuthContext";
+import { colors } from "../../utils/colors";
 
 function Mixed(props) {
   const [fixed, setFixed] = useState(false);
@@ -28,7 +29,7 @@ function Mixed(props) {
   const { home } = props;
   const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
-  const { userData } = useAuth();
+  const { userData, currentUser } = useAuth();
   const { t, i18n } = useTranslation();
 
   const buttonStyle = {
@@ -90,6 +91,7 @@ function Mixed(props) {
           alignItems: "center",
           backgroundColor: "transparent",
           maxHeight: "100px",
+          zIndex: 9,
         }}
       >
         <Container
@@ -109,28 +111,31 @@ function Mixed(props) {
               className={classes.navMenu}
               style={{ backgroundColor: "transparent" }}
             >
-              <div
-                className={classes.logo}
-                style={{
-                  paddingLeft: isMobile ? 10 : 10,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <a href={link.starter.home}>
-                  <Logo type="landscape" fixed={fixed} />
-                </a>
-                {userData ? (
-                  <Typography style={{ color: "white" }}>
-                    Bine ai venit, {userData && userData.first_name}!
-                  </Typography>
-                ) : (
-                  <Typography style={{ color: "white" }}>
-                    Bine ai venit !
-                  </Typography>
-                )}
-              </div>
+              {!props.isOnlySettngs && (
+                <div
+                  className={classes.logo}
+                  style={{
+                    paddingLeft: isMobile ? 10 : 10,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <a href={link.starter.home}>
+                    <Logo type="landscape" fixed={fixed} />
+                  </a>
+                  {userData ? (
+                    <Typography style={{ color: "white" }}>
+                      {t("helloUser")}, {userData && userData.first_name}!
+                    </Typography>
+                  ) : (
+                    <Typography style={{ color: "white" }}>
+                      {t("helloUser")} !
+                    </Typography>
+                  )}
+                </div>
+              )}
+
               {isMobile && (
                 <IconButton
                   onClick={handleOpenDrawer}
@@ -148,7 +153,7 @@ function Mixed(props) {
                 </IconButton>
               )}
 
-              {isDesktop && (
+              {isDesktop && !props.isOnlySettngs && (
                 <div className={classes.mainMenu}>
                   <HeaderMenu
                     open={openMenu}
@@ -163,7 +168,7 @@ function Mixed(props) {
                 </div>
               )}
 
-              {isDesktop && <UserMenu />}
+              {isDesktop && <UserMenu isOnlySettngs={props.isOnlySettngs} />}
             </nav>
           </div>
         </Container>
@@ -176,10 +181,38 @@ function Mixed(props) {
           width: "100%",
         }}
       ></div> */}
-      {isMobile && (
-        <Button style={buttonStyle} href={"Tel:+40345404753"}>
-          +40 345 404 753
-        </Button>
+      {isMobile && currentUser && (
+        <div
+          style={{
+            position: "fixed", // Schimbă aici din "absolute" în "fixed"
+            bottom: 0,
+            zIndex: 12,
+            width: "100%",
+            backgroundColor: colors.primary3,
+            height: "60px",
+          }}
+        >
+          <HeaderMenu
+            open={openMenu}
+            menuPrimary={navData}
+            dataMenu={multiple}
+            menuSecondary={samplePages}
+            toggle={handleToggle}
+            close={handleClose}
+            singleNav={home}
+            fixed={fixed}
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-around",
+              content: '""',
+              listStyleType: "none" /* Elimină bullet points */,
+              paddingLeft: 0 /* Opțional, elimină indentarea */,
+              margin: 4,
+            }}
+            fontSize={50}
+          />
+        </div>
       )}
     </Fragment>
   );

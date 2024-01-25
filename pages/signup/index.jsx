@@ -18,7 +18,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { Alert, CircularProgress } from "@mui/material";
 import { useRouter } from "next/router";
-import { auth } from "../../firebase";
+import { authentication } from "../../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
 import Head from "next/head";
@@ -169,7 +169,11 @@ export default function SignUp() {
         password: formData.password,
       });
 
-      createUserWithEmailAndPassword(auth, formData.email, formData.password)
+      createUserWithEmailAndPassword(
+        authentication,
+        formData.email,
+        formData.password
+      )
         .then((userCredential) => {
           // Signed up
           const user = userCredential.user;

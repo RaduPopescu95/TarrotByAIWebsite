@@ -24,6 +24,8 @@ import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import languageDetector from "../../lib/languageDetector";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -34,15 +36,13 @@ import { useApiData } from "../../context/ApiContext";
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
+}
 
 // ... rest of your code
 
@@ -52,7 +52,7 @@ export function NumarNorocos() {
   const { classes, cx } = useSpacing();
   const { culoriNorocoase } = useApiData();
   const [zilnicCuloriNorocoase, setZilnicCuloriNorocoase] = React.useState({});
-
+  const detectedLng = languageDetector.detect();
   const [flipAllCards, setFlipAllCards] = React.useState(false);
 
   const router = useRouter();
@@ -124,7 +124,7 @@ export function NumarNorocos() {
 
         <section>
           <div
-            style={{ paddingTop: "5%", height: isMobile ? "auto" : "100vh" }}
+            style={{ paddingTop: isMobile ? "15%" : "5%", height: "100%" }}
             className={classes.wraperSection}
           >
             <Grid
@@ -150,6 +150,7 @@ export function NumarNorocos() {
                     width: "100%",
                     height: "100%",
                     flexDirection: "column",
+                    marginBottom: "60px",
                   }}
                 >
                   {zilnicCuloriNorocoase.image && (
@@ -169,20 +170,31 @@ export function NumarNorocos() {
                       alignItems: "center",
                       flexDirection: "column",
 
-                      height: "100px",
+                      height: "auto",
                       marginTop: 20,
                     }}
                   >
-                    <h1>Culoarea norocoasă a zilei</h1>
-                    <h2>
-                      {zilnicCuloriNorocoase.info &&
-                        zilnicCuloriNorocoase.info.ro.nume}
-                    </h2>
+                    <h1>{t("luckyColorOfTheDay")}</h1>
+
+                    {zilnicCuloriNorocoase.info && (
+                      <h2>
+                        {detectedLng === "hi"
+                          ? zilnicCuloriNorocoase.info.hu.nume
+                          : detectedLng === "id"
+                            ? zilnicCuloriNorocoase.info.ru.nume
+                            : zilnicCuloriNorocoase.info[detectedLng].nume}
+                      </h2>
+                    )}
+                    {zilnicCuloriNorocoase.info && (
+                      <p style={{ textAlign: "justify", fontSize: 18 }}>
+                        {detectedLng === "hi"
+                          ? zilnicCuloriNorocoase.info.hu.descriere
+                          : detectedLng === "id"
+                            ? zilnicCuloriNorocoase.info.ru.descriere
+                            : zilnicCuloriNorocoase.info[detectedLng].descriere}
+                      </p>
+                    )}
                   </div>
-                  <p style={{ textAlign: "justify", fontSize: 18 }}>
-                    {zilnicCuloriNorocoase.info &&
-                      zilnicCuloriNorocoase.info.ro.descriere}
-                  </p>
                 </div>
               </Grid>
             </Grid>

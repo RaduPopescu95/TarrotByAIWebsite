@@ -125,7 +125,10 @@ export default function DropdownMenu({ fixed }) {
                   >
                     {dropdownData.map((item, index) => {
                       return (
-                        <div style={{ marginTop: index === 0 ? 0 : 8 }}>
+                        <div
+                          key={index}
+                          style={{ marginTop: index === 0 ? 0 : 8 }}
+                        >
                           <Link
                             href={`/services/${item.link}`}
                             className={classes.navLinkMixed}

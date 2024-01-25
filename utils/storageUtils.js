@@ -1,4 +1,4 @@
-import { auth, storage } from "../firebase";
+import { authentication, storage } from "../firebase";
 import {
   deleteObject,
   getDownloadURL,
@@ -18,7 +18,7 @@ export const uploadImage = async (
   oldFileName
 ) => {
   const imageUpload = images[0];
-  const authInstance = auth;
+  const authInstance = authentication;
   const currentUser = authInstance.currentUser;
   let finalUri;
   const fileName = new Date().getTime();
@@ -80,7 +80,7 @@ export const uploadImageServices = async (
   noNewImage
 ) => {
   const imageUpload = images[0];
-  const authInstance = auth;
+  const authInstance = authentication;
   const currentUser = authInstance.currentUser;
   let finalUri;
   const fileName = new Date().getTime();

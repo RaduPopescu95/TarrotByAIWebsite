@@ -18,7 +18,7 @@ import Image from "next/image";
 import StyleIcon from "@mui/icons-material/Style";
 import Link from "next/link";
 // import { toUrlSlug } from "../utils/commonUtils";
-// import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
 import { colors } from "../../utils/colors";
@@ -27,6 +27,7 @@ import { useApiData } from "../../context/ApiContext";
 import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
 import { Shuffle } from "@mui/icons-material";
+import languageDetector from "../../lib/languageDetector";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -37,15 +38,13 @@ import { Shuffle } from "@mui/icons-material";
 //   };
 // }
 
-// export async function getServerSideProps({ locale }) {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//       ...(await serverSideTranslations(locale, ["common", "services"])),
-//     },
-//   };
-// }
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
+}
 
 // ... rest of your code
 
@@ -86,6 +85,7 @@ const MediaCardConstantService = ({
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
   const card = shuffledCartiViitor[index % shuffledCartiViitor.length];
   const { classes, cx } = useSpacing();
+  const detectedLng = languageDetector.detect();
 
   console.log("carti viitor...", cartiViitor);
   console.log("Card...", shuffledCartiViitor);
@@ -190,6 +190,10 @@ const MediaCardConstantService = ({
           transform: "rotateY(180deg)",
           width: "100%",
           height: "100%",
+          display: "flex",
+
+          alignItems: "center",
+          justifyContent: "center",
         }}
         variants={backVariants}
         initial="initial"
@@ -209,6 +213,7 @@ const MediaCardConstantService = ({
           backgroundColor: colors.primary3,
           padding: "0.3rem",
           borderRadius: 5,
+          marginTop: 5,
         }}
       >
         <Typography
@@ -217,8 +222,8 @@ const MediaCardConstantService = ({
             bottom: "0%", // Poziționează textul la jumătatea înălțimii containerului părinte
             left: 0, // Aliniază la stânga containerului părinte
             // bottom: -40, // Aliniază la dreapta containerului părinte
-            textAlign: "center", // Centrează textul orizontal
-            // maxWidth: "100%", // limitează lățimea maximă
+            textAlign: "flex-start", // Centrează textul orizontal
+            maxWidth: "100%", // limitează lățimea maximă
             // whiteSpace: "nowrap", // împiedică întreruperea textului
             // overflow: "hidden", // ascunde textul care depășește lățimea maximă
             textOverflow: "ellipsis", // adaugă '...' dacă textul este prea lung
@@ -226,7 +231,11 @@ const MediaCardConstantService = ({
             fontSize: isMobile ? 5 : 15,
           }}
         >
-          {item.info.ro.nume}
+          {detectedLng === "hi"
+            ? item.info.hu.nume
+            : detectedLng === "id"
+              ? item.info.ru.nume
+              : item.info[detectedLng].nume}
         </Typography>
       </div>
     </motion.div>
@@ -386,6 +395,7 @@ export function CitirePersonalizata({ services }) {
               style={{
                 paddingTop: isDesktop ? "8%" : "30%",
                 height: "100%",
+                paddingBottom: "100px",
               }}
               className={classes.wraperSection}
             >

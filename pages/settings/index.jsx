@@ -23,24 +23,53 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import PasswordDialog from "../../components/PasswordDialog/PasswordDialog";
 import { handleUpdateFirestore } from "../../utils/firestoreUtils";
-import { Alert } from "@mui/material";
+import { Alert, IconButton, useMediaQuery, useTheme } from "@mui/material";
+import Header from "../../components/Header";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "react-i18next";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 function Copyright(props) {
   return (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      align="center"
-      {...props}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+      }}
     >
-      {"Copyright © "}
-      <Link color="inherit" href="https://mui.com/">
-        Cristina Zurba
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"Copyright © "}
+        <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
+        {"."}
+      </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"dezvoltat de "}
+        <Link color="inherit" href="https://webappdynamicx.ro/">
+          Web App Dynamicx
+        </Link>{" "}
+        {"."}
+      </Typography>
+    </div>
   );
+}
+
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
 }
 
 // TODO remove, this demo shouldn't need to reset the theme.
@@ -54,6 +83,7 @@ export default function SignInSide() {
   const [passwordError, setPasswordError] = React.useState("");
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
+  const { t } = useTranslation("common");
 
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [registerType, setRegisterType] = React.useState("email");
@@ -68,6 +98,10 @@ export default function SignInSide() {
   const [first_name, setFirstName] = React.useState("");
 
   const [snackMessage, setSnackMessage] = React.useState("");
+
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const router = useRouter();
 
@@ -172,6 +206,10 @@ export default function SignInSide() {
     <ThemeProvider theme={defaultTheme}>
       <Grid container component="main" sx={{ height: "100vh" }}>
         <CssBaseline />
+        <section>
+          <Header isOnlySettngs={true} />
+        </section>
+
         <Grid
           item
           xs={false}
@@ -187,10 +225,12 @@ export default function SignInSide() {
           <div
             style={{
               display: "flex",
-              justifyContent: "center",
+              justifyContent: "flex-start",
               alignItems: "center",
               flexDirection: "column",
               height: "100%",
+              paddingTop: "3%",
+              paddingBottom: "3%",
             }}
           >
             <Image
@@ -207,8 +247,11 @@ export default function SignInSide() {
               style={{ top: 20, position: "relative", height: 450, width: 400 }}
             />
 
-            <Typography variant="h1" style={{ color: colors.primary3 }}>
-              Tarot by AI
+            <Typography
+              variant="h1"
+              style={{ color: colors.primary3, fontSize: isMobile ? 40 : 80 }}
+            >
+              {t("tarotByAi")}
             </Typography>
           </div>
         </Grid>
@@ -218,7 +261,7 @@ export default function SignInSide() {
             xs={12}
             sm={8}
             md={5}
-            component={Paper}
+            // component={Paper}
             elevation={6}
             square
             sx={{
@@ -227,6 +270,16 @@ export default function SignInSide() {
               alignItems: "center",
             }}
           >
+            <div
+              style={{ position: "relative", left: 10, top: 10, zIndex: 11 }}
+            >
+              <IconButton
+                aria-label="delete"
+                onClick={() => window.history.back()}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            </div>
             <Box
               sx={{
                 mt: 1,
@@ -250,10 +303,10 @@ export default function SignInSide() {
               />
 
               <Typography component="h1" variant="h5">
-                Explore more with your own account
+                {t("createAccountCTA")}
               </Typography>
               <Typography variant="p">
-                Create your own account and save your reading history
+                {t("createAccountCTAMessage")}
               </Typography>
               <Box
                 component="form"
@@ -286,7 +339,7 @@ export default function SignInSide() {
                     },
                   }}
                 >
-                  Register
+                  {t("register")}
                 </Button>
 
                 <Copyright sx={{ mt: 5 }} />
@@ -299,13 +352,28 @@ export default function SignInSide() {
             xs={12}
             sm={8}
             md={5}
-            component={Paper}
+            // component={Paper}
             elevation={6}
             square
           >
+            <div
+              style={{
+                position: "relative",
+                left: 10,
+                top: 10,
+                zIndex: 11,
+              }}
+            >
+              <IconButton
+                aria-label="delete"
+                onClick={() => window.history.back()}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            </div>
             <Box
               sx={{
-                mt: 1,
+                mt: 0,
                 mb: 8,
                 mx: 4,
                 display: "flex",
@@ -315,26 +383,45 @@ export default function SignInSide() {
             >
               <Image
                 src="/LogoPngTransparent.png"
-                width={100}
-                height={100}
+                width={130}
+                height={130}
                 alt="Picture of the author"
               />
-
-              <Typography component="h1" variant="h5">
-                My account
-              </Typography>
-              <Box
-                component="form"
-                noValidate
-                onSubmit={handleSubmit}
-                sx={{ mt: 1 }}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                  marginTop: 5,
+                }}
               >
+                <Typography component="h1" variant="h4">
+                  {t("myAccount")}
+                </Typography>
+                <Typography
+                  component="p"
+                  onClick={() => router.push("/istoric-citiri-personalizate")}
+                  style={{ cursor: "pointer", color: colors.primary3 }}
+                >
+                  {t("historyPersonalized")}
+                </Typography>
+
+                <Typography
+                  component="p"
+                  onClick={() => router.push("/istoric-citiri-viitor")}
+                  style={{ cursor: "pointer" }}
+                >
+                  {t("historyFuture")}
+                </Typography>
+              </div>
+              <Box component="form" noValidate onSubmit={handleSubmit}>
                 <TextField
                   margin="normal"
                   required
                   fullWidth
                   id="first-name"
-                  label="First Name"
+                  label={t("firstName")}
                   name="first-name"
                   autoComplete="first-name"
                   autoFocus
@@ -346,7 +433,7 @@ export default function SignInSide() {
                   required
                   fullWidth
                   id="last-name"
-                  label="Last Name"
+                  label={t("lastName")}
                   name="last-name"
                   autoComplete="last-name"
                   autoFocus
@@ -358,7 +445,7 @@ export default function SignInSide() {
                   required
                   fullWidth
                   id="email"
-                  label="Email Address"
+                  label={t("email")}
                   name="email"
                   autoComplete="email"
                   autoFocus
@@ -370,7 +457,7 @@ export default function SignInSide() {
                   required
                   fullWidth
                   name="newPassword"
-                  label="New Password"
+                  label={t("createPassword")}
                   type="password"
                   id="newPassword"
                   autoComplete="current-password"
@@ -382,7 +469,7 @@ export default function SignInSide() {
                   required
                   fullWidth
                   name="confirmPassword"
-                  label="Confirm Password"
+                  label={t("confirmPassword")}
                   type="password"
                   id="confirmPassword"
                   autoComplete="confirm-password"
@@ -413,7 +500,7 @@ export default function SignInSide() {
                     },
                   }}
                 >
-                  Save changes
+                  {t("saveChanges")}
                 </Button>
                 <Grid container>
                   <Grid item xs>
@@ -426,12 +513,12 @@ export default function SignInSide() {
                         });
                       }}
                     >
-                      Sign out
+                      {t("logOut")}
                     </Button>
                   </Grid>
-                  <Grid item>
-                    <Button variant="body2">{"Delete account"}</Button>
-                  </Grid>
+                  {/* <Grid item>
+                    <Button variant="body2"> {t("deleteAccount")}</Button>
+                  </Grid> */}
                 </Grid>
                 <Copyright sx={{ mt: 5 }} />
               </Box>

@@ -18,27 +18,55 @@ import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
 import { retrieveTypeOfUser } from "../../utils/getFirebaseData";
 import { emailWithoutSpace } from "../../utils/strintText";
-import { Alert } from "@mui/material";
+import { Alert, useMediaQuery, useTheme } from "@mui/material";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { authentication } from "../../firebase";
+import Header from "../../components/Header";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "react-i18next";
 
 function Copyright(props) {
   return (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      align="center"
-      {...props}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+      }}
     >
-      {"Copyright © "}
-      <Link color="inherit" href="https://mui.com/">
-        Cristina Zurba
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"Copyright © "}
+        <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
+        {"."}
+      </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        align="center"
+        {...props}
+      >
+        {"dezvoltat de "}
+        <Link color="inherit" href="https://webappdynamicx.ro/">
+          Web App Dynamicx
+        </Link>{" "}
+        {"."}
+      </Typography>
+    </div>
   );
+}
+
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
 }
 
 // TODO remove, this demo shouldn't need to reset the theme.
@@ -46,9 +74,15 @@ function Copyright(props) {
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
-  const { currentUser, isGuestUser, setAsGuestUser } = useAuth();
+  const { currentUser, isGuestUser, setAsGuestUser, setCurrentUser } =
+    useAuth();
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const { t } = useTranslation("common");
   const router = useRouter();
 
   const handleSubmit = (event) => {
@@ -65,6 +99,7 @@ export default function SignInSide() {
 
     signInWithEmailAndPassword(authentication, emailNew, password)
       .then(async (userCredentials) => {
+        setCurrentUser(userCredentials);
         console.log("userCredentials...", userCredentials.user.uid);
         router.push("/");
         setIsLoading(false);
@@ -102,6 +137,10 @@ export default function SignInSide() {
     <ThemeProvider theme={defaultTheme}>
       <Grid container component="main" sx={{ height: "100vh" }}>
         <CssBaseline />
+        <section>
+          <Header isOnlySettngs={true} />
+        </section>
+
         <Grid
           item
           xs={false}
@@ -121,6 +160,8 @@ export default function SignInSide() {
               alignItems: "center",
               flexDirection: "column",
               height: "100%",
+              paddingTop: "3%",
+              paddingBottom: "3%",
             }}
           >
             <Image
@@ -137,14 +178,17 @@ export default function SignInSide() {
               style={{ top: 20, position: "relative", height: 450, width: 400 }}
             />
             <Typography variant="h4" style={{ color: colors.primary3 }}>
-              Bine ai venit la
+              {t("welcomeTo")}
             </Typography>
-            <Typography variant="h1" style={{ color: colors.primary3 }}>
-              Tarot by AI
+            <Typography
+              variant="h1"
+              style={{ color: colors.primary3, fontSize: isMobile ? 60 : 80 }}
+            >
+              {t("tarotByAi")}
             </Typography>
           </div>
         </Grid>
-        <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
+        <Grid item xs={12} sm={8} md={5} elevation={6} square>
           <Box
             sx={{
               my: 8,
@@ -162,7 +206,7 @@ export default function SignInSide() {
             />
 
             <Typography component="h1" variant="h5">
-              Sign in
+              {t("loginNow")}
             </Typography>
             <Box
               component="form"
@@ -175,7 +219,7 @@ export default function SignInSide() {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t("email")}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -185,7 +229,7 @@ export default function SignInSide() {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t("password")}
                 type="password"
                 id="password"
                 autoComplete="current-password"
@@ -215,7 +259,7 @@ export default function SignInSide() {
                   },
                 }}
               >
-                Continue without account
+                {t("loginNowNoAccount")}
               </Button>
 
               <Button
@@ -237,18 +281,27 @@ export default function SignInSide() {
                   },
                 }}
               >
-                Sign In
+                {t("login")}
               </Button>
               <Grid container>
                 <Grid item xs>
-                  <Link href="/forgotpassword" variant="body2">
-                    Forgot password?
-                  </Link>
+                  <Typography
+                    onClick={() => router.push("/forgotpassword")}
+                    variant="body2"
+                    style={{ color: "blue", cursor: "pointer" }}
+                  >
+                    {t("forgotPassword")}
+                  </Typography>
                 </Grid>
-                <Grid item>
-                  <Link href="/register" variant="body2">
-                    {"Don't have an account? Sign Up"}
-                  </Link>
+                <Grid item style={{ display: "flex", flexDirection: "row" }}>
+                  <Typography variant="body2">{t("dntHaveAccount")}</Typography>
+                  <Typography
+                    onClick={() => router.push("/register")}
+                    variant="body2"
+                    style={{ color: "blue", cursor: "pointer" }}
+                  >
+                    {t("signUp")}
+                  </Typography>
                 </Grid>
               </Grid>
               <Copyright sx={{ mt: 5 }} />

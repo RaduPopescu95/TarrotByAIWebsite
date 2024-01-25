@@ -43,6 +43,18 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
   const flagImages = {
     en: "/flags/english.png",
     ro: "/flags/romania.png",
+    bg: "/flags/bulgaria.png",
+    hr: "/flags/croatia.png",
+    cs: "/flags/czech.png",
+    fr: "/flags/france.png",
+    de: "/flags/germany.png",
+    el: "/flags/greece.png",
+    hi: "/flags/india.png",
+    id: "/flags/indonesia.png",
+    it: "/flags/italy.png",
+    pl: "/flags/poland.png",
+    sk: "/flags/slovakia.png",
+    es: "/flags/spanish.png",
     // Adaugă aici alte limbi și căile către imaginile lor
   };
 
@@ -59,7 +71,13 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
       )}
     </ListItem>
   ) : (
-    <ListItem role={undefined} dense button onClick={() => changeLang(locale)}>
+    <ListItem
+      sx={{ zIndex: 10 }}
+      role={undefined}
+      dense
+      button
+      onClick={() => changeLang(locale)}
+    >
       <img
         className="flag"
         src={flagImages[locale]} // Alege imaginea corespunzătoare limbii
@@ -68,7 +86,10 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
         height={20}
         style={{ marginRight: 10 }}
       />
-      <ListItemText primary={t(locale)} style={{ color: "white" }} />
+      <ListItemText
+        primary={t(locale)}
+        style={{ color: "white", zIndex: 10 }}
+      />
       {checked && (
         <ListItemSecondaryAction>
           <CheckIcon color="primary" style={{ color: "rgb(255,192,69)" }} />

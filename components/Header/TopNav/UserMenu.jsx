@@ -9,6 +9,7 @@ import PhoneIcon from "@mui/icons-material/Phone";
 
 import useStyles from "../header-style";
 import Settings from "./Settings";
+import Link from "next/link";
 
 function UserMenu(props) {
   const { classes } = useStyles();
@@ -31,12 +32,19 @@ function UserMenu(props) {
         >
           +40 345 404 753
         </Button> */}
-        <Settings />
-        <img
-          src={"/gplay.png"}
-          style={{ width: "40px", height: "40px", marginRight: 10 }}
-        />
-        <img src={"/appstore.png"} style={{ width: "40px", height: "40px" }} />
+        <Settings isWhiteBg={props.isOnlySettngs} />
+        <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
+          <img
+            src={"/gplay.png"}
+            style={{ width: "40px", height: "40px", marginRight: 10 }}
+          />
+        </Link>
+        <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
+          <img
+            src={"/appstore.png"}
+            style={{ width: "40px", height: "40px" }}
+          />
+        </Link>
       </div>
     </div>
   );
