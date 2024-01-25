@@ -7,6 +7,7 @@ import { AuthProvider } from "../context/AuthContext";
 import ApiDataProvider from "../context/ApiContext";
 import { NumberProvider } from "../context/NumberContext";
 import { appWithTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
@@ -25,6 +26,14 @@ function MyApp({ Component, pageProps }) {
       </ApiDataProvider>
     </AuthProvider>
   );
+}
+
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
 }
 
 export default appWithTranslation(MyApp);
