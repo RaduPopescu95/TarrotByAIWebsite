@@ -157,7 +157,7 @@ export function Landing({ services }) {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
