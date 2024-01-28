@@ -140,16 +140,16 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
       height: "7rem",
     },
     [theme.breakpoints.up("sm")]: {
-      height: "10rem",
+      height: "14rem",
     },
     [theme.breakpoints.up("md")]: {
-      height: "10rem",
+      height: "14rem",
     },
     [theme.breakpoints.up("lg")]: {
-      height: "10rem",
+      height: "14rem",
     },
     [theme.breakpoints.up("xl")]: {
-      height: "10rem",
+      height: "14rem",
     },
   },
 

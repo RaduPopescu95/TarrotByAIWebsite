@@ -593,6 +593,8 @@ export function CitirePersonalizata({ services }) {
                 paddingTop: isDesktop ? "8%" : "30%",
                 height: "100%",
                 marginBottom: "60px",
+                justifyContent: "center",
+                display: "flex",
               }}
               className={classes.wraperSection}
             >
@@ -609,6 +611,7 @@ export function CitirePersonalizata({ services }) {
                   paddingLeft: isDesktop ? 10 : 0,
                   paddingRight: isDesktop ? 10 : 0,
                   height: "100%",
+                  width: isMobile ? "100%" : "90%",
                 }}
               >
                 <AnimatePresence>

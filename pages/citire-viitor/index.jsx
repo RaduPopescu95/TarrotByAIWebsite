@@ -366,6 +366,7 @@ export function CitirePersonalizata({ services }) {
       </Head>
       <div
         style={{
+          overflow: "auto",
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
           minHeight: "100vh",
         }}
@@ -395,7 +396,9 @@ export function CitirePersonalizata({ services }) {
               style={{
                 paddingTop: isDesktop ? "8%" : "30%",
                 height: "100%",
-                paddingBottom: "100px",
+                marginBottom: "60px",
+                justifyContent: "center",
+                display: "flex",
               }}
               className={classes.wraperSection}
             >
@@ -412,6 +415,7 @@ export function CitirePersonalizata({ services }) {
                   paddingLeft: isDesktop ? 10 : 0,
                   paddingRight: isDesktop ? 10 : 0,
                   height: "100%",
+                  width: isMobile ? "100%" : "90%",
                 }}
               >
                 <AnimatePresence>

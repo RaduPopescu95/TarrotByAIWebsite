@@ -102,72 +102,106 @@ export default function CitirePersonalizatDialog({
                     flexDirection: "column",
                   }}
                 >
-                  <img
-                    src={item.info && item.carte.image.finalUri}
-                    width={100}
-                    height={150}
-                    alt="Picture of the author"
-                    style={{ marginBottom: 10 }}
-                  />
-
-                  <video
-                    width="280"
-                    height="280"
-                    controls
-                    onEnded={handleVideoEnd}
-                    autoPlay
-                    style={{ borderRadius: 10 }}
-                  >
-                    {item.info && (
-                      <source
-                        src={
-                          detectedLng === "hi"
-                            ? item.info.hu.url
-                            : detectedLng === "id"
-                              ? item.info.ru.url
-                              : item.info[detectedLng].url
-                        }
-                        type="video/mp4"
-                      />
-                    )}
-                  </video>
-
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "center",
+                      flexDirection: isMobile ? "column" : "row",
+                      justifyContent: "space-around",
                       alignItems: "center",
-                      flexDirection: "column",
 
-                      height: "100px",
-                      marginTop: 20,
+                      width: "100%",
                     }}
                   >
-                    {item.carte && (
-                      <h2 style={{ color: colors.primary3 }}>
-                        {detectedLng === "hi"
-                          ? item.carte.info.hu.nume
-                          : detectedLng === "id"
-                            ? item.carte.info.ru.nume
-                            : item.carte.info[detectedLng].nume}
-                      </h2>
-                    )}
-                  </div>
-                  {item.info && (
-                    <p
+                    <div
                       style={{
-                        textAlign: "justify",
-                        fontSize: 18,
-                        color: colors.primary3,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        flexDirection: "column",
+                        width: isMobile ? "100%" : "50%",
+                        height: "auto",
+                        marginTop: 20,
                       }}
                     >
-                      {detectedLng === "hi"
-                        ? item.info.hu.descriere
-                        : detectedLng === "id"
-                          ? item.info.ru.descriere
-                          : item.info[detectedLng].descriere}
-                    </p>
-                  )}
+                      <img
+                        src={item.info && item.carte.image.finalUri}
+                        width={150}
+                        height={250}
+                        alt="Picture of the author"
+                        style={{ marginBottom: 10 }}
+                      />
+                      {item.carte && (
+                        <h2 style={{ color: colors.primary3 }}>
+                          {detectedLng === "hi"
+                            ? item.carte.info.hu.nume
+                            : detectedLng === "id"
+                              ? item.carte.info.ru.nume
+                              : item.carte.info[detectedLng].nume}
+                        </h2>
+                      )}
+                      {item.info && (
+                        <p
+                          style={{
+                            textAlign: "justify",
+                            fontSize: 18,
+                            color: colors.primary3,
+                          }}
+                        >
+                          {detectedLng === "hi"
+                            ? item.info.hu.descriere
+                            : detectedLng === "id"
+                              ? item.info.ru.descriere
+                              : item.info[detectedLng].descriere}
+                        </p>
+                      )}
+                    </div>
+
+                    {isMobile ? (
+                      <video
+                        width="280"
+                        height="280"
+                        controls
+                        onEnded={handleVideoEnd}
+                        autoPlay
+                        style={{ borderRadius: 10 }}
+                      >
+                        {item.info && (
+                          <source
+                            src={
+                              detectedLng === "hi"
+                                ? item.info.hu.url
+                                : detectedLng === "id"
+                                  ? item.info.ru.url
+                                  : item.info[detectedLng].url
+                            }
+                            type="video/mp4"
+                          />
+                        )}
+                      </video>
+                    ) : (
+                      <video
+                        width="480"
+                        height="480"
+                        controls
+                        onEnded={handleVideoEnd}
+                        autoPlay
+                        style={{ borderRadius: 10 }}
+                      >
+                        {item.info && (
+                          <source
+                            src={
+                              detectedLng === "hi"
+                                ? item.info.hu.url
+                                : detectedLng === "id"
+                                  ? item.info.ru.url
+                                  : item.info[detectedLng].url
+                            }
+                            type="video/mp4"
+                          />
+                        )}
+                      </video>
+                    )}
+                  </div>
                 </div>
               </Grid>
             </Grid>

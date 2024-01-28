@@ -84,7 +84,7 @@ export default function CitireViitorDialog({
                   display: "flex",
                   justifyContent: "flex-start",
                   alignItems: "center",
-                  top: 30,
+                  top: 0,
                   position: "relative",
                   paddingLeft: isMobile ? 5 : 10,
                   paddingRight: isMobile ? 5 : 10,
@@ -101,15 +101,24 @@ export default function CitireViitorDialog({
                       flexDirection: "column",
                     }}
                   >
-                    {imageCard && (
-                      <img
-                        src={imageCard}
-                        width={180}
-                        height={280}
-                        alt="Picture of the author"
-                        style={{ marginTop: 10 }}
-                      />
-                    )}
+                    {imageCard &&
+                      (isMobile ? (
+                        <img
+                          src={imageCard}
+                          width={250}
+                          height={350}
+                          alt="Picture of the author"
+                          style={{ marginTop: 10 }}
+                        />
+                      ) : (
+                        <img
+                          src={imageCard}
+                          width={350}
+                          height={450}
+                          alt="Picture of the author"
+                          style={{ marginTop: 10 }}
+                        />
+                      ))}
 
                     <div
                       style={{

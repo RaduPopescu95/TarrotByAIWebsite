@@ -153,15 +153,24 @@ export function NumarNorocos() {
                     marginBottom: "60px",
                   }}
                 >
-                  {zilnicCuloriNorocoase.image && (
-                    <img
-                      src={zilnicCuloriNorocoase.image.finalUri}
-                      width={280}
-                      height={280}
-                      alt="Picture of the author"
-                      style={{ marginTop: 10 }}
-                    />
-                  )}
+                  {zilnicCuloriNorocoase.image &&
+                    (isMobile ? (
+                      <img
+                        src={zilnicCuloriNorocoase.image.finalUri}
+                        width={280}
+                        height={280}
+                        alt="Picture of the author"
+                        style={{ marginTop: 10 }}
+                      />
+                    ) : (
+                      <img
+                        src={zilnicCuloriNorocoase.image.finalUri}
+                        width={400}
+                        height={400}
+                        alt="Picture of the author"
+                        style={{ marginTop: 10 }}
+                      />
+                    ))}
 
                   <div
                     style={{
