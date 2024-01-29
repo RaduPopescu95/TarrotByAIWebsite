@@ -209,52 +209,6 @@ export default function SignInSide() {
         <section>
           <Header isOnlySettngs={true} />
         </section>
-
-        <Grid
-          item
-          xs={false}
-          sm={4}
-          md={7}
-          sx={{
-            backgroundRepeat: "no-repeat",
-            backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-start",
-              alignItems: "center",
-              flexDirection: "column",
-              height: "100%",
-              paddingTop: "3%",
-              paddingBottom: "3%",
-            }}
-          >
-            <Image
-              src="/lucky-deco.png"
-              width={278}
-              height={65}
-              alt="Picture of the author"
-            />
-            <Image
-              src="/onboardImg.png"
-              width={450}
-              height={500}
-              alt="Picture of the author"
-              style={{ top: 20, position: "relative", height: 450, width: 400 }}
-            />
-
-            <Typography
-              variant="h1"
-              style={{ color: colors.primary3, fontSize: isMobile ? 40 : 80 }}
-            >
-              {t("tarotByAi")}
-            </Typography>
-          </div>
-        </Grid>
         {isGuestUser ? (
           <Grid
             item
@@ -525,6 +479,170 @@ export default function SignInSide() {
             </Box>
           </Grid>
         )}
+        <Grid
+          item
+          xs={false}
+          sm={4}
+          md={7}
+          sx={{
+            backgroundRepeat: "no-repeat",
+            backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
+              flexDirection: "column",
+              height: "100%",
+              paddingTop: "3%",
+              paddingBottom: "3%",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Image
+                  src="/appmarketing.png"
+                  width={450}
+                  height={500}
+                  alt="Picture of the author"
+                  style={{
+                    top: 20,
+                    position: "relative",
+                    height: 450,
+                    width: 450,
+                  }}
+                />
+                <div
+                  style={{
+                    maxHeight: "100px",
+                    width: "auto",
+
+                    display: "flex",
+                    flexDirection: "row",
+                  }}
+                >
+                  <h2
+                    style={{
+                      color: colors.primary3,
+                      fontWeight: "300",
+                      margin: 0, // Elimină marja implicită de sus și jos
+                      paddingBottom: "0px", // Adaugă un spațiu mic la partea de jos, dacă este necesar
+                    }}
+                  >
+                    {t("downloadThe")}
+                    <span
+                      style={{
+                        color: colors.primary3,
+                        fontWeight: "bold",
+                        marginLeft: 5, // Elimină marja implicită de sus și jos
+                      }}
+                    >
+                      {t("appNow")}
+                    </span>
+                  </h2>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+
+                    width: "70%",
+                    justifyContent: "space-around",
+                  }}
+                >
+                  <Link
+                    href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937"
+                    underline="none"
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+
+                      overflow: "none",
+                      alignItems: "center",
+                    }}
+                  >
+                    <img
+                      src={"/appstore.png"}
+                      style={{ width: "80px", height: "80px", marginRight: 10 }}
+                    />
+                  </Link>
+                  <Link
+                    href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot"
+                    underline="none"
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+
+                      overflow: "none",
+                      alignItems: "center",
+                    }}
+                  >
+                    <img
+                      src={"/gplay.png"}
+                      style={{ width: "80px", height: "80px", marginRight: 10 }}
+                    />
+                  </Link>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Image
+                  src="/lucky-deco.png"
+                  width={278}
+                  height={65}
+                  alt="Picture of the author"
+                />
+                <Image
+                  src="/onboardImg.png"
+                  width={450}
+                  height={500}
+                  alt="Picture of the author"
+                  style={{
+                    top: 20,
+                    position: "relative",
+                    height: 450,
+                    width: 400,
+                  }}
+                />
+                <Typography
+                  variant="h1"
+                  style={{
+                    color: colors.primary3,
+                    fontSize: isMobile ? 40 : 80,
+                  }}
+                >
+                  {t("tarotByAi")}
+                </Typography>
+              </div>
+            </div>
+          </div>
+        </Grid>
+
         <PasswordDialog
           setModalVisible={setModalVisible}
           modalVisible={modalVisible}
