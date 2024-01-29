@@ -92,7 +92,7 @@ export default function SignInSide() {
     const password = data.get("password");
 
     const emailNew = emailWithoutSpace(email);
-    console.log("login with...", {
+    console.log("login with.........", {
       email: emailNew,
       password: data.get("password"),
     });
@@ -100,6 +100,7 @@ export default function SignInSide() {
     signInWithEmailAndPassword(authentication, emailNew, password)
       .then(async (userCredentials) => {
         setCurrentUser(userCredentials);
+        console.log("userCredentials...", userCredentials.user.uid);
         console.log("userCredentials...", userCredentials.user.uid);
         router.push("/");
         setIsLoading(false);

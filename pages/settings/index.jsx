@@ -225,7 +225,12 @@ export default function SignInSide() {
             }}
           >
             <div
-              style={{ position: "relative", left: 10, top: 10, zIndex: 11 }}
+              style={{
+                position: "absolute",
+                left: 10,
+                top: isMobile ? 20 : 90,
+                zIndex: 11,
+              }}
             >
               <IconButton
                 aria-label="delete"
