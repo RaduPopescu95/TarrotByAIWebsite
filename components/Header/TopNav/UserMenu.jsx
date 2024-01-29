@@ -19,7 +19,7 @@ function UserMenu(props) {
 
   return (
     <div className={classes.userMenu}>
-      <div style={{ display: "flex", alignItems: "center", width: "110px" }}>
+      <div style={{ display: "flex", alignItems: "center", width: "10px" }}>
         {/* <Button
           href={"Tel:+40345404753"}
           style={{
@@ -33,18 +33,6 @@ function UserMenu(props) {
           +40 345 404 753
         </Button> */}
         <Settings isWhiteBg={props.isOnlySettngs} />
-        <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
-          <img
-            src={"/gplay.png"}
-            style={{ width: "40px", height: "40px", marginRight: 10 }}
-          />
-        </Link>
-        <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
-          <img
-            src={"/appstore.png"}
-            style={{ width: "40px", height: "40px" }}
-          />
-        </Link>
       </div>
     </div>
   );

@@ -19,6 +19,8 @@ import { Button, Typography } from "@mui/material";
 import link from "../../public/text/link";
 import { useAuth } from "../../context/AuthContext";
 import { colors } from "../../utils/colors";
+import Link from "next/link";
+import Settings from "./TopNav/Settings";
 
 function Mixed(props) {
   const [fixed, setFixed] = useState(false);
@@ -73,9 +75,6 @@ function Mixed(props) {
 
   return (
     <Fragment>
-      {isMobile && (
-        <MobileMenu open={openDrawer} toggleDrawer={handleOpenDrawer} />
-      )}
       <AppBar
         position="relative"
         id="header"
@@ -152,6 +151,92 @@ function Mixed(props) {
                   </span>
                 </IconButton>
               )}
+              {isMobile && (
+                // <MobileMenu open={openDrawer} toggleDrawer={handleOpenDrawer} />
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      width: "50%",
+                      alignItems: "center",
+                      justifyContent: "space-around",
+                    }}
+                  >
+                    <Settings isWhiteBg={true} />
+                    <div
+                      style={{
+                        height: "3rem",
+                        display: "flex",
+                        alignItems: "center",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        paddingTop: "7%",
+                      }}
+                    >
+                      <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
+                        <img
+                          src={"/gplay.png"}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                          }}
+                        />
+                      </Link>
+                      <p
+                        style={{
+                          margin: 0,
+                          bottom: 10,
+                          position: "relative",
+                          color: colors.white,
+                          backgroundColor: "rgba(40, 49, 64, 0.5)",
+                          paddingLeft: 5,
+                          paddingRight: 5,
+                          marginTop: 4,
+                          borderRadius: 8,
+                        }}
+                      >
+                        Android
+                      </p>
+                    </div>
+                    <div
+                      style={{
+                        height: "3rem",
+                        display: "flex",
+                        alignItems: "center",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        paddingTop: "7%",
+                      }}
+                    >
+                      <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
+                        <img
+                          src={"/appstore.png"}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                          }}
+                        />
+                      </Link>
+                      <p
+                        style={{
+                          margin: 0,
+                          bottom: 10,
+                          position: "relative",
+                          color: colors.white,
+                          backgroundColor: "rgba(40, 49, 64, 0.5)",
+                          paddingLeft: 5,
+                          paddingRight: 5,
+                          marginTop: 4,
+                          borderRadius: 8,
+                        }}
+                      >
+                        IOS
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {isDesktop && !props.isOnlySettngs && (
                 <div className={classes.mainMenu}>
@@ -181,7 +266,7 @@ function Mixed(props) {
           width: "100%",
         }}
       ></div> */}
-      {isMobile && currentUser && (
+      {isMobile && (
         <div
           style={{
             position: "fixed", // Schimbă aici din "absolute" în "fixed"
@@ -193,6 +278,7 @@ function Mixed(props) {
           }}
         >
           <HeaderMenu
+            isMobile={isMobile}
             open={openMenu}
             menuPrimary={navData}
             dataMenu={multiple}

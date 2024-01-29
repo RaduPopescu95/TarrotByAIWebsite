@@ -395,43 +395,81 @@ export default function SignInSide() {
                   style={{
                     display: "flex",
                     flexDirection: "row",
-
+                    marginTop: 10,
                     width: "70%",
                     justifyContent: "space-around",
                   }}
                 >
-                  <Link
-                    href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937"
-                    underline="none"
+                  <div
                     style={{
+                      height: "3rem",
                       display: "flex",
-                      flexDirection: "row",
-
-                      overflow: "none",
                       alignItems: "center",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      paddingTop: "7%",
                     }}
                   >
-                    <img
-                      src={"/appstore.png"}
-                      style={{ width: "80px", height: "80px", marginRight: 10 }}
-                    />
-                  </Link>
-                  <Link
-                    href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot"
-                    underline="none"
+                    <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
+                      <img
+                        src={"/gplay.png"}
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                        }}
+                      />
+                    </Link>
+                    <p
+                      style={{
+                        margin: 0,
+                        bottom: 10,
+                        position: "relative",
+                        color: colors.white,
+                        backgroundColor: "rgba(40, 49, 64, 0.5)",
+                        paddingLeft: 5,
+                        paddingRight: 5,
+                        marginTop: 4,
+                        borderRadius: 8,
+                      }}
+                    >
+                      Android
+                    </p>
+                  </div>
+                  <div
                     style={{
+                      height: "3rem",
                       display: "flex",
-                      flexDirection: "row",
-
-                      overflow: "none",
                       alignItems: "center",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      paddingTop: "7%",
                     }}
                   >
-                    <img
-                      src={"/gplay.png"}
-                      style={{ width: "80px", height: "80px", marginRight: 10 }}
-                    />
-                  </Link>
+                    <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
+                      <img
+                        src={"/appstore.png"}
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                        }}
+                      />
+                    </Link>
+                    <p
+                      style={{
+                        margin: 0,
+                        bottom: 10,
+                        position: "relative",
+                        color: colors.white,
+                        backgroundColor: "rgba(40, 49, 64, 0.5)",
+                        paddingLeft: 5,
+                        paddingRight: 5,
+                        marginTop: 4,
+                        borderRadius: 8,
+                      }}
+                    >
+                      IOS
+                    </p>
+                  </div>
                 </div>
               </div>
               <div

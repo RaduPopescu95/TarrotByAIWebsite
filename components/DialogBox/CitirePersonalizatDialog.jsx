@@ -79,7 +79,7 @@ export default function CitirePersonalizatDialog({
           >
             <Grid
               container
-              rowSpacing={isMobile ? 5 : 5}
+              rowSpacing={isMobile ? 5 : 0}
               columnSpacing={0}
               sx={{
                 display: "flex",
@@ -89,9 +89,10 @@ export default function CitirePersonalizatDialog({
                 position: "relative",
                 paddingLeft: isMobile ? 5 : 10,
                 paddingRight: isMobile ? 5 : 10,
+                paddingTop: 0,
               }}
             >
-              <Grid item xs={12} sm={12} md={12}>
+              <Grid item xs={12} sm={12} md={12} style={{ paddingTop: 0 }}>
                 <div
                   style={{
                     display: "flex",
@@ -100,6 +101,7 @@ export default function CitirePersonalizatDialog({
                     width: "100%",
                     height: "100%",
                     flexDirection: "column",
+                    paddingTop: 0,
                   }}
                 >
                   <div
@@ -108,7 +110,7 @@ export default function CitirePersonalizatDialog({
                       flexDirection: isMobile ? "column" : "row",
                       justifyContent: "space-around",
                       alignItems: "center",
-
+                      paddingTop: 0,
                       width: "100%",
                     }}
                   >
@@ -120,39 +122,35 @@ export default function CitirePersonalizatDialog({
                         flexDirection: "column",
                         width: isMobile ? "100%" : "50%",
                         height: "auto",
-                        marginTop: 20,
+                        // marginTop: 20,
                       }}
                     >
-                      <img
-                        src={item.info && item.carte.image.finalUri}
-                        width={150}
-                        height={250}
-                        alt="Picture of the author"
-                        style={{ marginBottom: 10 }}
-                      />
+                      {isMobile ? (
+                        <img
+                          src={item.info && item.carte.image.finalUri}
+                          width={150}
+                          height={250}
+                          alt="Picture of the author"
+                          style={{ marginBottom: 10 }}
+                        />
+                      ) : (
+                        <img
+                          src={item.info && item.carte.image.finalUri}
+                          width={350}
+                          height={450}
+                          alt="Picture of the author"
+                          style={{ marginBottom: 10 }}
+                        />
+                      )}
+
                       {item.carte && (
-                        <h2 style={{ color: colors.primary3 }}>
+                        <h2 style={{ color: colors.primary3, fontSize: 30 }}>
                           {detectedLng === "hi"
                             ? item.carte.info.hu.nume
                             : detectedLng === "id"
                               ? item.carte.info.ru.nume
                               : item.carte.info[detectedLng].nume}
                         </h2>
-                      )}
-                      {item.info && (
-                        <p
-                          style={{
-                            textAlign: "justify",
-                            fontSize: 18,
-                            color: colors.primary3,
-                          }}
-                        >
-                          {detectedLng === "hi"
-                            ? item.info.hu.descriere
-                            : detectedLng === "id"
-                              ? item.info.ru.descriere
-                              : item.info[detectedLng].descriere}
-                        </p>
                       )}
                     </div>
 
@@ -180,8 +178,8 @@ export default function CitirePersonalizatDialog({
                       </video>
                     ) : (
                       <video
-                        width="480"
-                        height="480"
+                        width="600"
+                        height="600"
                         controls
                         onEnded={handleVideoEnd}
                         autoPlay
@@ -202,6 +200,21 @@ export default function CitirePersonalizatDialog({
                       </video>
                     )}
                   </div>
+                  {item.info && (
+                    <p
+                      style={{
+                        textAlign: "justify",
+                        fontSize: 18,
+                        color: colors.primary3,
+                      }}
+                    >
+                      {detectedLng === "hi"
+                        ? item.info.hu.descriere
+                        : detectedLng === "id"
+                          ? item.info.ru.descriere
+                          : item.info[detectedLng].descriere}
+                    </p>
+                  )}
                 </div>
               </Grid>
             </Grid>

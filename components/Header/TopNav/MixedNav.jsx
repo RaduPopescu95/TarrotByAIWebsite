@@ -12,7 +12,7 @@ import { useRouter } from "next/router";
 import { colors } from "../../../utils/colors";
 import { useNumberContext } from "../../../context/NumberContext";
 
-function NavBar({ fixed, style, fontSize }) {
+function NavBar({ fixed, style, fontSize, isMobile }) {
   const { classes } = useStyles();
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
@@ -48,6 +48,44 @@ function NavBar({ fixed, style, fontSize }) {
 
   return (
     <ul style={style}>
+      {!isMobile && (
+        <div
+          style={{
+            height: "3rem",
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+            justifyContent: "center",
+            paddingTop: "7%",
+          }}
+        >
+          <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
+            <img
+              src={"/gplay.png"}
+              style={{
+                width: "60px",
+                height: "60px",
+              }}
+            />
+          </Link>
+          <p
+            style={{
+              margin: 0,
+              bottom: 10,
+              position: "relative",
+              color: colors.white,
+              backgroundColor: "rgba(40, 49, 64, 0.5)",
+              paddingLeft: 5,
+              paddingRight: 5,
+              marginTop: 4,
+              borderRadius: 8,
+            }}
+          >
+            Android
+          </p>
+        </div>
+      )}
+
       {navData.map((item, index) => {
         const isActive = router.pathname === `/${item.toLowerCase()}`;
         return (
@@ -105,6 +143,43 @@ function NavBar({ fixed, style, fontSize }) {
           </li>
         );
       })}
+      {!isMobile && (
+        <div
+          style={{
+            height: "3rem",
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+            justifyContent: "center",
+            paddingTop: "7%",
+          }}
+        >
+          <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
+            <img
+              src={"/appstore.png"}
+              style={{
+                width: "60px",
+                height: "60px",
+              }}
+            />
+          </Link>
+          <p
+            style={{
+              margin: 0,
+              bottom: 10,
+              position: "relative",
+              color: colors.white,
+              backgroundColor: "rgba(40, 49, 64, 0.5)",
+              paddingLeft: 5,
+              paddingRight: 5,
+              marginTop: 4,
+              borderRadius: 8,
+            }}
+          >
+            IOS
+          </p>
+        </div>
+      )}
     </ul>
   );
 }
