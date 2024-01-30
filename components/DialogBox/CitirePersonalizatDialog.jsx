@@ -99,8 +99,8 @@ export default function CitirePersonalizatDialog({
                 md={12}
                 style={{
                   paddingTop: 0,
-                  paddingLeft: isMobile ? 0 : "10%",
-                  paddingRight: isMobile ? 0 : "7%",
+                  paddingLeft: isMobile ? 0 : "14%",
+                  paddingRight: isMobile ? 0 : "9%",
                 }}
               >
                 <div
