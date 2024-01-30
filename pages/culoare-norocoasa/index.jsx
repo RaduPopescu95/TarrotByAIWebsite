@@ -58,7 +58,7 @@ export function NumarNorocos() {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
@@ -96,20 +96,20 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Lucky Color | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover your lucky color with Cristina Zurba's unique insights. Learn how specific colors can influence your fortune and well-being. This guidance is perfect for anyone looking to enhance their luck and personal energy through the power of color."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta property="og:title" content="Lucky Color | Cristina Zurba" />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover your lucky color with Cristina Zurba's unique insights. Learn how specific colors can influence your fortune and well-being. This guidance is perfect for anyone looking to enhance their luck and personal energy through the power of color."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>

@@ -2,7 +2,7 @@
 import { handleGetArticles, handleGetServices } from "../utils/realtimeUtils";
 import { toUrlSlug } from "../utils/commonUtils";
 
-const URL = "https://mattealeconsulting.com";
+const URL = "https://cristinazurba.com";
 
 function escapeXml(unsafe) {
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -31,72 +31,26 @@ function generateSiteMap(articles, services) {
   
 
     <url>
-    <loc>${escapeXml(URL)}/news/</loc>
+    <loc>${escapeXml(URL)}/citat-motivational/</loc>
   </url>
   <url>
-    <loc>${escapeXml(URL)}/about/</loc>
+    <loc>${escapeXml(URL)}/citire-personalizata/</loc>
   </url>
   <url>
-    <loc>${escapeXml(URL)}/home/</loc>
+    <loc>${escapeXml(URL)}/citire-viitor/</loc>
   </url>
   <url>
-    <loc>${escapeXml(URL)}/contact/</loc>
+    <loc>${escapeXml(URL)}/culoare-norocoasa/</loc>
   </url>
   <url>
-    <loc>${escapeXml(URL)}/services/</loc>
+    <loc>${escapeXml(URL)}/numar-norocos/</loc>
   </url>
   <url>
-    <loc>${escapeXml(URL)}/services/it-infrastructure-support/</loc>
+    <loc>${escapeXml(URL)}/ora-norocoasa/</loc>
   </url>
-  <url>
-    <loc>${escapeXml(URL)}/services/web-app-support/</loc>
-  </url>
-  <url>
-    <loc>${escapeXml(URL)}/services/SAP-migration-implementation/</loc>
-  </url>
-  <url>
-    <loc>${escapeXml(URL)}/services/cloud-solutions/</loc>
-  </url>
+
   
-    <!-- Dynamically generated URLs for articles -->
-    ${articles
-      .map(({ name, image, id }) => {
-        return `
-          <url>
-            <loc>${escapeXml(
-              `${escapeXml(URL)}/news/${id}-${toUrlSlug(name)}/`
-            )}</loc>
-            ${
-              image && image.finalUri
-                ? `<image:image>
-              <image:loc>${escapeXml(image.finalUri)}</image:loc>
-            </image:image>`
-                : ""
-            }
-          </url>
-        `;
-      })
-      .join("")}
   
-    <!-- Dynamically generated URLs for services -->
-    ${services
-      .map(({ name, image, id }) => {
-        return `
-          <url>
-            <loc>${escapeXml(
-              `${escapeXml(URL)}/services/${id}-${toUrlSlug(name)}/`
-            )}</loc>
-            ${
-              image && image.finalUri
-                ? `<image:image>
-              <image:loc>${escapeXml(image.finalUri)}</image:loc>
-            </image:image>`
-                : ""
-            }
-          </url>
-        `;
-      })
-      .join("")}
   </urlset>`;
 }
 

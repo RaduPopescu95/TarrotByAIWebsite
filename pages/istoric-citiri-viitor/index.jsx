@@ -231,20 +231,23 @@ export function IstoricCitiriViitor() {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Future Reading History | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Uncover the history and evolution of future reading with Cristina Zurba. Delve into the rich background of this practice and explore its significance through time. Ideal for enthusiasts and learners interested in the historical context and development of future reading methods."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta
+          property="og:title"
+          content="Future Reading History | Cristina Zurba"
+        />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Uncover the history and evolution of future reading with Cristina Zurba. Delve into the rich background of this practice and explore its significance through time. Ideal for enthusiasts and learners interested in the historical context and development of future reading methods."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>

@@ -17,7 +17,7 @@ function Logo(props) {
       {/* <LazyLoad height={200} offset={100} once> */}
       <img
         src={"/LogoPngTransparent.png"}
-        alt="Matteale Consulting Logo"
+        alt="Cristina Zurba Logo"
         width={65}
         height={50}
         style={{ height: "60px" }}

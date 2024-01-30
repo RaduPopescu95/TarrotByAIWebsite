@@ -58,7 +58,7 @@ export function CitateMotivationale() {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
@@ -103,20 +103,20 @@ export function CitateMotivationale() {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Lucky Hour | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Find out your lucky hour with Cristina Zurba's insightful guidance. Learn about the significance of timing in your life and how certain hours can bring heightened luck and opportunities. Ideal for anyone looking to align their activities with the most auspicious times for success and positivity."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta property="og:title" content="Lucky Hour | Cristina Zurba" />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Find out your lucky hour with Cristina Zurba's insightful guidance. Learn about the significance of timing in your life and how certain hours can bring heightened luck and opportunities. Ideal for anyone looking to align their activities with the most auspicious times for success and positivity."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>

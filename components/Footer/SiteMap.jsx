@@ -33,7 +33,7 @@ function Copyright() {
       display="block"
       color="textSecondary"
     >
-      &copy;&nbsp; 2023. Matteale Consulting. {t("RightsReserved")}.
+      &copy;&nbsp; 2023. Cristina Zurba. {t("RightsReserved")}.
     </Typography>
   );
 }
@@ -168,11 +168,11 @@ function Footer(props) {
               style={{ backgroundColor: "#1877F2", marginLeft: 0 }}
             >
               <a
-                href="https://www.facebook.com/mattealeconsulting"
+                href="https://www.facebook.com/cristinazurba"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
-                aria-label="Matteale Consulting on Facebook"
+                aria-label="Cristina Zurba on Facebook"
               >
                 <FacebookIcon style={{ color: "white" }} />
               </a>
@@ -188,11 +188,11 @@ function Footer(props) {
               }}
             >
               <a
-                href="https://www.instagram.com/mattealeconsulting/"
+                href="https://www.instagram.com/cristinazurba/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
-                aria-label="Matteale Consulting on Instagram"
+                aria-label="Cristina Zurba on Instagram"
               >
                 <InstagramIcon style={{ color: "white" }} />
               </a>
@@ -202,21 +202,21 @@ function Footer(props) {
               className={classes.margin}
               size="small"
               style={{ backgroundColor: "#0077B5" }}
-              aria-label="Matteale Consulting on Linkedin"
+              aria-label="Cristina Zurba on Linkedin"
             >
               <a
-                href="https://www.linkedin.com/company/matteale-consulting-services/"
+                href="https://www.linkedin.com/company/cristinazurba/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
-                aria-label="Matteale Consulting on Linkedin"
+                aria-label="Cristina Zurba on Linkedin"
               >
                 <LinkedInIcon style={{ color: "white" }} />
               </a>
             </IconButton>
 
             <IconButton
-              aria-label="Matteale Consulting on Youtube"
+              aria-label="Cristina Zurba on Youtube"
               className={classes.margin}
               size="small"
               style={{ backgroundColor: "#FF0000" }}
@@ -226,7 +226,7 @@ function Footer(props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
-                aria-label="Matteale Consulting on Youtube"
+                aria-label="Cristina Zurba on Youtube"
               >
                 <YouTubeIcon style={{ color: "white" }} />
               </a>

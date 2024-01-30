@@ -543,20 +543,20 @@ export function CitirePersonalizata({ services }) {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Personal Reading | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Embark on a journey of self-discovery with Cristina Zurba's personal readings. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta property="og:title" content="Personal Reading | Cristina Zurba" />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Embark on a journey of self-discovery with Cristina Zurba's personal readings. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>

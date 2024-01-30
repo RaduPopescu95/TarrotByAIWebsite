@@ -1,15 +1,16 @@
 module.exports = {
   starter: {
-    name: 'Matteale',
-    desc: 'Matteale Consulting',
-    prefix: 'Matteale Consulting',
-    footerText: 'Matteale Consulting',
-    logoText: 'Matteale Consulting',
-    projectName: 'Starter Project',
-    url: 'www.mattealeconsulting.com',
-    img: '/static/images/logo.png',
-    notifMsg: 'Notification',
-    metaTitle:"SAP Partner | Cloud Solutions | Matteale Consulting",
-    metaDescription:"We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
-  }
+    name: "Cristina Zurba",
+    desc: "Cristina Zurba",
+    prefix: "Cristina Zurba",
+    footerText: "Cristina Zurba",
+    logoText: "Cristina Zurba",
+    projectName: "Starter Project",
+    url: "www.cristinazurba.com",
+    img: "/static/images/logo.png",
+    notifMsg: "Notification",
+    metaTitle: "Cristina Zurba",
+    metaDescription:
+      "Cristina Zurba is an interactive tarot card game website developed by well-known youtuber, tarot reader and astrologer Cristina Zurba.",
+  },
 };

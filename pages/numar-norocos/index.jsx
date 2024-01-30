@@ -58,7 +58,7 @@ export function NumarNorocos() {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
@@ -105,20 +105,20 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Lucky Number | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover the power of numbers in shaping your destiny with Cristina Zurba's insights on lucky numbers. Learn how these numbers can influence your life, bringing luck and positive changes. Ideal for those interested in numerology and seeking personal guidance through their own lucky numbers."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta property="og:title" content="Lucky Number | Cristina Zurba" />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover the power of numbers in shaping your destiny with Cristina Zurba's insights on lucky numbers. Learn how these numbers can influence your life, bringing luck and positive changes. Ideal for those interested in numerology and seeking personal guidance through their own lucky numbers."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>

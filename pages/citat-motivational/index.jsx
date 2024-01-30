@@ -55,7 +55,7 @@ export function NumarNorocos() {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://crinstinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
@@ -109,20 +109,23 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Services | Matteale Consulting</title>
+        <title>Motivational Quote | Cristina Zurba</title>
         <meta
           name="description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover Cristina Zurba's collection of motivational quotes, designed to inspire and uplift. Each quote is carefully chosen to boost motivation and provide encouragement. Perfect for those seeking a dose of positivity and inspiration in their daily lives."
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Services | Matteale Consulting" />
+        <meta
+          property="og:title"
+          content="Motivational Quote | Cristina Zurba"
+        />
         <meta
           property="og:description"
-          content="We are the SAP partner company that can support your journey to increase efficiency and features dedicated to the digital transformation of your enterprise."
+          content="Discover Cristina Zurba's collection of motivational quotes, designed to inspire and uplift. Each quote is carefully chosen to boost motivation and provide encouragement. Perfect for those seeking a dose of positivity and inspiration in their daily lives."
         />
         <meta
           property="og:image"
-          content="https://mattealeconsulting.com/images/social-share.jpg"
+          content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>
