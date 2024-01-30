@@ -222,6 +222,9 @@ export default function SignInSide() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              zIndex: 5,
+              marginLeft: isMobile ? "15%" : 0,
+              marginTop: isMobile ? "20%" : 0,
             }}
           >
             <div
@@ -314,12 +317,20 @@ export default function SignInSide() {
             // component={Paper}
             elevation={6}
             square
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 5,
+              marginLeft: isMobile ? "15%" : 0,
+              marginTop: isMobile ? "22%" : 0,
+            }}
           >
             <div
               style={{
-                position: "relative",
+                position: "absolute",
                 left: 10,
-                top: 10,
+                top: isMobile ? 20 : 90,
                 zIndex: 11,
               }}
             >

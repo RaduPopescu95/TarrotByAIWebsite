@@ -266,7 +266,7 @@ function Mixed(props) {
           width: "100%",
         }}
       ></div> */}
-      {isMobile && (
+      {isMobile && !props.isOnlySettngs && (
         <div
           style={{
             position: "fixed", // Schimbă aici din "absolute" în "fixed"

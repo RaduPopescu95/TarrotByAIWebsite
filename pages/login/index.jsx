@@ -142,7 +142,18 @@ export default function SignInSide() {
           <Header isOnlySettngs={true} />
         </section>
 
-        <Grid item xs={12} sm={8} md={5} elevation={6} square>
+        <Grid
+          item
+          xs={12}
+          sm={8}
+          md={5}
+          elevation={6}
+          square
+          sx={{
+            marginLeft: isMobile ? "15%" : 0,
+            marginTop: isMobile ? "10%" : 0,
+          }}
+        >
           <Box
             sx={{
               my: 8,

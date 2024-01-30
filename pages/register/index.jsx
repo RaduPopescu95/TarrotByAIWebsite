@@ -175,7 +175,11 @@ export default function SignInSide() {
           // component={Paper}
           elevation={6}
           square
-          sx={{ zIndex: 5 }}
+          sx={{
+            zIndex: 5,
+            marginLeft: isMobile ? "15%" : 0,
+            marginTop: isMobile ? "20%" : 0,
+          }}
         >
           <Box
             sx={{
