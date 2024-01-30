@@ -222,7 +222,7 @@ export default function SignInSide() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              zIndex: 5,
+
               marginLeft: isMobile ? "15%" : 0,
               marginTop: isMobile ? "20%" : 0,
             }}
@@ -321,7 +321,7 @@ export default function SignInSide() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              zIndex: 5,
+
               marginLeft: isMobile ? "15%" : 0,
               marginTop: isMobile ? "22%" : 0,
             }}
