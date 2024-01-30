@@ -92,7 +92,17 @@ export default function CitirePersonalizatDialog({
                 paddingTop: 0,
               }}
             >
-              <Grid item xs={12} sm={12} md={12} style={{ paddingTop: 0 }}>
+              <Grid
+                item
+                xs={12}
+                sm={12}
+                md={12}
+                style={{
+                  paddingTop: 0,
+                  paddingLeft: isMobile ? 0 : "10%",
+                  paddingRight: isMobile ? 0 : "7%",
+                }}
+              >
                 <div
                   style={{
                     display: "flex",
