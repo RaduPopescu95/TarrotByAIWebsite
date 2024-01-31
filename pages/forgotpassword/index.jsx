@@ -19,6 +19,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import Header from "../../components/Header";
 import { useMediaQuery } from "@mui/material";
 import { useRouter } from "next/router";
+import Head from "next/head";
 
 function Copyright(props) {
   return (

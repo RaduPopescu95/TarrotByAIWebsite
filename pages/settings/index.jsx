@@ -28,6 +28,7 @@ import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "react-i18next";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import Head from "next/head";
 
 function Copyright(props) {
   return (

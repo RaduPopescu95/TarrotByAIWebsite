@@ -26,6 +26,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "react-i18next";
 import Header from "../../components/Header";
 import Settings from "../../components/Header/TopNav/Settings";
+import Head from "next/head";
 
 function Copyright(props) {
   return (
