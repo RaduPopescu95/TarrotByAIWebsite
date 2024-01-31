@@ -33,6 +33,10 @@ export default function ResetPassword() {
     <>
       <Head>
         <meta name="robots" content="noindex,nofollow" />
+        <meta
+          name="google-adsense-account"
+          content="ca-pub-9577714849380446"
+        ></meta>
       </Head>
       <Grid container component="main" sx={styles.mainGrid}>
         <Grid

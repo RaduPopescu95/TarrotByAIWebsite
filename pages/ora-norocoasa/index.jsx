@@ -119,6 +119,10 @@ export function CitateMotivationale() {
           content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
+        <meta
+          name="google-adsense-account"
+          content="ca-pub-9577714849380446"
+        ></meta>
       </Head>
       <div
         style={{

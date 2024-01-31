@@ -163,6 +163,10 @@ export default function SignIn() {
     <>
       <Head>
         <meta name="robots" content="noindex,nofollow" />
+        <meta
+          name="google-adsense-account"
+          content="ca-pub-9577714849380446"
+        ></meta>
       </Head>
       <ThemeProvider theme={defaultTheme}>
         {progressBar && (
