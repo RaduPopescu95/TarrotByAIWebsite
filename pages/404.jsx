@@ -38,11 +38,6 @@ const PageNotFound = () => {
           content="Pagina pe care o căutați nu a fost găsită."
         />
         <meta name="keywords" content="404, not found, error" />
-
-        <meta
-          name="google-adsense-account"
-          content="ca-pub-9577714849380446"
-        ></meta>
       </Head>
       <Stack
         sx={{ width: "100%", height: "100vh" }}
