@@ -36,10 +36,13 @@ export const handleUpdateFirestore = async (location, updatedData) => {
 export const handleUploadFirestore = async (data, location) => {
   try {
     console.log("test....");
-    const ref = doc(db, location);
     console.log(location);
     console.log(data);
-    await setDoc(ref, data);
+    // pentru a face UPLOAD CU UN NUME DE DOCUMENT PREDEFINIT
+    // const ref = doc(db, location);
+    // await setDoc(ref, data);
+    // pentru a face UPLOAD CU UN NUME DE DOCUMENT CREATE ALEATORIU
+    await addDoc(collection(db, location), data);
   } catch (err) {
     console.log("Error on...handleUploadFirestore...", err);
   }
@@ -117,8 +120,8 @@ export const handleGetFirestoreSingleArrayData = async (location) => {
     const querySnapshot = await getDocs(collection(db, location));
     querySnapshot.forEach((doc) => {
       // doc.data() is never undefined for query doc snapshots
-      console.log(doc.id, ` ${location} => `, doc.data().arr);
-      arr = [...doc.data().arr];
+      console.log(doc.id, ` ${location} => `, doc.data());
+      arr = doc.data();
     });
     return arr;
   } catch (err) {
@@ -144,6 +147,21 @@ export const handleQueryFirestore = async (location, carte, categorie) => {
     arr.push(doc.data().data);
   });
   return arr;
+};
+export const handleQueryRandom = async (location, id) => {
+  console.log("start query firestore location...", location);
+  console.log("start query firestore id...", id);
+  let obj = {}; // Specificați tipul de obiecte pe care îl conține matricea
+  const q = query(collection(db, location), where("id", "==", id));
+
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
+    // doc.data() is never undefined for query doc snapshots
+    console.log(doc.id, " => ", doc.data());
+    // arr.push(doc.data().data);
+    obj = { ...doc.data() };
+  });
+  return obj;
 };
 
 export const handlePaginateFirestore = (location) => {

@@ -13,7 +13,7 @@ import Collapse from "@mui/material/Collapse";
 import useStyles from "../sidenav-style";
 import navMenu from "../data/single";
 import navPage from "../data/sample-pages";
-import link from "../../../public/text/link";
+
 import Logo from "../../Logo";
 
 function MixedMobile(props) {

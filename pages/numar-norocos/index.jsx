@@ -25,6 +25,12 @@ import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import languageDetector from "../../lib/languageDetector";
+import {
+  handleQueryRandom,
+  handleUploadFirestore,
+} from "../../utils/firestoreUtils";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { db } from "../../firebase";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -85,6 +91,32 @@ export function NumarNorocos() {
       setZilnicNumereNorocoase(numereNorocoase.arr[randomIndex]);
     }
   }, [numereNorocoase.arr]);
+
+  const getRandomDocumentFirestore = async () => {
+    // Presupunem că deja ai definit `collection` și `db`
+    const coll = collection(db, "NumereNorocoase");
+    const snapshot = await getCountFromServer(coll);
+    const count = snapshot.data().count;
+    console.log("count: ", count);
+
+    const randomIndex = Math.floor(Math.random() * count) + 1;
+
+    console.log(randomIndex);
+    const obj = await handleQueryRandom("NumereNorocoase", randomIndex);
+    setZilnicNumereNorocoase(obj);
+  };
+
+  // const uploadToFirestore = async (data) => {
+  //   await handleUploadFirestore(data, "NumereNorocoase");
+  // };
+
+  React.useEffect(() => {
+    // for (let i = 0; i < numereNorocoase.arr.length; i++) {
+    //   uploadToFirestore(numereNorocoase.arr[i]);
+    // }
+
+    getRandomDocumentFirestore();
+  }, []);
 
   React.useEffect(() => {
     if (!currentUser && !isGuestUser) {

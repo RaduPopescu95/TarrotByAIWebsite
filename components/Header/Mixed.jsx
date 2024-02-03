@@ -16,7 +16,7 @@ import i18nextConfig from "../../next-i18next.config";
 import { useTranslation } from "next-i18next";
 import multiple from "./data/multiple";
 import { Button, Typography } from "@mui/material";
-import link from "../../public/text/link";
+
 import { useAuth } from "../../context/AuthContext";
 import { colors } from "../../utils/colors";
 import Link from "next/link";
@@ -120,7 +120,7 @@ function Mixed(props) {
                     alignItems: "center",
                   }}
                 >
-                  <a href={link.starter.home}>
+                  <a href={"/"}>
                     <Logo type="landscape" fixed={fixed} />
                   </a>
                   {userData ? (

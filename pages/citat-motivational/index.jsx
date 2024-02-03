@@ -25,6 +25,12 @@ import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import languageDetector from "../../lib/languageDetector";
+import {
+  handleQueryRandom,
+  handleUploadFirestore,
+} from "../../utils/firestoreUtils";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { db } from "../../firebase";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -79,16 +85,26 @@ export function NumarNorocos() {
   const [zilnicCitateMotivationale, setZilnicCitateMotivationale] =
     React.useState({});
 
+  // const uploadToFirestore = async (data) => {
+  //   handleUploadFirestore(data, "CitateMotivationale");
+  // };
+  const getRandomDocumentFirestore = async () => {
+    // Presupunem că deja ai definit `collection` și `db`
+    const coll = collection(db, "CitateMotivationale");
+    const snapshot = await getCountFromServer(coll);
+    const count = snapshot.data().count;
+    console.log("count: ", count);
+
+    const randomIndex = Math.floor(Math.random() * count) + 1;
+
+    console.log(randomIndex);
+    const obj = await handleQueryRandom("CitateMotivationale", randomIndex);
+    setZilnicCitateMotivationale(obj);
+  };
+
   React.useEffect(() => {
-    if (citateMotivationale.arr && citateMotivationale.arr.length > 0) {
-      const randomIndex = Math.floor(
-        Math.random() * citateMotivationale.arr.length
-      );
-      console.log(citateMotivationale.arr[randomIndex]);
-      console.log(citateMotivationale.arr[randomIndex]);
-      setZilnicCitateMotivationale(citateMotivationale.arr[randomIndex]);
-    }
-  }, [citateMotivationale.arr]);
+    getRandomDocumentFirestore();
+  }, []);
 
   React.useEffect(() => {
     if (!currentUser && !isGuestUser) {

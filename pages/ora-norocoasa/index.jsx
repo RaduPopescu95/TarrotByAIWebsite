@@ -25,6 +25,12 @@ import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import languageDetector from "../../lib/languageDetector";
+import { collection, getCountFromServer } from "firebase/firestore";
+import {
+  handleQueryRandom,
+  handleUploadFirestore,
+} from "../../utils/firestoreUtils";
+import { db } from "../../firebase";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -77,12 +83,31 @@ export function CitateMotivationale() {
     maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
   };
 
+  const getRandomDocumentFirestore = async () => {
+    // Presupunem că deja ai definit `collection` și `db`
+    const coll = collection(db, "OreNorocoase");
+    const snapshot = await getCountFromServer(coll);
+    const count = snapshot.data().count;
+    console.log("count: ", count);
+
+    const randomIndex = Math.floor(Math.random() * count) + 1;
+
+    console.log(randomIndex);
+    const obj = await handleQueryRandom("OreNorocoase", randomIndex);
+    setZilnicOreNorocoase(obj);
+  };
+
+  // const uploadToFirestore = async (data) => {
+  //   await handleUploadFirestore(data, "OreNorocoase");
+  // };
+
   React.useEffect(() => {
-    if (oreNorocoase.arr && oreNorocoase.arr.length > 0) {
-      const randomIndex = Math.floor(Math.random() * oreNorocoase.arr.length);
-      setZilnicOreNorocoase(oreNorocoase.arr[randomIndex]);
-    }
-  }, [oreNorocoase.arr]);
+    // for (let i = 0; i < oreNorocoase.arr.length; i++) {
+    //   uploadToFirestore(oreNorocoase.arr[i]);
+    // }
+
+    getRandomDocumentFirestore();
+  }, []);
 
   React.useEffect(() => {
     if (!currentUser && !isGuestUser) {

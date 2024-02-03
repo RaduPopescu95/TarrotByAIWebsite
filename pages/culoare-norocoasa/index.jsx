@@ -26,6 +26,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import languageDetector from "../../lib/languageDetector";
+import {
+  handleQueryRandom,
+  handleUploadFirestore,
+} from "../../utils/firestoreUtils";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { db } from "../../firebase";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -67,14 +73,30 @@ export function NumarNorocos() {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const getRandomDocumentFirestore = async () => {
+    // Presupunem că deja ai definit `collection` și `db`
+    const coll = collection(db, "CuloriNorocoase");
+    const snapshot = await getCountFromServer(coll);
+    const count = snapshot.data().count;
+    console.log("count: ", count);
+
+    const randomIndex = Math.floor(Math.random() * count) + 1;
+
+    console.log(randomIndex);
+    const obj = await handleQueryRandom("CuloriNorocoase", randomIndex);
+    setZilnicCuloriNorocoase(obj);
+  };
+
+  // const uploadToFirestore = async (data) => {
+  //   handleUploadFirestore(data, "CuloriNorocoase");
+  // };
+
   React.useEffect(() => {
-    if (culoriNorocoase.arr && culoriNorocoase.arr.length > 0) {
-      const randomIndex = Math.floor(
-        Math.random() * culoriNorocoase.arr.length
-      );
-      console.log("test...", culoriNorocoase.arr[randomIndex].image.finalUri);
-      setZilnicCuloriNorocoase(culoriNorocoase.arr[randomIndex]);
-    }
+    // for (let i = 0; i < culoriNorocoase.arr.length; i++) {
+    //   uploadToFirestore(culoriNorocoase.arr[i]);
+    // }
+
+    getRandomDocumentFirestore();
   }, [culoriNorocoase.arr]);
 
   React.useEffect(() => {
