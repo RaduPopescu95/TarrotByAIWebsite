@@ -511,7 +511,7 @@ export function CitirePersonalizata({ services }) {
 
   React.useEffect(() => {
     console.log(
-      "categorii personalizate.............//asdas......",
+      "categorii personalizate.................//asdas......",
       categoriiPersonalizate
     );
     if (!currentUser && !isGuestUser) {
@@ -559,6 +559,10 @@ export function CitirePersonalizata({ services }) {
           content="https://cristinazurba.com/images/social-share.jpg"
         />
         <meta name="format-detection" content="telephone=no" />
+        <meta
+          name="google-adsense-account"
+          content="ca-pub-9577714849380446"
+        ></meta>
       </Head>
       <div
         style={{
