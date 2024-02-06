@@ -97,7 +97,7 @@ export function NumarNorocos() {
     // }
 
     getRandomDocumentFirestore();
-  }, [culoriNorocoase.arr]);
+  }, []);
 
   React.useEffect(() => {
     if (!currentUser && !isGuestUser) {
