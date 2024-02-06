@@ -529,11 +529,6 @@ export function CitirePersonalizata({ services }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Stil pentru cardurile din mijloc
-  const middleCardStyle = {
-    marginTop: "-20px", // Ajustează această valoare după necesitate
-  };
-
   // Spinner animation
   const spinnerAnimation = {
     rotate: 360,

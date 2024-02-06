@@ -269,7 +269,7 @@ export function CitirePersonalizata({ services }) {
     setLoading,
   } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common", "services");
+
   const { classes, cx } = useSpacing();
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
@@ -309,7 +309,6 @@ export function CitirePersonalizata({ services }) {
     if (isFirstEntry.current) {
       setLoading(true);
       shuffleCartiViitor();
-      console.log("Executat doar la prima intrare în acest ecran");
 
       // Setează flag-ul pe false, astfel încât logica să nu se mai execute la următoarele intrări
       isFirstEntry.current = false;
@@ -332,11 +331,6 @@ export function CitirePersonalizata({ services }) {
 
     return () => clearTimeout(timer);
   }, []);
-
-  // Stil pentru cardurile din mijloc
-  const middleCardStyle = {
-    marginTop: "-20px", // Ajustează această valoare după necesitate
-  };
 
   // Spinner animation
   const spinnerAnimation = {
