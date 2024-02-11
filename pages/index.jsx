@@ -200,31 +200,31 @@ export function Landing({ services }) {
     }
   };
 
-  React.useEffect(() => {
-    // handleAddToFirestore();
+  // React.useEffect(() => {
+  //   // handleAddToFirestore();
 
-    console.log(`test.....xxx,,xxx......`, numereNorocoase);
+  //   console.log(`test.....xxx,,xxx......`, numereNorocoase);
 
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
-  }, []);
+  //   if (!currentUser && !isGuestUser) {
+  //     router.push("login");
+  //   }
+  // }, []);
 
-  if ((!currentUser && !isGuestUser) || loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          width: "100%",
-        }}
-      >
-        <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
-      </div>
-    );
-  }
+  // if ((!currentUser && !isGuestUser) || loading) {
+  //   return (
+  //     <div
+  //       style={{
+  //         display: "flex",
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         height: "100vh",
+  //         width: "100%",
+  //       }}
+  //     >
+  //       <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
+  //     </div>
+  //   );
+  // }
 
   return (
     <>

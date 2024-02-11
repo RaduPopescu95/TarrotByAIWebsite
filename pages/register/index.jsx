@@ -163,7 +163,6 @@ export default function SignInSide() {
   return (
     <>
       <Head>
-        <meta name="robots" content="noindex,nofollow" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -173,6 +172,7 @@ export default function SignInSide() {
     })(window,document,'script','dataLayer','GTM-P2LWMRCF');`,
           }}
         />
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
       <ThemeProvider theme={defaultTheme}>
         <Grid container component="main" sx={{ height: "100vh", zIndex: 5 }}>

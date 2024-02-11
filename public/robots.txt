@@ -1,15 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
 # robots.txt
 
-# Block all crawlers for specific pages
-User-agent: *
-Disallow: /dashboard
-Disallow: /dashboard/articles
-Disallow: /dashboard/services
-Disallow: /signin
-Disallow: /signup
-Disallow: /resetpassword
-
 # Allow all crawlers to access the rest of the site
 User-agent: *
 Allow: /
