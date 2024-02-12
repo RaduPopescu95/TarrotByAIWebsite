@@ -87,6 +87,28 @@ export default function SignInSide() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [formData, setFormData] = React.useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    lastName: "",
+    firstName: "",
+  });
+
+  const isButtonDisabled =
+    !formData.email ||
+    !formData.password ||
+    formData.password !== formData.confirmPassword ||
+    !formData.firstName ||
+    !formData.lastName;
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -220,10 +242,11 @@ export default function SignInSide() {
                   fullWidth
                   id="first-name"
                   label={t("firstName")}
-                  name="first-name"
+                  name="firstName"
                   autoComplete="first-name"
                   autoFocus
                   style={{ zIndex: 5 }}
+                  onChange={handleChange}
                 />
                 <TextField
                   margin="normal"
@@ -231,10 +254,11 @@ export default function SignInSide() {
                   fullWidth
                   id="last-name"
                   label={t("lastName")}
-                  name="last-name"
+                  name="lastName"
                   autoComplete="last-name"
                   autoFocus
                   style={{ zIndex: 5 }}
+                  onChange={handleChange}
                 />
                 <TextField
                   margin="normal"
@@ -247,6 +271,7 @@ export default function SignInSide() {
                   autoFocus
                   error={!!emailError}
                   helperText={emailError}
+                  onChange={handleChange}
                 />
                 <TextField
                   margin="normal"
@@ -259,6 +284,7 @@ export default function SignInSide() {
                   autoComplete="current-password"
                   error={!!passwordError}
                   helperText={passwordError}
+                  onChange={handleChange}
                 />
                 <TextField
                   margin="normal"
@@ -271,6 +297,7 @@ export default function SignInSide() {
                   autoComplete="confirm-password"
                   error={!!passwordError}
                   helperText={passwordError}
+                  onChange={handleChange}
                 />
                 {/* <FormControlLabel
                 control={<Checkbox value="remember" color="primary" />}
@@ -281,6 +308,7 @@ export default function SignInSide() {
                   type="submit"
                   fullWidth
                   variant="contained"
+                  disabled={isButtonDisabled}
                   sx={{
                     mt: 3,
                     mb: 2,
