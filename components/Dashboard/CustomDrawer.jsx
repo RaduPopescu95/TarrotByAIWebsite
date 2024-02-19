@@ -18,6 +18,7 @@ import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Link from "@mui/material/Link";
 import MenuIcon from "@mui/icons-material/Menu";
+import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -193,6 +194,39 @@ export default function CustomDrawer(props) {
             sx={{ backgroundColor: "#303030", height: "100%" }}
           >
             <React.Fragment>
+              {open && (
+                <ListItemText
+                  primary="Blog"
+                  sx={{
+                    color: "white",
+                    marginLeft: "8%",
+                  }}
+                />
+              )}
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "blog-articole",
+                    text: "Articole",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Articole" ? "#ffc045" : "white",
+                  }}
+                >
+                  <LibraryBooksIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Articole"
+                  sx={{
+                    color: "white",
+                  }}
+                />
+              </ListItemButton>
+
+              <Divider sx={{ my: 1 }} />
               {open && (
                 <ListItemText
                   primary="Citire de viitor"

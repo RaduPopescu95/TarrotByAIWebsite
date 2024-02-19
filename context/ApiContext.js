@@ -2,11 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import firebase from "firebase/app";
 
 import { getData } from "../utils/realtimeUtils";
-import {
-  handleGetFirestore,
-  handleUploadFirestore,
-  handleUploadFirestoreSubcollection,
-} from "../utils/firestoreUtils";
+import { handleUploadFirestoreSubcollection } from "../utils/firestoreUtils";
 import { authentication } from "../firebase";
 
 const ApiDataContext = createContext();

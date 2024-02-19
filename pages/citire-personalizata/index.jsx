@@ -28,10 +28,7 @@ import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
 import { Shuffle } from "@mui/icons-material";
 import { normalizeString } from "../../utils/strintText";
-import {
-  handleQueryFirestore,
-  handleUploadFirestoreSubcollection,
-} from "../../utils/firestoreUtils";
+import { handleQueryFirestore } from "../../utils/firestoreUtils";
 import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";

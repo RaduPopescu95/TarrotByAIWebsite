@@ -15,36 +15,76 @@ import {
   query,
   collectionGroup,
   startAt,
+  getCountFromServer,
 } from "firebase/firestore";
 import { authentication, db } from "../firebase";
 import { handleDeleteAccount } from "./authUtils";
+import { getCurrentDateTime } from "../utils/timeUtils";
 
 const auth = authentication;
 export const userLocation = `Users/${
   auth.currentUser ? auth.currentUser.uid : ""
 }`; // Calea către document
 
+export const getFirestoreCollectionLength = async (location) => {
+  const coll = collection(db, location);
+  const snapshot = await getCountFromServer(coll);
+  console.log("count: ", snapshot.data().count);
+
+  return snapshot.data().count;
+};
+
 export const handleUpdateFirestore = async (location, updatedData) => {
   try {
+    //current date
+    const dateTime = getCurrentDateTime();
+
     const ref = doc(db, location);
 
-    await updateDoc(ref, updatedData);
+    const newData = {
+      ...updatedData,
+      EditDate: dateTime.date,
+      Edittime: dateTime.time,
+    };
+
+    await updateDoc(ref, newData);
   } catch (err) {
     console.log("Error on...handleUpdateFirestore...", err);
   }
 };
 export const handleUploadFirestore = async (data, location) => {
   try {
-    console.log("test....");
+    console.log("test.infor in handle upload firestore...");
     console.log(location);
     console.log(data);
-    // pentru a face UPLOAD CU UN NUME DE DOCUMENT PREDEFINIT
-    // const ref = doc(db, location);
-    // await setDoc(ref, data);
-    // pentru a face UPLOAD CU UN NUME DE DOCUMENT CREATE ALEATORIU
-    await addDoc(collection(db, location), data);
+
+    // Crează un nou document în colecție cu un ID generat automat
+    const docRef = doc(collection(db, location));
+
+    // preia length of location collection
+
+    const collectionLength = await getFirestoreCollectionLength(location);
+    let id = collectionLength + 1;
+
+    //current date
+    const dateTime = getCurrentDateTime();
+
+    // Adaugă ID-ul generat în obiectul data
+    const newData = {
+      ...data,
+      documentId: docRef.id,
+      id,
+      firstUploadDate: dateTime.date,
+      firstUploadtime: dateTime.time,
+    };
+
+    // Face upload cu noul obiect de date care include ID-ul documentului
+    await setDoc(docRef, newData);
+
+    console.log(`Documentul cu ID-ul ${docRef.id} a fost adăugat cu succes.`);
+    return newData;
   } catch (err) {
-    console.log("Error on...handleUploadFirestore...", err);
+    console.log("Eroare la handleUploadFirestore...", err);
   }
 };
 
@@ -52,45 +92,26 @@ export const handleUploadFirestore = async (data, location) => {
 export const handleUploadFirestoreSubcollection = async (data, location) => {
   console.log("create subcollection history...", data);
   try {
-    const createdAt = Date.now();
+    const collectionLength = await getFirestoreCollectionLength(location);
+    let id = collectionLength + 1;
+    // Adăugarea documentului în subcolecție
 
-    const currentDate = new Date();
-    const formattedDate =
-      currentDate.getDate().toString().padStart(2, "0") +
-      "." +
-      (currentDate.getMonth() + 1).toString().padStart(2, "0") +
-      "." +
-      currentDate.getFullYear();
-    console.log(formattedDate);
-    // Obține ultimele cifre ale timestamp-ului curent
-    const timestamp = new Date().getTime().toString().slice(-5);
+    const docRef = doc(collection(db, location));
 
-    // Generează un număr aleator între 0 și 99
-    const randomComponent = Math.floor(Math.random() * 100)
-      .toString()
-      .padStart(2, "0");
+    // Actualizarea datelor cu ID-ul documentului generat
+    const newData = { ...data, documentId: docRef.id, id };
+    await setDoc(docRef, newData); // Actualizează documentul cu noul set de date, dacă este necesar
 
-    // Creează ID-ul combinând o parte din ștampelul de timp și componenta aleatoare
-    const uniqueId = `${timestamp}${randomComponent}`.slice(0, 7);
-
-    console.log("ID unic:", uniqueId);
-    let dataObj = {
-      data,
-      id: uniqueId,
-      date: formattedDate,
-      createdAt,
-    };
-
-    await addDoc(collection(db, location), dataObj);
-    // console.log(location);
-    // console.log(data);
-    // await setDoc(ref, data);
+    console.log(`Document adăugat în subcolecție cu ID-ul: ${docRef.id}`);
   } catch (err) {
-    console.log("Error on...handleUploadFirestore...", err);
+    console.log("Error on...handleUploadFirestoreSubcollection...", err);
   }
 };
 
-export const handleDeleteFirestore = async (location, currentPassword) => {
+export const handleDeleteFirestoreAccount = async (
+  location,
+  currentPassword
+) => {
   try {
     const ref = doc(db, location);
 
@@ -102,6 +123,7 @@ export const handleDeleteFirestore = async (location, currentPassword) => {
   }
 };
 
+//get firestore docs from a collection
 export const handleGetFirestore = async (location) => {
   let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
   const querySnapshot = await getDocs(collection(db, location));
@@ -111,6 +133,78 @@ export const handleGetFirestore = async (location) => {
     arr.push(doc.data());
   });
   return arr;
+};
+
+//DELETE FROM FIRESTORE DATA
+
+export const handleDeleteFirestoreData = async (
+  locationToDelete,
+  getNewData,
+  locationToGet = null
+) => {
+  try {
+    const ref = doc(db, locationToDelete);
+    await deleteDoc(ref);
+
+    // Dacă getNewData este true, procedează la obținerea și actualizarea datelor
+    if (getNewData) {
+      const data = await handleGetFirestore(locationToGet); // Presupunem că returnează un array de obiecte
+
+      // Sortează datele în ordinea crescătoare a ID-urilor
+      data.sort((a, b) => a.id - b.id);
+
+      let updatedData = []; // Inițializează un array gol pentru a stoca datele actualizate
+
+      // Actualizează ID-urile documentelor rămase pentru a fi consecutive
+      for (let i = 0; i < data.length; i++) {
+        const newId = i + 1; // Calculul noului ID
+        const docRef = doc(db, locationToGet, data[i].documentId); // Presupunem că fiecare document are un `docId` unic
+        await updateDoc(docRef, {
+          id: newId, // Actualizează ID-ul pentru a fi consecutiv
+        });
+
+        // Adaugă documentul actualizat în array-ul updatedData cu noul ID
+        updatedData.push({
+          ...data[i],
+          id: newId,
+        });
+      }
+
+      return updatedData; // Returnează datele actualizate dacă getNewData este true
+    }
+    // Dacă getNewData este false, nu returna nimic sau returnează o valoare specifică
+    return null; // Sau orice altă valoare semnificativă pentru cazul tău
+  } catch (err) {
+    console.log("Error on...handleDeleteFirestore...", err);
+    // Returnează null sau o valoare de eroare specifică în caz de eroare
+    return null;
+  }
+};
+
+//get all subcolletion from a collection
+export const handleGetSubcollections = async (subcollection) => {
+  try {
+    // Creează o interogare pentru grupul de colecții "Localitati"
+    const q = query(collectionGroup(db, subcollection));
+
+    // Execută interogarea și preia documentele
+    const querySnapshot = await getDocs(q);
+
+    // Crează un array pentru a stoca rezultatele
+    const docs = [];
+
+    // Iterează prin rezultatele interogării
+    querySnapshot.forEach((doc) => {
+      // Adaugă documentul la array
+      docs.push({ ...doc.data() });
+    });
+
+    // Returnează array-ul de localități
+    return docs;
+  } catch (err) {
+    console.error("Eroare la preluarea subcolectiilor..... ", err);
+    throw err; // Repropagă eroarea
+  }
 };
 
 export const handleGetFirestoreSingleArrayData = async (location) => {
@@ -130,24 +224,37 @@ export const handleGetFirestoreSingleArrayData = async (location) => {
   }
 };
 
-export const handleQueryFirestore = async (location, carte, categorie) => {
-  console.log("start query firestore carte...", carte);
-  console.log("start query firestore categorei...", categorie);
-  let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
-  const q = query(
-    collection(db, location),
-    where("carte", "==", carte),
-    where("categorie", "==", categorie)
-  );
+export const handleQueryFirestore = async (
+  location,
+  elementOne = null,
+  elementTwo = null
+) => {
+  console.log("start query firestore pentru elementOne...", elementOne);
+  console.log("start query firestore pentru elementTwo...", elementTwo);
+  let arr = []; // Specificați tipul de obiecte pe care îl conține matricea, de exemplu: let arr = [{}];
+  let conditions = [];
+
+  conditions.push(collection(db, location));
+
+  if (elementOne) {
+    conditions.push(where("siteName", "==", elementOne));
+  }
+
+  if (elementTwo) {
+    conditions.push(where("siteName", "==", elementTwo));
+  }
+
+  const q = query(...conditions);
 
   const querySnapshot = await getDocs(q);
   querySnapshot.forEach((doc) => {
     // doc.data() is never undefined for query doc snapshots
     console.log(doc.id, " => ", doc.data());
-    arr.push(doc.data().data);
+    arr.push(doc.data()); // Dacă dorești să adaugi un anumit câmp, specifică, de exemplu: doc.data().numeCamp
   });
   return arr;
 };
+
 export const handleQueryRandom = async (location, id) => {
   console.log("start query firestore location...", location);
   console.log("start query firestore id...", id);
