@@ -17,8 +17,11 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { toUrlSlug } from "../../utils/commonUtils";
+import languageDetector from "../../lib/languageDetector";
+import { colors } from "../../utils/colors";
 
 function Headline({ newestArticle, isRo }) {
+  const detectedLng = languageDetector.detect();
   const { classes, cx } = useStyles();
   const { classes: text } = useText();
   const theme = useTheme();
@@ -32,7 +35,10 @@ function Headline({ newestArticle, isRo }) {
   return (
     <>
       <CssBaseline />
-      <Card className={classes.blogHeadline} style={{ position: "relative" }}>
+      <Card
+        className={classes.blogHeadline}
+        style={{ position: "relative", backgroundColor: colors.primary2 }}
+      >
         <img
           className={classes.media}
           src={newestArticle.image.finalUri}
@@ -46,19 +52,13 @@ function Headline({ newestArticle, isRo }) {
             pathname: "/news/[slug]",
             query: {
               slug: `${newestArticle.id}-${toUrlSlug(
-                isRo ? newestArticle.info.ro.nume : newestArticle.info.ro.nume
+                newestArticle.info[detectedLng].nume
               )}`,
             },
           }}
-          as={
-            isRo
-              ? `/noutati/${newestArticle.id}-${toUrlSlug(
-                  newestArticle.info.ro.nume
-                )}`
-              : `/news/${newestArticle.id}-${toUrlSlug(
-                  newestArticle.info.ro.nume
-                )}`
-          }
+          as={`/news/${newestArticle.id}-${toUrlSlug(
+            newestArticle.info[detectedLng].nume
+          )}`}
           passHref={false}
         >
           <CardActionArea
@@ -94,7 +94,7 @@ function Headline({ newestArticle, isRo }) {
                   textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
                 }}
               >
-                {isRo ? newestArticle.info.ro.nume : newestArticle.info.ro.nume}
+                {newestArticle.info[detectedLng].nume}
               </Typography>
               {isDesktop && (
                 <Typography
@@ -112,9 +112,7 @@ function Headline({ newestArticle, isRo }) {
                     whiteSpace: "normal",
                   }}
                 >
-                  {isRo
-                    ? newestArticle.info.ro.metaDescriptionRomana
-                    : newestArticle.info.ro.metaDescription}
+                  {newestArticle.info[detectedLng].descriere}
                 </Typography>
               )}
             </CardContent>

@@ -38,7 +38,6 @@ function PapperBlock(props) {
               component="h2"
               // className={classes.title}
               color={"white"}
-              
             >
               {title}
             </Typography>

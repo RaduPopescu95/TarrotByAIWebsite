@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import Divider from "@mui/material/Divider";
@@ -13,8 +13,9 @@ import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import Image from "next/image";
-import { customStyles } from "../../data/data";
+import { customStyles } from "../../data/constants";
 import languageDetector from "../../lib/languageDetector";
+import { colors } from "@mui/material";
 
 function Article({ filteredArticles }) {
   const { classes } = useStyles();
@@ -49,18 +50,20 @@ function Article({ filteredArticles }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("sm"));
 
+  useEffect(() => {
+    console.log("filteredArticles...", filteredArticles);
+  }, []);
+  // return;
   return (
     <div className={classes.root}>
       <style>{customStyles}</style> {/* Incluziunea stilurilor CSS */}
       <article className={classes.article}>
         <div className={classes.content}>
           <Typography variant="h2" className={classes.titleBlog}>
-            {detectedLng === "ro"
-              ? filteredArticles.ro.nameRomana
-              : filteredArticles.name}
+            {filteredArticles.info[detectedLng].nume}
           </Typography>
           <span className={classes.caption} style={{ color: "white" }}>
-            {filteredArticles.date}
+            {filteredArticles.firstUploadDate}
           </span>
           <figure className={classes.imageBlog}>
             <img
@@ -72,23 +75,18 @@ function Article({ filteredArticles }) {
           </figure>
           <div
             dangerouslySetInnerHTML={{
-              __html:
-                detectedLng === "ro"
-                  ? filteredArticles.ro.contentRomana
-                  : filteredArticles.content,
+              __html: filteredArticles.info[detectedLng].content,
             }}
-            style={{ color: "white" }}
+            style={{ color: colors.primary3 }}
           ></div>
 
-          <Divider className={classes.dividerBordered} />
+          {/* <Divider className={classes.dividerBordered} /> */}
         </div>
       </article>
-      <section className={classes.socmedShare}>
+      {/* <section className={classes.socmedShare}>
         <div className={classes.btnArea}>
           <Typography variant="h6" sx={{ color: "white" }}>
-            {detectedLng === "ro"
-              ? "Distribuie pe social media"
-              : "Share to social media"}
+            {"Share to social media"}
           </Typography>
           <Box mt={3}>
             <Button
@@ -120,8 +118,8 @@ function Article({ filteredArticles }) {
             </Button>
           </Box>
         </div>
-      </section>
-      <Divider className={classes.dividerBordered} />
+      </section> */}
+      {/* <Divider className={classes.dividerBordered} /> */}
     </div>
   );
 }

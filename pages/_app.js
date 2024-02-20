@@ -9,23 +9,26 @@ import { NumberProvider } from "../context/NumberContext";
 import { appWithTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import "./globals.css";
+import { DatabaseProvider } from "../context/DatabaseContext";
 
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
 function MyApp({ Component, pageProps }) {
   return (
-    <AuthProvider>
-      <ApiDataProvider>
-        <NumberProvider>
-          <CacheProvider value={createCache({ key: "css" })}>
-            <ThemeProvider theme={defaultTheme}>
-              <CssBaseline />
-              <Component {...pageProps} />
-            </ThemeProvider>
-          </CacheProvider>
-        </NumberProvider>
-      </ApiDataProvider>
-    </AuthProvider>
+    <DatabaseProvider>
+      <AuthProvider>
+        <ApiDataProvider>
+          <NumberProvider>
+            <CacheProvider value={createCache({ key: "css" })}>
+              <ThemeProvider theme={defaultTheme}>
+                <CssBaseline />
+                <Component {...pageProps} />
+              </ThemeProvider>
+            </CacheProvider>
+          </NumberProvider>
+        </ApiDataProvider>
+      </AuthProvider>
+    </DatabaseProvider>
   );
 }
 

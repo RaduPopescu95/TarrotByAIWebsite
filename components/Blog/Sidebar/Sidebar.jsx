@@ -7,7 +7,7 @@ function Sidebar({ lastFiveArticles, isRo }) {
   return (
     <div>
       {/* <Box py={5} /> */}
-      <PostWidget lastFiveArticles={lastFiveArticles} isRo={isRo} />
+      <PostWidget />
       <Box py={3} />
     </div>
   );

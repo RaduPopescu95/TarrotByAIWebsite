@@ -13,6 +13,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
 import { toUrlSlug } from "../../utils/commonUtils";
+import { colors } from "../../utils/colors";
 
 function PostCard(props) {
   const { classes, cx } = useStyles();
@@ -23,7 +24,10 @@ function PostCard(props) {
   useEffect(() => {}, []);
 
   return (
-    <Card className={cx(classes.newsCard, classes[orientation], classes[type])}>
+    <Card
+      className={cx(classes.newsCard, classes[orientation], classes[type])}
+      // style={{ backgroundColor: "rgba(40, 49, 64, 0.2)" }}
+    >
       <div className={classes.figure}>
         <img
           className={classes.media}
@@ -42,6 +46,7 @@ function PostCard(props) {
               noWrap
               variant="h2"
               className={classes.title}
+              style={{ color: colors.primary3 }}
             >
               <Box
                 component="span"
@@ -52,10 +57,18 @@ function PostCard(props) {
                 {title}
               </Box>
             </Typography>
-            <Typography variant="caption" className={classes.caption}>
+            <Typography
+              variant="caption"
+              className={classes.caption}
+              style={{ color: colors.primary3 }}
+            >
               {date}
             </Typography>
-            <Typography display="block" className={classes.desc}>
+            <Typography
+              display="block"
+              className={classes.desc}
+              style={{ color: colors.primary3 }}
+            >
               <span>{desc}</span>
             </Typography>
           </div>

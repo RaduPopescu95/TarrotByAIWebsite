@@ -39,7 +39,27 @@ import { colors } from "../../utils/colors";
 // }
 
 export async function getServerSideProps({ locale }) {
-  const articles = await handleGetFirestore("BlogArticole");
+  // Obținerea datelor articolelor din Firestore
+  const articlesData = await handleGetFirestore("BlogArticole");
+
+  // Sortarea articolelor după data și ora lor
+  const sortedArticles = articlesData.sort((a, b) => {
+    // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
+    const dateTimeA = new Date(`${a.date} ${a.time}`);
+    const dateTimeB = new Date(`${b.date} ${b.time}`);
+
+    // Compară obiectele de tip Date
+    return dateTimeB - dateTimeA;
+  });
+
+  // Selectarea celor mai noi două articole
+  const latestArticles = sortedArticles.slice(0, 2);
+
+  // Selectarea celui mai nou articol
+  const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
+
+  // Returnarea datelor către componenta Next.js
+  const articles = { articlesData, latestArticles, lastArticle };
   return {
     props: {
       articles,
@@ -47,7 +67,6 @@ export async function getServerSideProps({ locale }) {
     },
   };
 }
-
 function BlogHome(props) {
   const { t } = useTranslation("common");
   const detectedLng = languageDetector.detect();
@@ -74,13 +93,15 @@ function BlogHome(props) {
   const endIndex = startIndex + itemsPerPage;
 
   // Extrage articolele de pe pagina curentă
-  const articlesToDisplay = articles && articles.slice(startIndex, endIndex);
-  const articlesToDisplayRo = articles && articles.slice(startIndex, endIndex);
+  const articlesToDisplay =
+    articles.articlesData && articles.articlesData.slice(startIndex, endIndex);
+  const articlesToDisplayRo =
+    articles.articlesData && articles.articlesData.slice(startIndex, endIndex);
 
   useEffect(() => {
-    console.log(".....------------------------------------.", articles);
+    console.log("...----------testssss------.", articles.articlesData);
   }, []);
-
+  // return;
   return (
     <Fragment>
       <Head>
@@ -117,26 +138,28 @@ function BlogHome(props) {
           style={{
             paddingTop: isMobile ? 0 : 50,
             height:
-              articles.length === 0 && detectedLng === "ro" ? "100vh" : "100%",
+              articles.articlesData.length === 0 && detectedLng === "ro"
+                ? "100vh"
+                : "100%",
           }}
         >
           {detectedLng === "ro" ? (
             <div className={classes.containerGeneral}>
               <Box pt={{ xs: 5, sm: 3, md: 4 }}>
-                {articles.length > 0 ? (
+                {articles.articlesData.length > 0 ? (
                   <Container>
                     <Grid container spacing={3}>
                       <Grid item sm={12}>
                         <Headline
-                          newestArticle={detectedLng === "ro" && articles[0]}
-                          isRo={detectedLng === "ro" ? true : false}
+                          newestArticle={articles.lastArticle}
+                          isRo={false}
                         />
                       </Grid>
                     </Grid>
                     <Box mt={8}>
                       <Grid container spacing={3}>
-                        {articles &&
-                          articles.map((article, index) => (
+                        {articles.latestArticles &&
+                          articles.latestArticles.map((article, index) => (
                             <Grid item md={6} xs={12}>
                               <PostCard
                                 href={"sss"}
@@ -157,8 +180,8 @@ function BlogHome(props) {
                     <Box mt={2}>
                       <Grid spacing={4} container>
                         <Grid item md={8} xs={12}>
-                          {articles &&
-                            articles.map((article, index) => (
+                          {articles.articlesData &&
+                            articlesToDisplay.map((article, index) => (
                               <Box
                                 key={index.toString()}
                                 mt={index > 0 ? 6 : 0}
@@ -189,7 +212,8 @@ function BlogHome(props) {
                               <Button
                                 onClick={() => setCurrentPage(currentPage + 1)}
                                 disabled={
-                                  articles && endIndex >= articles.length
+                                  articles.articlesData &&
+                                  endIndex >= articles.articlesData.length
                                 }
                               >
                                 Next
@@ -199,7 +223,7 @@ function BlogHome(props) {
                           </Box>
                         </Grid>
                         <Grid item md={4} xs={12}>
-                          {/* <Sidebar isRo={true} lastFiveArticles={articles} /> */}
+                          <Sidebar />
                         </Grid>
                       </Grid>
                     </Box>
@@ -209,7 +233,7 @@ function BlogHome(props) {
                     style={{
                       color: "white",
                       fontSize: "20px",
-                      paddingTop: articles.length == 0 && 30,
+                      paddingTop: articles.articlesData.length == 0 && 30,
                     }}
                     gutterBottom
                     variant="body1"
@@ -231,13 +255,13 @@ function BlogHome(props) {
                   <Container>
                     <Grid container spacing={3}>
                       <Grid item sm={12}>
-                        <Headline newestArticle={articles[0]} />
+                        <Headline newestArticle={articles.lastArticle} />
                       </Grid>
                     </Grid>
                     <Box mt={8}>
                       <Grid container spacing={3}>
-                        {articles &&
-                          articles.map((article, index) => (
+                        {articles.latestArticles &&
+                          articles.latestArticles.map((article, index) => (
                             <Grid item md={6} xs={12}>
                               <PostCard
                                 href={""}
@@ -257,8 +281,8 @@ function BlogHome(props) {
                     <Box mt={2}>
                       <Grid spacing={4} container>
                         <Grid item md={8} xs={12}>
-                          {articles &&
-                            articles.map((article, index) => (
+                          {articles.articlesData &&
+                            articlesToDisplay.map((article, index) => (
                               <Box
                                 key={index.toString()}
                                 mt={index > 0 ? 6 : 0}
@@ -298,7 +322,7 @@ function BlogHome(props) {
                           </Box>
                         </Grid>
                         <Grid item md={4} xs={12}>
-                          {/* <Sidebar lastFiveArticles={articles} /> */}
+                          <Sidebar />
                         </Grid>
                       </Grid>
                     </Box>

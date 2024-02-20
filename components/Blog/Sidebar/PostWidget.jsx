@@ -11,91 +11,36 @@ import Link from "next/link";
 import { toUrlSlug } from "../../../utils/commonUtils";
 
 function PostWidget({ lastFiveArticles, isRo }) {
+  const filters = ["filterOne", "filterTwo", "filterThree"];
+
   const { classes } = useStyles();
 
   const route = useRouter();
 
-  const handleRoute = (item) => {
-    route.push({
-      pathname: "/news/[slug]",
-      query: {
-        slug: item.id,
-      },
-    });
-  };
-
   return (
-    <Paper
-      title={isRo ? "Ultimele articole" : "Latest Articles"}
-      icon="ion-android-bookmark"
-      whiteBg
-      desc=""
-    >
+    <Paper title={"Filters"} icon="ion-android-bookmark" whiteBg desc="">
       <div
         className={classes.albumRoot}
         style={{ backgroundColor: "transparent" }}
       >
-        {isRo ? (
-          <List component="nav">
-            {lastFiveArticles.map((item, index) => (
-              <Link
-                href={{
-                  pathname: "/news/[slug]",
-                  query: {
-                    slug: `${item.id}-${toUrlSlug(item.ro.nameRomana)}`,
-                  },
-                }}
-                as={`/noutati/${item.id}-${toUrlSlug(item.ro.nameRomana)}`}
-                passHref={false}
-              >
-                <ListItem
-                  button
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "#252525", // Culoarea pentru hover
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary={item.ro.nameRomana}
-                    secondary={item.date}
-                    primaryTypographyProps={{ style: { color: "white" } }}
-                    secondaryTypographyProps={{ style: { color: "#d3a03e" } }}
-                  />
-                </ListItem>
-              </Link>
-            ))}
-          </List>
-        ) : (
-          <List component="nav">
-            {lastFiveArticles.map((item, index) => (
-              <Link
-                href={{
-                  pathname: "/news/[slug]",
-                  query: { slug: `${item.id}-${toUrlSlug(item.name)}` },
-                }}
-                as={`/news/${item.id}-${toUrlSlug(item.name)}`}
-                passHref={false}
-              >
-                <ListItem
-                  button
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "#252525", // Culoarea pentru hover
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary={item.name}
-                    secondary={item.date}
-                    primaryTypographyProps={{ style: { color: "white" } }}
-                    secondaryTypographyProps={{ style: { color: "#d3a03e" } }}
-                  />
-                </ListItem>
-              </Link>
-            ))}
-          </List>
-        )}
+        <List component="nav">
+          {filters.map((item, index) => (
+            <ListItem
+              button
+              sx={{
+                "&:hover": {
+                  backgroundColor: "#252525", // Culoarea pentru hover
+                },
+              }}
+            >
+              <ListItemText
+                primary={item}
+                primaryTypographyProps={{ style: { color: "white" } }}
+                secondaryTypographyProps={{ style: { color: "#d3a03e" } }}
+              />
+            </ListItem>
+          ))}
+        </List>
       </div>
     </Paper>
   );

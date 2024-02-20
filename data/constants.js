@@ -99,3 +99,26 @@ export const LANGUAGE_LABELS = {
   },
   // Adaugă aici orice alte limbi necesare
 };
+
+export const customStyles = `
+  /* Stiluri pentru paragrafe */
+  p {
+    font-size: 20px;
+    line-height: 1.5;
+  }
+
+  /* Stiluri pentru titluri */
+  h1 {
+    font-size: 40px;
+    font-weight: bold;
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 30px;
+    font-weight: bold;
+    line-height: 1.5;
+  }
+
+  /* Alte stiluri pentru elementele generate de react-quill */
+`;

@@ -6,15 +6,15 @@ import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import { CircularProgress } from "@mui/material";
-import { useSpacing } from "~/theme/common";
-import Header from "~/components/Header";
-import Article from "~/components/Blog/Article";
-import Sidebar from "~/components/Blog/Sidebar";
-import Footer from "~/components/Footer";
-import brand from "~/public/text/brand";
+import { useSpacing } from "../../../theme/common";
+import Header from "../../../components/Header";
+import Article from "../../../components/Blog/Article";
+import Sidebar from "../../../components/Blog/Sidebar";
+
 import { useRouter } from "next/router";
 import { useDatabase } from "../../../context/DatabaseContext";
 import languageDetector from "../../../lib/languageDetector";
+import { colors } from "../../../utils/colors";
 
 function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
@@ -32,26 +32,14 @@ function BlogDetail(props) {
   useEffect(() => {
     console.log("test....");
     console.log(detectedLng);
-    if (detectedLng === "ro") {
-      if (router.isReady && articles.articlesArrayRo) {
-        const slug = router.query.slug;
-        const id = slug.split("-")[0]; // Extract the ID part
-        const filtered = articles.articlesArrayRo.find(
-          (article) => article.id.toString() === id
-        );
-        setFilteredArticle(filtered); // Set the found article
-      }
-    } else {
-      if (router.isReady && articles.articlesArray) {
-        const slug = router.query.slug;
-        const id = slug.split("-")[0]; // Extract the ID part
-        const filtered = articles.articlesArray.find(
-          (article) => article.id.toString() === id
-        );
-        setFilteredArticle(filtered); // Set the found article
-      }
+
+    if (router.isReady && articles) {
+      const slug = router.query.slug;
+      const id = slug.split("-")[0]; // Extract the ID part
+      const filtered = articles.find((article) => article.id.toString() === id);
+      setFilteredArticle(filtered); // Set the found article
     }
-  }, [router.isReady, router.query.slug, articles.articlesArray]);
+  }, [router.isReady, router.query.slug, articles]);
   return (
     <Fragment>
       <CssBaseline />
@@ -75,17 +63,22 @@ function BlogDetail(props) {
         home
         isSlug={true}
       />
-      {filteredArticle ? (
-        <div className={classes.mainWrap}>
-          <section id="home" />
-          <div className={classes.wraperSection}>
-            <Box pt={5}>
-              <Container>
-                <Grid container spacing={4}>
-                  <Grid item md={8} xs={12}>
-                    <Article filteredArticles={filteredArticle} />
-                  </Grid>
-                  <Grid item md={4} xs={12}>
+      <div
+        style={{
+          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+        }}
+      >
+        {filteredArticle ? (
+          <div className={classes.mainWrap}>
+            <section id="home" />
+            <div className={classes.wraperSection} style={{ height: "100%" }}>
+              <Box pt={5}>
+                <Container>
+                  <Grid container spacing={4}>
+                    <Grid item md={12} xs={12}>
+                      <Article filteredArticles={filteredArticle} />
+                    </Grid>
+                    {/* <Grid item md={4} xs={12}>
                     <Sidebar
                       lastFiveArticles={
                         detectedLng === "ro"
@@ -94,18 +87,16 @@ function BlogDetail(props) {
                       }
                       isRo={detectedLng === "ro" ? true : false}
                     />
+                  </Grid> */}
                   </Grid>
-                </Grid>
-              </Container>
-            </Box>
+                </Container>
+              </Box>
+            </div>
           </div>
-          <div id="footer">
-            <Footer toggleDir={onToggleDir} />
-          </div>
-        </div>
-      ) : (
-        <CircularProgress />
-      )}
+        ) : (
+          <CircularProgress />
+        )}
+      </div>
     </Fragment>
   );
 }

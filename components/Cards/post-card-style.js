@@ -62,15 +62,15 @@ const cardsStyles = makeStyles({ uniqId: "post_card" })(
       marginTop: 28,
       fontSize: "15px",
       fontWeight: "700",
-      backgroundColor: "transparent",
+      backgroundColor: "rgba(40, 49, 64, 0.7)",
       color: "white",
       width: "170px",
       textTransform: "none",
-      border: "1px solid #d3a03e",
+      border: "1px solid #283140",
       transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
       "&:hover": {
-        backgroundColor: "rgba(211, 160, 62, 0.2)", // Culorea de fundal pentru hover
-        border: "1px solid #d3a03e", // Adaugă o bordură la hover
+        backgroundColor: "rgba(40, 49, 64, 0.9)", // Culorea de fundal pentru hover
+        border: "1px solid #283140", // Adaugă o bordură la hover
       },
     },
     /* Orientation */

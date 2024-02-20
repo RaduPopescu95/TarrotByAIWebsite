@@ -128,7 +128,7 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
     position: "relative",
     width: "100%",
     overflow: "hidden",
-    background: "black",
+    // background: "black",
   },
   cardImg: {
     objectFit: "cover",
