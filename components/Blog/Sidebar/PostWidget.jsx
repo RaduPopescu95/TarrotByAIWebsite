@@ -9,9 +9,16 @@ import { Button } from "@mui/material";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { toUrlSlug } from "../../../utils/commonUtils";
+import { colors } from "../../../utils/colors";
 
-function PostWidget({ lastFiveArticles, isRo }) {
-  const filters = ["filterOne", "filterTwo", "filterThree"];
+function PostWidget({ handleFilter, filterItem }) {
+  const filters = [
+    "All",
+    "Previziuni zilnice",
+    "Previziuni săptămânale",
+    "Previziuni lunare",
+    "Previziuni anuale",
+  ];
 
   const { classes } = useStyles();
 
@@ -29,14 +36,30 @@ function PostWidget({ lastFiveArticles, isRo }) {
               button
               sx={{
                 "&:hover": {
-                  backgroundColor: "#252525", // Culoarea pentru hover
+                  backgroundColor: colors.primary3, // Culoarea pentru hover pe ListItem
+                  // Schimbă culoarea textului la hover prin referirea la copilul ListItemText
+                  "& .MuiTypography-root": {
+                    color: "white",
+                  },
                 },
+                backgroundColor:
+                  filterItem === item ? colors.primary3 : "transparent",
               }}
+              onClick={() => handleFilter(item)}
             >
               <ListItemText
                 primary={item}
-                primaryTypographyProps={{ style: { color: "white" } }}
-                secondaryTypographyProps={{ style: { color: "#d3a03e" } }}
+                sx={{
+                  ".MuiTypography-root": {
+                    // Aplică stilul pentru toate elementele Typography din ListItemText
+                    color: filterItem === item ? "white" : colors.primary3,
+                    height: "2rem",
+                    width: "auto",
+                  },
+                  ".MuiTypography-secondary": {
+                    color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific
+                  },
+                }}
               />
             </ListItem>
           ))}

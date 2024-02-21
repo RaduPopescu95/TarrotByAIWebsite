@@ -16,6 +16,10 @@ import {
   Chip,
   useMediaQuery,
   useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import GTranslateIcon from "@mui/icons-material/GTranslate";
 import { StyledTextField } from "../../styles/FormStyles";
@@ -28,6 +32,8 @@ import FieldRow from "./FieldRow";
 import LoadingDialog from "../DialogBox/DialogLoader";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { gTranslateFetch } from "../../utils/apiUtils";
+import DropdownFieldRow from "./DropdownFieldRow";
+import DropdownFieldCategorii from "./DropdownFieldCategorii";
 
 export default function BlogArticoleFields({
   handleUpload,
@@ -45,6 +51,9 @@ export default function BlogArticoleFields({
 
   const [selectedImages, setSelectedImages] = useState([]);
   const [image, setImage] = useState(dialogData.image ? dialogData.image : "");
+  const [categorie, setCategorie] = useState(
+    dialogData.categorie ? dialogData.categorie : ""
+  );
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -551,14 +560,16 @@ export default function BlogArticoleFields({
 
     const oldFileName = dialogData.image ? dialogData.image.fileName : "";
     if (isEdit) {
-      handleEdit(data, selectedImages, image, oldFileName).then(() => {
-        setLoading(false);
-      });
+      handleEdit(data, selectedImages, image, oldFileName, categorie).then(
+        () => {
+          setLoading(false);
+        }
+      );
     } else {
       console.log("else.....");
       console.log(selectedImages);
       console.log(data);
-      handleUpload(data, selectedImages).then(() => {
+      handleUpload(data, selectedImages, categorie).then(() => {
         setLoading(false);
       });
     }
@@ -568,6 +579,7 @@ export default function BlogArticoleFields({
 
   // HANDLE TRANSLATE
   const handleTranslate = async (text, target) => {
+    console.log("translate text...", text);
     try {
       const res = await gTranslateFetch(text, target);
       return res;
@@ -614,7 +626,7 @@ export default function BlogArticoleFields({
     };
 
     for (let l of languages) {
-      console.log(l);
+      console.log("language to translate...", l);
 
       let translation;
 
@@ -687,6 +699,68 @@ export default function BlogArticoleFields({
         translation = await handleTranslate(descriereRoValue, "id");
       } else {
         translation = await handleTranslate(descriereRoValue, l);
+      }
+
+      // console.log("translation", translation);
+      if (translation) {
+        console.log("language round...", l);
+        console.log("translation", translation);
+
+        // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
+
+        if (setFunctions[l]) {
+          setFunctions[l](translation);
+        }
+      }
+    }
+  };
+  //---------- CONTENT HANDLE TRANSLATE -----------
+
+  const handleToTranslateContent = async (contentRoValue) => {
+    const languages = [
+      "en",
+      "es",
+      "it",
+      "pl",
+      "de",
+      "hu",
+      "cs",
+      "sk",
+      "hr",
+      "ru",
+      "bg",
+      "el",
+      "fr",
+    ];
+
+    // Creăm un obiect de mapare pentru funcțiile set
+    const setFunctions = {
+      en: setContentEn,
+      es: setContentEs,
+      it: setContentIt,
+      pl: setContentPl,
+      de: setContentDe,
+      hu: setContentHu,
+      cs: setContentCs,
+      sk: setContentSk,
+      hr: setContentHr,
+      ru: setContentRu,
+      bg: setContentBg,
+      el: setContentEl,
+      fr: setContentFr,
+    };
+
+    for (let l of languages) {
+      console.log(l);
+
+      let translation;
+
+      if (l === "hu") {
+        translation = await handleTranslate(contentRoValue, "hi");
+      } else if (l === "ru") {
+        translation = await handleTranslate(contentRoValue, "id");
+      } else {
+        translation = await handleTranslate(contentRoValue, l);
       }
 
       // console.log("translation", translation);
@@ -879,6 +953,41 @@ export default function BlogArticoleFields({
             xs={12}
             sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
           >
+            <HorizontalLineWithText text={"Setări Categorie"} />
+          </Grid>
+          <Box
+            style={{
+              width: "100%",
+              paddingRight: "3%",
+              paddingLeft: "3%",
+              paddingBottom: "3%",
+              backgroundColor: "#2B2B2B",
+              marginRight: "2%",
+              marginLeft: "2%",
+              borderRadius: "1%",
+            }}
+          >
+            <DropdownFieldCategorii
+              id="Categorii-select"
+              name="Categorii"
+              label="Categorii"
+              value={categorie}
+              onChange={(item) => setCategorie(item)}
+              widthLabel="11.5%"
+              options={[
+                "Previziuni zilnice",
+                "Previziuni săptămânale",
+                "Previziuni lunare",
+                "Previziuni anuale",
+              ]}
+              placeHolder="Categorii"
+            />
+          </Box>
+          <Grid
+            item
+            xs={12}
+            sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
+          >
             <HorizontalLineWithText text={"Setări Principale"} />
           </Grid>
 
@@ -941,7 +1050,7 @@ export default function BlogArticoleFields({
                     color="primary"
                     aria-label="add an alarm"
                     sx={{ position: "relative", left: 5, top: 15 }}
-                    onClick={() => handleToTranslateDescriere(descriereRo)}
+                    onClick={() => handleToTranslateContent(contentRo)}
                   >
                     <GTranslateIcon />
                   </IconButton>

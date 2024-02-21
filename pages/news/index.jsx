@@ -25,7 +25,10 @@ import { FloatingWhatsApp } from "react-floating-whatsapp";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import languageDetector from "../../lib/languageDetector";
 import { useTranslation } from "next-i18next";
-import { handleGetFirestore } from "../../utils/firestoreUtils";
+import {
+  handleGetFirestore,
+  handleQueryFirestore,
+} from "../../utils/firestoreUtils";
 import { colors } from "../../utils/colors";
 
 // export async function getStaticProps() {
@@ -87,20 +90,80 @@ function BlogHome(props) {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
+  const itemsPerPage = 4; // Setează numărul de articole pe pagină la 4
+
   // Calculează indexul de start și de sfârșit pentru articolele de pe pagina curentă
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
   // Extrage articolele de pe pagina curentă
-  const articlesToDisplay =
-    articles.articlesData && articles.articlesData.slice(startIndex, endIndex);
-  const articlesToDisplayRo =
-    articles.articlesData && articles.articlesData.slice(startIndex, endIndex);
+  const [articlesToDisplay, setArticlesToDisplay] = useState(
+    articles.articlesData
+      ? articles.articlesData.slice(startIndex, endIndex)
+      : []
+  );
+  const [lastArticle, setLastArticle] = useState(
+    articles.lastArticle ? articles.lastArticle : []
+  );
+  const [latestArticles, setLatestArticles] = useState(
+    articles.latestArticles ? articles.latestArticles : []
+  );
+
+  const [filteredArticles, setFilteredArticles] = useState(
+    articles.articlesData
+  );
+
+  const [filterItem, setFilterItem] = useState("All");
+
+  const handleNextPage = () => {
+    const newStartIndex = currentPage * itemsPerPage;
+    if (newStartIndex < filteredArticles.length) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleFilter = async (filterItem) => {
+    setFilterItem(filterItem);
+    let articlesData = [];
+    if (filterItem === "All") {
+      articlesData = await handleGetFirestore("BlogArticole");
+    } else {
+      articlesData = await handleQueryFirestore(
+        "BlogArticole",
+        "categorie",
+        filterItem
+      );
+    }
+
+    const sortedArticles = articlesData.sort((a, b) => {
+      const dateTimeA = new Date(`${a.date} ${a.time}`);
+      const dateTimeB = new Date(`${b.date} ${b.time}`);
+      return dateTimeB - dateTimeA;
+    });
+
+    setCurrentPage(1);
+    setFilteredArticles(sortedArticles); // Actualizează starea cu articolele filtrate
+
+    // Nu este necesar să actualizezi `articlesToDisplay` aici direct deoarece `useEffect` va face acest lucru
+  };
 
   useEffect(() => {
-    console.log("...----------testssss------.", articles.articlesData);
-  }, []);
+    const newStartIndex = (currentPage - 1) * itemsPerPage;
+    const newEndIndex = newStartIndex + itemsPerPage;
+    const newArticlesToDisplay = filteredArticles.slice(
+      newStartIndex,
+      newEndIndex
+    );
+
+    setArticlesToDisplay(newArticlesToDisplay);
+  }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
+
   // return;
   return (
     <Fragment>
@@ -143,126 +206,42 @@ function BlogHome(props) {
                 : "100%",
           }}
         >
-          {detectedLng === "ro" ? (
-            <div className={classes.containerGeneral}>
-              <Box pt={{ xs: 5, sm: 3, md: 4 }}>
-                {articles.articlesData.length > 0 ? (
-                  <Container>
-                    <Grid container spacing={3}>
-                      <Grid item sm={12}>
-                        <Headline
-                          newestArticle={articles.lastArticle}
-                          isRo={false}
-                        />
-                      </Grid>
+          <div className={classes.containerGeneral}>
+            <Box pt={{ xs: 5, sm: 3, md: 4 }}>
+              {articles.articlesData.length > 0 ? (
+                <Container>
+                  <Grid container spacing={3}>
+                    <Grid item sm={12}>
+                      <Headline newestArticle={lastArticle} isRo={false} />
                     </Grid>
-                    <Box mt={8}>
-                      <Grid container spacing={3}>
-                        {articles.latestArticles &&
-                          articles.latestArticles.map((article, index) => (
-                            <Grid item md={6} xs={12}>
-                              <PostCard
-                                href={"sss"}
-                                img={article.image.finalUri}
-                                title={article.info[detectedLng].nume}
-                                desc={article.info[detectedLng].descriere}
-                                date={article.firstUploadDate}
-                                id={article.id}
-                                articleData={article}
-                                orientation="landscape"
-                                type="full"
-                                isRo={true}
-                              />
-                            </Grid>
-                          ))}
-                      </Grid>
-                    </Box>
-                    <Box mt={2}>
-                      <Grid spacing={4} container>
-                        <Grid item md={8} xs={12}>
-                          {articles.articlesData &&
-                            articlesToDisplay.map((article, index) => (
-                              <Box
-                                key={index.toString()}
-                                mt={index > 0 ? 6 : 0}
-                              >
-                                <PostCard
-                                  href={""}
-                                  img={article.image.finalUri}
-                                  title={article.info[detectedLng].nume}
-                                  desc={article.info[detectedLng].descriere}
-                                  date={article.firstUploadDate}
-                                  id={article.id}
-                                  orientation="portrait"
-                                  type="round"
-                                  isRo={true}
-                                />
-                              </Box>
-                            ))}
-
-                          <Box mt={5} className={classes.arrow}>
-                            <Grid container justifyContent="space-between">
-                              <Button
-                                onClick={() => setCurrentPage(currentPage - 1)}
-                                disabled={currentPage === 1}
-                              >
-                                <ArrowBackIcon />
-                                Previous
-                              </Button>
-                              <Button
-                                onClick={() => setCurrentPage(currentPage + 1)}
-                                disabled={
-                                  articles.articlesData &&
-                                  endIndex >= articles.articlesData.length
-                                }
-                              >
-                                Next
-                                <ArrowForwardIcon />
-                              </Button>
-                            </Grid>
-                          </Box>
-                        </Grid>
-                        <Grid item md={4} xs={12}>
-                          <Sidebar />
-                        </Grid>
-                      </Grid>
-                    </Box>
-                  </Container>
-                ) : (
-                  <Typography
-                    style={{
-                      color: "white",
-                      fontSize: "20px",
-                      paddingTop: articles.articlesData.length == 0 && 30,
-                    }}
-                    gutterBottom
-                    variant="body1"
-                    display="block"
-                  >
-                    {detectedLng === "ro"
-                      ? "Lucrăm la crearea unor conținuturi noi! Revino în curând pentru a citi cele mai recente articole. Între timp, explorează resursele noastre existente."
-                      : `We're brewing some fresh content! Check back soon to read our
-                    latest articles. In the meantime, explore our existing
-                    resources.`}
-                  </Typography>
-                )}
-              </Box>
-            </div>
-          ) : (
-            <div className={classes.containerGeneral}>
-              <Box pt={{ xs: 5, sm: 3, md: 4 }}>
-                {articles.length > 0 ? (
-                  <Container>
+                  </Grid>
+                  <Box mt={8}>
                     <Grid container spacing={3}>
-                      <Grid item sm={12}>
-                        <Headline newestArticle={articles.lastArticle} />
-                      </Grid>
+                      {latestArticles &&
+                        latestArticles.map((article, index) => (
+                          <Grid item md={6} xs={12}>
+                            <PostCard
+                              href={"sss"}
+                              img={article.image.finalUri}
+                              title={article.info[detectedLng].nume}
+                              desc={article.info[detectedLng].descriere}
+                              date={article.firstUploadDate}
+                              id={article.id}
+                              articleData={article}
+                              orientation="landscape"
+                              type="full"
+                              isRo={true}
+                            />
+                          </Grid>
+                        ))}
                     </Grid>
-                    <Box mt={8}>
-                      <Grid container spacing={3}>
-                        {articles.latestArticles &&
-                          articles.latestArticles.map((article, index) => (
-                            <Grid item md={6} xs={12}>
+                  </Box>
+                  <Box mt={2}>
+                    <Grid spacing={4} container>
+                      <Grid item md={8} xs={12}>
+                        {articlesToDisplay &&
+                          articlesToDisplay.map((article, index) => (
+                            <Box key={index.toString()} mt={index > 0 ? 6 : 0}>
                               <PostCard
                                 href={""}
                                 img={article.image.finalUri}
@@ -270,82 +249,64 @@ function BlogHome(props) {
                                 desc={article.info[detectedLng].descriere}
                                 date={article.firstUploadDate}
                                 id={article.id}
-                                articleData={article}
-                                orientation="landscape"
-                                type="full"
+                                orientation="portrait"
+                                type="round"
+                                isRo={true}
                               />
-                            </Grid>
+                            </Box>
                           ))}
-                      </Grid>
-                    </Box>
-                    <Box mt={2}>
-                      <Grid spacing={4} container>
-                        <Grid item md={8} xs={12}>
-                          {articles.articlesData &&
-                            articlesToDisplay.map((article, index) => (
-                              <Box
-                                key={index.toString()}
-                                mt={index > 0 ? 6 : 0}
-                              >
-                                <PostCard
-                                  href={""}
-                                  img={article.image.finalUri}
-                                  title={article.info[detectedLng].nume}
-                                  desc={article.info[detectedLng].descriere}
-                                  date={article.firstUploadDate}
-                                  id={article.id}
-                                  orientation="portrait"
-                                  type="round"
-                                />
-                              </Box>
-                            ))}
 
-                          <Box mt={5} className={classes.arrow}>
-                            <Grid container justifyContent="space-between">
-                              <Button
-                                onClick={() => setCurrentPage(currentPage - 1)}
-                                disabled={currentPage === 1}
-                              >
-                                <ArrowBackIcon />
-                                Previous
-                              </Button>
-                              <Button
-                                onClick={() => setCurrentPage(currentPage + 1)}
-                                disabled={
-                                  articles && endIndex >= articles.length
-                                }
-                              >
-                                Next
-                                <ArrowForwardIcon />
-                              </Button>
-                            </Grid>
-                          </Box>
-                        </Grid>
-                        <Grid item md={4} xs={12}>
-                          <Sidebar />
-                        </Grid>
+                        <Box mt={5} className={classes.arrow}>
+                          <Grid container justifyContent="space-between">
+                            <Button
+                              onClick={handlePrevPage}
+                              disabled={currentPage === 1}
+                            >
+                              <ArrowBackIcon />
+                              Previous
+                            </Button>
+                            <Button
+                              onClick={handleNextPage}
+                              disabled={
+                                articlesToDisplay &&
+                                endIndex >= articles.articlesData.length
+                              }
+                            >
+                              Next
+                              <ArrowForwardIcon />
+                            </Button>
+                          </Grid>
+                        </Box>
                       </Grid>
-                    </Box>
-                  </Container>
-                ) : (
-                  <Typography
-                    style={{
-                      color: "white",
-                      fontSize: "20px",
-                      paddingTop: articles.articlesArray.length == 0 && 30,
-                    }}
-                    gutterBottom
-                    variant="body1"
-                    display="block"
-                  >
-                    We're brewing some fresh content! Check back soon to read
-                    our latest articles. In the meantime, explore our existing
-                    resources or subscribe to get updates.
-                  </Typography>
-                )}
-              </Box>
-            </div>
-          )}
+                      <Grid item md={4} xs={12}>
+                        <Sidebar
+                          handleFilter={handleFilter}
+                          filterItem={filterItem}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Container>
+              ) : (
+                <Typography
+                  style={{
+                    color: "white",
+                    fontSize: "20px",
+                    paddingTop: articlesToDisplay.length == 0 && 30,
+                  }}
+                  gutterBottom
+                  variant="body1"
+                  display="block"
+                >
+                  {detectedLng === "ro"
+                    ? "Lucrăm la crearea unor conținuturi noi! Revino în curând pentru a citi cele mai recente articole. Între timp, explorează resursele noastre existente."
+                    : `We're brewing some fresh content! Check back soon to read our
+                    latest articles. In the meantime, explore our existing
+                    resources.`}
+                </Typography>
+              )}
+            </Box>
+          </div>
         </div>
       </div>
     </Fragment>

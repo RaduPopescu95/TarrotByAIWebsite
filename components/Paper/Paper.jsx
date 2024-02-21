@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import useStyles from "./paper-style";
+import { colors } from "../../utils/colors";
 
 function PapperBlock(props) {
   const {
@@ -34,16 +35,16 @@ function PapperBlock(props) {
             style={{ backgroundColor: "transparent" }}
           >
             <Typography
-              variant="h6"
+              variant="h4"
               component="h2"
               // className={classes.title}
-              color={"white"}
+              color={colors.primary3}
             >
               {title}
             </Typography>
-            <Typography component="p" className={classes.description}>
+            {/* <Typography component="p" className={classes.description}>
               {desc}
-            </Typography>
+            </Typography> */}
           </div>
         </div>
         <section

@@ -184,7 +184,13 @@ export default function BlogArticole() {
     handleDelete();
   };
 
-  const handleEdit = async (info, image, initialImage, oldFileName) => {
+  const handleEdit = async (
+    info,
+    image,
+    initialImage,
+    oldFileName,
+    categorie
+  ) => {
     console.log("info....");
     console.log(info);
     console.log(image);
@@ -200,6 +206,7 @@ export default function BlogArticole() {
               ...item,
               info,
               image: initialImage,
+              categorie,
             };
             console.log("if.....", data);
           } else {
@@ -216,6 +223,7 @@ export default function BlogArticole() {
               ...item,
               info,
               image: newImage,
+              categorie,
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);
@@ -234,7 +242,7 @@ export default function BlogArticole() {
     }
   };
 
-  const handleUpload = async (info, selectedImages) => {
+  const handleUpload = async (info, selectedImages, categorie) => {
     try {
       const image = await uploadImage(
         selectedImages,
@@ -247,6 +255,7 @@ export default function BlogArticole() {
       const data = {
         info,
         image,
+        categorie,
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii

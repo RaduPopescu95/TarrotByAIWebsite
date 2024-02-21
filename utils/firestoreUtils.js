@@ -226,6 +226,7 @@ export const handleGetFirestoreSingleArrayData = async (location) => {
 
 export const handleQueryFirestore = async (
   location,
+  queryParam,
   elementOne = null,
   elementTwo = null
 ) => {
@@ -237,11 +238,11 @@ export const handleQueryFirestore = async (
   conditions.push(collection(db, location));
 
   if (elementOne) {
-    conditions.push(where("siteName", "==", elementOne));
+    conditions.push(where(queryParam, "==", elementOne));
   }
 
   if (elementTwo) {
-    conditions.push(where("siteName", "==", elementTwo));
+    conditions.push(where(queryParam, "==", elementTwo));
   }
 
   const q = query(...conditions);

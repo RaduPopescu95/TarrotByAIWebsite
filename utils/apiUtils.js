@@ -10,19 +10,18 @@ import { getUrlImageApi } from "./storageUtils";
 let finalArr = [];
 
 export const gTranslateFetch = async (text, target) => {
-  const url =
-    "https://google-translate113.p.rapidapi.com/api/v1/translator/text";
+  const url = "https://translate281.p.rapidapi.com/";
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
       "X-RapidAPI-Key": "fdb30fac7dmshee22c632d48569ap1d9819jsna577a39fffd6",
-      "X-RapidAPI-Host": "google-translate113.p.rapidapi.com",
+      "X-RapidAPI-Host": "translate281.p.rapidapi.com",
     },
     body: new URLSearchParams({
+      text: text,
       from: "auto",
       to: target,
-      text: text,
     }),
   };
 
@@ -30,7 +29,7 @@ export const gTranslateFetch = async (text, target) => {
     const response = await fetch(url, options);
     const result = await response.json();
     console.log("result...", result);
-    return result.trans;
+    return result.response;
   } catch (error) {
     console.error("error on gTranslateFetch...", error);
   }

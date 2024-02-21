@@ -3,11 +3,11 @@ import Box from "@mui/material/Box";
 
 import PostWidget from "./PostWidget";
 
-function Sidebar({ lastFiveArticles, isRo }) {
+function Sidebar({ handleFilter, filterItem }) {
   return (
     <div>
       {/* <Box py={5} /> */}
-      <PostWidget />
+      <PostWidget handleFilter={handleFilter} filterItem={filterItem} />
       <Box py={3} />
     </div>
   );
