@@ -9,59 +9,94 @@ import { Button } from "@mui/material";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { toUrlSlug } from "../../../utils/commonUtils";
+import languageDetector from "../../../lib/languageDetector";
 import { colors } from "../../../utils/colors";
 
-function PostWidget({ handleFilter, filterItem }) {
-  const filters = [
-    "All",
-    "Previziuni zilnice",
-    "Previziuni săptămânale",
-    "Previziuni lunare",
-    "Previziuni anuale",
-  ];
-
+function PostWidget({ lastFiveArticles }) {
   const { classes } = useStyles();
+  const detectedLng = languageDetector.detect();
 
   const route = useRouter();
 
+  const handleRoute = (item) => {
+    route.push({
+      pathname: "/news/[slug]",
+      query: {
+        slug: item.id,
+      },
+    });
+  };
+
   return (
-    <Paper title={"Filters"} icon="ion-android-bookmark" whiteBg desc="">
+    <Paper
+      title={"Latest Articles"}
+      icon="ion-android-bookmark"
+      whiteBg
+      desc=""
+    >
       <div
         className={classes.albumRoot}
         style={{ backgroundColor: "transparent" }}
       >
         <List component="nav">
-          {filters.map((item, index) => (
-            <ListItem
-              button
-              sx={{
-                "&:hover": {
-                  backgroundColor: colors.primary3, // Culoarea pentru hover pe ListItem
-                  // Schimbă culoarea textului la hover prin referirea la copilul ListItemText
-                  "& .MuiTypography-root": {
-                    color: "white",
-                  },
+          {lastFiveArticles.map((item, index) => (
+            <Link
+              href={{
+                pathname: "/news/[slug]",
+                query: {
+                  slug: `${item.id}-${toUrlSlug(
+                    detectedLng === "hi"
+                      ? item.info.hu.nume
+                      : detectedLng === "id"
+                        ? item.info.ru.nume
+                        : item.info[detectedLng].nume
+                  )}`,
                 },
-                backgroundColor:
-                  filterItem === item ? colors.primary3 : "transparent",
               }}
-              onClick={() => handleFilter(item)}
+              as={`/news/${item.id}-${toUrlSlug(
+                detectedLng === "hi"
+                  ? item.info.hu.nume
+                  : detectedLng === "id"
+                    ? item.info.ru.nume
+                    : item.info[detectedLng].nume
+              )}`}
+              passHref={false}
             >
-              <ListItemText
-                primary={item}
+              <ListItem
+                button
                 sx={{
-                  ".MuiTypography-root": {
-                    // Aplică stilul pentru toate elementele Typography din ListItemText
-                    color: filterItem === item ? "white" : colors.primary3,
-                    height: "2rem",
-                    width: "auto",
+                  "&:hover": {
+                    backgroundColor: colors.primary3, // Culoarea pentru hover pe ListItem
+                    // Schimbă culoarea textului la hover prin referirea la copilul ListItemText
+                    "& .MuiTypography-root": {
+                      color: "white",
+                    },
                   },
-                  ".MuiTypography-secondary": {
-                    color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific
-                  },
+                  backgroundColor: "transparent",
                 }}
-              />
-            </ListItem>
+              >
+                <ListItemText
+                  primary={
+                    detectedLng === "hi"
+                      ? item.info.hu.nume
+                      : detectedLng === "id"
+                        ? item.info.ru.nume
+                        : item.info[detectedLng].nume
+                  }
+                  sx={{
+                    ".MuiTypography-root": {
+                      // Aplică stilul pentru toate elementele Typography din ListItemText
+                      color: colors.primary3,
+                      height: "2rem",
+                      width: "auto",
+                    },
+                    ".MuiTypography-secondary": {
+                      color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific
+                    },
+                  }}
+                />
+              </ListItem>
+            </Link>
           ))}
         </List>
       </div>

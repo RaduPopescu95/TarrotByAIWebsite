@@ -46,11 +46,15 @@ export default function CitirePersonalizatDialog({
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  React.useEffect(() => {
+    console.log("item in dialog..", item);
+  }, []);
+
   return (
     <React.Fragment>
       <Dialog
         fullScreen
-        open={item.info ? true : false}
+        open={item.data ? true : false}
         onClose={handleClose}
         TransitionComponent={Transition}
       >
@@ -137,7 +141,7 @@ export default function CitirePersonalizatDialog({
                     >
                       {isMobile ? (
                         <img
-                          src={item.info && item.carte.image.finalUri}
+                          src={item.data && item.data.carte.image.finalUri}
                           width={150}
                           height={250}
                           alt="Picture of the author"
@@ -145,21 +149,27 @@ export default function CitirePersonalizatDialog({
                         />
                       ) : (
                         <img
-                          src={item.info && item.carte.image.finalUri}
+                          src={item.data && item.data.carte.image.finalUri}
                           width={350}
                           height={450}
                           alt="Picture of the author"
-                          style={{ marginBottom: 10 }}
+                          style={{ marginBottom: 10, height: "480px" }}
                         />
                       )}
 
                       {item.carte && (
-                        <h2 style={{ color: colors.primary3, fontSize: 30 }}>
+                        <h2
+                          style={{
+                            color: colors.primary3,
+                            fontSize: 30,
+                            fontWeight: "bold",
+                          }}
+                        >
                           {detectedLng === "hi"
-                            ? item.carte.info.hu.nume
+                            ? item.data.carte.info.hu.nume
                             : detectedLng === "id"
-                              ? item.carte.info.ru.nume
-                              : item.carte.info[detectedLng].nume}
+                              ? item.data.carte.info.ru.nume
+                              : item.data.carte.info[detectedLng].nume}
                         </h2>
                       )}
                     </div>
@@ -173,14 +183,14 @@ export default function CitirePersonalizatDialog({
                         autoPlay
                         style={{ borderRadius: 10 }}
                       >
-                        {item.info && (
+                        {item.data && (
                           <source
                             src={
                               detectedLng === "hi"
-                                ? item.info.hu.url
+                                ? item.data.info.hu.url
                                 : detectedLng === "id"
-                                  ? item.info.ru.url
-                                  : item.info[detectedLng].url
+                                  ? item.data.info.ru.url
+                                  : item.data.info[detectedLng].url
                             }
                             type="video/mp4"
                           />
@@ -195,14 +205,14 @@ export default function CitirePersonalizatDialog({
                         autoPlay
                         style={{ borderRadius: 10 }}
                       >
-                        {item.info && (
+                        {item.data && (
                           <source
                             src={
                               detectedLng === "hi"
-                                ? item.info.hu.url
+                                ? item.data.info.hu.url
                                 : detectedLng === "id"
-                                  ? item.info.ru.url
-                                  : item.info[detectedLng].url
+                                  ? item.data.info.ru.url
+                                  : item.data.info[detectedLng].url
                             }
                             type="video/mp4"
                           />
@@ -210,19 +220,20 @@ export default function CitirePersonalizatDialog({
                       </video>
                     )}
                   </div>
-                  {item.info && (
+                  {item.data && (
                     <p
                       style={{
                         textAlign: "justify",
                         fontSize: 18,
                         color: colors.primary3,
+                        marginTop: 20,
                       }}
                     >
                       {detectedLng === "hi"
-                        ? item.info.hu.descriere
+                        ? item.data.info.hu.descriere
                         : detectedLng === "id"
-                          ? item.info.ru.descriere
-                          : item.info[detectedLng].descriere}
+                          ? item.data.info.ru.descriere
+                          : item.data.info[detectedLng].descriere}
                     </p>
                   )}
                 </div>

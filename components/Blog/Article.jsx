@@ -60,7 +60,11 @@ function Article({ filteredArticles }) {
       <article className={classes.article}>
         <div className={classes.content}>
           <Typography variant="h2" className={classes.titleBlog}>
-            {filteredArticles.info[detectedLng].nume}
+            {detectedLng === "hi"
+              ? filteredArticles.info.hu.nume
+              : detectedLng === "id"
+                ? filteredArticles.info.ru.nume
+                : filteredArticles.info[detectedLng].nume}
           </Typography>
           <span className={classes.caption} style={{ color: "white" }}>
             {filteredArticles.firstUploadDate}
@@ -75,7 +79,12 @@ function Article({ filteredArticles }) {
           </figure>
           <div
             dangerouslySetInnerHTML={{
-              __html: filteredArticles.info[detectedLng].content,
+              __html:
+                detectedLng === "hi"
+                  ? filteredArticles.info.hu.content
+                  : detectedLng === "id"
+                    ? filteredArticles.info.ru.content
+                    : filteredArticles.info[detectedLng].content,
             }}
             style={{ color: colors.primary3 }}
           ></div>

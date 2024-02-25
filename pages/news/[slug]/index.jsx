@@ -15,6 +15,7 @@ import { useRouter } from "next/router";
 import { useDatabase } from "../../../context/DatabaseContext";
 import languageDetector from "../../../lib/languageDetector";
 import { colors } from "../../../utils/colors";
+import { handleGetFirestore } from "../../../utils/firestoreUtils";
 
 function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
@@ -29,17 +30,27 @@ function BlogDetail(props) {
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
-  useEffect(() => {
-    console.log("test....");
-    console.log(detectedLng);
+  const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
 
-    if (router.isReady && articles) {
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await handleGetFirestore("BlogArticole");
+      setArticlesData(data); // Presupunând că aceasta setează datele articolului în starea componentei
+    };
+
+    fetchData();
+  }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
+
+  useEffect(() => {
+    if (router.isReady && articlesData) {
       const slug = router.query.slug;
-      const id = slug.split("-")[0]; // Extract the ID part
-      const filtered = articles.find((article) => article.id.toString() === id);
-      setFilteredArticle(filtered); // Set the found article
+      const id = slug.split("-")[0];
+      const filtered = articlesData.find(
+        (article) => article.id.toString() === id
+      );
+      setFilteredArticle(filtered);
     }
-  }, [router.isReady, router.query.slug, articles]);
+  }, [router.isReady, router.query.slug, articlesData]);
   return (
     <Fragment>
       <CssBaseline />
@@ -75,19 +86,12 @@ function BlogDetail(props) {
               <Box pt={5}>
                 <Container>
                   <Grid container spacing={4}>
-                    <Grid item md={12} xs={12}>
+                    <Grid item md={8} xs={12}>
                       <Article filteredArticles={filteredArticle} />
                     </Grid>
-                    {/* <Grid item md={4} xs={12}>
-                    <Sidebar
-                      lastFiveArticles={
-                        detectedLng === "ro"
-                          ? articles.lastFiveArticlesRo
-                          : articles.lastFiveArticles
-                      }
-                      isRo={detectedLng === "ro" ? true : false}
-                    />
-                  </Grid> */}
+                    <Grid item md={4} xs={12}>
+                      <Sidebar lastFiveArticles={articles.articlesData} />
+                    </Grid>
                   </Grid>
                 </Container>
               </Box>

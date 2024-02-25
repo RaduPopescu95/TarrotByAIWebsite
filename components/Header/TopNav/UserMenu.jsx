@@ -32,7 +32,7 @@ function UserMenu(props) {
         >
           +40 345 404 753
         </Button> */}
-        <Settings isWhiteBg={props.isOnlySettngs} />
+        {!props.isSlug && <Settings isWhiteBg={props.isOnlySettngs} />}
       </div>
     </div>
   );

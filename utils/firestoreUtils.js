@@ -132,6 +132,7 @@ export const handleGetFirestore = async (location) => {
     console.log(doc.id, ` ${location} => `, doc.data());
     arr.push(doc.data());
   });
+
   return arr;
 };
 
@@ -226,8 +227,9 @@ export const handleGetFirestoreSingleArrayData = async (location) => {
 
 export const handleQueryFirestore = async (
   location,
-  queryParam,
+  queryParamOne,
   elementOne = null,
+  queryParamTwo = null,
   elementTwo = null
 ) => {
   console.log("start query firestore pentru elementOne...", elementOne);
@@ -238,11 +240,11 @@ export const handleQueryFirestore = async (
   conditions.push(collection(db, location));
 
   if (elementOne) {
-    conditions.push(where(queryParam, "==", elementOne));
+    conditions.push(where(queryParamOne, "==", elementOne));
   }
 
   if (elementTwo) {
-    conditions.push(where(queryParam, "==", elementTwo));
+    conditions.push(where(queryParamTwo, "==", elementTwo));
   }
 
   const q = query(...conditions);

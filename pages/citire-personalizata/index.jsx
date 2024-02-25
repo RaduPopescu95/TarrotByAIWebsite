@@ -123,7 +123,9 @@ const MediaCardConstantService = ({
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
+        "carte",
         cardNameNormalized,
+        "categorie",
         categoryNameNormalized
       );
 
@@ -300,7 +302,7 @@ const MediaCardConstantService = ({
             // overflow: "hidden", // ascunde textul care depășește lățimea maximă
             textOverflow: "ellipsis", // adaugă '...' dacă textul este prea lung
             color: colors.white,
-            fontSize: isMobile ? 5 : 15,
+            fontSize: isMobile ? 5 : 20,
           }}
         >
           {detectedLng === "hi"
@@ -361,6 +363,11 @@ export function CitirePersonalizata({ services }) {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const handleSetItem = (item) => {
+    console.log("item....", item);
+    setItem(item);
+  };
+
   const getVariantaCarti = async (index) => {
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
@@ -381,6 +388,8 @@ export function CitirePersonalizata({ services }) {
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
+        "carte",
+        "categorie",
         cardNameNormalized,
         categoryNameNormalized
       );
@@ -445,31 +454,31 @@ export function CitirePersonalizata({ services }) {
         updateNumber(4);
         break;
       case 4:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(7);
         updateNumber(7);
         break;
       case 7:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(5);
         updateNumber(5);
         break;
       case 5:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(2);
         updateNumber(2);
         break;
       case 2:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(6);
         updateNumber(6);
         break;
       case 6:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(3);
         updateNumber(3);
         break;
       case 3:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(0);
         updateNumber(0);
         break;
       case 0:
-        await getVariantaCarti(currentNumber);
+        await getVariantaCarti(8);
         updateNumber(8);
         break;
     }
@@ -496,6 +505,7 @@ export function CitirePersonalizata({ services }) {
   const isFirstEntry = React.useRef(true);
 
   React.useEffect(() => {
+    console.log("item....------...--..-..----......", item);
     if (isFirstEntry.current) {
       setLoading(true);
       shuffleCartiPersonalizate();
@@ -659,6 +669,7 @@ export function CitirePersonalizata({ services }) {
           setImageCard={setImageCard}
           handleVideoEnd={handleVideoEnd}
         />
+
         {/* <section>
           <Footer />
         </section> */}

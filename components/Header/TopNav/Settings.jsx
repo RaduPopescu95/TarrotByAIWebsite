@@ -72,9 +72,9 @@ function Settings(props) {
           className="flag"
           src={flagImages[i18n.language]} // Alege imaginea corespunzătoare limbii
           alt={i18n.language}
-          width={30}
-          height={30}
-          style={{ marginRight: 10 }}
+          width={45}
+          height={45}
+          style={{ marginRight: 10, minWidth: 45, minHeight: 45 }}
         />
       </IconButton>
       <Popper

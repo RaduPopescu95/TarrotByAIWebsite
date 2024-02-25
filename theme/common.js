@@ -187,6 +187,7 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
   containerGeneral: {
     position: "relative",
     // paddingTop: 32,
+
     marginTop: theme.spacing(8),
     marginBottom: theme.spacing(5),
     [theme.breakpoints.up("sm")]: {

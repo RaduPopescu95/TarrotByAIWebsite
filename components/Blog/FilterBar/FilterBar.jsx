@@ -3,14 +3,14 @@ import Box from "@mui/material/Box";
 
 import PostWidget from "./PostWidget";
 
-function Sidebar({ lastFiveArticles }) {
+function FilterBar({ handleFilter, filterItem }) {
   return (
     <div>
       {/* <Box py={5} /> */}
-      <PostWidget lastFiveArticles={lastFiveArticles} />
+      <PostWidget handleFilter={handleFilter} filterItem={filterItem} />
       <Box py={3} />
     </div>
   );
 }
 
-export default Sidebar;
+export default FilterBar;

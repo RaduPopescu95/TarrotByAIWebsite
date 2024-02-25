@@ -11,12 +11,18 @@ import { useApiData } from "../../../context/ApiContext";
 import { useRouter } from "next/router";
 import { colors } from "../../../utils/colors";
 import { useNumberContext } from "../../../context/NumberContext";
+import NewspaperIcon from "@mui/icons-material/Newspaper";
 
 function NavBar({ fixed, style, fontSize, isMobile }) {
   const { classes } = useStyles();
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
-  const navData = ["", "citire-personalizata", "settings"];
+  const navData = [
+    "main-dashboard",
+    "citire-personalizata",
+    "settings",
+    "news",
+  ];
   const {
     shuffleCartiViitor,
     startExitAnimation,
@@ -116,7 +122,7 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
                 }
                 onClick={() => updateNumber(1)}
               >
-                {item === "" ? (
+                {item === "main-dashboard" ? (
                   <StarBorderIcon
                     style={{ fontSize }}
                     className={
@@ -125,6 +131,13 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
                   />
                 ) : item === "citire-personalizata" ? (
                   <StyleIcon
+                    style={{ fontSize }}
+                    className={
+                      isActive ? classes.iconHovered : classes.iconHover
+                    }
+                  />
+                ) : item === "news" ? (
+                  <NewspaperIcon
                     style={{ fontSize }}
                     className={
                       isActive ? classes.iconHovered : classes.iconHover

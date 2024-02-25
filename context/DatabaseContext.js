@@ -4,7 +4,7 @@ import languageDetector from "../lib/languageDetector";
 import { handleGetFirestore } from "../utils/firestoreUtils";
 
 export const DatabaseContext = createContext({
-  articles: [],
+  articles: {},
   setArticles: () => {},
   services: [],
   setServices: () => {},
@@ -21,10 +21,37 @@ export const DatabaseProvider = ({ children }) => {
 
   const handleData = async (setter) => {
     try {
-      const data = await handleGetFirestore("BlogArticole");
-      console.log("handle data....", data);
-      console.log(data);
-      setter(data);
+      const articlesData = await handleGetFirestore("BlogArticole");
+
+      console.log(articlesData);
+      // Sortarea articolelor după data și ora lor
+      const sortedArticles = articlesData.sort((a, b) => {
+        // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
+        const dateTimeA = new Date(`${a.date} ${a.time}`);
+        const dateTimeB = new Date(`${b.date} ${b.time}`);
+
+        // Compară obiectele de tip Date
+        return dateTimeB - dateTimeA;
+      });
+
+      // Selectarea celor mai noi două articole
+      const latestArticles = sortedArticles.slice(0, 2);
+
+      // Selectarea celor mai noi cinci articole
+      const latestFiveArticles = sortedArticles.slice(0, 5);
+
+      // Selectarea celui mai nou articol
+      const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
+
+      // Returnarea datelor către componenta Next.js
+      const articles = {
+        articlesData,
+        latestArticles,
+        lastArticle,
+        latestFiveArticles,
+      };
+      console.log("handle data....", articles);
+      setter(articles);
       setIsLoading(false); // Setează isLoading la false indiferent de rezultat
     } catch (error) {
       // Gestionează erorile aici

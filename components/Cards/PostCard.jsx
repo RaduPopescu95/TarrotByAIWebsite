@@ -26,7 +26,7 @@ function PostCard(props) {
   return (
     <Card
       className={cx(classes.newsCard, classes[orientation], classes[type])}
-      // style={{ backgroundColor: "rgba(40, 49, 64, 0.2)" }}
+      style={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}
     >
       <div className={classes.figure}>
         <img

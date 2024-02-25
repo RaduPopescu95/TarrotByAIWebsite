@@ -163,7 +163,7 @@ function Mixed(props) {
                       justifyContent: "space-around",
                     }}
                   >
-                    <Settings isWhiteBg={true} />
+                    {!props.isSlug && <Settings isWhiteBg={true} />}
                     <div
                       style={{
                         height: "3rem",
@@ -253,7 +253,12 @@ function Mixed(props) {
                 </div>
               )}
 
-              {isDesktop && <UserMenu isOnlySettngs={props.isOnlySettngs} />}
+              {isDesktop && (
+                <UserMenu
+                  isOnlySettngs={props.isOnlySettngs}
+                  isSlug={props.isSlug}
+                />
+              )}
             </nav>
           </div>
         </Container>

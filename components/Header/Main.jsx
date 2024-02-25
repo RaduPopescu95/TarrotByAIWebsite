@@ -6,7 +6,11 @@ function Main(props) {
   const { home } = props;
   return (
     <div>
-      <Mixed home={home} isOnlySettngs={props.isOnlySettngs} />
+      <Mixed
+        home={home}
+        isOnlySettngs={props.isOnlySettngs}
+        isSlug={props.isSlug}
+      />
     </div>
   );
 }

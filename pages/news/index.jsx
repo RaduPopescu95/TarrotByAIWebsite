@@ -30,6 +30,7 @@ import {
   handleQueryFirestore,
 } from "../../utils/firestoreUtils";
 import { colors } from "../../utils/colors";
+import FilterBar from "../../components/Blog/FilterBar/FilterBar";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -44,25 +45,42 @@ import { colors } from "../../utils/colors";
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   const articlesData = await handleGetFirestore("BlogArticole");
+  let articles = {};
+  if (articlesData.length > 0) {
+    // Sortarea articolelor după data și ora lor
+    const sortedArticles = articlesData.sort((a, b) => {
+      // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
+      const dateTimeA = new Date(`${a.date} ${a.time}`);
+      const dateTimeB = new Date(`${b.date} ${b.time}`);
 
-  // Sortarea articolelor după data și ora lor
-  const sortedArticles = articlesData.sort((a, b) => {
-    // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-    const dateTimeA = new Date(`${a.date} ${a.time}`);
-    const dateTimeB = new Date(`${b.date} ${b.time}`);
+      // Compară obiectele de tip Date
+      return dateTimeB - dateTimeA;
+    });
 
-    // Compară obiectele de tip Date
-    return dateTimeB - dateTimeA;
-  });
+    // Selectarea celor mai noi două articole
+    const latestArticles = sortedArticles.slice(0, 2);
 
-  // Selectarea celor mai noi două articole
-  const latestArticles = sortedArticles.slice(0, 2);
+    // Selectarea celor mai noi cinci articole
+    const latestFiveArticles = sortedArticles.slice(0, 5);
 
-  // Selectarea celui mai nou articol
-  const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
+    // Selectarea celui mai nou articol
+    const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
 
-  // Returnarea datelor către componenta Next.js
-  const articles = { articlesData, latestArticles, lastArticle };
+    // Returnarea datelor către componenta Next.js
+    articles = {
+      articlesData,
+      latestArticles,
+      lastArticle,
+      latestFiveArticles,
+    };
+  } else {
+    articles = {
+      articlesData: [],
+      latestArticles: [],
+      lastArticle: [],
+      latestFiveArticles: [],
+    };
+  }
   return {
     props: {
       articles,
@@ -107,6 +125,9 @@ function BlogHome(props) {
   );
   const [latestArticles, setLatestArticles] = useState(
     articles.latestArticles ? articles.latestArticles : []
+  );
+  const [latestFiveArticles, setLatestFiverArticles] = useState(
+    articles.latestFiveArticles ? articles.latestFiveArticles : []
   );
 
   const [filteredArticles, setFilteredArticles] = useState(
@@ -209,7 +230,7 @@ function BlogHome(props) {
           <div className={classes.containerGeneral}>
             <Box pt={{ xs: 5, sm: 3, md: 4 }}>
               {articles.articlesData.length > 0 ? (
-                <Container>
+                <Container style={{ minWidth: "80%" }}>
                   <Grid container spacing={3}>
                     <Grid item sm={12}>
                       <Headline newestArticle={lastArticle} isRo={false} />
@@ -223,8 +244,20 @@ function BlogHome(props) {
                             <PostCard
                               href={"sss"}
                               img={article.image.finalUri}
-                              title={article.info[detectedLng].nume}
-                              desc={article.info[detectedLng].descriere}
+                              title={
+                                detectedLng === "hi"
+                                  ? article.info.hu.nume
+                                  : detectedLng === "id"
+                                    ? article.info.ru.nume
+                                    : article.info[detectedLng].nume
+                              }
+                              desc={
+                                detectedLng === "hi"
+                                  ? article.info.hu.descriere
+                                  : detectedLng === "id"
+                                    ? article.info.ru.descriere
+                                    : article.info[detectedLng].descriere
+                              }
                               date={article.firstUploadDate}
                               id={article.id}
                               articleData={article}
@@ -245,8 +278,20 @@ function BlogHome(props) {
                               <PostCard
                                 href={""}
                                 img={article.image.finalUri}
-                                title={article.info[detectedLng].nume}
-                                desc={article.info[detectedLng].descriere}
+                                title={
+                                  detectedLng === "hi"
+                                    ? article.info.hu.nume
+                                    : detectedLng === "id"
+                                      ? article.info.ru.nume
+                                      : article.info[detectedLng].nume
+                                }
+                                desc={
+                                  detectedLng === "hi"
+                                    ? article.info.hu.descriere
+                                    : detectedLng === "id"
+                                      ? article.info.ru.descriere
+                                      : article.info[detectedLng].descriere
+                                }
                                 date={article.firstUploadDate}
                                 id={article.id}
                                 orientation="portrait"
@@ -279,10 +324,11 @@ function BlogHome(props) {
                         </Box>
                       </Grid>
                       <Grid item md={4} xs={12}>
-                        <Sidebar
+                        <FilterBar
                           handleFilter={handleFilter}
                           filterItem={filterItem}
                         />
+                        <Sidebar lastFiveArticles={latestFiveArticles} />
                       </Grid>
                     </Grid>
                   </Box>

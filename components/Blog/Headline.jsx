@@ -27,6 +27,18 @@ function Headline({ newestArticle, isRo }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  let nume =
+    detectedLng === "hi"
+      ? newestArticle.info.hu.nume
+      : detectedLng === "id"
+        ? newestArticle.info.ru.nume
+        : newestArticle.info[detectedLng].nume;
+  let descriere =
+    detectedLng === "hi"
+      ? newestArticle.info.hu.descriere
+      : detectedLng === "id"
+        ? newestArticle.info.ru.descriere
+        : newestArticle.info[detectedLng].descriere;
   const route = useRouter();
   useEffect(() => {
     console.log("test here...", newestArticle);
@@ -51,14 +63,10 @@ function Headline({ newestArticle, isRo }) {
           href={{
             pathname: "/news/[slug]",
             query: {
-              slug: `${newestArticle.id}-${toUrlSlug(
-                newestArticle.info[detectedLng].nume
-              )}`,
+              slug: `${newestArticle.id}-${toUrlSlug(nume)}`,
             },
           }}
-          as={`/news/${newestArticle.id}-${toUrlSlug(
-            newestArticle.info[detectedLng].nume
-          )}`}
+          as={`/news/${newestArticle.id}-${toUrlSlug(nume)}`}
           passHref={false}
         >
           <CardActionArea
@@ -94,7 +102,7 @@ function Headline({ newestArticle, isRo }) {
                   textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
                 }}
               >
-                {newestArticle.info[detectedLng].nume}
+                {nume}
               </Typography>
               {isDesktop && (
                 <Typography
@@ -112,7 +120,7 @@ function Headline({ newestArticle, isRo }) {
                     whiteSpace: "normal",
                   }}
                 >
-                  {newestArticle.info[detectedLng].descriere}
+                  {descriere}
                 </Typography>
               )}
             </CardContent>

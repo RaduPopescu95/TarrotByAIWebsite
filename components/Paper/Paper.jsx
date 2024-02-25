@@ -23,7 +23,7 @@ function PapperBlock(props) {
     <div>
       <Paper
         className={cx(classes.root, noMargin && classes.noMargin)}
-        sx={{ background: "transparent" }}
+        sx={{ background: "rgba(255, 255, 255, 0.2)" }}
         elevation={5}
       >
         <div className={classes.descBlock}>

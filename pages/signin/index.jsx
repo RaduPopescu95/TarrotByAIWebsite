@@ -19,6 +19,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
 import { authentication } from "../../firebase";
 import Head from "next/head";
+import { handleLogout } from "../../utils/authUtils";
 
 const defaultTheme = createTheme();
 
@@ -93,15 +94,24 @@ export default function SignIn() {
       )
         .then((userCredential) => {
           // Signed in
-          // Change "/dashboard" to your desired route
           const user = userCredential.user;
-          route.push("/dashboard/citire-viitor-carti");
-          // ...
+          // Verifică dacă UID-ul utilizatorului corespunde cu cel specificat
+          if (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32") {
+            // Dacă UID-ul corespunde, utilizatorul poate continua
+            route.push("/dashboard/citire-viitor-carti");
+          } else {
+            // Dacă UID-ul nu corespunde, afișează o eroare sau redirecționează utilizatorul
+            alert("Nu ai permisiunea de a accesa această pagină.");
+            // Opțional: Deloghează utilizatorul
+            // route.push("/signin");
+            handleLogout();
+          }
           setProgressBar(false);
         })
         .catch((error) => {
           const errorCode = error.code;
           const errorMessage = error.message;
+          // Loghează sau afișează eroarea
           console.log(
             "Error at signInWithEmailAndPassword firebase...",
             errorMessage
@@ -111,9 +121,9 @@ export default function SignIn() {
             errorCode
           );
           if (errorCode === "auth/invalid-credential") {
-            console.log("set true");
             setIsInvalid(true);
           }
+          setProgressBar(false);
         });
     } catch (err) {
       console.log("Error at handleSubmit signin...", err);

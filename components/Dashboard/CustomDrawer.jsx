@@ -40,6 +40,9 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { handleSignOut } from "../../utils/signout";
 import { Avatar } from "@mui/material";
 import Image from "next/image";
+import { authentication } from "../../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { handleLogout } from "../../utils/authUtils";
 
 const drawerWidth = 240;
 
@@ -117,6 +120,31 @@ export default function CustomDrawer(props) {
       router.push(`/dashboard/${i.screen}`);
     }
   };
+
+  React.useEffect(() => {
+    const authenticated = authentication;
+    onAuthStateChanged(authenticated, (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const uid = user.uid;
+        console.log("is user.......");
+        if (uid === "LQheTX2moAhKbu72gaStkZgaGz32") {
+          router.push("/dashboard/blog-articole");
+        } else {
+          handleLogout();
+          router.push("/signin");
+        }
+        // ...
+      } else {
+        console.log("is user......no.");
+        router.push("/signin");
+
+        // User is signed out
+        // ...
+      }
+    });
+  }, []);
 
   return (
     <ThemeProvider theme={defaultTheme}>
