@@ -320,24 +320,6 @@ export function CitirePersonalizata({ services }) {
 
   return (
     <>
-      <Head>
-        <title>Future Reading | Cristina Zurba</title>
-        <meta
-          name="description"
-          content="Explore the possibilities of your future with Cristina Zurba's insightful future readings. Dive into forecasts and guidance for what lies ahead, offering clarity and direction for your path forward. Ideal for those curious about their future and seeking enlightened guidance."
-        />
-        <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Future Reading | Cristina Zurba" />
-        <meta
-          property="og:description"
-          content="Explore the possibilities of your future with Cristina Zurba's insightful future readings. Dive into forecasts and guidance for what lies ahead, offering clarity and direction for your path forward. Ideal for those curious about their future and seeking enlightened guidance."
-        />
-        <meta
-          property="og:image"
-          content="https://cristinazurba.com/images/social-share.jpg"
-        />
-        <meta name="format-detection" content="telephone=no" />
-      </Head>
       <div
         style={{
           overflow: "auto",
@@ -349,105 +331,6 @@ export function CitirePersonalizata({ services }) {
           <Header />
         </section>
 
-        {loading ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-            }}
-          >
-            <motion.div animate={spinnerAnimation}>
-              <StyleIcon
-                style={{ fontSize: 80, color: "white", height: "100vh" }}
-              />
-            </motion.div>
-          </div>
-        ) : (
-          <section>
-            <div
-              style={{
-                paddingTop: isDesktop ? "8%" : "30%",
-                height: "100%",
-                marginBottom: "60px",
-                justifyContent: "center",
-                display: "flex",
-              }}
-              className={classes.wraperSection}
-            >
-              <Grid
-                container
-                rowSpacing={isMobile ? 5 : 5}
-                columnSpacing={0}
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                  top: 30,
-                  position: "relative",
-                  paddingLeft: isDesktop ? 10 : 0,
-                  paddingRight: isDesktop ? 10 : 0,
-                  height: "100%",
-                  width: isMobile ? "100%" : "90%",
-                }}
-              >
-                <AnimatePresence>
-                  {categoriiViitor.arr &&
-                    categoriiViitor.arr.map((item, index) => {
-                      // Aplică stilul de sus pentru cardurile din mijloc
-                      const isLastItem = index === constantServices.length - 2;
-                      const isFifthItem = index === constantServices.length - 4;
-                      const isMiddleCard =
-                        index % 3 === 1 && !isLastItem && !isFifthItem; // Verifică dacă cardul este pe poziția din mijloc în rând
-                      if (!visibleCards[index]) {
-                        return null; // Nu afișa cardul dacă visibleCards la acest index este false
-                      }
-                      return (
-                        <React.Fragment key={index}>
-                          {isLastItem && (
-                            // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={4} sm={4} md={4} />
-                          )}
-                          {isFifthItem && (
-                            // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={4} sm={4} md={4} />
-                          )}
-                          <Grid
-                            item
-                            xs={4}
-                            sm={4}
-                            md={4}
-                            sx={{
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                            }}
-                          >
-                            <MediaCardConstantService
-                              item={item}
-                              isMiddleCard={isMiddleCard}
-                              index={index}
-                              flipAllCards={flipAllCards}
-                              setItem={setItem}
-                              setImageCard={setImageCard}
-                            />
-                          </Grid>
-                        </React.Fragment>
-                      );
-                    })}
-                </AnimatePresence>
-              </Grid>
-            </div>
-          </section>
-        )}
-
-        <CitireViitorDialog
-          item={item}
-          setItem={setItem}
-          imageCard={imageCard}
-          setImageCard={setImageCard}
-        />
         {/* <section>
           <Footer />
         </section> */}
