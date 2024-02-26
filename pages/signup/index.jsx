@@ -207,6 +207,24 @@ export default function SignUp() {
     }
   };
 
+  // useEffect(() => {
+  //   route.push("/signin");
+  // });
+
+  // if (true) {
+  //   return (
+  //     <Box
+  //       sx={{
+  //         display: "flex",
+  //         justifyContent: "center", // Center horizontally
+  //         alignItems: "center", // Center vertically
+  //         height: "100vh", // Optional: Set a specific height for the centering container
+  //       }}
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
   return (
     <>
       <Head>
