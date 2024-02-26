@@ -57,29 +57,9 @@ const MediaCardConstantService = ({
   setItem,
 }) => {
   const {
-    oreNorocoase,
-    numereNorocoase,
-    culoriNorocoase,
-    citateMotivationale,
-
-    varianteCarti,
-    categoriiPersonalizate,
-    cartiPersonalizate,
-    shuffleCartiPersonalizate,
-    shuffledCartiPersonalizate,
-    setShuffledCartiPersonalizate,
-    loading,
-    error,
-    fetchData,
-    triggerExitAnimation,
-    startExitAnimation,
-    resetExitAnimation,
-    categoriiViitor,
     cartiViitor,
-    shuffleCartiViitor,
+
     shuffledCartiViitor,
-    setShuffledCartiViitor,
-    setLoading,
   } = useApiData();
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
