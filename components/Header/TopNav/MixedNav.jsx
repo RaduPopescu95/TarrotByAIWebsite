@@ -21,7 +21,7 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
     "main-dashboard",
     "citire-personalizata",
     "settings",
-    // "news",
+    "news",
   ];
   const {
     shuffleCartiViitor,
