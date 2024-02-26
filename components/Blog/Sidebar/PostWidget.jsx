@@ -41,6 +41,7 @@ function PostWidget({ lastFiveArticles }) {
         <List component="nav">
           {lastFiveArticles.map((item, index) => (
             <Link
+              key={index}
               href={{
                 pathname: "/news/[slug]",
                 query: {

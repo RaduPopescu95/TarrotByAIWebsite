@@ -291,7 +291,7 @@ function Landing(props) {
                     <Grid container spacing={4}>
                       {latestArticles &&
                         latestArticles.map((article, index) => (
-                          <Grid item md={6} xs={12}>
+                          <Grid item md={6} xs={12} key={index}>
                             <PostCard
                               href={"sss"}
                               img={article.image.finalUri}

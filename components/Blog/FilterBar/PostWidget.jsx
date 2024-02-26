@@ -33,6 +33,7 @@ function PostWidget({ handleFilter, filterItem }) {
         <List component="nav">
           {filters.map((item, index) => (
             <ListItem
+              key={index}
               button
               sx={{
                 "&:hover": {
