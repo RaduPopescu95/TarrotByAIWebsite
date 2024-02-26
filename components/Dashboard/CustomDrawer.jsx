@@ -43,6 +43,7 @@ import Image from "next/image";
 import { authentication } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { handleLogout } from "../../utils/authUtils";
+import { useParams, useSearchParams } from "next/navigation";
 
 const drawerWidth = 240;
 
@@ -130,7 +131,7 @@ export default function CustomDrawer(props) {
         const uid = user.uid;
         console.log("is user.......");
         if (uid === "LQheTX2moAhKbu72gaStkZgaGz32") {
-          router.push("/dashboard/blog-articole");
+          router.push(router.asPath);
         } else {
           handleLogout();
           router.push("/signin");

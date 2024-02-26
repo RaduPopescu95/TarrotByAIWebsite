@@ -9,7 +9,7 @@ export default function index() {
       <Head>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <CustomDrawer selectedItem={"Carti"} drawerText={"Carti"}>
+      <CustomDrawer selectedItem={"Articole"} drawerText={"Articole"}>
         <BlogArticole />
       </CustomDrawer>
     </>

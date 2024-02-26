@@ -23,7 +23,7 @@ export default function MainScreen() {
         const uid = user.uid;
         console.log("is user.......");
         setIsLoading(false);
-        route.push("/dashboard/citire-viitor-carti");
+        route.push("/dashboard/blog-articole");
         // ...
       } else {
         console.log("is user......no.");
