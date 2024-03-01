@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import Link from "@mui/material/Link";
 import IconButton from "@mui/material/IconButton";
 
-import { useTextAlign } from "~/theme/common";
+import { useTextAlign } from "../../theme/common";
 
 import useStyles from "./sitemap-style";
 
