@@ -22,6 +22,7 @@ import {
   handleUpdateFirestore,
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
+import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 
 export default function BlogArticole() {
   // const { db } = useMockup();
@@ -189,24 +190,25 @@ export default function BlogArticole() {
     image,
     initialImage,
     oldFileName,
-    categorie
+    categorie,
+    youtubeLink
   ) => {
-    console.log("info....");
-    console.log(info);
-    console.log(image);
-    console.log(initialImage);
-    console.log(oldFileName);
+    console.log("youtubeLink....");
+    console.log(youtubeLink);
+
     try {
       const updateData = db.map(async (item) => {
         if (item.id === dialogData.id) {
           console.log("is found");
           let data;
           if (image.length === 0) {
+            let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             data = {
               ...item,
               info,
               image: initialImage,
               categorie,
+              youtubeLinks,
             };
             console.log("if.....", data);
           } else {
@@ -219,11 +221,13 @@ export default function BlogArticole() {
               "Articole",
               oldFileName
             );
+            let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             data = {
               ...item,
               info,
               image: newImage,
               categorie,
+              youtubeLinks,
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);
@@ -242,7 +246,7 @@ export default function BlogArticole() {
     }
   };
 
-  const handleUpload = async (info, selectedImages, categorie) => {
+  const handleUpload = async (info, selectedImages, categorie, youtubeLink) => {
     try {
       const image = await uploadImage(
         selectedImages,
@@ -252,10 +256,13 @@ export default function BlogArticole() {
         "Articole"
       );
 
+      let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
+
       const data = {
         info,
         image,
         categorie,
+        youtubeLinks,
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii

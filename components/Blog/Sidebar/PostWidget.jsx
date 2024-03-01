@@ -11,11 +11,12 @@ import Link from "next/link";
 import { toUrlSlug } from "../../../utils/commonUtils";
 import languageDetector from "../../../lib/languageDetector";
 import { colors } from "../../../utils/colors";
+import { useTranslation } from "react-i18next";
 
 function PostWidget({ lastFiveArticles }) {
   const { classes } = useStyles();
   const detectedLng = languageDetector.detect();
-
+  const { t } = useTranslation("common");
   const route = useRouter();
 
   const handleRoute = (item) => {
@@ -29,7 +30,7 @@ function PostWidget({ lastFiveArticles }) {
 
   return (
     <Paper
-      title={"Latest Articles"}
+      title={t("Latest Articles")}
       icon="ion-android-bookmark"
       whiteBg
       desc=""

@@ -14,10 +14,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { toUrlSlug } from "../../utils/commonUtils";
 import { colors } from "../../utils/colors";
+import { useTranslation } from "react-i18next";
 
 function PostCard(props) {
   const { classes, cx } = useStyles();
   const { date, title, desc, img, orientation, type, href, id } = props;
+  const { t } = useTranslation("common");
 
   const route = useRouter();
 
@@ -83,7 +85,7 @@ function PostCard(props) {
         >
           <CardActions className={classes.action}>
             <Button variant="outlined" className={classes.btn}>
-              Read More
+              {t("readMore")}
             </Button>
           </CardActions>
         </Link>

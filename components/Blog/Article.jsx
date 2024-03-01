@@ -16,6 +16,10 @@ import Image from "next/image";
 import { customStyles } from "../../data/constants";
 import languageDetector from "../../lib/languageDetector";
 import { colors } from "@mui/material";
+import {
+  getYoutubeEmbedUrl,
+  getYoutubeVideoId,
+} from "../../utils/youtubeLinkUtils";
 
 function Article({ filteredArticles }) {
   const { classes } = useStyles();
@@ -53,6 +57,13 @@ function Article({ filteredArticles }) {
   useEffect(() => {
     console.log("filteredArticles...", filteredArticles);
   }, []);
+  // Extrage ID-ul videoclipului YouTube din linkul complet, presupunând că `youtubeLink` este un URL YouTube standard
+
+  // Asigură-te că youtubeLinks este tratat ca un array chiar dacă este unul singur
+  const youtubeEmbedLinks = filteredArticles.youtubeLinks
+    ? filteredArticles.youtubeLinks.map((link) => getYoutubeEmbedUrl(link))
+    : [];
+
   // return;
   return (
     <div className={classes.root}>
@@ -88,6 +99,22 @@ function Article({ filteredArticles }) {
             }}
             style={{ color: colors.primary3 }}
           ></div>
+          {/* Adăugarea elementului video */}
+          {/* Încorporarea videoclipului YouTube folosind un iframe */}
+
+          {/* Încorporarea videoclipurilor YouTube folosind un map */}
+          {youtubeEmbedLinks.map((embedLink, index) => (
+            <iframe
+              key={index}
+              width="100%"
+              height="415"
+              src={embedLink}
+              frameBorder="0"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ borderRadius: 10, marginTop: "3%" }}
+            ></iframe>
+          ))}
 
           {/* <Divider className={classes.dividerBordered} /> */}
         </div>

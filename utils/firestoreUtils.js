@@ -54,7 +54,7 @@ export const handleUpdateFirestore = async (location, updatedData) => {
 };
 export const handleUploadFirestore = async (data, location) => {
   try {
-    console.log("test.infor in handle upload firestore...");
+    console.log("test.infor in handle upload firestore...", data);
     console.log(location);
     console.log(data);
 

@@ -10,6 +10,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { toUrlSlug } from "../../../utils/commonUtils";
 import { colors } from "../../../utils/colors";
+import { useTranslation } from "react-i18next";
 
 function PostWidget({ handleFilter, filterItem }) {
   const filters = [
@@ -19,13 +20,14 @@ function PostWidget({ handleFilter, filterItem }) {
     "Previziuni lunare",
     "Previziuni anuale",
   ];
+  const { t } = useTranslation("common");
 
   const { classes } = useStyles();
 
   const route = useRouter();
 
   return (
-    <Paper title={"Filters"} icon="ion-android-bookmark" whiteBg desc="">
+    <Paper title={t("Filters")} icon="ion-android-bookmark" whiteBg desc="">
       <div
         className={classes.albumRoot}
         style={{ backgroundColor: "transparent" }}
@@ -49,7 +51,7 @@ function PostWidget({ handleFilter, filterItem }) {
               onClick={() => handleFilter(item)}
             >
               <ListItemText
-                primary={item}
+                primary={t(item)}
                 sx={{
                   ".MuiTypography-root": {
                     // Aplică stilul pentru toate elementele Typography din ListItemText

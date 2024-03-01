@@ -51,6 +51,9 @@ export default function BlogArticoleFields({
 
   const [selectedImages, setSelectedImages] = useState([]);
   const [image, setImage] = useState(dialogData.image ? dialogData.image : "");
+  const [youtubeLink, setYoutubeLink] = useState(
+    dialogData.youtubeLinks ? dialogData.youtubeLinks.join("; ") : ""
+  );
   const [categorie, setCategorie] = useState(
     dialogData.categorie ? dialogData.categorie : ""
   );
@@ -556,20 +559,25 @@ export default function BlogArticoleFields({
     };
 
     console.log(data);
-    console.log("image...", dialogData.images);
+    console.log("youtube...", youtubeLink);
 
     const oldFileName = dialogData.image ? dialogData.image.fileName : "";
     if (isEdit) {
-      handleEdit(data, selectedImages, image, oldFileName, categorie).then(
-        () => {
-          setLoading(false);
-        }
-      );
+      handleEdit(
+        data,
+        selectedImages,
+        image,
+        oldFileName,
+        categorie,
+        youtubeLink
+      ).then(() => {
+        setLoading(false);
+      });
     } else {
       console.log("else.....");
       console.log(selectedImages);
       console.log(data);
-      handleUpload(data, selectedImages, categorie).then(() => {
+      handleUpload(data, selectedImages, categorie, youtubeLink).then(() => {
         setLoading(false);
       });
     }
@@ -946,6 +954,20 @@ export default function BlogArticoleFields({
                   <p style={{ color: "white" }}>Select Images</p>
                 </label>
               )}
+              <React.Fragment>
+                <h1 style={{ color: "#D3D3D3", fontSize: 30, marginTop: 20 }}>
+                  Link Youtube
+                </h1>
+
+                <FieldRow
+                  id={"youtubeLink"}
+                  name={"youtubeLink"}
+                  label={"Link Youtube"}
+                  value={youtubeLink}
+                  onChange={(event) => setYoutubeLink(event.target.value)}
+                  widthLabel="10%"
+                />
+              </React.Fragment>
             </Grid>
           </Box>
           <Grid
