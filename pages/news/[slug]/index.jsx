@@ -89,6 +89,18 @@ function BlogDetail(props) {
     return <CircularProgress />;
   }
 
+  useEffect(() => {
+    console.log("test....");
+    console.log(detectedLng);
+
+    const slug = router.query.slug;
+    const id = slug.split("-")[0]; // Extract the ID part
+    const filtered = articles.articlesData.find(
+      (article) => article.id.toString() === id
+    );
+    setFilteredArticle(filtered); // Set the found article
+  }, [router.isReady, router.query.slug, articles.articlesData]);
+
   return (
     <Fragment>
       <CssBaseline />
@@ -124,7 +136,7 @@ function BlogDetail(props) {
               <Container>
                 <Grid container spacing={4}>
                   <Grid item md={8} xs={12}>
-                    <Article filteredArticles={articles.articlesData[0]} />
+                    <Article filteredArticles={filteredArticle} />
                   </Grid>
                   <Grid item md={4} xs={12}>
                     <Sidebar lastFiveArticles={articles.articlesData} />
