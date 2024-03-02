@@ -15,7 +15,10 @@ import { useRouter } from "next/router";
 import { useDatabase } from "../../../context/DatabaseContext";
 import languageDetector from "../../../lib/languageDetector";
 import { colors } from "../../../utils/colors";
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
+import {
+  handleGetFirestore,
+  handleQueryFirestore,
+} from "../../../utils/firestoreUtils";
 
 function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
@@ -41,13 +44,17 @@ function BlogDetail(props) {
     fetchData();
   }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
 
-  useEffect(() => {
+  const handleQuery = async () => {
     const slug = router.query.slug;
-    const id = slug.split("-")[0];
-    const filtered = articles.articlesData.find(
-      (article) => article.id.toString() === id
-    );
-    setFilteredArticle(filtered);
+    const id = parseFloat(slug.split("-")[0]);
+
+    const article = await handleQueryFirestore("BlogArticole", "id", id);
+    console.log("ARticle...", article);
+    setFilteredArticle(article[0]);
+  };
+
+  useEffect(() => {
+    handleQuery();
   }, [router.isReady, router.query.slug, articlesData]);
 
   return (
