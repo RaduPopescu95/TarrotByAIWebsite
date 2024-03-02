@@ -15,7 +15,6 @@ import { useRouter } from "next/router";
 import { useDatabase } from "../../../context/DatabaseContext";
 import languageDetector from "../../../lib/languageDetector";
 import { colors } from "../../../utils/colors";
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
 
 function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
@@ -42,15 +41,25 @@ function BlogDetail(props) {
   // }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
 
   useEffect(() => {
-    console.log("articles...", articles);
-    const slug = router.query.slug;
-    const id = slug.split("-")[0];
-    const filtered = articles.articlesData.find(
-      (article) => article.id.toString() === id
-    );
-    console.log("filtered...", filtered);
-    setFilteredArticle(filtered);
-    setArticlesData(articles);
+    if (
+      router.isReady &&
+      articles.articlesData &&
+      Array.isArray(articles.articlesData)
+    ) {
+      const slug = router.query.slug;
+      const id = slug.split("-")[0];
+      const filtered = articles.articlesData.find(
+        (article) => article.id.toString() === id
+      );
+      if (filtered) {
+        setFilteredArticle(filtered);
+      } else {
+        // Gestionează cazul când articolul nu este găsit, de exemplu:
+        console.log("Articolul nu a fost găsit.");
+      }
+
+      setArticlesData(articles);
+    }
   }, [router.isReady, router.query.slug]);
   return (
     <Fragment>
