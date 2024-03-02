@@ -113,6 +113,7 @@ function Landing(props) {
     error,
     fetchData,
     zilnicCitateMotivationale,
+    blogData,
   } = useApiData();
   const { t } = useTranslation("common");
   const detectedLng = languageDetector.detect();

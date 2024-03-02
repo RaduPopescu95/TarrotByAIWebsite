@@ -2,7 +2,10 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import firebase from "firebase/app";
 
 import { getData } from "../utils/realtimeUtils";
-import { handleUploadFirestoreSubcollection } from "../utils/firestoreUtils";
+import {
+  handleGetFirestore,
+  handleUploadFirestoreSubcollection,
+} from "../utils/firestoreUtils";
 import { authentication } from "../firebase";
 
 const ApiDataContext = createContext();
@@ -19,6 +22,7 @@ export const ApiDataProvider = ({ children }) => {
   const [cartiViitor, setCartiViitor] = useState([]);
   const [shuffledCartiViitor, setShuffledCartiViitor] = useState([]);
   const [categoriiViitor, setCategoriiViitor] = useState([]);
+  const [blogData, setBlogData] = useState([]);
   const [citateMotivationale, setCitateMotivationale] = useState([]);
   const [culoriNorocoase, setCuloriNorocoase] = useState([]);
   const [numereNorocoase, setNumereNorocoase] = useState([]);
@@ -229,6 +233,8 @@ export const ApiDataProvider = ({ children }) => {
       );
       setCartiViitor(await getDataOrFetch("Citire-Viitor", "Carti"));
       setCategoriiViitor(await getDataOrFetch("Citire-Viitor", "Categorii"));
+      // setBlogData(await handleGetFirestore("BlogArticole"));
+
       // setCitateMotivationale(
       //   await getDataOrFetch("Others", "Citate-Motivationale")
       // );
@@ -307,6 +313,7 @@ export const ApiDataProvider = ({ children }) => {
         setReentryAnimation,
         setCurrentNumber,
         currentNumber,
+        blogData,
       }}
     >
       {children}

@@ -55,13 +55,13 @@ function Article({ filteredArticles }) {
   const isDesktop = useMediaQuery(theme.breakpoints.up("sm"));
 
   useEffect(() => {
-    console.log("filteredArticles...", filteredArticles);
+    console.log("filteredArticles?...", filteredArticles);
   }, []);
   // Extrage ID-ul videoclipului YouTube din linkul complet, presupunând că `youtubeLink` este un URL YouTube standard
 
   // Asigură-te că youtubeLinks este tratat ca un array chiar dacă este unul singur
-  const youtubeEmbedLinks = filteredArticles.youtubeLinks
-    ? filteredArticles.youtubeLinks.map((link) => getYoutubeEmbedUrl(link))
+  const youtubeEmbedLinks = filteredArticles?.youtubeLinks
+    ? filteredArticles?.youtubeLinks.map((link) => getYoutubeEmbedUrl(link))
     : [];
 
   // return;
@@ -72,19 +72,19 @@ function Article({ filteredArticles }) {
         <div className={classes.content}>
           <Typography variant="h2" className={classes.titleBlog}>
             {detectedLng === "hi"
-              ? filteredArticles.info.hu.nume
+              ? filteredArticles?.info?.hu.nume
               : detectedLng === "id"
-                ? filteredArticles.info.ru.nume
-                : filteredArticles.info[detectedLng].nume}
+                ? filteredArticles?.info?.ru.nume
+                : filteredArticles?.info[detectedLng].nume}
           </Typography>
           <span className={classes.caption} style={{ color: "white" }}>
-            {filteredArticles.firstUploadDate}
+            {filteredArticles?.firstUploadDate}
           </span>
           <figure className={classes.imageBlog}>
             <img
               width={1440}
               height={isDesktop ? 282 : 123}
-              src={filteredArticles.image.finalUri}
+              src={filteredArticles?.image?.finalUri}
               alt="blog"
             />
           </figure>
@@ -92,10 +92,10 @@ function Article({ filteredArticles }) {
             dangerouslySetInnerHTML={{
               __html:
                 detectedLng === "hi"
-                  ? filteredArticles.info.hu.content
+                  ? filteredArticles?.info?.hu.content
                   : detectedLng === "id"
-                    ? filteredArticles.info.ru.content
-                    : filteredArticles.info[detectedLng].content,
+                    ? filteredArticles?.info?.ru.content
+                    : filteredArticles?.info[detectedLng].content,
             }}
             style={{ color: colors.primary3 }}
           ></div>

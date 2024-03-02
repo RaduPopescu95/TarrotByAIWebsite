@@ -32,25 +32,26 @@ function BlogDetail(props) {
 
   const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await handleGetFirestore("BlogArticole");
-      setArticlesData(data); // Presupunând că aceasta setează datele articolului în starea componentei
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const data = await handleGetFirestore("BlogArticole");
+  //     setArticlesData(data); // Presupunând că aceasta setează datele articolului în starea componentei
+  //   };
 
-    fetchData();
-  }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
+  //   fetchData();
+  // }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
 
   useEffect(() => {
-    if (router.isReady && articlesData) {
-      const slug = router.query.slug;
-      const id = slug.split("-")[0];
-      const filtered = articlesData.find(
-        (article) => article.id.toString() === id
-      );
-      setFilteredArticle(filtered);
-    }
-  }, [router.isReady, router.query.slug, articlesData]);
+    console.log("articles...", articles);
+    const slug = router.query.slug;
+    const id = slug.split("-")[0];
+    const filtered = articles.articlesData.find(
+      (article) => article.id.toString() === id
+    );
+    console.log("filtered...", filtered);
+    setFilteredArticle(filtered);
+    setArticlesData(articles);
+  }, [router.isReady, router.query.slug]);
   return (
     <Fragment>
       <CssBaseline />
