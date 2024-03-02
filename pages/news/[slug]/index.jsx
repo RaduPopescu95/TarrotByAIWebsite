@@ -84,11 +84,6 @@ function BlogDetail(props) {
   const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
   const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
   const { articles } = props;
-
-  if (loading) {
-    return <CircularProgress />;
-  }
-
   useEffect(() => {
     console.log("test....");
     console.log(detectedLng);
@@ -100,6 +95,10 @@ function BlogDetail(props) {
     );
     setFilteredArticle(filtered); // Set the found article
   }, [router.isReady, router.query.slug, articles.articlesData]);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <Fragment>
