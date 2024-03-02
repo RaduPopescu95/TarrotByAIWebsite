@@ -396,7 +396,7 @@ export function CitirePersonalizata({ services }) {
         "categorie",
         categoryNameNormalized
       );
-
+ 
       // Verificare dacă există elemente în array-ul filtrat
       if (filteredVariante.length > 0) {
         // Selectare aleatorie a unui element
