@@ -19,11 +19,59 @@ import {
   handleGetFirestore,
   handleQueryFirestore,
 } from "../../../utils/firestoreUtils";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+
+export async function getServerSideProps({ locale }) {
+  // Obținerea datelor articolelor din Firestore
+  const articlesData = await handleGetFirestore("BlogArticole");
+  let articles = {};
+  if (articlesData.length > 0) {
+    // Sortarea articolelor după data și ora lor
+    const sortedArticles = articlesData.sort((a, b) => {
+      // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
+      const dateTimeA = new Date(`${a.date} ${a.time}`);
+      const dateTimeB = new Date(`${b.date} ${b.time}`);
+
+      // Compară obiectele de tip Date
+      return dateTimeB - dateTimeA;
+    });
+
+    // Selectarea celor mai noi două articole
+    const latestArticles = sortedArticles.slice(0, 2);
+
+    // Selectarea celor mai noi cinci articole
+    const latestFiveArticles = sortedArticles.slice(0, 5);
+
+    // Selectarea celui mai nou articol
+    const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
+
+    // Returnarea datelor către componenta Next.js
+    articles = {
+      articlesData,
+      latestArticles,
+      lastArticle,
+      latestFiveArticles,
+    };
+  } else {
+    articles = {
+      articlesData: [],
+      latestArticles: [],
+      lastArticle: [],
+      latestFiveArticles: [],
+    };
+  }
+  return {
+    props: {
+      articles,
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+}
 
 function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
   const { classes } = useSpacing();
-  const { articles } = useDatabase(); // Assuming this is a context hook for fetching articles
+  // const { articles } = useDatabase(); // Assuming this is a context hook for fetching articles
   const router = useRouter();
   const [filteredArticle, setFilteredArticle] = useState(null);
   const detectedLng = languageDetector.detect();
@@ -34,28 +82,12 @@ function BlogDetail(props) {
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
   const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
+  const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
+  const { articles } = props;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await handleGetFirestore("BlogArticole");
-      setArticlesData(data); // Presupunând că aceasta setează datele articolului în starea componentei
-    };
-
-    fetchData();
-  }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
-
-  const handleQuery = async () => {
-    const slug = router.query.slug;
-    const id = parseFloat(slug.split("-")[0]);
-
-    const article = await handleQueryFirestore("BlogArticole", "id", id);
-    console.log("ARticle...", article);
-    setFilteredArticle(article[0]);
-  };
-
-  useEffect(() => {
-    handleQuery();
-  }, [router.isReady, router.query.slug, articlesData]);
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <Fragment>
@@ -85,27 +117,23 @@ function BlogDetail(props) {
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
         }}
       >
-        {filteredArticle ? (
-          <div className={classes.mainWrap}>
-            <section id="home" />
-            <div className={classes.wraperSection} style={{ height: "100%" }}>
-              <Box pt={5}>
-                <Container>
-                  <Grid container spacing={4}>
-                    <Grid item md={8} xs={12}>
-                      <Article filteredArticles={filteredArticle} />
-                    </Grid>
-                    <Grid item md={4} xs={12}>
-                      <Sidebar lastFiveArticles={articles.articlesData} />
-                    </Grid>
+        <div className={classes.mainWrap}>
+          <section id="home" />
+          <div className={classes.wraperSection} style={{ height: "100%" }}>
+            <Box pt={5}>
+              <Container>
+                <Grid container spacing={4}>
+                  <Grid item md={8} xs={12}>
+                    <Article filteredArticles={articles.articlesData[0]} />
                   </Grid>
-                </Container>
-              </Box>
-            </div>
+                  <Grid item md={4} xs={12}>
+                    <Sidebar lastFiveArticles={articles.articlesData} />
+                  </Grid>
+                </Grid>
+              </Container>
+            </Box>
           </div>
-        ) : (
-          <CircularProgress />
-        )}
+        </div>
       </div>
     </Fragment>
   );
