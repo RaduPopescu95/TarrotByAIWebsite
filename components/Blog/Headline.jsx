@@ -19,12 +19,14 @@ import Link from "next/link";
 import { toUrlSlug } from "../../utils/commonUtils";
 import languageDetector from "../../lib/languageDetector";
 import { colors } from "../../utils/colors";
+import { useDatabase } from "../../context/DatabaseContext";
 
 function Headline({ newestArticle, isRo }) {
   const detectedLng = languageDetector.detect();
   const { classes, cx } = useStyles();
   const { classes: text } = useText();
   const theme = useTheme();
+  const { article, setArticle } = useDatabase(); // Assuming this is a context hook for fetching articles
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   let nume =
@@ -70,6 +72,7 @@ function Headline({ newestArticle, isRo }) {
           passHref={false}
         >
           <CardActionArea
+            onClick={() => console.log(article)}
             style={{
               position: "absolute",
               top: 0,

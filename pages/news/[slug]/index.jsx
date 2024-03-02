@@ -42,15 +42,14 @@ function BlogDetail(props) {
   }, []); // Dependența goală indică faptul că acest efect se rulează o singură dată, la montarea componentei
 
   useEffect(() => {
-    if (router.isReady && articlesData) {
-      const slug = router.query.slug;
-      const id = slug.split("-")[0];
-      const filtered = articlesData.find(
-        (article) => article.id.toString() === id
-      );
-      setFilteredArticle(filtered);
-    }
+    const slug = router.query.slug;
+    const id = slug.split("-")[0];
+    const filtered = articles.articlesData.find(
+      (article) => article.id.toString() === id
+    );
+    setFilteredArticle(filtered);
   }, [router.isReady, router.query.slug, articlesData]);
+
   return (
     <Fragment>
       <CssBaseline />

@@ -13,6 +13,7 @@ export const DatabaseContext = createContext({
 
 export const DatabaseProvider = ({ children }) => {
   const [articles, setArticles] = useState({});
+  const [article, setArticle] = useState({});
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true); // Setează initial isLoading la true
   const detectedLng = languageDetector.detect();
@@ -80,7 +81,16 @@ export const DatabaseProvider = ({ children }) => {
 
   return (
     <DatabaseContext.Provider
-      value={{ articles, setArticles, services, setServices, isLoading, lang }}
+      value={{
+        articles,
+        setArticles,
+        services,
+        setServices,
+        isLoading,
+        lang,
+        article,
+        setArticle,
+      }}
     >
       {children}
     </DatabaseContext.Provider>

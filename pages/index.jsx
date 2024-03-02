@@ -178,7 +178,7 @@ function Landing(props) {
 
   const handleFilter = async (filterItem) => {
     setFilterItem(filterItem);
-    console.log("te...", filterItem);
+
     let articlesData = [];
     if (filterItem === "All") {
       articlesData = await handleGetFirestore("BlogArticole");
@@ -215,8 +215,6 @@ function Landing(props) {
 
   useEffect(() => {
     // handleAddToFirestore();
-
-    console.log(`test.....xxx,,xxx........`, arti);
 
     if (!currentUser && !isGuestUser) {
       router.push("login");
