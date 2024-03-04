@@ -96,7 +96,7 @@ export default function SignIn() {
           // Signed in
           const user = userCredential.user;
           // Verifică dacă UID-ul utilizatorului corespunde cu cel specificat
-          if (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32") {
+          if (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2") {
             // Dacă UID-ul corespunde, utilizatorul poate continua
             route.push("/dashboard/citire-viitor-carti");
           } else {
