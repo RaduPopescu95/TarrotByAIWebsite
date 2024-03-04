@@ -100,6 +100,7 @@ export default function BlogArticole() {
   };
 
   const handleGetData = async () => {
+    console.log("Start......")
     setIsLoading(true);
     const data = await handleGetFirestore("BlogArticole");
 

@@ -70,7 +70,7 @@ function Article({ filteredArticles }) {
       <style>{customStyles}</style> {/* Incluziunea stilurilor CSS */}
       <article className={classes.article}>
         <div className={classes.content}>
-          <Typography variant="h2" className={classes.titleBlog}>
+          <Typography variant="h5" className={classes.titleBlog}>
             {detectedLng === "hi"
               ? filteredArticles?.info?.hu.nume
               : detectedLng === "id"

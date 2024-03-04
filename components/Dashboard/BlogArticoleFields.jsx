@@ -958,6 +958,13 @@ export default function BlogArticoleFields({
                 <h1 style={{ color: "#D3D3D3", fontSize: 30, marginTop: 20 }}>
                   Link Youtube
                 </h1>
+                <p style={{ color: "#D3D3D3", fontSize: "15px", marginTop: "20px", fontWeight: "bold" }}>
+  Pentru adăugarea mai multor video-uri de YouTube, trebuie să le separați prin adăugarea "<span style={{color:"blue", fontWeight: "bold"}}>;</span>" între link-urile de YouTube introduse.
+</p>
+<p style={{ color: "#D3D3D3", fontSize: "15px", marginTop: "20px", fontWeight: "bold" }}>
+  Spre exemplu "<span style={{color:"white"}}>https://www.youtube.com/watch?v=caWBmvhRcII&t=15s</span><span style={{color:"blue"}}>;</span><span style={{color:"white"}}>https://www.youtube.com/watch?v=caWBmvhRcII&t=15s</span>"
+</p>
+
 
                 <FieldRow
                   id={"youtubeLink"}
