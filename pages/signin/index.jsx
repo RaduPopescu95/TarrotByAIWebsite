@@ -102,6 +102,7 @@ export default function SignIn() {
           } else {
             // Dacă UID-ul nu corespunde, afișează o eroare sau redirecționează utilizatorul
             alert("Nu ai permisiunea de a accesa această pagină.");
+            console.log("Nu ai permisiunea de a accesa această pagină.");
             // Opțional: Deloghează utilizatorul
             // route.push("/signin");
             handleLogout();
