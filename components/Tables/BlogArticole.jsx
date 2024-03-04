@@ -192,7 +192,9 @@ export default function BlogArticole() {
     initialImage,
     oldFileName,
     categorie,
-    youtubeLink
+    youtubeLink,
+    timpProgramat, 
+    dataProgramata
   ) => {
     console.log("youtubeLink....");
     console.log(youtubeLink);
@@ -206,10 +208,15 @@ export default function BlogArticole() {
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             data = {
               ...item,
+              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
+              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
               info,
               image: initialImage,
               categorie,
               youtubeLinks,
+           
+              timpProgramat,
+              dataProgramata
             };
             console.log("if.....", data);
           } else {
@@ -220,15 +227,20 @@ export default function BlogArticole() {
               true,
               "Blog",
               "Articole",
-              oldFileName
+              oldFileName,
+              
             );
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             data = {
               ...item,
+              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
+              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
               info,
               image: newImage,
               categorie,
               youtubeLinks,
+              timpProgramat,
+              dataProgramata
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);
@@ -247,7 +259,7 @@ export default function BlogArticole() {
     }
   };
 
-  const handleUpload = async (info, selectedImages, categorie, youtubeLink) => {
+  const handleUpload = async (info, selectedImages, categorie, youtubeLink,  timpProgramat, dataProgramata) => {
     try {
       const image = await uploadImage(
         selectedImages,
@@ -264,6 +276,8 @@ export default function BlogArticole() {
         image,
         categorie,
         youtubeLinks,
+        timpProgramat,
+        dataProgramata
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii

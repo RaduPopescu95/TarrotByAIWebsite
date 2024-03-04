@@ -74,8 +74,9 @@ export const handleUploadFirestore = async (data, location) => {
       ...data,
       documentId: docRef.id,
       id,
-      firstUploadDate: dateTime.date,
-      firstUploadtime: dateTime.time,
+      firstUploadtime: data.timpProgramat.length > 0 ? data.timpProgramat : dateTime.time,
+      firstUploadDate: data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
+
     };
 
     // Face upload cu noul obiect de date care include ID-ul documentului

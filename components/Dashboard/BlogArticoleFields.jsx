@@ -21,6 +21,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
+import dayjs from 'dayjs';
 import GTranslateIcon from "@mui/icons-material/GTranslate";
 import { StyledTextField } from "../../styles/FormStyles";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -34,6 +35,7 @@ import { LANGUAGE_LABELS } from "../../data/constants";
 import { gTranslateFetch } from "../../utils/apiUtils";
 import DropdownFieldRow from "./DropdownFieldRow";
 import DropdownFieldCategorii from "./DropdownFieldCategorii";
+import DateTimePicker from "./DateTimePicker";
 
 export default function BlogArticoleFields({
   handleUpload,
@@ -57,6 +59,9 @@ export default function BlogArticoleFields({
   const [categorie, setCategorie] = useState(
     dialogData.categorie ? dialogData.categorie : ""
   );
+
+  const [dataProgramata, setDataProgramata] = useState(  dialogData.dataProgramata ? dialogData.dataProgramata : "");
+  const [timpProgramat, setTimpProgramat] = useState(dialogData.timpProgramat ? dialogData.timpProgramat : "");
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -540,6 +545,8 @@ export default function BlogArticoleFields({
   };
 
   const handleUploadData = () => {
+    console.log("timpProgramat...", timpProgramat)
+    console.log("dataProgramata...", dataProgramata)
     setLoading(true);
     const data = {
       ro: { nume: numeRo, descriere: descriereRo, content: contentRo },
@@ -569,7 +576,9 @@ export default function BlogArticoleFields({
         image,
         oldFileName,
         categorie,
-        youtubeLink
+        youtubeLink,
+        timpProgramat,
+        dataProgramata
       ).then(() => {
         setLoading(false);
       });
@@ -577,7 +586,7 @@ export default function BlogArticoleFields({
       console.log("else.....");
       console.log(selectedImages);
       console.log(data);
-      handleUpload(data, selectedImages, categorie, youtubeLink).then(() => {
+      handleUpload(data, selectedImages, categorie, youtubeLink, timpProgramat, dataProgramata ).then(() => {
         setLoading(false);
       });
     }
@@ -1011,6 +1020,28 @@ export default function BlogArticoleFields({
               ]}
               placeHolder="Categorii"
             />
+          </Box>
+          <Grid
+            item
+            xs={12}
+            sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
+          >
+            <HorizontalLineWithText text={"Programare continut"} />
+          </Grid>
+          <Box
+            style={{
+              width: "100%",
+              paddingRight: "3%",
+              paddingLeft: "3%",
+              paddingBottom: "3%",
+              backgroundColor: "#2B2B2B",
+              marginRight: "2%",
+              marginLeft: "2%",
+              borderRadius: "1%",
+              paddingTop:"3%"
+            }}
+          >
+           <DateTimePicker dataProgramata={dataProgramata} setDataProgramata={setDataProgramata} timpProgramat={timpProgramat} setTimpProgramat={setTimpProgramat}/>
           </Box>
           <Grid
             item

@@ -39,6 +39,7 @@ import { useAuth } from "../context/AuthContext";
 import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { useDatabase } from "../context/DatabaseContext";
+import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -52,7 +53,10 @@ import { useDatabase } from "../context/DatabaseContext";
 
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
-  const articlesData = await handleGetFirestore("BlogArticole");
+  const dataArt = await handleGetFirestore("BlogArticole");
+  console.log("Articole...aici..unu.", dataArt)
+  let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
+  console.log("Articole...aici...", articlesData)
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
