@@ -46,7 +46,7 @@ function PostCard(props) {
             <Typography
               display="block"
               noWrap
-              variant="h2"
+              variant="h4"
               className={classes.title}
               style={{ color: colors.primary3 }}
             >

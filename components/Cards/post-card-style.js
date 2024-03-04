@@ -48,7 +48,7 @@ const cardsStyles = makeStyles({ uniqId: "post_card" })(
     title: {
       whiteSpace: "nowrap",
       width: "100%",
-      fontSize: 24,
+      fontSize: 16,
       fontWeight: theme.typography.fontWeightBold,
       color: "white",
     },

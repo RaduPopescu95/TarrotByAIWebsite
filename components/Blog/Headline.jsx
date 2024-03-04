@@ -100,7 +100,7 @@ function Headline({ newestArticle, isRo }) {
                 variant="h1"
                 className={cx(text.title2)}
                 style={{
-                  fontSize: isMobile ? "1.5rem" : "2.5rem", // Responsive font size
+                  fontSize: isMobile ? "1.5rem" : "2.0rem", // Responsive font size
                   color: "white",
                   textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
                 }}
