@@ -219,7 +219,8 @@ function Landing(props) {
 
   useEffect(() => {
     // handleAddToFirestore();
-
+    const currentTime = new Date(); // Obține timpul actual
+console.log("current time...", currentTime)
     if (!currentUser && !isGuestUser) {
       router.push("login");
     }
