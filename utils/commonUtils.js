@@ -1,10 +1,14 @@
-import dayjs from "dayjs";
+
 import {
   deleteElaiVideoAPI,
   generateElaiVideoAPI,
   renderElaiVideoAPI,
   updateElaiVideoAPI,
 } from "./apiUtils";
+import moment from 'moment';
+
+
+
 
 export const toUrlSlug = (string) => {
   return string
@@ -93,17 +97,15 @@ export function validateEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 
-
-export const filterArticlesBeforeCurrentTime = (articlesData) => {
-  const currentTime = new Date(); // Obține timpul actual
-  console.log("Test...here.......",currentTime)
+export function filterArticlesBeforeCurrentTime(articlesData) {
   return articlesData.filter(article => {
-    // Construiește un șir de data și ora în format acceptat de constructorul Date din JavaScript
-    const articleDateStr = `${article.firstUploadDate.split('-').reverse().join('-')}T${article.firstUploadtime}:00`;
-    // Convertiți șirul construit într-un obiect Date
-    const articleDateTime = new Date(articleDateStr);
+    // Asigură-te că formatul este corect interpretat
+    const articleDateTime = moment(`${article.firstUploadDate} ${article.firstUploadtime}`, 'DD-MM-YYYY HH:mm');
+    const currentDateTime = moment();
 
-    // Verificați dacă data și ora articolului sunt înainte sau egale cu timpul actual
-    return articleDateTime <= currentTime;
+    console.log("articleDateTime...",articleDateTime)
+    console.log("currentDateTime...", currentDateTime)
+
+    return currentDateTime.isAfter(articleDateTime) || currentDateTime.isSame(articleDateTime, 'minute');
   });
-};
+}

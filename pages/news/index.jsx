@@ -48,7 +48,7 @@ export async function getServerSideProps({ locale }) {
   const dataArt = await handleGetFirestore("BlogArticole");
   console.log("Articole...aici..unu.....", dataArt)
   let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
-  console.log("Articole...aici......", articlesData)
+  console.log("Articole...aici......", articlesData.length)
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
