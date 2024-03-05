@@ -96,7 +96,7 @@ export function validateEmail(email) {
 
 export const filterArticlesBeforeCurrentTime = (articlesData) => {
   const currentTime = new Date(); // Obține timpul actual
-
+  console.log("Test...here.......",currentTime)
   return articlesData.filter(article => {
     // Construiește un șir de data și ora în format acceptat de constructorul Date din JavaScript
     const articleDateStr = `${article.firstUploadDate.split('-').reverse().join('-')}T${article.firstUploadtime}:00`;
