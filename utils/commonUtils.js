@@ -99,12 +99,14 @@ export function validateEmail(email) {
 
 export function filterArticlesBeforeCurrentTime(articlesData) {
   return articlesData.filter(article => {
-    // Asigură-te că formatul este corect interpretat
-    const articleDateTime = moment(`${article.firstUploadDate} ${article.firstUploadtime}`, 'DD-MM-YYYY HH:mm');
-    const currentDateTime = moment();
+    // Parsează data articolului în UTC folosind formatul dat și asigură-te că ora este tratată în UTC
+    const articleDateTime = moment.utc(`${article.firstUploadDate} ${article.firstUploadtime}`, 'DD-MM-YYYY HH:mm');
 
-    console.log("articleDateTime...",articleDateTime)
-    console.log("currentDateTime...", currentDateTime)
+    // Obține data și ora curentă în UTC
+    const currentDateTime = moment.utc();
+
+    console.log("articleDateTime...", articleDateTime.format());
+    console.log("currentDateTime...", currentDateTime.format());
 
     return currentDateTime.isAfter(articleDateTime) || currentDateTime.isSame(articleDateTime, 'minute');
   });
