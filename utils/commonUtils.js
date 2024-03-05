@@ -103,7 +103,8 @@ export function filterArticlesBeforeCurrentTime(articlesData) {
     const articleDateTime = moment.utc(`${article.firstUploadDate} ${article.firstUploadtime}`, 'DD-MM-YYYY HH:mm');
 
     // Obține data și ora curentă în UTC
-    const currentDateTime = moment.utc();
+    // const currentDateTime = moment.utc();
+    const currentDateTime = moment.utc().add(2, 'hours');
 
     console.log("articleDateTime...", articleDateTime.format());
     console.log("currentDateTime...", currentDateTime.format());

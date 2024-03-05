@@ -46,7 +46,7 @@ import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   const dataArt = await handleGetFirestore("BlogArticole");
-  console.log("Articole...aici..unu.....", dataArt)
+
   let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
   console.log("Articole...aici......", articlesData.length)
   let articles = {};
