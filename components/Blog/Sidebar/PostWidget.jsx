@@ -89,7 +89,7 @@ function PostWidget({ lastFiveArticles }) {
                     ".MuiTypography-root": {
                       // Aplică stilul pentru toate elementele Typography din ListItemText
                       color: colors.primary3,
-                      height: "2rem",
+                      height: "auto",
                       width: "auto",
                     },
                     ".MuiTypography-secondary": {
