@@ -62,12 +62,14 @@ export async function getServerSideProps({ locale }) {
     // Sortarea articolelor după data și ora lor
     const sortedArticles = articlesData.sort((a, b) => {
       // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-      const dateTimeA = new Date(`${a.date} ${a.time}`);
-      const dateTimeB = new Date(`${b.date} ${b.time}`);
+      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
+      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
 
       // Compară obiectele de tip Date
       return dateTimeB - dateTimeA;
     });
+    
+  console.log("sorted articles...", sortedArticles)
 
     // Selectarea celor mai noi două articole
     const latestArticles = sortedArticles.slice(0, 2);
