@@ -6,6 +6,15 @@ import Footer from "../../components/Footer";
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
 import { colors } from "../../utils/colors";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+
+export async function getServerSideProps({ locale }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common", "services"])),
+    },
+  };
+}
 
 const CookiesPrivacyPolicyPage = () => {
   const { t } = useTranslation("common");

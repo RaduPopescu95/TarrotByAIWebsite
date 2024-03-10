@@ -32,6 +32,7 @@ import {
 import { colors } from "../../utils/colors";
 import FilterBar from "../../components/Blog/FilterBar/FilterBar";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
+import Footer from "../../components/Footer/SiteMap";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -359,6 +360,7 @@ function BlogHome(props) {
           </div>
         </div>
       </div>
+      <Footer />
     </Fragment>
   );
 }

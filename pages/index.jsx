@@ -40,6 +40,7 @@ import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { useDatabase } from "../context/DatabaseContext";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
+import Footer from "../components/Footer/SiteMap";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -412,6 +413,7 @@ console.log("current time...", currentTime)
           </div>
         </div>
       </div>
+      <Footer />
     </Fragment>
   );
 }

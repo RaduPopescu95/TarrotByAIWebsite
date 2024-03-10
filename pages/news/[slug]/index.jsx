@@ -20,6 +20,7 @@ import {
   handleQueryFirestore,
 } from "../../../utils/firestoreUtils";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import Footer from "../../../components/Footer/SiteMap";
 
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
@@ -146,6 +147,7 @@ function BlogDetail(props) {
           </div>
         </div>
       </div>
+      <Footer />
     </Fragment>
   );
 }

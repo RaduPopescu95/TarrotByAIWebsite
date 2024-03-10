@@ -41,24 +41,10 @@ function Copyright() {
 const footers = [
   {
     title: "Company",
-    description: ["About", "Services", "Contact", "News"],
-    link: ["/about", "/services", "/contact", "/news"],
+    description: ["About"],
+    link: ["/about"],
   },
-  {
-    title: "Services",
-    description: [
-      "IT Infrastructure Support",
-      "Web and app support",
-      "SAP Migration and implementation",
-      "Cloud Services",
-    ],
-    link: [
-      "/services/it-infrastructure-support",
-      "/services/web-app-support",
-      "/services/SAP-migration-implementation",
-      "/services/cloud-solutions",
-    ],
-  },
+
   {
     title: "Legal",
     description: ["Privacy policy"],
@@ -85,32 +71,15 @@ function Footer(props) {
         <Grid item xs={12} md={3}>
           <div style={{ overflow: "hidden" }}>
             <img
-              src={"/matlogo.png"}
+              src={"/LogoPngTransparent.png"}
               alt="logo"
               width={155}
               height={60}
               style={{
                 objectFit: "contain",
+                width:50
               }}
             />
-
-            <Typography
-              color="textPrimary"
-              className={classes.footerDesc}
-              gutterBottom
-              style={{
-                textAlign: "left",
-                paddingLeft: 0,
-                overflow: "hidden",
-                // textOverflow: "ellipsis",
-                // display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2, // Setează la 2 pentru a afișa maxim 2 linii
-                maxWidth: 400,
-              }}
-            >
-              {t("FooterMsg")}
-            </Typography>
           </div>
           {isDesktop && <Copyright />}
         </Grid>
@@ -161,22 +130,7 @@ function Footer(props) {
         </Grid>
         <Grid item xs={12} md={3}>
           <div className={classes.socmed}>
-            <IconButton
-              aria-label="FB"
-              className={classes.margin}
-              size="small"
-              style={{ backgroundColor: "#1877F2", marginLeft: 0 }}
-            >
-              <a
-                href="https://www.facebook.com/cristinazurba"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center" }}
-                aria-label="Cristina Zurba on Facebook"
-              >
-                <FacebookIcon style={{ color: "white" }} />
-              </a>
-            </IconButton>
+       
 
             <IconButton
               aria-label="IG"
@@ -188,7 +142,7 @@ function Footer(props) {
               }}
             >
               <a
-                href="https://www.instagram.com/cristinazurba/"
+                href="https://www.instagram.com/cristina.zurba/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
@@ -199,30 +153,13 @@ function Footer(props) {
             </IconButton>
 
             <IconButton
-              className={classes.margin}
-              size="small"
-              style={{ backgroundColor: "#0077B5" }}
-              aria-label="Cristina Zurba on Linkedin"
-            >
-              <a
-                href="https://www.linkedin.com/company/cristinazurba/"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center" }}
-                aria-label="Cristina Zurba on Linkedin"
-              >
-                <LinkedInIcon style={{ color: "white" }} />
-              </a>
-            </IconButton>
-
-            <IconButton
               aria-label="Cristina Zurba on Youtube"
               className={classes.margin}
               size="small"
               style={{ backgroundColor: "#FF0000" }}
             >
               <a
-                href="https://www.youtube.com/channel/UCcCrYY8-Afj8UvVuM0PyC_A"
+                href="https://www.youtube.com/@CristinaZurba"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center" }}
