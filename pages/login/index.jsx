@@ -26,6 +26,7 @@ import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "react-i18next";
 import Head from "next/head";
+import Footer from "../../components/Footer/SiteMap";
 
 function Copyright(props) {
   return (
@@ -495,6 +496,7 @@ export default function SignInSide() {
             </Box>
           )}
         </Grid>
+ 
       </ThemeProvider>
     </>
   );

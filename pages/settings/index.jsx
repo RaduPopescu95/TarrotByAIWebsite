@@ -29,6 +29,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "react-i18next";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Head from "next/head";
+import Footer from "../../components/Footer/SiteMap";
 
 function Copyright(props) {
   return (
@@ -726,6 +727,7 @@ export default function SignInSide() {
           )}
         </Grid>
       </ThemeProvider>
+      <Footer />
     </>
   );
 }
