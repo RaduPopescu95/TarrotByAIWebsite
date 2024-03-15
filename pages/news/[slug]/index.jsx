@@ -20,9 +20,11 @@ import {
   handleQueryFirestore,
 } from "../../../utils/firestoreUtils";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import Footer from "../../../components/Footer/SiteMap";
 
-export async function getServerSideProps({ locale }) {
+export async function getServerSideProps(context) {
   // Obținerea datelor articolelor din Firestore
+  const { locale, params, req } = context;
   const articlesData = await handleGetFirestore("BlogArticole");
   let articles = {};
   if (articlesData.length > 0) {
@@ -60,9 +62,30 @@ export async function getServerSideProps({ locale }) {
       latestFiveArticles: [],
     };
   }
+    // Adaugă aici logica pentru a extrage slug-ul și a găsi articolul corespunzător
+    const slug = params.slug; // Parametrii de rute sunt accesibili direct prin `params`
+    const id = slug.split("-")[0]; // Extrage partea de ID din slug
+    const filteredArticle = articlesData.find(
+      (article) => article.id.toString() === id
+    );
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host; // 'host' include și portul, dacă este specificat
+    const baseUrl = `${protocol}://${host}`;
+
+  //   const baseUrl =
+  //   process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
+
+  // const currentUrl = `${baseUrl}${router.asPath || ""}`;
+
+  const currentUrl = `${baseUrl}${req.url}`;
+
+  filteredArticle.currentUrl = currentUrl
+  
   return {
     props: {
       articles,
+      filteredArticle, // Pasează articolul filtrat ca prop
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };
@@ -72,33 +95,29 @@ function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
   const { classes } = useSpacing();
   // const { articles } = useDatabase(); // Assuming this is a context hook for fetching articles
-  const router = useRouter();
-  const [filteredArticle, setFilteredArticle] = useState(null);
-  const detectedLng = languageDetector.detect();
+  // const router = useRouter();
+  // const [filteredArticle, setFilteredArticle] = useState(null);
+  // const detectedLng = languageDetector.detect();
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
 
-  const currentUrl = `${baseUrl}${router.asPath || ""}`;
+  // const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
+  // const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
+  const { articles, filteredArticle } = props;
+  // useEffect(() => {
+  //   console.log("test....");
+  //   console.log(detectedLng);
 
-  const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
-  const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
-  const { articles } = props;
-  useEffect(() => {
-    console.log("test....");
-    console.log(detectedLng);
+  //   const slug = router.query.slug;
+  //   const id = slug.split("-")[0]; // Extract the ID part
+  //   const filtered = articles.articlesData.find(
+  //     (article) => article.id.toString() === id
+  //   );
+  //   setFilteredArticle(filtered); // Set the found article
+  // }, [router.isReady, router.query.slug, articles.articlesData]);
 
-    const slug = router.query.slug;
-    const id = slug.split("-")[0]; // Extract the ID part
-    const filtered = articles.articlesData.find(
-      (article) => article.id.toString() === id
-    );
-    setFilteredArticle(filtered); // Set the found article
-  }, [router.isReady, router.query.slug, articles.articlesData]);
-
-  if (loading) {
-    return <CircularProgress />;
-  }
+  // if (loading) {
+  //   return <CircularProgress />;
+  // }
 
   return (
     <Fragment>
