@@ -22,7 +22,7 @@ import {
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import Footer from "../../../components/Footer/SiteMap";
 
-export async function getServerSideProps({ locale }) {
+export async function getServerSideProps({ locale, params }) {
   // Obținerea datelor articolelor din Firestore
   const articlesData = await handleGetFirestore("BlogArticole");
   let articles = {};
@@ -61,9 +61,17 @@ export async function getServerSideProps({ locale }) {
       latestFiveArticles: [],
     };
   }
+    // Adaugă aici logica pentru a extrage slug-ul și a găsi articolul corespunzător
+    const slug = params.slug; // Parametrii de rute sunt accesibili direct prin `params`
+    const id = slug.split("-")[0]; // Extrage partea de ID din slug
+    const filteredArticle = articlesData.find(
+      (article) => article.id.toString() === id
+    );
+  
   return {
     props: {
       articles,
+      filteredArticle, // Pasează articolul filtrat ca prop
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };
@@ -74,7 +82,7 @@ function BlogDetail(props) {
   const { classes } = useSpacing();
   // const { articles } = useDatabase(); // Assuming this is a context hook for fetching articles
   const router = useRouter();
-  const [filteredArticle, setFilteredArticle] = useState(null);
+  // const [filteredArticle, setFilteredArticle] = useState(null);
   const detectedLng = languageDetector.detect();
 
   const baseUrl =
@@ -84,18 +92,18 @@ function BlogDetail(props) {
 
   const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
   const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
-  const { articles } = props;
-  useEffect(() => {
-    console.log("test....");
-    console.log(detectedLng);
+  const { articles, filteredArticle } = props;
+  // useEffect(() => {
+  //   console.log("test....");
+  //   console.log(detectedLng);
 
-    const slug = router.query.slug;
-    const id = slug.split("-")[0]; // Extract the ID part
-    const filtered = articles.articlesData.find(
-      (article) => article.id.toString() === id
-    );
-    setFilteredArticle(filtered); // Set the found article
-  }, [router.isReady, router.query.slug, articles.articlesData]);
+  //   const slug = router.query.slug;
+  //   const id = slug.split("-")[0]; // Extract the ID part
+  //   const filtered = articles.articlesData.find(
+  //     (article) => article.id.toString() === id
+  //   );
+  //   setFilteredArticle(filtered); // Set the found article
+  // }, [router.isReady, router.query.slug, articles.articlesData]);
 
   if (loading) {
     return <CircularProgress />;
