@@ -122,12 +122,12 @@ function BlogDetail(props) {
   return (
     <Fragment>
       <Head>
-      <title>{filteredArticle?.info?.ro?.nume}</title>
-      <meta name="description" content={filteredArticle?.info?.ro?.descriere} />
-      <meta property="og:title" content={filteredArticle?.info?.ro?.nume} />
+      <title>{"titlu aici"}</title>
+      <meta name="description" content={"Descriere aici"} />
+      <meta property="og:title" content={"titlu aici..."} />
       <meta property="og:description" content={"Horoscopul Tarot pentru săptămâna 11-17 martie 2024 oferă previziuni bazate pe cărțile de tarot pentru fiecare semn zodiacal, ajutând la ghidarea deciziilor și la anticiparea evenimentelor viitoare."} />
       <meta property="og:image" content={"https://firebasestorage.googleapis.com/v0/b/tarrot-590ee.appspot.com/o/images%2FBlog%2FMSBePxFVcVO3vsfM5nwHr36ROfh2%2F1710246379381?alt=media&token=75811c6f-cbe0-47a7-9f76-2262b1344ced"} />
-      <meta property="og:url" content={filteredArticle.currentUrl} />
+      <meta property="og:url" content={"www.test.com"} />
       <meta property="og:type" content="article" />
       <meta name="keywords" content={filteredArticle?.metaKeys} />
     </Head>
