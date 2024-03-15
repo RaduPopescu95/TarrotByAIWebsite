@@ -22,8 +22,9 @@ import {
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import Footer from "../../../components/Footer/SiteMap";
 
-export async function getServerSideProps({ locale, params }) {
+export async function getServerSideProps(context) {
   // Obținerea datelor articolelor din Firestore
+  const { locale, params, req } = context;
   const articlesData = await handleGetFirestore("BlogArticole");
   let articles = {};
   if (articlesData.length > 0) {
@@ -68,10 +69,17 @@ export async function getServerSideProps({ locale, params }) {
       (article) => article.id.toString() === id
     );
 
-    const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host; // 'host' include și portul, dacă este specificat
+    const baseUrl = `${protocol}://${host}`;
 
-  const currentUrl = `${baseUrl}${router.asPath || ""}`;
+  //   const baseUrl =
+  //   process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
+
+  // const currentUrl = `${baseUrl}${router.asPath || ""}`;
+
+  const currentUrl = `${baseUrl}${req.url}`;
+
   filteredArticle.currentUrl = currentUrl
   
   return {
@@ -87,14 +95,14 @@ function BlogDetail(props) {
   const { onToggleDark, onToggleDir } = props;
   const { classes } = useSpacing();
   // const { articles } = useDatabase(); // Assuming this is a context hook for fetching articles
-  const router = useRouter();
+  // const router = useRouter();
   // const [filteredArticle, setFilteredArticle] = useState(null);
-  const detectedLng = languageDetector.detect();
+  // const detectedLng = languageDetector.detect();
 
 
-  const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
-  const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
-  const { articles, filteredArticle } = props;
+  // const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
+  // const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
+  // const { articles, filteredArticle } = props;
   // useEffect(() => {
   //   console.log("test....");
   //   console.log(detectedLng);
@@ -107,9 +115,9 @@ function BlogDetail(props) {
   //   setFilteredArticle(filtered); // Set the found article
   // }, [router.isReady, router.query.slug, articles.articlesData]);
 
-  if (loading) {
-    return <CircularProgress />;
-  }
+  // if (loading) {
+  //   return <CircularProgress />;
+  // }
 
   return (
     <Fragment>
