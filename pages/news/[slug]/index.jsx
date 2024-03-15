@@ -19,7 +19,7 @@ import {
   handleGetFirestore,
   handleQueryFirestore,
 } from "../../../utils/firestoreUtils";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+
 import Footer from "../../../components/Footer/SiteMap";
 
 export async function getServerSideProps(context) {
@@ -86,7 +86,6 @@ export async function getServerSideProps(context) {
     props: {
       articles,
       filteredArticle, // Pasează articolul filtrat ca prop
-      ...(await serverSideTranslations(locale, ["common"])),
     },
   };
 }
@@ -136,13 +135,13 @@ function BlogDetail(props) {
         </Head>
     
 
-      {/* <Header
+      <Header
         onToggleDark={onToggleDark}
         onToggleDir={onToggleDir}
         home
         isSlug={true}
-      /> */}
-      {/* <div
+      />
+      <div
         style={{
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
         }}
@@ -164,7 +163,7 @@ function BlogDetail(props) {
             </Box>
           </div>
         </div>
-      </div> */}
+      </div>
     </Fragment>
   );
 }
