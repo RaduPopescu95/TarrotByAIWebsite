@@ -75,6 +75,7 @@ function PostWidget({ lastFiveArticles }) {
                     },
                   },
                   backgroundColor: "transparent",
+                  height:"auto"
                 }}
               >
                 <ListItemText
@@ -91,6 +92,7 @@ function PostWidget({ lastFiveArticles }) {
                       color: colors.primary3,
                       height: "2rem",
                       width: "auto",
+                      height:"auto"
                     },
                     ".MuiTypography-secondary": {
                       color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific

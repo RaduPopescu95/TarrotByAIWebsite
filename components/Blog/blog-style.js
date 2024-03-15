@@ -88,6 +88,7 @@ const useStyles = makeStyles({ uniqId: "blog" })((theme) => ({
     "& > *": {
       width: "100%",
     },
+    height:"auto"
   },
   gridList: {
     width: 500,

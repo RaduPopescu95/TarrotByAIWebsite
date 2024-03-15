@@ -122,19 +122,19 @@ function BlogDetail(props) {
   return (
     <Fragment>
       <CssBaseline />
-      {filteredArticle && (
+     
         <Head>
-          <title>{filteredArticle.title}</title>
-          <meta name="description" content={filteredArticle.metaDescription} />
-          <meta name="og:title" content={filteredArticle.title} />
+          <title>{filteredArticle?.info?.ro.nume}</title>
+          <meta name="description" content={filteredArticle?.info?.ro.descriere} />
+          <meta name="og:title" content={filteredArticle?.info?.ro.nume} />
           <meta
             name="og:description"
-            content={filteredArticle.metaDescription}
+            content={filteredArticle?.info?.ro.descriere}
           />
-          <meta name="keywords" content={filteredArticle.metaKeys} />
-          <meta property="og:url" content={currentUrl} />
+          <meta property="og:url" content={filteredArticle?.currentUrl} />
+          <meta property="og:image" content={filteredArticle?.image?.finalUri} />
         </Head>
-      )}
+    
 
       <Header
         onToggleDark={onToggleDark}
@@ -157,7 +157,7 @@ function BlogDetail(props) {
                     <Article filteredArticles={filteredArticle} />
                   </Grid>
                   <Grid item md={4} xs={12}>
-                    <Sidebar lastFiveArticles={articles.articlesData} />
+                    <Sidebar lastFiveArticles={articles.latestFiveArticles} />
                   </Grid>
                 </Grid>
               </Container>
