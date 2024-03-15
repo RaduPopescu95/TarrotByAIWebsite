@@ -104,19 +104,18 @@ function BlogDetail(props) {
   return (
     <Fragment>
       <CssBaseline />
-      {filteredArticle && (
+    
       <Head>
-      <title>{filteredArticle.title}</title>
+      <title>{filteredArticle?.info?.ro?.nume}</title>
       <meta name="description" content={filteredArticle?.info?.ro?.descriere} />
-      <meta name="title" content={filteredArticle?.info?.ro?.nume} />
       <meta property="og:title" content={filteredArticle?.info?.ro?.nume} />
       <meta property="og:description" content={filteredArticle?.info?.ro?.descriere} />
       <meta property="og:image" content={filteredArticle?.image?.finalUri} />
       <meta property="og:url" content={currentUrl} />
       <meta property="og:type" content="article" />
-      <meta name="keywords" content={filteredArticle.metaKeys} />
+      <meta name="keywords" content={filteredArticle?.metaKeys} />
     </Head>
-      )}
+    
 
       <Header
         onToggleDark={onToggleDark}
