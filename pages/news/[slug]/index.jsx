@@ -136,13 +136,13 @@ function BlogDetail(props) {
         </Head>
     
 
-      <Header
+      {/* <Header
         onToggleDark={onToggleDark}
         onToggleDir={onToggleDir}
         home
         isSlug={true}
-      />
-      <div
+      /> */}
+      {/* <div
         style={{
           backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
         }}
@@ -164,7 +164,7 @@ function BlogDetail(props) {
             </Box>
           </div>
         </div>
-      </div>
+      </div> */}
     </Fragment>
   );
 }
