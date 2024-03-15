@@ -126,9 +126,9 @@ function BlogDetail(props) {
         <Head>
           <title>{filteredArticle?.info?.ro.nume}</title>
           <meta name="description" content={filteredArticle?.info?.ro.descriere} />
-          <meta name="og:title" content={filteredArticle?.info?.ro.nume} />
+          <meta property="og:title" content={filteredArticle?.info?.ro.nume} />
           <meta
-            name="og:description"
+            property="og:description"
             content={filteredArticle?.info?.ro.descriere}
           />
           <meta property="og:url" content={filteredArticle?.currentUrl} />
