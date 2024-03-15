@@ -102,7 +102,7 @@ function BlogDetail(props) {
 
   // const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
   // const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
-  // const { articles, filteredArticle } = props;
+  const { articles, filteredArticle } = props;
   // useEffect(() => {
   //   console.log("test....");
   //   console.log(detectedLng);

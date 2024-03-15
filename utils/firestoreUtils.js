@@ -130,7 +130,7 @@ export const handleGetFirestore = async (location) => {
   const querySnapshot = await getDocs(collection(db, location));
   querySnapshot.forEach((doc) => {
     // doc.data() is never undefined for query doc snapshots
-    console.log(doc.id, ` ${location} => `, doc.data());
+    // console.log(doc.id, ` ${location} => `, doc.data());
     arr.push(doc.data());
   });
 
