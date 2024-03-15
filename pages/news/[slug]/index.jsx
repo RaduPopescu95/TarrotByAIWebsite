@@ -67,6 +67,12 @@ export async function getServerSideProps({ locale, params }) {
     const filteredArticle = articlesData.find(
       (article) => article.id.toString() === id
     );
+
+    const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
+
+  const currentUrl = `${baseUrl}${router.asPath || ""}`;
+  filteredArticle.currentUrl = currentUrl
   
   return {
     props: {
@@ -85,10 +91,6 @@ function BlogDetail(props) {
   // const [filteredArticle, setFilteredArticle] = useState(null);
   const detectedLng = languageDetector.detect();
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
-
-  const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
   const [articlesData, setArticlesData] = useState(null); // Starea pentru a stoca datele articolului
   const [loading, setLoading] = useState(false); // Starea pentru a stoca datele articolului
@@ -111,18 +113,18 @@ function BlogDetail(props) {
 
   return (
     <Fragment>
-      <CssBaseline />
-    
       <Head>
       <title>{filteredArticle?.info?.ro?.nume}</title>
       <meta name="description" content={filteredArticle?.info?.ro?.descriere} />
       <meta property="og:title" content={filteredArticle?.info?.ro?.nume} />
       <meta property="og:description" content={"Horoscopul Tarot pentru săptămâna 11-17 martie 2024 oferă previziuni bazate pe cărțile de tarot pentru fiecare semn zodiacal, ajutând la ghidarea deciziilor și la anticiparea evenimentelor viitoare."} />
       <meta property="og:image" content={"https://firebasestorage.googleapis.com/v0/b/tarrot-590ee.appspot.com/o/images%2FBlog%2FMSBePxFVcVO3vsfM5nwHr36ROfh2%2F1710246379381?alt=media&token=75811c6f-cbe0-47a7-9f76-2262b1344ced"} />
-      <meta property="og:url" content={currentUrl} />
+      <meta property="og:url" content={filteredArticle.currentUrl} />
       <meta property="og:type" content="article" />
       <meta name="keywords" content={filteredArticle?.metaKeys} />
     </Head>
+      <CssBaseline />
+    
     
 
       <Header
