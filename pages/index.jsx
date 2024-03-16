@@ -182,29 +182,28 @@ function Landing(props) {
   };
 
   const handleFilter = async (filterItem) => {
-    setFilterItem(filterItem);
+    
+    setFilterItem(filterItem); // Presupunând că ai o stare `filterItem` pentru a stoca categoria selectată
 
     let articlesData = [];
     if (filterItem === "All") {
-      articlesData = await handleGetFirestore("BlogArticole");
+      articlesData = articles.articlesData; // Dacă filtrul este "All", folosește toate articolele
     } else {
-      articlesData = await handleQueryFirestore(
-        "BlogArticole",
-        "categorie",
-        filterItem
+      // Filtrarea articolelor pe baza categoriei selectate
+      articlesData = articles.articlesData.filter(
+        (article) => article.categorie === filterItem
       );
     }
 
+    // Sortarea articolelor filtrate după data și ora
     const sortedArticles = articlesData.sort((a, b) => {
       const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
       const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
       return dateTimeB - dateTimeA;
     });
 
-    setCurrentPage(1);
-    setFilteredArticles(sortedArticles); // Actualizează starea cu articolele filtrate
-
-    // Nu este necesar să actualizezi `articlesToDisplay` aici direct deoarece `useEffect` va face acest lucru
+    setCurrentPage(1); // Resetarea paginii curente la 1 după filtrare
+    setFilteredArticles(sortedArticles); // Actualizează starea cu articolele filtrate și sortate
   };
 
   useEffect(() => {
