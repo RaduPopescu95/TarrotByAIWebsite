@@ -23,71 +23,70 @@ import {
 import Footer from "../../../components/Footer/SiteMap";
 
 export async function getServerSideProps(context) {
-  // Obținerea datelor articolelor din Firestore
-  const { locale, params, req } = context;
-  const articlesData = await handleGetFirestore("BlogArticole");
-  let articles = {};
-  if (articlesData.length > 0) {
-    // Sortarea articolelor după data și ora lor
-    const sortedArticles = articlesData.sort((a, b) => {
-      // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-      const dateTimeA = new Date(`${a.date} ${a.time}`);
-      const dateTimeB = new Date(`${b.date} ${b.time}`);
+  try {
+ 
+    // Obținerea datelor articolelor din Firestore
+    const { locale, params, req } = context;
+    const articlesData = await handleGetFirestore("BlogArticole");
+    let articles = {};
+    if (articlesData.length > 0) {
+      // Sortarea articolelor după data și ora lor
+      const sortedArticles = articlesData.sort((a, b) => {
+        const dateTimeA = new Date(`${a.date} ${a.time}`);
+        const dateTimeB = new Date(`${b.date} ${b.time}`);
+        return dateTimeB - dateTimeA;
+      });
 
-      // Compară obiectele de tip Date
-      return dateTimeB - dateTimeA;
-    });
+      // Selectarea și prepararea datelor articolelor pentru a fi returnate
+      articles = {
+        articlesData,
+        latestArticles: sortedArticles.slice(0, 2),
+        lastArticle: sortedArticles[0],
+        latestFiveArticles: sortedArticles.slice(0, 5),
+      };
+    } else {
+      articles = {
+        articlesData: [],
+        latestArticles: [],
+        lastArticle: [],
+        latestFiveArticles: [],
+      };
+    }
 
-    // Selectarea celor mai noi două articole
-    const latestArticles = sortedArticles.slice(0, 2);
+    // Logica pentru a extrage slug-ul și a găsi articolul corespunzător
+    const slug = params.slug;
+    const id = slug.split("-")[0];
+    const filteredArticle = articlesData.find(article => article.id.toString() === id);
 
-    // Selectarea celor mai noi cinci articole
-    const latestFiveArticles = sortedArticles.slice(0, 5);
-
-    // Selectarea celui mai nou articol
-    const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
-
-    // Returnarea datelor către componenta Next.js
-    articles = {
-      articlesData,
-      latestArticles,
-      lastArticle,
-      latestFiveArticles,
-    };
-  } else {
-    articles = {
-      articlesData: [],
-      latestArticles: [],
-      lastArticle: [],
-      latestFiveArticles: [],
-    };
-  }
-    // Adaugă aici logica pentru a extrage slug-ul și a găsi articolul corespunzător
-    const slug = params.slug; // Parametrii de rute sunt accesibili direct prin `params`
-    const id = slug.split("-")[0]; // Extrage partea de ID din slug
-    const filteredArticle = articlesData.find(
-      (article) => article.id.toString() === id
-    );
+  
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
-    const host = req.headers.host; // 'host' include și portul, dacă este specificat
+    const host = req.headers.host;
     const baseUrl = `${protocol}://${host}`;
+    const currentUrl = `${baseUrl}${req.url}`;
 
-  //   const baseUrl =
-  //   process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
-
-  // const currentUrl = `${baseUrl}${router.asPath || ""}`;
-
-  const currentUrl = `${baseUrl}${req.url}`;
-
-  filteredArticle.currentUrl = currentUrl
-  
-  return {
-    props: {
-      articles,
-      filteredArticle, // Pasează articolul filtrat ca prop
-    },
-  };
+    // Asigură-te că articolul filtrat există înainte de a încerca să accesezi proprietăți pe el
+    if (filteredArticle) {
+      filteredArticle.currentUrl = currentUrl;
+    } else {
+      throw new Error("Articolul nu a fost găsit.");
+    }
+    
+    return {
+      props: {
+        articles,
+        filteredArticle,
+      },
+    };
+  } catch (error) {
+    console.error("Eroare la preluarea datelor in slug:", error.message);
+    // Returnează un obiect de eroare sau un mesaj de eroare ca prop pentru a fi gestionat în componenta ta
+    return {
+      props: {
+        error: error.message,
+      },
+    };
+  }
 }
 
 function BlogDetail(props) {
@@ -153,7 +152,7 @@ function BlogDetail(props) {
                     <Article filteredArticles={filteredArticle} />
                   </Grid>
                   <Grid item md={4} xs={12}>
-                    <Sidebar lastFiveArticles={articles.latestFiveArticles} />
+                    <Sidebar lastFiveArticles={articles?.latestFiveArticles} />
                   </Grid>
                 </Grid>
               </Container>

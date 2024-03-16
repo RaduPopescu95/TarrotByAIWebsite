@@ -48,7 +48,7 @@ export async function getServerSideProps({ locale }) {
   const dataArt = await handleGetFirestore("BlogArticole");
 
   let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
-  console.log("Articole...aici......", articlesData.length)
+
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -154,7 +154,7 @@ function BlogHome(props) {
   };
 
   const handleFilter = async (filterItem) => {
-    console.log("filterItem...", filterItem);
+    
     setFilterItem(filterItem); // Presupunând că ai o stare `filterItem` pentru a stoca categoria selectată
 
     let articlesData = [];
