@@ -32,6 +32,7 @@ import {
 import { colors } from "../../utils/colors";
 import FilterBar from "../../components/Blog/FilterBar/FilterBar";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
+import Footer from "../../components/Footer";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -54,8 +55,8 @@ export async function getServerSideProps({ locale }) {
     // Sortarea articolelor după data și ora lor
     const sortedArticles = articlesData.sort((a, b) => {
       // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-      const dateTimeA = new Date(`${a.date} ${a.time}`);
-      const dateTimeB = new Date(`${b.date} ${b.time}`);
+      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
+      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
 
       // Compară obiectele de tip Date
       return dateTimeB - dateTimeA;
@@ -169,8 +170,8 @@ function BlogHome(props) {
 
     // Sortarea articolelor filtrate după data și ora
     const sortedArticles = articlesData.sort((a, b) => {
-      const dateTimeA = new Date(`${a.date} ${a.time}`);
-      const dateTimeB = new Date(`${b.date} ${b.time}`);
+      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
+      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
       return dateTimeB - dateTimeA;
     });
 
@@ -360,6 +361,7 @@ function BlogHome(props) {
           </div>
         </div>
       </div>
+      <Footer />
     </Fragment>
   );
 }

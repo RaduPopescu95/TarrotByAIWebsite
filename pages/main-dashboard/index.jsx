@@ -32,6 +32,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
+import Footer from "../../components/Footer";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -271,9 +272,9 @@ export function Landing({ services }) {
             </Grid>
           </div>
         </section>
-        {/* <section>
+        <section>
           <Footer />
-        </section> */}
+        </section>
       </div>
     </>
   );
