@@ -179,6 +179,7 @@ function BlogHome(props) {
   };
 
   useEffect(() => {
+    console.log("asdad....")
     const newStartIndex = (currentPage - 1) * itemsPerPage;
     const newEndIndex = newStartIndex + itemsPerPage;
     const newArticlesToDisplay = filteredArticles.slice(

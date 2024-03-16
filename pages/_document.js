@@ -1,118 +1,72 @@
-// import React from "react";
-// import Document, { Html, Main, NextScript } from "next/document";
-// import createEmotionServer from "@emotion/server/create-instance";
-
-// import createEmotionCache from "../theme/createEmotionCache";
-// import HeadComponent from "~/components/head";
-
-// class MyDocument extends Document {
-//   render() {
-//     return (
-//       <Html lang="en">
-//         <HeadComponent />
-//         <body>
-//           <Main />
-//           <NextScript />
-//         </body>
-//       </Html>
-//     );
-//   }
-// }
-
-// MyDocument.getInitialProps = async (ctx) => {
-//   // Render app and page and get the context of the page with collected side effects.
-//   const originalRenderPage = ctx.renderPage;
-
-//   const cache = createEmotionCache();
-//   const { extractCriticalToChunks } = createEmotionServer(cache);
-
-//   ctx.renderPage = () =>
-//     originalRenderPage({
-//       enhanceApp: (App) =>
-//         function EnhanceApp(props) {
-//           // eslint-disable-line
-//           return <App emotionCache={cache} {...props} />;
-//         },
-//     });
-
-//   const initialProps = await Document.getInitialProps(ctx);
-//   const emotionStyles = extractCriticalToChunks(initialProps.html);
-//   const emotionStyleTags = emotionStyles.styles.map((style) => (
-//     <style
-//       data-emotion={`${style.key} ${style.ids.join(" ")}`}
-//       key={style.key}
-//       // eslint-disable-next-line react/no-danger
-//       dangerouslySetInnerHTML={{ __html: style.css }}
-//     />
-//   ));
-
-//   return {
-//     ...initialProps,
-//     emotionStyleTags,
-//     namespacesRequired: ["common", "starter-landing"],
-//   };
-// };
-
-// export default MyDocument;
-
-import React from "react";
-import Document, { Head, Html, Main, NextScript } from "next/document";
-import createEmotionServer from "@emotion/server/create-instance";
-
-import createEmotionCache from "../theme/createEmotionCache";
-// import HeadComponent from "~/components/head";
+import Document, { Html, Head, Main, NextScript } from "next/document";
 
 class MyDocument extends Document {
   render() {
     return (
-      <Html lang={this.props.locale}>
-      <Head>
+      <Html>
+        <Head>
+          {/* Pastreaza meta tag-ul Google AdSense aici */}
+          {/* You can add custom tags here, but do not remove the <Head> component */}
+    
 
-  </Head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-P2LWMRCF');`,
+            }}
+          />
+
+          {/* Google Tag Manager - Global site tag (gtag.js) */}
+          <script
+            async
+            src="https://www.googletagmanager.com/gtag/js?id=AW-11367210761"
+          ></script>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'AW-11367210761');
+              `,
+            }}
+          />
+
+          {/* Aici poti adauga alte scripturi globale necesare */}
+        </Head>
         <body>
+          <noscript>
+            <iframe
+              src="https://www.googletagmanager.com/ns.html?id=GTM-P2LWMRCF"
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            ></iframe>
+          </noscript>
           <Main />
           <NextScript />
+          {/* Adaugarea scripturilor Google AdWords in body */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                document.addEventListener('click', function(e) {
+                  if (e.target.closest('button') && e.target.closest('button').innerText.includes("LOGIN")) {
+                    gtag('event', 'conversion', {
+                      'send_to': 'AW-11367210761/RBplCOHhkpYZEIm-p6wq'
+                    });
+                  }
+                });
+                gtag('event', 'conversion', {'send_to': 'AW-11367210761/oIR1COThkpYZEIm-p6wq'});
+              `,
+            }}
+          />
         </body>
       </Html>
     );
   }
 }
-
-MyDocument.getInitialProps = async (ctx) => {
-  // Render app and page and get the context of the page with collected side effects.
-  const originalRenderPage = ctx.renderPage;
-
-  const cache = createEmotionCache();
-  const { extractCriticalToChunks } = createEmotionServer(cache);
-
-  ctx.renderPage = () =>
-    originalRenderPage({
-      enhanceApp: (App) =>
-        function EnhanceApp(props) {
-          // eslint-disable-line
-          return <App emotionCache={cache} {...props} />;
-        },
-    });
-
-  const initialProps = await Document.getInitialProps(ctx);
-  const { pathname } = ctx;
-  const lang = pathname.startsWith("/ro") ? "ro" : "en";
-  const emotionStyles = extractCriticalToChunks(initialProps.html);
-  const emotionStyleTags = emotionStyles.styles.map((style) => (
-    <style
-      data-emotion={`${style.key} ${style.ids.join(" ")}`}
-      key={style.key}
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: style.css }}
-    />
-  ));
-
-  return {
-    ...initialProps,
-    emotionStyleTags,
-    namespacesRequired: ["common", "starter-landing"],
-    lang,
-  };
-};
 
 export default MyDocument;

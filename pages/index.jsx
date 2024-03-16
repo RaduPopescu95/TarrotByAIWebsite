@@ -102,7 +102,7 @@ export async function getServerSideProps({ locale }) {
 }
 function Landing(props) {
   const { articles: arti } = useDatabase();
-  const { currentUser, isGuestUser } = useAuth();
+  // const { currentUser, isGuestUser } = useAuth();
   const {
     oreNorocoase,
     numereNorocoase,
@@ -128,7 +128,7 @@ function Landing(props) {
   const router = useRouter();
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://mattealeconsulting.com";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   // In your component
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
@@ -207,6 +207,7 @@ function Landing(props) {
   };
 
   useEffect(() => {
+    console.log("asdad.....")
     const newStartIndex = (currentPage - 1) * itemsPerPage;
     const newEndIndex = newStartIndex + itemsPerPage;
     const newArticlesToDisplay = filteredArticles.slice(
@@ -217,30 +218,30 @@ function Landing(props) {
     setArticlesToDisplay(newArticlesToDisplay);
   }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
 
-  useEffect(() => {
-    // handleAddToFirestore();
-    const currentTime = new Date(); // Obține timpul actual
-console.log("current time...", currentTime)
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
-  }, []);
+//   useEffect(() => {
+//     // handleAddToFirestore();
+//     const currentTime = new Date(); // Obține timpul actual
+// console.log("current time...", currentTime)
+//     if (!currentUser && !isGuestUser) {
+//       router.push("login");
+//     }
+//   }, []);
 
-  if ((!currentUser && !isGuestUser) || loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          width: "100%",
-        }}
-      >
-        <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
-      </div>
-    );
-  }
+//   if ((!currentUser && !isGuestUser) || loading) {
+//     return (
+//       <div
+//         style={{
+//           display: "flex",
+//           justifyContent: "center",
+//           alignItems: "center",
+//           height: "100vh",
+//           width: "100%",
+//         }}
+//       >
+//         <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
+//       </div>
+//     );
+//   }
   return (
     <Fragment>
       <Head>

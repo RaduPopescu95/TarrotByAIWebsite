@@ -10,10 +10,30 @@ import { appWithTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import "./globals.css";
 import { DatabaseProvider } from "../context/DatabaseContext";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
 function MyApp({ Component, pageProps }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Function to handle sending page view events to Google Analytics
+
+
+    // Remove the preloader once the app is hydrated
+    const preloader = document.getElementById("preloader");
+    if (preloader) {
+      preloader.style.display = "none";
+    }
+
+    // Unsubscribe from route changes on cleanup
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router.events]);
+
   return (
     <DatabaseProvider>
       <AuthProvider>

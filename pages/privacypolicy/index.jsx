@@ -4,10 +4,10 @@ import Typography from "@mui/material/Typography";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Head from "next/head";
-import { useTranslation } from "next-i18next";
+
 
 const CookiesPrivacyPolicyPage = () => {
-  const { t } = useTranslation("common");
+
   return (
     <>
       <Head>

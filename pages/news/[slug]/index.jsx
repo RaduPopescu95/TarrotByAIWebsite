@@ -120,20 +120,17 @@ function BlogDetail(props) {
 
   return (
     <Fragment>
+      <Head>
+        <title>{filteredArticle?.info?.ro?.nume || 'Titlu implicit'}</title>
+        <meta name="description" content={filteredArticle?.info?.ro?.descriere || 'Descriere implicită'} />
+        <meta property="og:title" content={filteredArticle?.info?.ro?.nume || 'Titlu implicit'} />
+        <meta property="og:description" content={filteredArticle?.info?.ro?.descriere || 'Descriere implicită'} />
+        <meta property="og:url" content={filteredArticle?.currentUrl || 'https://example.com'} />
+        <meta property="og:image" content={filteredArticle?.image?.finalUri || 'https://example.com/default-image.jpg'} />
+      </Head>
+    
       <CssBaseline />
      
-        <Head>
-          <title>{filteredArticle?.info?.ro.nume}</title>
-          <meta name="description" content={filteredArticle?.info?.ro.descriere} />
-          <meta property="og:title" content={filteredArticle?.info?.ro.nume} />
-          <meta
-            property="og:description"
-            content={filteredArticle?.info?.ro.descriere}
-          />
-          <meta property="og:url" content={filteredArticle?.currentUrl} />
-          <meta property="og:image" content={filteredArticle?.image?.finalUri} />
-        </Head>
-    
 
       <Header
         onToggleDark={onToggleDark}
