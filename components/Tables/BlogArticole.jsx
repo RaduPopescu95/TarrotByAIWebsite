@@ -24,11 +24,15 @@ import {
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 
-export default function BlogArticole() {
+
+
+
+export default function BlogArticole({articles}) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [db, setDb] = useState([]);
+
+  const [db, setDb] = useState([...articles]);
 
   const [dialogData, setDialogData] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
@@ -37,6 +41,7 @@ export default function BlogArticole() {
   const [openSoloPopup, setOpenSoloPopup] = React.useState(false);
   const settingsRef = React.useRef(null);
   const classes = useStyles();
+
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -99,23 +104,24 @@ export default function BlogArticole() {
     }
   };
 
-  const handleGetData = async () => {
-    console.log("Start......")
-    setIsLoading(true);
-    const data = await handleGetFirestore("BlogArticole");
+  // ELIMINAT SI INLOCUIT CU GETSERVERSIDEPROPS
+  // const handleGetData = async () => {
+  //   console.log("Start......")
+  //   setIsLoading(true);
+  //   const data = await handleGetFirestore("BlogArticole");
 
-    let rawData = [...data];
-    const sortedArr = rawData.sort((a, b) => a.id - b.id);
+  //   let rawData = [...data];
+  //   const sortedArr = rawData.sort((a, b) => a.id - b.id);
 
-    if (data) {
-      setDb([...sortedArr]);
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-      // Handle the case where servicesDB is undefined
-      // For example, display an error message or take appropriate action
-    }
-  };
+  //   if (data) {
+  //     setDb([...sortedArr]);
+  //     setIsLoading(false);
+  //   } else {
+  //     setIsLoading(false);
+  //     // Handle the case where servicesDB is undefined
+  //     // For example, display an error message or take appropriate action
+  //   }
+  // };
 
   const handleShowDialog = (item) => {
     console.log(item);
@@ -279,9 +285,9 @@ export default function BlogArticole() {
         timpProgramat,
         dataProgramata
       };
-
+ 
       // Folosește await pentru a aștepta finalizarea promisiunii
-      const dataReturned = await handleUploadFirestore(data, "BlogArticole");
+      const dataReturned = await handleUploadFirestore(data, "RegularNotifications");
 
       let newData = db;
 
@@ -299,10 +305,10 @@ export default function BlogArticole() {
     setOpenSoloPopup(!openSoloPopup);
   };
 
-  useEffect(() => {
-    handleGetData();
-    // console.log(db);
-  }, []);
+  // useEffect(() => {
+  //   handleGetData();
+  //   // console.log(db);
+  // }, []);
 
   return (
     <>
@@ -332,7 +338,7 @@ export default function BlogArticole() {
               <Stack direction="column" alignItems="center">
                 {isLoading ? (
                   <CircularProgress />
-                ) : db.length === 0 ? (
+                ) : articles.length === 0 ? (
                   <Typography
                     sx={{
                       fontSize: 20,
@@ -345,7 +351,7 @@ export default function BlogArticole() {
                   </Typography>
                 ) : (
                   <CustomTableContainer
-                    db={db}
+                    db={articles}
                     searchedDb={searchedDb}
                     searchValue={searchValue}
                     handleShowDialog={handleShowDialog}
