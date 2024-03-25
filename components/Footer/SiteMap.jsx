@@ -33,7 +33,7 @@ function Copyright() {
       display="block"
       color="textSecondary"
     >
-      &copy;&nbsp; 2023. Cristina Zurba. {t("RightsReserved")}.
+      &copy;&nbsp; 2024. Cristina Zurba. {t("RightsReserved")}.
     </Typography>
   );
 }
