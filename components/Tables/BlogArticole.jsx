@@ -287,7 +287,7 @@ export default function BlogArticole({articles}) {
       };
  
       // Folosește await pentru a aștepta finalizarea promisiunii
-      const dataReturned = await handleUploadFirestore(data, "RegularNotifications");
+      const dataReturned = await handleUploadFirestore(data, "BlogArticole");
 
       let newData = db;
 
