@@ -63,8 +63,8 @@ export const handleUploadFirestore = async (data, location) => {
 
     // preia length of location collection
 
-    // const collectionLength = await getFirestoreCollectionLength(location);
-    // let id = collectionLength + 1;
+    const collectionLength = await getFirestoreCollectionLength(location);
+    let id = collectionLength + 1;
 
     //current date
     const dateTime = getCurrentDateTime();
@@ -73,9 +73,9 @@ export const handleUploadFirestore = async (data, location) => {
     const newData = {
       ...data,
       documentId: docRef.id,
-      // id,
-      // firstUploadtime: data.timpProgramat.length > 0 ? data.timpProgramat : dateTime.time,
-      // firstUploadDate: data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
+      id,
+      firstUploadtime: data.timpProgramat.length > 0 ? data.timpProgramat : dateTime.time,
+      firstUploadDate: data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
 
     };
 
