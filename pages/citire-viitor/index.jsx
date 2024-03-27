@@ -346,6 +346,8 @@ export function CitirePersonalizata({ services }) {
           name="description"
           content="Explore the possibilities of your future with Cristina Zurba's insightful future readings. Dive into forecasts and guidance for what lies ahead, offering clarity and direction for your path forward. Ideal for those curious about their future and seeking enlightened guidance."
         />
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Future Reading | Cristina Zurba" />
         <meta

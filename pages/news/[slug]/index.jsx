@@ -121,6 +121,8 @@ function BlogDetail(props) {
     <Fragment>
       <Head>
         <title>{filteredArticle?.info?.ro?.nume || 'Titlu implicit'}</title>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"></script>
         <meta name="description" content={filteredArticle?.info?.ro?.descriere || 'Descriere implicită'} />
         <meta property="og:title" content={filteredArticle?.info?.ro?.nume || 'Titlu implicit'} />
         <meta property="og:description" content={filteredArticle?.info?.ro?.descriere || 'Descriere implicită'} />

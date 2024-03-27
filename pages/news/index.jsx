@@ -200,6 +200,8 @@ function BlogHome(props) {
           name="description"
           content="Embark on a journey of self-discovery with Cristina Zurba's News. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="News | Cristina Zurba" />
         <meta

@@ -130,6 +130,8 @@ export function NumarNorocos() {
           name="description"
           content="Discover Cristina Zurba's collection of motivational quotes, designed to inspire and uplift. Each quote is carefully chosen to boost motivation and provide encouragement. Perfect for those seeking a dose of positivity and inspiration in their daily lives."
         />
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta
           property="og:title"

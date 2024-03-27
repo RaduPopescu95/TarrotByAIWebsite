@@ -213,6 +213,8 @@ export function Landing({ services }) {
           name="description"
           content="Cristina Zurba is an interactive tarot card game website developed by well-known youtuber, tarot reader and astrologer Cristina Zurba."
         />
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Cristina Zurba" />
         <meta
