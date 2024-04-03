@@ -41,6 +41,8 @@ import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { useDatabase } from "../context/DatabaseContext";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, startAfter } from "firebase/firestore";
+import { db } from "../firebase";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -54,9 +56,18 @@ import Footer from "../components/Footer";
 
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
-  const dataArt = await handleGetFirestore("BlogArticole");
-  console.log("Articole...aici..primull.....", dataArt.length)
-  let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
+  let PAGE_SIZE = 12;
+  console.log("Start fetch...")
+  let articlesRef = collection(db, 'BlogArticole');
+  let q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), limit(PAGE_SIZE));
+
+
+  const documentSnapshots = await getDocs(q);
+  let articlesData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  articlesData = filterArticlesBeforeCurrentTime(articlesData);
+
+  const lastVisibleId = documentSnapshots.docs.length > 0 ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id : null;
+  
   console.log("Articole...aici...", articlesData.length)
   let articles = {};
   if (articlesData.length > 0) {
@@ -97,6 +108,7 @@ export async function getServerSideProps({ locale }) {
   return {
     props: {
       articles,
+      lastVisibleId,
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };
@@ -124,7 +136,7 @@ function Landing(props) {
   const detectedLng = languageDetector.detect();
 
   const { classes } = useSpacing();
-  const { articles } = props;
+  const { articles, lastVisibleId  } = props;
 
   const router = useRouter();
 
@@ -139,7 +151,9 @@ function Landing(props) {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 4; // Setează numărul de articole pe pagină la 4
+  const [lastVisible, setLastVisible] = useState(null);
 
   // Calculează indexul de start și de sfârșit pentru articolele de pe pagina curentă
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -217,6 +231,24 @@ function Landing(props) {
 
     setArticlesToDisplay(newArticlesToDisplay);
   }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
+
+  useEffect(() => {
+    const loadInitialLastVisible = async () => {
+      if (lastVisibleId) {
+        const lastVisibleDocRef = doc(db, 'BlogArticole', lastVisibleId);
+        const lastVisibleSnapshot = await getDoc(lastVisibleDocRef);
+        if (lastVisibleSnapshot.exists()) {
+          setLastVisible(lastVisibleSnapshot);
+        } else {
+          console.log("Nu s-a găsit documentul pentru lastVisibleId.");
+        }
+      }
+    };
+
+    loadInitialLastVisible();
+  }, [lastVisibleId]); // Dependența de lastVisibleId asigură că efectul se rulează la încărcarea componentei
+
+
 
 //   useEffect(() => {
 //     // handleAddToFirestore();

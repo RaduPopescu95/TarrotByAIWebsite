@@ -31,6 +31,7 @@ function PostWidget({ lastFiveArticles }) {
   return (
     <Paper
       title={t("Latest Articles")}
+      // title={"asdasds"}
       icon="ion-android-bookmark"
       whiteBg
       desc=""

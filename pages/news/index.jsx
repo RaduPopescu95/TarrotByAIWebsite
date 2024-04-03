@@ -26,6 +26,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import languageDetector from "../../lib/languageDetector";
 import { useTranslation } from "next-i18next";
 import {
+  fetchArticlesPage,
   handleGetFirestore,
   handleQueryFirestore,
 } from "../../utils/firestoreUtils";
@@ -33,6 +34,8 @@ import { colors } from "../../utils/colors";
 import FilterBar from "../../components/Blog/FilterBar/FilterBar";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
+import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
+import { db } from "../../firebase";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -46,10 +49,19 @@ import Footer from "../../components/Footer";
 
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
-  const dataArt = await handleGetFirestore("BlogArticole");
+  let PAGE_SIZE = 12;
+  console.log("Start fetch...")
+  let articlesRef = collection(db, 'BlogArticole');
+  let q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), limit(PAGE_SIZE));
 
-  let articlesData  = filterArticlesBeforeCurrentTime(dataArt)
 
+  const documentSnapshots = await getDocs(q);
+  let articlesData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  articlesData = filterArticlesBeforeCurrentTime(articlesData);
+
+  const lastVisibleId = documentSnapshots.docs.length > 0 ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id : null;
+  
+  console.log("Articole...aici...", articlesData.length)
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -89,6 +101,7 @@ export async function getServerSideProps({ locale }) {
   return {
     props: {
       articles,
+      lastVisibleId,
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };

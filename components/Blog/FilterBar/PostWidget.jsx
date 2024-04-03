@@ -27,7 +27,8 @@ function PostWidget({ handleFilter, filterItem }) {
   const route = useRouter();
 
   return (
-    <Paper title={t("Filters")} icon="ion-android-bookmark" whiteBg desc="">
+    // <Paper title={t("Filters")} icon="ion-android-bookmark" whiteBg desc="">
+    <Paper title={"filters"} icon="ion-android-bookmark" whiteBg desc="">
       <div
         className={classes.albumRoot}
         style={{ backgroundColor: "transparent" }}
@@ -52,6 +53,7 @@ function PostWidget({ handleFilter, filterItem }) {
             >
               <ListItemText
                 primary={t(item)}
+                // primary={"asd"}
                 sx={{
                   ".MuiTypography-root": {
                     // Aplică stilul pentru toate elementele Typography din ListItemText

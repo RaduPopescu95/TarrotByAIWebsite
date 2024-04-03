@@ -16,9 +16,12 @@ import {
   collectionGroup,
   startAt,
   getCountFromServer,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { authentication, db } from "../firebase";
 import { handleDeleteAccount } from "./authUtils";
+import { filterArticlesBeforeCurrentTime } from "./commonUtils";
 import { getCurrentDateTime } from "../utils/timeUtils";
 
 const auth = authentication;
@@ -281,3 +284,30 @@ export const handlePaginateFirestore = (location) => {
   const citiesRef = collection(db, "Users", auth.currentUser.uid, location);
   const q = query(citiesRef, startAt(1000000));
 };
+
+
+export const fetchArticlesPage = async (refresh = false, lastVisible = null) => {
+ try{ let PAGE_SIZE = 4;
+  let articles = [];
+  
+  let articlesRef = collection(db, 'BlogArticole');
+  let q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), limit(PAGE_SIZE));
+  
+  if (!refresh && lastVisible) {
+    q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), startAfter(lastVisible), limit(PAGE_SIZE));
+  }
+  
+  const documentSnapshots = await getDocs(q);
+  let moreArticles = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  moreArticles = filterArticlesBeforeCurrentTime(moreArticles);
+  articles = refresh ? moreArticles : [...articles, ...moreArticles];
+  console.log("Start fetch...", articles)
+  lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+  return {articles, lastVisible}
+} catch(err) {
+  console.error("Error fetching articles:", err);
+  return { articles: [], lastVisible: null }; // Returnează o valoare implicită pentru a evita erorile
+}
+
+};
+

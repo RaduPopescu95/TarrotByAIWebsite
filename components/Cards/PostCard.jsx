@@ -21,10 +21,6 @@ function PostCard(props) {
   const { date, title, desc, img, orientation, type, href, id } = props;
   const { t } = useTranslation("common");
 
-  const route = useRouter();
-
-  useEffect(() => {}, []);
-
   return (
     <Card
       className={cx(classes.newsCard, classes[orientation], classes[type])}
