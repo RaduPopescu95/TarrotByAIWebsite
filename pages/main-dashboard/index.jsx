@@ -259,8 +259,8 @@ export function Landing({ services }) {
                     key={index}
                     item
                     xs={6}
-                    sm={3}
-                    md={3}
+                    sm={4}
+                    md={4}
                     sx={{
                       display: "flex",
                       justifyContent: "center",
