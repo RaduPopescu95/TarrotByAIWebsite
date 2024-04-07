@@ -152,9 +152,9 @@ export function Landing({ services }) {
     { text: t("luckyNumber"), route: "/numar-norocos" },
     { text: t("luckyColor"), route: "/culoare-norocoasa" },
     { text: t("luckyHours"), route: "/ora-norocoasa" },
-    { text: t("CeGandeste"), route: "/ce-gandeste" },
-    { text: t("CeSimte"), route: "/ce-simte" },
-    { text: t("CarteaTa"), route: "/cartea-ta" },
+    // { text: t("CeGandeste"), route: "/ce-gandeste" },
+    // { text: t("CeSimte"), route: "/ce-simte" },
+    // { text: t("CarteaTa"), route: "/cartea-ta" },
   ];
 
   const router = useRouter();
