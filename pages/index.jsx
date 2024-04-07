@@ -59,7 +59,9 @@ export async function getServerSideProps({ locale }) {
   let PAGE_SIZE = 12;
   console.log("Start fetch...")
   let articlesRef = collection(db, 'BlogArticole');
-  let q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), limit(PAGE_SIZE));
+      let q = query(articlesRef, orderBy('firstUploadTimestamp', 'desc'), limit(PAGE_SIZE));
+
+
 
 
   const documentSnapshots = await getDocs(q);

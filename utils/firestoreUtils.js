@@ -71,6 +71,19 @@ export const handleUploadFirestore = async (data, location) => {
 
     //current date
     const dateTime = getCurrentDateTime();
+    let date;
+    if(data.timpProgramat.length > 0){
+      const dateParts = data.dataProgramata.split('-');
+      const timeParts = data.timpProgramat.split(':');
+      date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+      
+    }else{
+      const dateParts = dateTime.date.split('-');
+      const timeParts = dateTime.time.split(':');
+      date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+
+    }
+
 
     // Adaugă ID-ul generat în obiectul data
     const newData = {
@@ -79,6 +92,7 @@ export const handleUploadFirestore = async (data, location) => {
       id,
       firstUploadtime: data.timpProgramat.length > 0 ? data.timpProgramat : dateTime.time,
       firstUploadDate: data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
+      firstUploadTimestamp:date
 
     };
 

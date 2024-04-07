@@ -200,7 +200,7 @@ export const ApiDataProvider = ({ children }) => {
       localStorage.setItem("accessCount", accessCount.toString());
 
       // Verifică dacă trebuie să actualizezi datele (la a 7-a accesare)
-      const shouldRefreshData = accessCount % 50 === 0;
+      const shouldRefreshData = accessCount % 100 === 0;
 
       const getDataOrFetch = async (category, key) => {
         console.log("Start fetch from firebase real time or localstorage");

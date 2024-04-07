@@ -212,10 +212,23 @@ export default function BlogArticole({articles}) {
           let data;
           if (image.length === 0) {
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
+            let date;
+            if(timpProgramat.length > 0){
+              const dateParts = dataProgramata.split('-');
+              const timeParts = timpProgramat.split(':');
+              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+              
+            }else{
+              const dateParts = item.firstUploadDate.split('-');
+              const timeParts = item.firstUploadTime.split(':');
+              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+        
+            }
             data = {
               ...item,
               firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
               firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
+              firstUploadTimestamp:date,
               info,
               image: initialImage,
               categorie,
@@ -237,10 +250,24 @@ export default function BlogArticole({articles}) {
               
             );
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
+            let date;
+            if(timpProgramat.length > 0){
+              const dateParts = dataProgramata.split('-');
+              const timeParts = timpProgramat.split(':');
+              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+              
+            }else{
+              const dateParts = item.firstUploadDate.split('-');
+              const timeParts = item.firstUploadTime.split(':');
+              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+        
+            }
+        
             data = {
               ...item,
               firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
               firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
+              firstUploadTimestamp:date,
               info,
               image: newImage,
               categorie,
