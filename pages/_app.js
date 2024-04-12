@@ -18,25 +18,25 @@ const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  // const { t, i18n } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
 
-  // useEffect(() => {
-  //   // Verificăm dacă există o limbă salvată în localStorage
-  //   const savedLocale = localStorage.getItem("locale");
+  useEffect(() => {
+    // Verificăm dacă există o limbă salvată în localStorage
+    const savedLocale = localStorage.getItem("locale");
 
-  //   if (savedLocale && savedLocale !== router.locale) {
-  //     // Dacă există o limbă salvată și este diferită de limba curentă a routerului,
-  //     // actualizăm routerul pentru a folosi limba salvată
-  //     const { pathname, asPath, query } = router;
-  //     router.push({ pathname, query }, asPath, {
-  //       locale: savedLocale,
-  //       shallow: true,
-  //     });
-  //     // Actualizează limba în i18n
-  //     i18n.changeLanguage(savedLocale);
-  //     languageDetector.cache(savedLocale);
-  //   }
-  // }, []); // Dependințele goale înseamnă că efectul va rula o singură dată la încărcarea componentei
+    if (savedLocale && savedLocale !== router.locale) {
+      // Dacă există o limbă salvată și este diferită de limba curentă a routerului,
+      // actualizăm routerul pentru a folosi limba salvată
+      const { pathname, asPath, query } = router;
+      router.push({ pathname, query }, asPath, {
+        locale: savedLocale,
+        shallow: true,
+      });
+      // Actualizează limba în i18n
+      // i18n.changeLanguage(savedLocale);
+      // languageDetector.cache(savedLocale);
+    }
+  }, []); // Dependințele goale înseamnă că efectul va rula o singură dată la încărcarea componentei
 
   return (
     <DatabaseProvider>
