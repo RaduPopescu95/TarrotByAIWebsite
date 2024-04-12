@@ -153,9 +153,9 @@ export function Landing({ services }) {
     { text: t("luckyColor"), route: "/culoare-norocoasa" },
     { text: t("luckyHours"), route: "/ora-norocoasa" },
     { text: t("motivationalQuotes"), route: "/citat-motivational" },
-    // { text: t("CeGandeste"), route: "/ce-gandeste" },
-    // { text: t("CeSimte"), route: "/ce-simte" },
-    // { text: t("CarteaTa"), route: "/cartea-ta" },
+    { text: t("CeGandeste"), route: "/ce-gandeste" },
+    { text: t("CeSimte"), route: "/ce-simte" },
+    { text: t("CarteaTa"), route: "/cartea-ta" },
   ];
 
   const router = useRouter();
@@ -216,8 +216,11 @@ export function Landing({ services }) {
           name="description"
           content="Cristina Zurba is an interactive tarot card game website developed by well-known youtuber, tarot reader and astrologer Cristina Zurba."
         />
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"
+        ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Cristina Zurba" />
         <meta

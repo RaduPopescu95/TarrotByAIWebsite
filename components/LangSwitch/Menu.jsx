@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "next-i18next";
 import CheckIcon from "@mui/icons-material/Check";
@@ -11,12 +11,19 @@ import i18nextConfig from "../../next-i18next.config";
 import languageDetector from "../../lib/languageDetector";
 
 const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
+  const [currentLocale, setCurrentLocale] = useState("");
   const router = useRouter();
   const { t } = useTranslation("common");
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem("locale") || "en"; // Presupunem 'en' ca default
+    setCurrentLocale(savedLocale);
+  }, []);
 
   const changeLang = (lang) => {
     console.log(lang);
     languageDetector.cache(lang);
+    localStorage.setItem("locale", lang);
     closePopup();
 
     if (i18nextConfig.ssg) {
@@ -34,6 +41,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
       }
       router.push(href);
     } else {
+      console.log("lang...", lang);
       const { pathname, asPath, query } = router;
       router.push({ pathname, query }, asPath, { locale: lang });
     }

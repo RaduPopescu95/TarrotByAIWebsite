@@ -41,7 +41,16 @@ import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { useDatabase } from "../context/DatabaseContext";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, startAfter } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  startAfter,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 // export async function getStaticProps() {
@@ -57,20 +66,27 @@ import { db } from "../firebase";
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   let PAGE_SIZE = 12;
-  console.log("Start fetch...")
-  let articlesRef = collection(db, 'BlogArticole');
-      let q = query(articlesRef, orderBy('firstUploadTimestamp', 'desc'), limit(PAGE_SIZE));
-
-
-
+  console.log("Start fetch...");
+  let articlesRef = collection(db, "BlogArticole");
+  let q = query(
+    articlesRef,
+    orderBy("firstUploadTimestamp", "desc"),
+    limit(PAGE_SIZE)
+  );
 
   const documentSnapshots = await getDocs(q);
-  let articlesData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let articlesData = documentSnapshots.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
   articlesData = filterArticlesBeforeCurrentTime(articlesData);
 
-  const lastVisibleId = documentSnapshots.docs.length > 0 ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id : null;
-  
-  console.log("Articole...aici...", articlesData.length)
+  const lastVisibleId =
+    documentSnapshots.docs.length > 0
+      ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
+      : null;
+
+  console.log("Articole...aici...", articlesData.length);
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -138,7 +154,7 @@ function Landing(props) {
   const detectedLng = languageDetector.detect();
 
   const { classes } = useSpacing();
-  const { articles, lastVisibleId  } = props;
+  const { articles, lastVisibleId } = props;
 
   const router = useRouter();
 
@@ -198,7 +214,6 @@ function Landing(props) {
   };
 
   const handleFilter = async (filterItem) => {
-    
     setFilterItem(filterItem); // Presupunând că ai o stare `filterItem` pentru a stoca categoria selectată
 
     let articlesData = [];
@@ -223,7 +238,7 @@ function Landing(props) {
   };
 
   useEffect(() => {
-    console.log("asdad.....")
+    console.log("asdad.....");
     const newStartIndex = (currentPage - 1) * itemsPerPage;
     const newEndIndex = newStartIndex + itemsPerPage;
     const newArticlesToDisplay = filteredArticles.slice(
@@ -237,7 +252,7 @@ function Landing(props) {
   useEffect(() => {
     const loadInitialLastVisible = async () => {
       if (lastVisibleId) {
-        const lastVisibleDocRef = doc(db, 'BlogArticole', lastVisibleId);
+        const lastVisibleDocRef = doc(db, "BlogArticole", lastVisibleId);
         const lastVisibleSnapshot = await getDoc(lastVisibleDocRef);
         if (lastVisibleSnapshot.exists()) {
           setLastVisible(lastVisibleSnapshot);
@@ -250,32 +265,30 @@ function Landing(props) {
     loadInitialLastVisible();
   }, [lastVisibleId]); // Dependența de lastVisibleId asigură că efectul se rulează la încărcarea componentei
 
+  //   useEffect(() => {
+  //     // handleAddToFirestore();
+  //     const currentTime = new Date(); // Obține timpul actual
+  // console.log("current time...", currentTime)
+  //     if (!currentUser && !isGuestUser) {
+  //       router.push("login");
+  //     }
+  //   }, []);
 
-
-//   useEffect(() => {
-//     // handleAddToFirestore();
-//     const currentTime = new Date(); // Obține timpul actual
-// console.log("current time...", currentTime)
-//     if (!currentUser && !isGuestUser) {
-//       router.push("login");
-//     }
-//   }, []);
-
-//   if ((!currentUser && !isGuestUser) || loading) {
-//     return (
-//       <div
-//         style={{
-//           display: "flex",
-//           justifyContent: "center",
-//           alignItems: "center",
-//           height: "100vh",
-//           width: "100%",
-//         }}
-//       >
-//         <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
-//       </div>
-//     );
-//   }
+  //   if ((!currentUser && !isGuestUser) || loading) {
+  //     return (
+  //       <div
+  //         style={{
+  //           display: "flex",
+  //           justifyContent: "center",
+  //           alignItems: "center",
+  //           height: "100vh",
+  //           width: "100%",
+  //         }}
+  //       >
+  //         <CircularProgress color="secondary" sx={{ fontSize: "100px" }} />
+  //       </div>
+  //     );
+  //   }
   return (
     <Fragment>
       <Head>

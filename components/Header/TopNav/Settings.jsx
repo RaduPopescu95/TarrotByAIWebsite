@@ -18,10 +18,16 @@ import { colors } from "../../../utils/colors";
 function Settings(props) {
   const { classes } = useStyles();
   const [open, setOpen] = useState(false);
+  const [currentLocale, setCurrentLocale] = useState("");
   const anchorRef = useRef(null);
 
   const { t, i18n } = useTranslation("common");
   const { toggleDark, toggleDir, invert, isMobile } = props;
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem("locale") || "en"; // Presupunem 'en' ca default
+    setCurrentLocale(savedLocale);
+  }, []);
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);

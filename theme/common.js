@@ -90,7 +90,7 @@ export const useSpacing = makeStyles({ uniqId: "spacing" })((theme) => ({
     },
   },
   wraperSection: {
-    height: "100vh",
+    height: "1000px",
     [theme.breakpoints.up("xs")]: {
       padding: "50px 15px",
     },

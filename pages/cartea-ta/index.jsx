@@ -120,9 +120,7 @@ const MediaCardConstantService = ({
       // console.log(item.image.finalUri);
 
       const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString(
-        "Ce gândește"
-      );
+      const categoryNameNormalized = normalizeString("Ce gândește");
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
@@ -180,11 +178,11 @@ const MediaCardConstantService = ({
   React.useEffect(() => {
     if (flipAllCards) {
       setFlipped(true);
-      // if (currentNumber === 1) {
-      //   setTimeout(() => {
-      //     getVariantaCarti(1);
-      //   }, 1000);
-      // }
+      if (currentNumber === 1) {
+        setTimeout(() => {
+          getVariantaCarti(1);
+        }, 1000);
+      }
     }
   }, [flipAllCards]);
 
@@ -375,14 +373,11 @@ export function CitirePersonalizata({ services }) {
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
 
-
     try {
       // console.log(item.image.finalUri);
 
       const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString(
-        "Ce gândește"
-      );
+      const categoryNameNormalized = normalizeString("Ce gândește");
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
@@ -391,7 +386,7 @@ export function CitirePersonalizata({ services }) {
         "categorie",
         categoryNameNormalized
       );
- 
+
       // Verificare dacă există elemente în array-ul filtrat
       if (filteredVariante.length > 0) {
         // Selectare aleatorie a unui element
@@ -515,7 +510,6 @@ export function CitirePersonalizata({ services }) {
   }, []); // Array gol de dependențe pentru a rula doar la montare
 
   React.useEffect(() => {
-
     if (!currentUser && !isGuestUser) {
       router.push("login");
     }
@@ -545,8 +539,11 @@ export function CitirePersonalizata({ services }) {
           name="description"
           content="Embark on a journey of self-discovery with Cristina Zurba's personal readings. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"
+        ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Personal Reading | Cristina Zurba" />
         <meta
@@ -614,33 +611,35 @@ export function CitirePersonalizata({ services }) {
                 }}
               >
                 <AnimatePresence>
-                {categoriiPersonalizate.arr && categoriiPersonalizate.arr.length > 0 && (
-  <React.Fragment>
-    {/* Presupunând că vreți să aplicați aceeași logică ca și cum ar fi fost parcurși într-un map */}
-    <Grid
-      item
-      xs={12}
-      sm={12}
-      md={12}
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <MediaCardConstantService
-        item={categoriiPersonalizate.arr[0]}
-        isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
-        index={0}
-        flipAllCards={flipAllCards}
-        setItem={setItem}
-        setImageCard={setImageCard}
-        conditieCategorie={categoriiPersonalizate.arr[0].info.ro.nume}
-      />
-    </Grid>
-  </React.Fragment>
-)}
-
+                  {categoriiPersonalizate.arr &&
+                    categoriiPersonalizate.arr.length > 0 && (
+                      <React.Fragment>
+                        {/* Presupunând că vreți să aplicați aceeași logică ca și cum ar fi fost parcurși într-un map */}
+                        <Grid
+                          item
+                          xs={12}
+                          sm={12}
+                          md={12}
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MediaCardConstantService
+                            item={categoriiPersonalizate.arr[0]}
+                            isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
+                            index={0}
+                            flipAllCards={flipAllCards}
+                            setItem={setItem}
+                            setImageCard={setImageCard}
+                            conditieCategorie={
+                              categoriiPersonalizate.arr[0].info.ro.nume
+                            }
+                          />
+                        </Grid>
+                      </React.Fragment>
+                    )}
                 </AnimatePresence>
               </Grid>
             </div>
