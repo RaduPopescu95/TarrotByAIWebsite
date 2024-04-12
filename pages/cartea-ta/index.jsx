@@ -111,6 +111,7 @@ const MediaCardConstantService = ({
   // Funcția pentru a schimba starea la click pe card
 
   const getVariantaCarti = async (index) => {
+    console.log(index);
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
     const conditieCategorie = categoriiPersonalizate.arr[index];
@@ -120,7 +121,7 @@ const MediaCardConstantService = ({
       // console.log(item.image.finalUri);
 
       const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString("Ce gândește");
+      const categoryNameNormalized = normalizeString("Energia generală");
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
@@ -180,7 +181,7 @@ const MediaCardConstantService = ({
       setFlipped(true);
       if (currentNumber === 1) {
         setTimeout(() => {
-          getVariantaCarti(1);
+          getVariantaCarti(0);
         }, 1000);
       }
     }
@@ -369,112 +370,11 @@ export function CitirePersonalizata({ services }) {
     setItem(item);
   };
 
-  const getVariantaCarti = async (index) => {
-    const card =
-      shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
-
-    try {
-      // console.log(item.image.finalUri);
-
-      const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString("Ce gândește");
-
-      const filteredVariante = await handleQueryFirestore(
-        "VarianteCarti",
-        "carte",
-        cardNameNormalized,
-        "categorie",
-        categoryNameNormalized
-      );
-
-      // Verificare dacă există elemente în array-ul filtrat
-      if (filteredVariante.length > 0) {
-        // Selectare aleatorie a unui element
-        const randomIndex = Math.floor(Math.random() * filteredVariante.length);
-        const selectedCard = filteredVariante[randomIndex];
-
-        // ---- START HISTORY ----
-        if (currentNumber !== 0) {
-          // console.log("sendToHistory...currentnr < 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          console.log("test...selected card....", selectedCard);
-          setTimeout(() => {
-            setItem(selectedCard);
-          }, 500);
-
-          // setSendToHistory([...arr]);
-        } else if (currentNumber === 0) {
-          // console.log("sendToHistory...currentnr === 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          // const auth = authentication;
-          // if (auth.currentUser) {
-          // console.log("Is user...saving personal reading...");
-          // const userLocation = `Users/${
-          //   auth.currentUser ? auth.currentUser.uid : ""
-          // }/PersonalReading`;
-          // if (arr.length > 0) {
-          //   handleUploadFirestoreSubcollection(arr, userLocation);
-          // }
-          // }
-
-          //   // setSendToHistory([]);
-          // console.log(item);
-          // updateNumber(8);
-          setTimeout(() => {
-            setItem(selectedCard);
-          }, 500);
-        }
-      } else {
-        console.log(
-          "Nicio carte nu a fost găsită pentru criteriile specificate."
-        );
-      }
-    } catch (err) {
-      console.log("Error at navigateToPersonalizedReading...", err);
-    }
-  };
-
   const handleVideoEnd = async () => {
     console.log("Video-ul s-a terminat nou!");
     setItem({});
     console.log("Videoclipul s-a terminat!");
     console.log("currentNumber...", currentNumber);
-    // switch (currentNumber) {
-    //   case 1:
-    //     await getVariantaCarti(4);
-    //     updateNumber(4);
-    //     break;
-    //   case 4:
-    //     await getVariantaCarti(7);
-    //     updateNumber(7);
-    //     break;
-    //   case 7:
-    //     await getVariantaCarti(5);
-    //     updateNumber(5);
-    //     break;
-    //   case 5:
-    //     await getVariantaCarti(2);
-    //     updateNumber(2);
-    //     break;
-    //   case 2:
-    //     await getVariantaCarti(6);
-    //     updateNumber(6);
-    //     break;
-    //   case 6:
-    //     await getVariantaCarti(3);
-    //     updateNumber(3);
-    //     break;
-    //   case 3:
-    //     await getVariantaCarti(0);
-    //     updateNumber(0);
-    //     break;
-    //   case 0:
-    //     await getVariantaCarti(8);
-    //     updateNumber(8);
-    //     break;
-    // }
 
     // Aici puteți adăuga orice logică suplimentară dorită după terminarea videoclipului
   };
@@ -627,7 +527,7 @@ export function CitirePersonalizata({ services }) {
                           }}
                         >
                           <MediaCardConstantService
-                            item={categoriiPersonalizate.arr[0]}
+                            item={categoriiPersonalizate.arr[1]}
                             isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
                             index={0}
                             flipAllCards={flipAllCards}

@@ -120,9 +120,7 @@ const MediaCardConstantService = ({
       // console.log(item.image.finalUri);
 
       const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString(
-        "Ce simte"
-      );
+      const categoryNameNormalized = normalizeString("Ce gândește");
 
       const filteredVariante = await handleQueryFirestore(
         "VarianteCarti",
@@ -180,11 +178,11 @@ const MediaCardConstantService = ({
   React.useEffect(() => {
     if (flipAllCards) {
       setFlipped(true);
-      // if (currentNumber === 1) {
-      //   setTimeout(() => {
-      //     getVariantaCarti(1);
-      //   }, 1000);
-      // }
+      if (currentNumber === 1) {
+        setTimeout(() => {
+          getVariantaCarti(0);
+        }, 1000);
+      }
     }
   }, [flipAllCards]);
 
@@ -371,115 +369,11 @@ export function CitirePersonalizata({ services }) {
     setItem(item);
   };
 
-  const getVariantaCarti = async (index) => {
-    const card =
-      shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
-
-
-    try {
-      // console.log(item.image.finalUri);
-
-      const cardNameNormalized = normalizeString(card.info.ro.nume);
-      const categoryNameNormalized = normalizeString(
-        "Ce simte"
-      );
-
-      const filteredVariante = await handleQueryFirestore(
-        "VarianteCarti",
-        "carte",
-        cardNameNormalized,
-        "categorie",
-        categoryNameNormalized
-      );
- 
-      // Verificare dacă există elemente în array-ul filtrat
-      if (filteredVariante.length > 0) {
-        // Selectare aleatorie a unui element
-        const randomIndex = Math.floor(Math.random() * filteredVariante.length);
-        const selectedCard = filteredVariante[randomIndex];
-
-        // ---- START HISTORY ----
-        if (currentNumber !== 0) {
-          // console.log("sendToHistory...currentnr < 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          console.log("test...selected card....", selectedCard);
-          setTimeout(() => {
-            setItem(selectedCard);
-          }, 500);
-
-          // setSendToHistory([...arr]);
-        } else if (currentNumber === 0) {
-          // console.log("sendToHistory...currentnr === 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          // const auth = authentication;
-          // if (auth.currentUser) {
-          // console.log("Is user...saving personal reading...");
-          // const userLocation = `Users/${
-          //   auth.currentUser ? auth.currentUser.uid : ""
-          // }/PersonalReading`;
-          // if (arr.length > 0) {
-          //   handleUploadFirestoreSubcollection(arr, userLocation);
-          // }
-          // }
-
-          //   // setSendToHistory([]);
-          // console.log(item);
-          // updateNumber(8);
-          setTimeout(() => {
-            setItem(selectedCard);
-          }, 500);
-        }
-      } else {
-        console.log(
-          "Nicio carte nu a fost găsită pentru criteriile specificate."
-        );
-      }
-    } catch (err) {
-      console.log("Error at navigateToPersonalizedReading...", err);
-    }
-  };
-
   const handleVideoEnd = async () => {
     console.log("Video-ul s-a terminat nou!");
     setItem({});
     console.log("Videoclipul s-a terminat!");
     console.log("currentNumber...", currentNumber);
-    // switch (currentNumber) {
-    //   case 1:
-    //     await getVariantaCarti(4);
-    //     updateNumber(4);
-    //     break;
-    //   case 4:
-    //     await getVariantaCarti(7);
-    //     updateNumber(7);
-    //     break;
-    //   case 7:
-    //     await getVariantaCarti(5);
-    //     updateNumber(5);
-    //     break;
-    //   case 5:
-    //     await getVariantaCarti(2);
-    //     updateNumber(2);
-    //     break;
-    //   case 2:
-    //     await getVariantaCarti(6);
-    //     updateNumber(6);
-    //     break;
-    //   case 6:
-    //     await getVariantaCarti(3);
-    //     updateNumber(3);
-    //     break;
-    //   case 3:
-    //     await getVariantaCarti(0);
-    //     updateNumber(0);
-    //     break;
-    //   case 0:
-    //     await getVariantaCarti(8);
-    //     updateNumber(8);
-    //     break;
-    // }
 
     // Aici puteți adăuga orice logică suplimentară dorită după terminarea videoclipului
   };
@@ -515,7 +409,6 @@ export function CitirePersonalizata({ services }) {
   }, []); // Array gol de dependențe pentru a rula doar la montare
 
   React.useEffect(() => {
-
     if (!currentUser && !isGuestUser) {
       router.push("login");
     }
@@ -545,8 +438,11 @@ export function CitirePersonalizata({ services }) {
           name="description"
           content="Embark on a journey of self-discovery with Cristina Zurba's personal readings. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"
+        ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Personal Reading | Cristina Zurba" />
         <meta
@@ -614,33 +510,35 @@ export function CitirePersonalizata({ services }) {
                 }}
               >
                 <AnimatePresence>
-                {categoriiPersonalizate.arr && categoriiPersonalizate.arr.length > 0 && (
-  <React.Fragment>
-    {/* Presupunând că vreți să aplicați aceeași logică ca și cum ar fi fost parcurși într-un map */}
-    <Grid
-      item
-      xs={12}
-      sm={12}
-      md={12}
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <MediaCardConstantService
-        item={categoriiPersonalizate.arr[0]}
-        isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
-        index={0}
-        flipAllCards={flipAllCards}
-        setItem={setItem}
-        setImageCard={setImageCard}
-        conditieCategorie={categoriiPersonalizate.arr[0].info.ro.nume}
-      />
-    </Grid>
-  </React.Fragment>
-)}
-
+                  {categoriiPersonalizate.arr &&
+                    categoriiPersonalizate.arr.length > 0 && (
+                      <React.Fragment>
+                        {/* Presupunând că vreți să aplicați aceeași logică ca și cum ar fi fost parcurși într-un map */}
+                        <Grid
+                          item
+                          xs={12}
+                          sm={12}
+                          md={12}
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MediaCardConstantService
+                            item={categoriiPersonalizate.arr[0]}
+                            isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
+                            index={0}
+                            flipAllCards={flipAllCards}
+                            setItem={setItem}
+                            setImageCard={setImageCard}
+                            conditieCategorie={
+                              categoriiPersonalizate.arr[0].info.ro.nume
+                            }
+                          />
+                        </Grid>
+                      </React.Fragment>
+                    )}
                 </AnimatePresence>
               </Grid>
             </div>
