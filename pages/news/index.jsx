@@ -36,6 +36,7 @@ import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { db } from "../../firebase";
+import { useAuth } from "../../context/AuthContext";
 
 // export async function getStaticProps() {
 //   const articles = await handleGetArticles();
@@ -50,18 +51,28 @@ import { db } from "../../firebase";
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   let PAGE_SIZE = 12;
-  console.log("Start fetch...")
-  let articlesRef = collection(db, 'BlogArticole');
-  let q = query(articlesRef, orderBy('firstUploadDate', 'desc'), orderBy('firstUploadtime', 'desc'), limit(PAGE_SIZE));
-
+  console.log("Start fetch...");
+  let articlesRef = collection(db, "BlogArticole");
+  let q = query(
+    articlesRef,
+    orderBy("firstUploadDate", "desc"),
+    orderBy("firstUploadtime", "desc"),
+    limit(PAGE_SIZE)
+  );
 
   const documentSnapshots = await getDocs(q);
-  let articlesData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let articlesData = documentSnapshots.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
   articlesData = filterArticlesBeforeCurrentTime(articlesData);
 
-  const lastVisibleId = documentSnapshots.docs.length > 0 ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id : null;
-  
-  console.log("Articole...aici...", articlesData.length)
+  const lastVisibleId =
+    documentSnapshots.docs.length > 0
+      ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
+      : null;
+
+  console.log("Articole...aici...", articlesData.length);
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -109,6 +120,7 @@ export async function getServerSideProps({ locale }) {
 function BlogHome(props) {
   const { t } = useTranslation("common");
   const detectedLng = languageDetector.detect();
+  const { currentUser, isGuestUser } = useAuth();
 
   const { classes } = useSpacing();
   const { articles } = props;
@@ -168,7 +180,6 @@ function BlogHome(props) {
   };
 
   const handleFilter = async (filterItem) => {
-    
     setFilterItem(filterItem); // Presupunând că ai o stare `filterItem` pentru a stoca categoria selectată
 
     let articlesData = [];
@@ -193,7 +204,7 @@ function BlogHome(props) {
   };
 
   useEffect(() => {
-    console.log("asdad....")
+    console.log("asdad....");
     const newStartIndex = (currentPage - 1) * itemsPerPage;
     const newEndIndex = newStartIndex + itemsPerPage;
     const newArticlesToDisplay = filteredArticles.slice(
@@ -204,6 +215,12 @@ function BlogHome(props) {
     setArticlesToDisplay(newArticlesToDisplay);
   }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
 
+  useEffect(() => {
+    if (!currentUser && !isGuestUser) {
+      router.push("login");
+    }
+  }, []);
+
   // return;
   return (
     <Fragment>
@@ -213,8 +230,11 @@ function BlogHome(props) {
           name="description"
           content="Embark on a journey of self-discovery with Cristina Zurba's News. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossorigin="anonymous"
+        ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="News | Cristina Zurba" />
         <meta

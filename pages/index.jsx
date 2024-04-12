@@ -133,7 +133,7 @@ export async function getServerSideProps({ locale }) {
 }
 function Landing(props) {
   const { articles: arti } = useDatabase();
-  // const { currentUser, isGuestUser } = useAuth();
+  const { currentUser, isGuestUser } = useAuth();
   const {
     oreNorocoase,
     numereNorocoase,
@@ -289,6 +289,13 @@ function Landing(props) {
   //       </div>
   //     );
   //   }
+
+  useEffect(() => {
+    if (!currentUser && !isGuestUser) {
+      router.push("login");
+    }
+  }, []);
+
   return (
     <Fragment>
       <Head>
