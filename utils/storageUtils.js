@@ -1,4 +1,5 @@
 import { authentication, storage } from "../firebase";
+import imageCompression from "browser-image-compression";
 import {
   deleteObject,
   getDownloadURL,
@@ -61,8 +62,18 @@ export const uploadImage = async (
       contentType: "image/jpeg",
     };
 
+    // Options for image compression
+    const options = {
+      maxSizeMB: 0.2, // (Max file size in MB)
+      maxWidthOrHeight: 1920, // (Compressed files are scaled to these dimensions)
+      useWebWorker: true, // (Use a web worker to perform the compression in a separate thread)
+    };
+
+    // Compress the image file
+    const compressedFile = await imageCompression(imageUpload, options);
+
     // Upload the image with metadata
-    const snapshot = await uploadBytes(imageRef, imageUpload, metadata);
+    const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
 
     // Get the download URL for the uploaded image
     finalUri = await getDownloadURL(snapshot.ref);
