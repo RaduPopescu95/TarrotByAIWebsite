@@ -24,10 +24,7 @@ import {
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 
-
-
-
-export default function AfirmatiiPozitive({articles}) {
+export default function AfirmatiiPozitive({ articles }) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -41,7 +38,6 @@ export default function AfirmatiiPozitive({articles}) {
   const [openSoloPopup, setOpenSoloPopup] = React.useState(false);
   const settingsRef = React.useRef(null);
   const classes = useStyles();
-
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -168,7 +164,6 @@ export default function AfirmatiiPozitive({articles}) {
 
     console.log("new data.....", newData);
 
-
     // Actualizează starea db cu noua matrice filtrată
     setDb(newData);
     handleShowDialog();
@@ -182,7 +177,7 @@ export default function AfirmatiiPozitive({articles}) {
     oldFileName,
     categorie,
     youtubeLink,
-    timpProgramat, 
+    timpProgramat,
     dataProgramata
   ) => {
     console.log("youtubeLink....");
@@ -194,57 +189,87 @@ export default function AfirmatiiPozitive({articles}) {
           console.log("is found");
           let data;
           if (image.length === 0) {
-            
             let date;
-            if(timpProgramat.length > 0){
-              const dateParts = dataProgramata.split('-');
-              const timeParts = timpProgramat.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-              
-            }else{
-              const dateParts = item.firstUploadDate.split('-');
-              const timeParts = item.firstUploadTime.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-        
+            if (timpProgramat.length > 0) {
+              const dateParts = dataProgramata.split("-");
+              const timeParts = timpProgramat.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
+            } else {
+              const dateParts = item.firstUploadDate.split("-");
+              const timeParts = item.firstUploadTime.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
             }
             data = {
               ...item,
-              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
-              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
-              firstUploadTimestamp:date,
+              firstUploadtime:
+                timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime,
+              firstUploadDate:
+                dataProgramata.length > 0
+                  ? dataProgramata
+                  : item.firstUploadDate,
+              firstUploadTimestamp: date,
               info,
-           
+
               timpProgramat,
-              dataProgramata
+              dataProgramata,
             };
             console.log("if.....", data);
           } else {
             console.log("else.....", data);
-   
+
             let date;
-            if(timpProgramat.length > 0){
-              const dateParts = dataProgramata.split('-');
-              const timeParts = timpProgramat.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-              
-            }else{
-              const dateParts = item.firstUploadDate.split('-');
-              const timeParts = item.firstUploadTime.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-        
+            if (timpProgramat.length > 0) {
+              const dateParts = dataProgramata.split("-");
+              const timeParts = timpProgramat.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
+            } else {
+              const dateParts = item.firstUploadDate.split("-");
+              const timeParts = item.firstUploadTime.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
             }
-        
+
             data = {
               ...item,
-              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
-              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
-              firstUploadTimestamp:date,
+              firstUploadtime:
+                timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime,
+              firstUploadDate:
+                dataProgramata.length > 0
+                  ? dataProgramata
+                  : item.firstUploadDate,
+              firstUploadTimestamp: date,
               info,
               timpProgramat,
-              dataProgramata
+              dataProgramata,
             };
           }
-          await handleUpdateFirestore(`AfirmatiiPozitive/${data.documentId}`, data);
+          await handleUpdateFirestore(
+            `AfirmatiiPozitive/${data.documentId}`,
+            data
+          );
           return data;
         } else {
           console.log("is not found");
@@ -260,19 +285,26 @@ export default function AfirmatiiPozitive({articles}) {
     }
   };
 
-  const handleUpload = async (info, selectedImages, categorie, youtubeLink,  timpProgramat, dataProgramata) => {
+  const handleUpload = async (
+    info,
+    selectedImages,
+    categorie,
+    youtubeLink,
+    timpProgramat,
+    dataProgramata
+  ) => {
     try {
-   
-
-
       const data = {
         info,
         timpProgramat,
-        dataProgramata
+        dataProgramata,
       };
- 
+
       // Folosește await pentru a aștepta finalizarea promisiunii
-      const dataReturned = await handleUploadFirestore(data, "AfirmatiiPozitive");
+      const dataReturned = await handleUploadFirestore(
+        data,
+        "AfirmatiiPozitive"
+      );
 
       let newData = db;
 

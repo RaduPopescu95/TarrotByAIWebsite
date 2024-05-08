@@ -21,7 +21,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import dayjs from 'dayjs';
+import dayjs from "dayjs";
 import GTranslateIcon from "@mui/icons-material/GTranslate";
 import { StyledTextField } from "../../styles/FormStyles";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -60,8 +60,12 @@ export default function AfirmatiiPozitiveFields({
     dialogData.categorie ? dialogData.categorie : ""
   );
 
-  const [dataProgramata, setDataProgramata] = useState(  dialogData.dataProgramata ? dialogData.dataProgramata : "");
-  const [timpProgramat, setTimpProgramat] = useState(dialogData.timpProgramat ? dialogData.timpProgramat : "");
+  const [dataProgramata, setDataProgramata] = useState(
+    dialogData.dataProgramata ? dialogData.dataProgramata : ""
+  );
+  const [timpProgramat, setTimpProgramat] = useState(
+    dialogData.timpProgramat ? dialogData.timpProgramat : ""
+  );
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -208,7 +212,7 @@ export default function AfirmatiiPozitiveFields({
       setValue: setDescriereEn,
       denumire: LANGUAGE_LABELS.en.denumire,
     },
- 
+
     // Spaniolă
     {
       id: "nume-es",
@@ -418,8 +422,8 @@ export default function AfirmatiiPozitiveFields({
   };
 
   const handleUploadData = () => {
-    console.log("timpProgramat...", timpProgramat)
-    console.log("dataProgramata...", dataProgramata)
+    console.log("timpProgramat...", timpProgramat);
+    console.log("dataProgramata...", dataProgramata);
     setLoading(true);
     const data = {
       ro: { nume: numeRo, descriere: descriereRo },
@@ -459,7 +463,14 @@ export default function AfirmatiiPozitiveFields({
       console.log("else.....");
       console.log(selectedImages);
       console.log(data);
-      handleUpload(data, selectedImages, categorie, youtubeLink, timpProgramat, dataProgramata ).then(() => {
+      handleUpload(
+        data,
+        selectedImages,
+        categorie,
+        youtubeLink,
+        timpProgramat,
+        dataProgramata
+      ).then(() => {
         setLoading(false);
       });
     }
@@ -708,7 +719,7 @@ export default function AfirmatiiPozitiveFields({
               Închide
             </Button>
           </Grid>
-      
+
           {/* <Grid
             item
             xs={12}
@@ -761,10 +772,15 @@ export default function AfirmatiiPozitiveFields({
               marginRight: "2%",
               marginLeft: "2%",
               borderRadius: "1%",
-              paddingTop:"3%"
+              paddingTop: "3%",
             }}
           >
-           <DateTimePicker dataProgramata={dataProgramata} setDataProgramata={setDataProgramata} timpProgramat={timpProgramat} setTimpProgramat={setTimpProgramat}/>
+            <DateTimePicker
+              dataProgramata={dataProgramata}
+              setDataProgramata={setDataProgramata}
+              timpProgramat={timpProgramat}
+              setTimpProgramat={setTimpProgramat}
+            />
           </Box>
           <Grid
             item
