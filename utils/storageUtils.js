@@ -70,7 +70,9 @@ export const uploadImage = async (
     };
 
     // Compress the image file
+    console.log("Start image compression.....");
     const compressedFile = await imageCompression(imageUpload, options);
+    console.log("end image compression.....");
 
     // Upload the image with metadata
     const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
