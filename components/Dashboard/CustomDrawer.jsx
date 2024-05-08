@@ -225,6 +225,39 @@ export default function CustomDrawer(props) {
             <React.Fragment>
               {open && (
                 <ListItemText
+                  primary="Afirmatii pozitive"
+                  sx={{
+                    color: "white",
+                    marginLeft: "8%",
+                  }}
+                />
+              )}
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "afirmatii-pozitive",
+                    text: "Afirmatii",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Afirmatii" ? "#ffc045" : "white",
+                  }}
+                >
+                  <LibraryBooksIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Afirmatii"
+                  sx={{
+                    color: "white",
+                  }}
+                />
+              </ListItemButton>
+
+              <Divider sx={{ my: 1 }} />
+              {open && (
+                <ListItemText
                   primary="Blog"
                   sx={{
                     color: "white",

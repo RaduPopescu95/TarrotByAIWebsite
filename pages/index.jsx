@@ -131,6 +131,7 @@ export async function getServerSideProps({ locale }) {
     },
   };
 }
+
 function Landing(props) {
   const { articles: arti } = useDatabase();
   const { currentUser, isGuestUser } = useAuth();
