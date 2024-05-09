@@ -73,12 +73,16 @@ export const uploadImage = async (
     console.log("Start image compression.....");
     const compressedFile = await imageCompression(imageUpload, options);
     console.log("end image compression.....");
-
+    
     // Upload the image with metadata
+    console.log("start image upload.....");
     const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
-
+    console.log("end image upload.....");
+    
     // Get the download URL for the uploaded image
+    console.log("start image link download.....");
     finalUri = await getDownloadURL(snapshot.ref);
+    console.log("end image link download.....");
 
     console.log("Image uploaded successfully. Download URL:", finalUri);
   } catch (error) {
