@@ -755,7 +755,7 @@ export default function AfirmatiiPozitiveFields({
               placeHolder="Categorii"
             />
           </Box> */}
-          <Grid
+          {/* <Grid
             item
             xs={12}
             sx={{ width: "100%", marginTop: 2, marginBottom: 1 }}
@@ -781,7 +781,7 @@ export default function AfirmatiiPozitiveFields({
               timpProgramat={timpProgramat}
               setTimpProgramat={setTimpProgramat}
             />
-          </Box>
+          </Box> */}
           <Grid
             item
             xs={12}
