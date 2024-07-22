@@ -10,26 +10,28 @@ import { getUrlImageApi } from "./storageUtils";
 let finalArr = [];
 
 export const gTranslateFetch = async (text, target) => {
-  const url = "https://translate281.p.rapidapi.com/";
+  const url = "https://google-translator9.p.rapidapi.com/v2";
   const options = {
     method: "POST",
     headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      "X-RapidAPI-Key": "fdb30fac7dmshee22c632d48569ap1d9819jsna577a39fffd6",
-      "X-RapidAPI-Host": "translate281.p.rapidapi.com",
+      "x-rapidapi-key": "d249d3abe2mshf90f82ef3c9aa89p13ef66jsnba5bc2845bb5",
+      "x-rapidapi-host": "google-translator9.p.rapidapi.com",
+      "Content-Type": "application/json", // Asigură-te că corespunde modului în care e format body-ul
     },
-    body: new URLSearchParams({
-      text: text,
-      from: "auto",
-      to: target,
+    body: JSON.stringify({
+      q: text,
+      source: "ro", // Ajustat pentru a reflecta limbajul sursă
+      target: target,
+      format: "text",
     }),
   };
 
   try {
     const response = await fetch(url, options);
-    const result = await response.json();
-    console.log("result...", result);
-    return result.response;
+    console.log("response...", response);
+    const result = await response.json(); // Presupunând că API-ul răspunde cu JSON
+    console.log("result...", result.data.translations[0].translatedText);
+    return result.data.translations[0].translatedText; // Asigură-te că 'response' este calea corectă în obiectul rezultat
   } catch (error) {
     console.error("error on gTranslateFetch...", error);
   }

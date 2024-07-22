@@ -24,10 +24,7 @@ import {
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 
-
-
-
-export default function BlogArticole({articles}) {
+export default function BlogArticole({ articles }) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -41,7 +38,6 @@ export default function BlogArticole({articles}) {
   const [openSoloPopup, setOpenSoloPopup] = React.useState(false);
   const settingsRef = React.useRef(null);
   const classes = useStyles();
-
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -199,7 +195,7 @@ export default function BlogArticole({articles}) {
     oldFileName,
     categorie,
     youtubeLink,
-    timpProgramat, 
+    timpProgramat,
     dataProgramata
   ) => {
     console.log("youtubeLink....");
@@ -213,29 +209,43 @@ export default function BlogArticole({articles}) {
           if (image.length === 0) {
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             let date;
-            if(timpProgramat.length > 0){
-              const dateParts = dataProgramata.split('-');
-              const timeParts = timpProgramat.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-              
-            }else{
-              const dateParts = item.firstUploadDate.split('-');
-              const timeParts = item.firstUploadTime.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-        
+            if (timpProgramat.length > 0) {
+              const dateParts = dataProgramata.split("-");
+              const timeParts = timpProgramat.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
+            } else {
+              const dateParts = item.firstUploadDate.split("-");
+              const timeParts = item.firstUploadTime.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
             }
             data = {
               ...item,
-              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
-              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
-              firstUploadTimestamp:date,
+              firstUploadtime:
+                timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime,
+              firstUploadDate:
+                dataProgramata.length > 0
+                  ? dataProgramata
+                  : item.firstUploadDate,
+              firstUploadTimestamp: date,
               info,
               image: initialImage,
               categorie,
               youtubeLinks,
-           
+
               timpProgramat,
-              dataProgramata
+              dataProgramata,
             };
             console.log("if.....", data);
           } else {
@@ -246,34 +256,47 @@ export default function BlogArticole({articles}) {
               true,
               "Blog",
               "Articole",
-              oldFileName,
-              
+              oldFileName
             );
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
             let date;
-            if(timpProgramat.length > 0){
-              const dateParts = dataProgramata.split('-');
-              const timeParts = timpProgramat.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-              
-            }else{
-              const dateParts = item.firstUploadDate.split('-');
-              const timeParts = item.firstUploadTime.split(':');
-              date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
-        
+            if (timpProgramat.length > 0) {
+              const dateParts = dataProgramata.split("-");
+              const timeParts = timpProgramat.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
+            } else {
+              const dateParts = item.firstUploadDate.split("-");
+              const timeParts = item.firstUploadTime.split(":");
+              date = new Date(
+                dateParts[2],
+                dateParts[1] - 1,
+                dateParts[0],
+                timeParts[0],
+                timeParts[1]
+              );
             }
-        
+
             data = {
               ...item,
-              firstUploadtime: timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime ,
-              firstUploadDate: dataProgramata.length > 0 ? dataProgramata : item.firstUploadDate,
-              firstUploadTimestamp:date,
+              firstUploadtime:
+                timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime,
+              firstUploadDate:
+                dataProgramata.length > 0
+                  ? dataProgramata
+                  : item.firstUploadDate,
+              firstUploadTimestamp: date,
               info,
               image: newImage,
               categorie,
               youtubeLinks,
               timpProgramat,
-              dataProgramata
+              dataProgramata,
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);
@@ -292,7 +315,14 @@ export default function BlogArticole({articles}) {
     }
   };
 
-  const handleUpload = async (info, selectedImages, categorie, youtubeLink,  timpProgramat, dataProgramata) => {
+  const handleUpload = async (
+    info,
+    selectedImages,
+    categorie,
+    youtubeLink,
+    timpProgramat,
+    dataProgramata
+  ) => {
     try {
       const image = await uploadImage(
         selectedImages,
@@ -310,9 +340,9 @@ export default function BlogArticole({articles}) {
         categorie,
         youtubeLinks,
         timpProgramat,
-        dataProgramata
+        dataProgramata,
       };
- 
+
       // Folosește await pentru a aștepta finalizarea promisiunii
       const dataReturned = await handleUploadFirestore(data, "BlogArticole");
 
@@ -324,7 +354,7 @@ export default function BlogArticole({articles}) {
 
       setShowSettings(!showSettings);
     } catch (err) {
-      console.log("Error handleUpload...", err);
+      console.log("Error handleUpload......", err);
     }
   };
 

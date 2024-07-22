@@ -5,9 +5,8 @@ import BlogArticole from "../../../components/Tables/BlogArticole";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 
 export async function getServerSideProps(context) {
-  console.log("Start......")
+  console.log("Start......");
   try {
- 
     // Obținerea datelor articolelor din Firestore
     const { locale, params, req } = context;
 
@@ -16,15 +15,17 @@ export async function getServerSideProps(context) {
     let rawData = [...data];
     const articles = rawData.sort((a, b) => a.id - b.id);
 
-    console.log("articles...",articles[0])
+    console.log("articles.....", articles[0]);
     return {
       props: {
         articles,
-  
       },
     };
   } catch (error) {
-    console.error("Eroare la preluarea datelor in dashboard articles:", error.message);
+    console.error(
+      "Eroare la preluarea datelor in dashboard articles:",
+      error.message
+    );
     // Returnează un obiect de eroare sau un mesaj de eroare ca prop pentru a fi gestionat în componenta ta
     return {
       props: {
@@ -35,7 +36,6 @@ export async function getServerSideProps(context) {
 }
 
 export default function index(props) {
-
   const { articles } = props;
   return (
     <>
@@ -43,7 +43,7 @@ export default function index(props) {
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <CustomDrawer selectedItem={"Articole"} drawerText={"Articole"}>
-        <BlogArticole articles={articles}/>
+        <BlogArticole articles={articles} />
       </CustomDrawer>
     </>
   );
