@@ -10,30 +10,39 @@ import { getUrlImageApi } from "./storageUtils";
 let finalArr = [];
 
 export const gTranslateFetch = async (text, target) => {
-  const url = "https://google-translator9.p.rapidapi.com/v2";
-  const options = {
-    method: "POST",
-    headers: {
-      "x-rapidapi-key": "d249d3abe2mshf90f82ef3c9aa89p13ef66jsnba5bc2845bb5",
-      "x-rapidapi-host": "google-translator9.p.rapidapi.com",
-      "Content-Type": "application/json", // Asigură-te că corespunde modului în care e format body-ul
-    },
-    body: JSON.stringify({
-      q: text,
-      source: "ro", // Ajustat pentru a reflecta limbajul sursă
-      target: target,
-      format: "text",
-    }),
+  const url = `https://translation.googleapis.com/language/translate/v2?key=AIzaSyBRgP4D08BVgzw4oyWfZZ9Rx2mjNouePj4`;
+
+  const body = {
+    q: text,
+    target: target,
+    format: "text",
   };
 
   try {
-    const response = await fetch(url, options);
-    console.log("response...", response);
-    const result = await response.json(); // Presupunând că API-ul răspunde cu JSON
-    console.log("result...", result.data.translations[0].translatedText);
-    return result.data.translations[0].translatedText; // Asigură-te că 'response' este calea corectă în obiectul rezultat
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error("Translation request failed");
+    }
+
+    const result = await response.json();
+    console.log("----------Translation result--------");
+    console.log("Translation result:", text);
+    console.log("Translation result:", target);
+    console.log(
+      "Translation result:",
+      result.data.translations[0].translatedText
+    );
+    return result.data.translations[0].translatedText;
   } catch (error) {
-    console.error("error on gTranslateFetch...", error);
+    console.error("Error on gTranslateFetch:", error);
+    return null;
   }
 };
 

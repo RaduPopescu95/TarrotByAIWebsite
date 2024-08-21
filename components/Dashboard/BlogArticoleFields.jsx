@@ -21,7 +21,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import dayjs from 'dayjs';
+import dayjs from "dayjs";
 import GTranslateIcon from "@mui/icons-material/GTranslate";
 import { StyledTextField } from "../../styles/FormStyles";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -60,8 +60,12 @@ export default function BlogArticoleFields({
     dialogData.categorie ? dialogData.categorie : ""
   );
 
-  const [dataProgramata, setDataProgramata] = useState(  dialogData.dataProgramata ? dialogData.dataProgramata : "");
-  const [timpProgramat, setTimpProgramat] = useState(dialogData.timpProgramat ? dialogData.timpProgramat : "");
+  const [dataProgramata, setDataProgramata] = useState(
+    dialogData.dataProgramata ? dialogData.dataProgramata : ""
+  );
+  const [timpProgramat, setTimpProgramat] = useState(
+    dialogData.timpProgramat ? dialogData.timpProgramat : ""
+  );
 
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -545,8 +549,8 @@ export default function BlogArticoleFields({
   };
 
   const handleUploadData = () => {
-    console.log("timpProgramat...", timpProgramat)
-    console.log("dataProgramata...", dataProgramata)
+    console.log("timpProgramat...", timpProgramat);
+    console.log("dataProgramata...", dataProgramata);
     setLoading(true);
     const data = {
       ro: { nume: numeRo, descriere: descriereRo, content: contentRo },
@@ -586,7 +590,14 @@ export default function BlogArticoleFields({
       console.log("else.....");
       console.log(selectedImages);
       console.log(data);
-      handleUpload(data, selectedImages, categorie, youtubeLink, timpProgramat, dataProgramata ).then(() => {
+      handleUpload(
+        data,
+        selectedImages,
+        categorie,
+        youtubeLink,
+        timpProgramat,
+        dataProgramata
+      ).then(() => {
         setLoading(false);
       });
     }
@@ -642,6 +653,11 @@ export default function BlogArticoleFields({
       fr: setNumeFr,
     };
 
+    // Funcție de delay
+    const sleep = (ms) => {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    };
+
     for (let l of languages) {
       console.log("language to translate...", l);
 
@@ -661,11 +677,13 @@ export default function BlogArticoleFields({
         console.log("translation", translation);
 
         // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
-
         if (setFunctions[l]) {
           setFunctions[l](translation);
         }
       }
+
+      // Așteaptă o secundă înainte de a trece la următoarea limbă
+      await sleep(1000); // 1000 ms = 1 secunda
     }
   };
 
@@ -705,6 +723,11 @@ export default function BlogArticoleFields({
       fr: setDescriereFr,
     };
 
+    // Funcție de delay
+    const sleep = (ms) => {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    };
+
     for (let l of languages) {
       console.log(l);
 
@@ -724,11 +747,13 @@ export default function BlogArticoleFields({
         console.log("translation", translation);
 
         // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
-
         if (setFunctions[l]) {
           setFunctions[l](translation);
         }
       }
+
+      // Așteaptă o secundă înainte de a trece la următoarea limbă
+      await sleep(1000); // 1000 ms = 1 secunda
     }
   };
   //---------- CONTENT HANDLE TRANSLATE -----------
@@ -767,6 +792,11 @@ export default function BlogArticoleFields({
       fr: setContentFr,
     };
 
+    // Funcție de delay
+    const sleep = (ms) => {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    };
+
     for (let l of languages) {
       console.log(l);
 
@@ -786,11 +816,13 @@ export default function BlogArticoleFields({
         console.log("translation", translation);
 
         // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
-
         if (setFunctions[l]) {
           setFunctions[l](translation);
         }
       }
+
+      // Așteaptă o secundă înainte de a trece la următoarea limbă
+      await sleep(1000); // 1000 ms = 1 secunda
     }
   };
 
@@ -967,13 +999,37 @@ export default function BlogArticoleFields({
                 <h1 style={{ color: "#D3D3D3", fontSize: 30, marginTop: 20 }}>
                   Link Youtube
                 </h1>
-                <p style={{ color: "#D3D3D3", fontSize: "15px", marginTop: "20px", fontWeight: "bold" }}>
-  Pentru adăugarea mai multor video-uri de YouTube, trebuie să le separați prin adăugarea "<span style={{color:"blue", fontWeight: "bold"}}>;</span>" între link-urile de YouTube introduse.
-</p>
-<p style={{ color: "#D3D3D3", fontSize: "15px", marginTop: "20px", fontWeight: "bold" }}>
-  Spre exemplu "<span style={{color:"white"}}>https://www.youtube.com/watch?v=caWBmvhRcII&t=15s</span><span style={{color:"blue"}}>;</span><span style={{color:"white"}}>https://www.youtube.com/watch?v=caWBmvhRcII&t=15s</span>"
-</p>
-
+                <p
+                  style={{
+                    color: "#D3D3D3",
+                    fontSize: "15px",
+                    marginTop: "20px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Pentru adăugarea mai multor video-uri de YouTube, trebuie să
+                  le separați prin adăugarea "
+                  <span style={{ color: "blue", fontWeight: "bold" }}>;</span>"
+                  între link-urile de YouTube introduse.
+                </p>
+                <p
+                  style={{
+                    color: "#D3D3D3",
+                    fontSize: "15px",
+                    marginTop: "20px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Spre exemplu "
+                  <span style={{ color: "white" }}>
+                    https://www.youtube.com/watch?v=caWBmvhRcII&t=15s
+                  </span>
+                  <span style={{ color: "blue" }}>;</span>
+                  <span style={{ color: "white" }}>
+                    https://www.youtube.com/watch?v=caWBmvhRcII&t=15s
+                  </span>
+                  "
+                </p>
 
                 <FieldRow
                   id={"youtubeLink"}
@@ -1038,10 +1094,15 @@ export default function BlogArticoleFields({
               marginRight: "2%",
               marginLeft: "2%",
               borderRadius: "1%",
-              paddingTop:"3%"
+              paddingTop: "3%",
             }}
           >
-           <DateTimePicker dataProgramata={dataProgramata} setDataProgramata={setDataProgramata} timpProgramat={timpProgramat} setTimpProgramat={setTimpProgramat}/>
+            <DateTimePicker
+              dataProgramata={dataProgramata}
+              setDataProgramata={setDataProgramata}
+              timpProgramat={timpProgramat}
+              setTimpProgramat={setTimpProgramat}
+            />
           </Box>
           <Grid
             item
