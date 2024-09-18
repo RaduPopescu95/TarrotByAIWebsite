@@ -13,6 +13,21 @@ import { DatabaseProvider } from "../context/DatabaseContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
+import "../node_modules/bootstrap/dist/css/bootstrap.min.css"; // Importă doar CSS-ul pe server
+
+import dynamic from "next/dynamic";
+
+// Încarcă dinamica JavaScript-ul Bootstrap doar pe client
+const Bootstrap = dynamic(
+  () => import("bootstrap/dist/js/bootstrap.bundle.min.js"),
+  { ssr: false }
+);
+
+require("../client/assets/icons/fontawesome/css/fontawesome.min.css");
+require("../client/assets/icons/fontawesome/css/all.min.css");
+require("../client/assets/icons/feather/css/iconfont.css");
+require("../client/assets/scss/main.scss");
+require("../client/components/customstyleclient.css");
 
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
