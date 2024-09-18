@@ -3,7 +3,7 @@
 /* eslint-disable no-dupe-keys */
 import React, { useEffect, useRef } from "react";
 import DoctorSidebar from "../sidebar";
-import Header from "../../header";
+
 import {
   doctordashboardclient01,
   doctordashboardclient02,
@@ -13,10 +13,11 @@ import {
   doctordashboardprofile05,
   doctordashboardprofile3,
 } from "../../imagepath";
-import Chart from "react-apexcharts";
+
 import DoctorFooter from "../../common/doctorFooter";
-import userImage from "../../../../assets/images/doctors-dashboard/userprofile.png";
+import userImage from "../../../assets/images/doctors-dashboard/userprofile.png";
 import Link from "next/link";
+import Home1Header from "../../home/home-1/header";
 const DoctorDashboard = (props) => {
   // revenue chart
   const chartRef1 = useRef(null);
@@ -124,7 +125,7 @@ const DoctorDashboard = (props) => {
 
   return (
     <div>
-      <Header {...props} />
+    <Home1Header />
       {/* Breadcrumb */}
       <div className="breadcrumb-bar-two">
         <div className="container">

@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
 import { doctorprofileimg } from "../../imagepath";
-import profilecristina from "../../../../assets/images/doctors-dashboard/profilecristina.png";
+import profilecristina from "../../../assets/images/doctors-dashboard/profilecristina.png";
 
 import Select from "react-select";
 const DoctorSidebar = () => {
-  let pathnames = window.location.pathname;
+
 
   const availablity = [
     { value: "Online acum", label: "Online acum" },
@@ -55,7 +55,7 @@ const DoctorSidebar = () => {
             <ul>
               <li
                 className={
-                  pathnames.includes("/doctor/doctor-dashboard") ? "active" : ""
+                  false ? "active" : ""
                 }
               >
                 <Link href="/doctor/doctor-dashboard">
@@ -96,7 +96,7 @@ const DoctorSidebar = () => {
 
               <li
                 className={
-                  pathnames.includes("/doctor/available-timings")
+                  false
                     ? "active"
                     : ""
                 }
@@ -121,7 +121,7 @@ const DoctorSidebar = () => {
               </li> */}
               <li
                 className={
-                  pathnames.includes("/doctor/doctor-specialities")
+                 false
                     ? "active"
                     : ""
                 }
@@ -151,7 +151,7 @@ const DoctorSidebar = () => {
               </li> */}
               <li
                 className={
-                  pathnames.includes("/doctor/invoices") ? "active" : ""
+                  false ? "active" : ""
                 }
               >
                 <Link href="/doctor/invoices">
@@ -215,7 +215,7 @@ const DoctorSidebar = () => {
                   <span>Change Password</span>
                 </Link>
               </li> */}
-              <li className={pathnames.includes("/login") ? "active" : ""}>
+              <li className={false ? "active" : ""}>
                 <Link href="/login">
                   <i className="fa-solid fa-calendar-check me-2" />
                   <span>Deconectare</span>

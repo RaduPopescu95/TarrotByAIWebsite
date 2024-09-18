@@ -50,7 +50,7 @@ const Home1Header = () => {
               </div>
               <ul className="main-nav">
                 <li className="has-submenu megamenu active">
-                  <Link href="/home-1">
+                  <Link href="/consultatii">
                     {/* Acasa <i className="fas fa-chevron-down" /> */}
                     Acasa
                   </Link>
@@ -319,7 +319,7 @@ const Home1Header = () => {
                   </ul> */}
                 </li>
                 <li className="has-submenu">
-                  <Link href="#">
+                  <Link href="/">
                     {/* Cristina Zurba - Tarot <i className="fas fa-chevron-down" /> */}
                     Cristina Zurba - Tarot
                   </Link>
@@ -501,7 +501,7 @@ const Home1Header = () => {
                   </ul>
                 </li> */}
                 <li className="has-submenu">
-                  <Link href="#">Despre platforma</Link>
+                  <Link href="/about">Despre platforma</Link>
                   {/* <ul className="submenu">
                     <li>
                       <Link href="/pages/aboutus">About Us</Link>
@@ -602,7 +602,7 @@ const Home1Header = () => {
                   </ul> */}
                 </li>
                 <li className="has-submenu">
-                  <Link href="#">
+                  <Link href="/privacypolicy">
                     Termeni si conditii
                     {/* Termeni si conditii <i className="fas fa-chevron-down" /> */}
                   </Link>

@@ -14,50 +14,46 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false); // Inițializat ca false
 
+  useEffect(() => {
+    // Verificăm dacă suntem pe partea de client (browser)
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("currentUser");
+      const storedUserData = localStorage.getItem("userData");
+      const storedGuestUser = localStorage.getItem("isGuestUser");
+
+      // Inițializăm stările cu valorile din localStorage (dacă există)
+      setCurrentUser(storedUser ? JSON.parse(storedUser) : null);
+      setUserData(storedUserData ? JSON.parse(storedUserData) : null);
+      setIsGuestUser(storedGuestUser === "true");
+    }
+  }, []);
+
   // Funcția pentru a seta utilizatorul ca guest user
   const setAsGuestUser = (isGuest) => {
-    try {
+    if (typeof window !== "undefined") {
       localStorage.setItem("isGuestUser", isGuest ? "true" : "false");
-      setIsGuestUser(isGuest);
-    } catch (e) {
-      console.error("Failed to update isGuestUser in localStorage:", e);
     }
+    setIsGuestUser(isGuest);
   };
 
   useEffect(() => {
-    const unsubscribe = authentication.onAuthStateChanged(async (user) => {
-      if (user) {
-        try {
-          const userDataFromFirestore = await handleGetUserInfo();
-          setUserData(userDataFromFirestore);
-        } catch (error) {
-          console.error("Failed to fetch user data:", error);
-        }
-      }
-      setCurrentUser(user);
+    if (currentUser && typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    }
+  }, [currentUser]);
 
-      try {
-        const guestUserValue = localStorage.getItem("isGuestUser");
-        // Setează isGuestUser ca true sau false bazat pe valoarea din localStorage
-        // Dacă valoarea nu există, va rămâne setat ca false
-        setIsGuestUser(guestUserValue === "true");
-      } catch (e) {
-        console.error("Failed to fetch isGuestUser from localStorage:", e);
-        setIsGuestUser(false); // Setat ca false în cazul unei erori
-      }
-
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
+  useEffect(() => {
+    if (userData && typeof window !== "undefined") {
+      localStorage.setItem("userData", JSON.stringify(userData));
+    }
+  }, [userData]);
 
   const value = {
     currentUser,
     userData,
     loading,
-    isGuestUser, // Includeți isGuestUser în context
-    setAsGuestUser, // Expuși funcția prin context
+    isGuestUser,
+    setAsGuestUser,
     setUserData,
     setCurrentUser,
   };

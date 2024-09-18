@@ -234,6 +234,7 @@ function Mixed(props) {
                         IOS
                       </p>
                     </div>
+               
                   </div>
                 </>
               )}

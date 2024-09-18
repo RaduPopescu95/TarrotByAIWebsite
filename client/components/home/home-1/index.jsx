@@ -186,7 +186,7 @@ const Home1 = () => {
                 </p>
                 {/* Daca nu este autentificat functioneaza si fara */}
                 <Link
-                  href="/patient/booking1"
+                  href="/calendar"
                   className="btn btn-consult-start"
                 >
                   începe consultul

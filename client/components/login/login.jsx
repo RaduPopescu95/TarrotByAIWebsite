@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
-import loginBanner from "../../../assets/images/login-banner.png";
+// import loginBanner from "../../../assets/images/login-banner.png";
 import Link from "next/link";
-import Header from "../header";
+
 import Footer from "../footer";
+import Home1Header from "../home/home-1/header";
 
 const LoginContainer = (props) => {
   useEffect(() => {
@@ -13,7 +14,7 @@ const LoginContainer = (props) => {
 
   return (
     <>
-      <Header {...props} />
+      <Home1Header />
 
       <>
         {/* Page Content */}
@@ -24,13 +25,13 @@ const LoginContainer = (props) => {
                 {/* Login Tab Content */}
                 <div className="account-content">
                   <div className="row align-items-center justify-content-center">
-                    <div className="col-md-7 col-lg-6 login-left">
+                    {/* <div className="col-md-7 col-lg-6 login-left">
                       <img
                         src={"../../../assets/img/login-banner-cristina.png"}
                         className="img-fluid"
                         alt="Doccure Login"
                       />
-                    </div>
+                    </div> */}
                     <div className="col-md-12 col-lg-6 login-right">
                       <div className="login-header">
                         <h3>Autentificare</h3>
@@ -50,14 +51,14 @@ const LoginContainer = (props) => {
                           />
                           <label className="focus-label">Parola</label>
                         </div>
-                        <div className="text-end">
+                        {/* <div className="text-end">
                           <Link
                             className="forgot-link"
                             href="/pages/forgot-password"
                           >
                             Ai uitat parola?
                           </Link>
-                        </div>
+                        </div> */}
 
                         <Link
                           href="/home-1"
@@ -66,11 +67,11 @@ const LoginContainer = (props) => {
                         >
                           Autentificare
                         </Link>
-                        <div className="login-or">
+                        {/* <div className="login-or">
                           <span className="or-line" />
                           <span className="span-or">or</span>
-                        </div>
-                        <div className="row form-row social-login">
+                        </div> */}
+                        {/* <div className="row form-row social-login">
                           <div className="col-6">
                             <Link
                               href="/home-1"
@@ -87,11 +88,11 @@ const LoginContainer = (props) => {
                               <i className="fab fa-google me-1" /> Google
                             </Link>
                           </div>
-                        </div>
-                        <div className="text-center dont-have">
+                        </div> */}
+                        {/* <div className="text-center dont-have">
                           Nu ai cont?{" "}
                           <Link href="/register">Înregistrează-te</Link>
-                        </div>
+                        </div> */}
                       </form>
                     </div>
                   </div>
@@ -104,7 +105,7 @@ const LoginContainer = (props) => {
         {/* /Page Content */}
       </>
 
-      <Footer {...props} />
+      {/* <Footer {...props} /> */}
     </>
   );
 };
