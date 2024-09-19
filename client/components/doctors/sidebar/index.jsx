@@ -1,16 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { doctorprofileimg } from "../../imagepath";
-import profilecristina from "../../../assets/images/doctors-dashboard/profilecristina.png";
-
+import { handleSignIn } from "@/utils/authUtils";
 import Select from "react-select";
+import { handleLogout } from "@/utils/authUtils";
+import { useRouter } from "next/router";
+import { useAuth } from "../../../../context/AuthContext";
+import { onAuthStateChanged } from "firebase/auth";
+import { authentication } from "../../../../firebase";
+import { Box, CircularProgress } from "@mui/material";
 const DoctorSidebar = () => {
-
+  const router = useRouter();
+  const { currentUser, userData, loading, setLoading } = useAuth()
 
   const availablity = [
     { value: "Online acum", label: "Online acum" },
     { value: "Offline", label: "Offline" },
   ];
+
+
+
+  useEffect(() => {
+    setLoading(true);
+    const authenticated = authentication;
+    onAuthStateChanged(authenticated, (user) => {
+      if (user && user.uid === "AW8kjQIhAiaJM5q0QgGlOKpGF2j1") {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const uid = user.uid;
+        console.log("is user.......");
+        setLoading(false);
+  
+        // ...
+      } else {
+        console.log("is user......no.");
+        router.push("/login-admin-consultatii");
+        setLoading(false);
+        // User is signed out
+        // ...
+      }
+    });
+  },[]);
+
+
 
   return (
     <>
@@ -19,7 +51,7 @@ const DoctorSidebar = () => {
         <div className="widget-profile pro-widget-content">
           <div className="profile-info-widget">
             <Link href="#" className="booking-doc-img">
-              <img src={profilecristina} alt="User Image" />
+              <img src={"/img/profilecristina.png"} alt="User Image" />
             </Link>
             <div className="profile-det-info">
               <h3>
@@ -216,7 +248,14 @@ const DoctorSidebar = () => {
                 </Link>
               </li> */}
               <li className={false ? "active" : ""}>
-                <Link href="/login">
+                <Link href="/login"     onClick={(e) => {
+                    // Prevenim comportamentul default al link-ului dacă este necesar
+                 
+                      e.preventDefault();
+                      handleLogout();
+                      router.push("/consultatii");
+          
+                  }}>
                   <i className="fa-solid fa-calendar-check me-2" />
                   <span>Deconectare</span>
                 </Link>

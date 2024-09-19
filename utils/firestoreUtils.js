@@ -325,3 +325,574 @@ export const fetchArticlesPage = async (refresh = false, lastVisible = null) => 
 
 };
 
+
+
+export const getFirestoreQueryLength = async (
+  location,
+  queryParam,
+  element
+) => {
+  const coll = collection(db, location);
+  const q = query(coll, where(queryParam, "==", element));
+  const snapshot = await getCountFromServer(q);
+  return snapshot.data().count;
+};
+
+export const getFirestoreSubcollectionLength = async (
+  subcollection,
+  queryParam,
+  element
+) => {
+  const q = query(
+    collectionGroup(db, subcollection),
+    where(queryParam, "==", element)
+  );
+
+  const snapshot = await getCountFromServer(q);
+  return snapshot.data().count;
+};
+
+//FUNCTIE DE QUERY DIN SUBCOLLECTI CU NR NELIMITAT DE PARAMETRI
+export const handleQueryFirestoreSubcollectionVariableParams = async (
+  location,
+  ...queryPairs
+) => {
+  let results = [];
+  let constraints = [];
+
+  // Construiește constrângerile interogării din perechile de parametri
+  for (let i = 0; i < queryPairs.length; i += 2) {
+    const queryParam = queryPairs[i];
+    const element = queryPairs[i + 1];
+    if (queryParam && element !== undefined) {
+      constraints.push(where(queryParam, "==", element));
+    }
+  }
+
+  // Dacă nu există constrângeri valide, returnează un array gol
+  if (constraints.length === 0) {
+    console.warn("No valid query constraints provided.");
+    return results;
+  }
+  console.log("constraints...", constraints);
+  // Interoghează subcolecția Localitati folosind constrângerile create
+  let localitatiRef = query(collectionGroup(db, location), ...constraints);
+  const querySnapshot = await getDocs(localitatiRef);
+
+  // Adaugă fiecare document găsit în rezultate
+  querySnapshot.forEach((doc) => {
+    results.push(doc.data());
+  });
+
+  return results;
+};
+
+
+
+
+//UPDATE A DOCUMENT IN THE SUBCOLLECTION
+export const handleUpdateFirestoreSubcollection = async (
+  updatedData,
+  location,
+  actionText
+) => {
+  console.log("create subcollection history...", updatedData);
+  try {
+    //current date
+    const dateTime = getCurrentDateTime();
+
+    const ref = doc(db, location);
+
+    const newData = {
+      ...updatedData,
+      EditDate: dateTime.date,
+      Edittime: dateTime.time,
+    };
+
+    // UPLOAD ACTION OF USER
+    if (actionText) {
+      const currentUser = authentication.currentUser;
+      let actionData = {
+        actionText,
+      };
+
+      await handleUploadFirestoreSubcollection(
+        actionData,
+        `UsersJobs/${currentUser?.uid}/ActiuniJobs`,
+        currentUser?.uid
+      );
+    }
+
+    await updateDoc(ref, newData);
+  } catch (err) {
+    console.log("Error on...handleUploadFirestoreSubcollection...", err);
+  }
+};
+
+
+
+//DELETE FROM FIRESTORE DATA
+
+
+//DELETE FROM FIRESTORE SUBCOLLECTION DATA
+
+export const handleDeleteFirestoreSubcollectionData = async (
+  locationToDelete,
+  getNewData,
+  locationToGet = null,
+  itemToDelete
+) => {
+  try {
+    console.log("STart....delete...");
+    const ref = doc(db, locationToDelete);
+    await deleteDoc(ref);
+
+    // Dacă getNewData este true, procedează la obținerea și actualizarea datelor
+    if (getNewData) {
+      const data = await handleGetFirestore(locationToGet); // Presupunem că returnează un array de obiecte
+
+      // Sortează datele în ordinea crescătoare a ID-urilor
+      data.sort((a, b) => a.id - b.id);
+
+      console.log("test...", data);
+
+      let updatedData = []; // Inițializează un array gol pentru a stoca datele actualizate
+
+      // Actualizează ID-urile documentelor rămase pentru a fi consecutive
+      for (let i = 0; i < data.length; i++) {
+        const newId = i + 1; // Calculul noului ID
+
+        const ref = doc(
+          db,
+          `UsersJobs/${data[i].collectionId}/Oferte/${data[i].documentId}`
+        );
+
+        const newData = {
+          id: newId, // Actualizează ID-ul pentru a fi consecutiv
+        };
+
+        await updateDoc(ref, newData);
+
+        // Adaugă documentul actualizat în array-ul updatedData cu noul ID
+        updatedData.push({
+          ...data[i],
+          id: newId,
+        });
+      }
+
+      return updatedData; // Returnează datele actualizate dacă getNewData este true
+    }
+    // Dacă getNewData este false, nu returna nimic sau returnează o valoare specifică
+    return null; // Sau orice altă valoare semnificativă pentru cazul tău
+  } catch (err) {
+    console.log("Error on...handleDeleteFirestore...", err);
+    // Returnează null sau o valoare de eroare specifică în caz de eroare
+    return null;
+  }
+};
+
+
+
+
+
+
+export const handleQueryFirestoreSubcollection = async (
+  location,
+  queryParamOne,
+  elementOne = null,
+  queryParamTwo = null,
+  elementTwo = null
+) => {
+  let arr = [];
+  let localitatiRef;
+  // Pasul 1: Interoghează subcolecția Localitati
+  if (queryParamTwo) {
+    localitatiRef = query(
+      collectionGroup(db, location),
+      where(queryParamOne, "==", elementOne),
+      where(queryParamTwo, "==", elementTwo)
+    );
+  } else {
+    localitatiRef = query(
+      collectionGroup(db, location),
+      where(queryParamOne, "==", elementOne)
+    );
+  }
+
+  const querySnapshot = await getDocs(localitatiRef);
+  querySnapshot.forEach((doc) => {
+    arr.push(doc.data());
+  });
+  return arr;
+};
+
+
+export const handleQueryDoubleParam = async (
+  location,
+  paramOne,
+  elementOne,
+  paramTwo,
+  elementTwo
+) => {
+  let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
+  const q = query(
+    collection(db, location),
+    where(paramOne, "==", elementOne),
+    where(paramTwo, "==", elementTwo)
+  );
+
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
+    // doc.data() is never undefined for query doc snapshots
+    console.log(doc.id, " => ", doc.data());
+    // arr.push(doc.data().data);
+    arr.push(doc.data());
+  });
+  return arr;
+};
+export const handleQueryTripleParam = async (
+  location,
+  paramOne,
+  elementOne,
+  paramTwo,
+  elementTwo,
+  paramThree,
+  elementThree,
+  maxQuery = null
+) => {
+  let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
+  const q = query(
+    collection(db, location),
+    where(paramOne, "==", elementOne),
+    where(paramTwo, "==", elementTwo),
+    where(paramThree, "==", elementThree)
+  );
+
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
+    // doc.data() is never undefined for query doc snapshots
+    console.log(doc.id, " => ", doc.data());
+    // arr.push(doc.data().data);
+    arr.push(doc.data());
+  });
+  return arr;
+};
+export const handleQueryPatruParam = async (
+  location,
+  paramOne,
+  elementOne,
+  paramTwo,
+  elementTwo,
+  paramThree,
+  elementThree,
+  paramPatru,
+  elementPatru
+) => {
+  let arr = []; // Specificați tipul de obiecte pe care îl conține matricea
+  const q = query(
+    collection(db, location),
+    where(paramOne, "==", elementOne),
+    where(paramTwo, "==", elementTwo),
+    where(paramThree, "==", elementThree),
+    where(paramPatru, "==", elementPatru)
+  );
+
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
+    // doc.data() is never undefined for query doc snapshots
+    console.log(doc.id, " => ", doc.data());
+    // arr.push(doc.data().data);
+    arr.push(doc.data());
+  });
+  return arr;
+};
+
+
+
+export const uploadJudete = async (jd) => {
+  console.log("Start upload judete...");
+  for (let i = 0; i < jd.length; i++) {
+    const judetDoc = doc(collection(db, "Judete"));
+    const judetData = {
+      id: i + 1, // Numărul județului
+      judet: jd[i].judet,
+      documentId: judetDoc.id, // Adăugăm ID-ul documentului
+    };
+    await setDoc(judetDoc, judetData);
+
+    for (let j = 0; j < jd[i].localitati.length; j++) {
+      const localitateDoc = doc(collection(judetDoc, "Localitati"));
+      const localitateData = {
+        id: j + 1, // Numărul localității în cadrul județului
+        localitate: jd[i].localitati[j],
+        judet: jd[i].judet,
+        documentId: localitateDoc.id, // Adăugăm ID-ul documentului
+      };
+      await setDoc(localitateDoc, localitateData);
+    }
+  }
+};
+
+export const handleQueryFirestoreSubcollectionTripleParam = async (
+  location,
+  queryParamOne,
+  elementOne = null,
+  queryParamTwo = null,
+  elementTwo = null,
+  queryParamThree = null,
+  elementThree = null
+) => {
+  let arr = [];
+  let localitatiRef;
+  // Pasul 1: Interoghează subcolecția Localitati
+
+  localitatiRef = query(
+    collectionGroup(db, location),
+    where(queryParamOne, "==", elementOne),
+    where(queryParamTwo, "==", elementTwo),
+    where(queryParamThree, "==", elementThree)
+  );
+
+  const querySnapshot = await getDocs(localitatiRef);
+  querySnapshot.forEach((doc) => {
+    arr.push(doc.data());
+  });
+  return arr;
+};
+export const handleQueryFirestoreSubcollectionPatruParam = async (
+  location,
+  queryParamOne,
+  elementOne = null,
+  queryParamTwo = null,
+  elementTwo = null,
+  queryParamThree = null,
+  elementThree = null,
+  queryParamPatru = null,
+  elementPatru = null
+) => {
+  let arr = [];
+  let localitatiRef;
+  // Pasul 1: Interoghează subcolecția Localitati
+
+  localitatiRef = query(
+    collectionGroup(db, location),
+    where(queryParamOne, "==", elementOne),
+    where(queryParamTwo, "==", elementTwo),
+    where(queryParamThree, "==", elementThree),
+    where(queryParamPatru, "==", elementPatru)
+  );
+
+  const querySnapshot = await getDocs(localitatiRef);
+  querySnapshot.forEach((doc) => {
+    arr.push(doc.data());
+  });
+  return arr;
+};
+export const handleQueryFirestoreSubcollectionCinciParam = async (
+  location,
+  queryParamOne,
+  elementOne = null,
+  queryParamTwo = null,
+  elementTwo = null,
+  queryParamThree = null,
+  elementThree = null,
+  queryParamPatru = null,
+  elementPatru = null,
+  queryParamCinici = null,
+  elementCinci = null
+) => {
+  let arr = [];
+  let localitatiRef;
+  // Pasul 1: Interoghează subcolecția Localitati
+
+  localitatiRef = query(
+    collectionGroup(db, location),
+    where(queryParamOne, "==", elementOne),
+    where(queryParamTwo, "==", elementTwo),
+    where(queryParamThree, "==", elementThree),
+    where(queryParamPatru, "==", elementPatru),
+    where(queryParamCinici, "==", elementCinci)
+  );
+
+  const querySnapshot = await getDocs(localitatiRef);
+  querySnapshot.forEach((doc) => {
+    arr.push(doc.data());
+  });
+  return arr;
+};
+export const handleQueryFirestoreSubcollectionSaseParam = async (
+  location,
+  queryParamOne,
+  elementOne = null,
+  queryParamTwo = null,
+  elementTwo = null,
+  queryParamThree = null,
+  elementThree = null,
+  queryParamPatru = null,
+  elementPatru = null,
+  queryParamCinici = null,
+  elementCinci = null,
+  queryParamSase = null,
+  elementSase = null
+) => {
+  let arr = [];
+  let localitatiRef;
+  // Pasul 1: Interoghează subcolecția Localitati
+  console.log("....start....");
+  localitatiRef = query(
+    collectionGroup(db, location),
+    where(queryParamOne, "==", elementOne),
+    where(queryParamTwo, "==", elementTwo),
+    where(queryParamThree, "==", elementThree),
+    where(queryParamPatru, "==", elementPatru),
+    where(queryParamCinici, "==", elementCinci),
+    where(queryParamSase, "==", elementSase)
+  );
+  console.log("....start....2");
+
+  const querySnapshot = await getDocs(localitatiRef);
+  querySnapshot.forEach((doc) => {
+    arr.push(doc.data());
+  });
+  return arr;
+};
+
+export async function getLocalitatiWithUserCounts() {
+  // const countyCapitals = [
+  //   "Alba Iulia",
+  //   "Arad",
+  //   "Pitesti",
+  //   "Bacau",
+  //   "Oradea",
+  //   "Bistrita",
+  //   "Botosani",
+  //   "Braila",
+  //   "Brasov",
+  //   "Bucuresti",
+  //   "Buzau",
+  //   "Calarasi",
+  //   "Resita",
+  //   "Cluj-Napoca",
+  //   "Constanta",
+  //   "Sfantu Gheorghe",
+  //   "Targoviste",
+  //   "Craiova",
+  //   "Galati",
+  //   "Giurgiu",
+  //   "Targu Jiu",
+  //   "Miercurea Ciuc",
+  //   "Deva",
+  //   "Slobozia",
+  //   "Iasi",
+  //   "Baia Mare",
+  //   "Drobeta-Turnu Severin",
+  //   "Targu Mures",
+  //   "Piatra Neamt",
+  //   "Slatina",
+  //   "Ploiesti",
+  //   "Satu Mare",
+  //   "Zalau",
+  //   "Sibiu",
+  //   "Suceava",
+  //   "Alexandria",
+  //   "Timisoara",
+  //   "Tulcea",
+  //   "Ramnicu Valcea",
+  //   "Vaslui",
+  //   "Focsani",
+  //   "Afumati",
+  //   "Popesti-Leordeni",
+  //   "Voluntari",
+  //   "Otopeni",
+  //   "Chitila",
+  //   "Magurele",
+  //   "Corbeanca",
+  //   "Buftea",
+  //   "Bragadiru",
+  //   "Pantelimon",
+  // ];
+  const counties = [
+    "Alba",
+    "Arad",
+    "Arges",
+    "Bacau",
+    "Bihor",
+    "Bistrita-Nasaud",
+    "Botosani",
+    "Braila",
+    "Brasov",
+    "Bucuresti",
+    "Buzau",
+    "Calarasi",
+    "Caras-Severin",
+    "Cluj",
+    "Constanta",
+    "Covasna",
+    "Dambovita",
+    "Dolj",
+    "Galati",
+    "Giurgiu",
+    "Gorj",
+    "Harghita",
+    "Hunedoara",
+    "Ialomita",
+    "Iasi",
+    "Ilfov",
+    "Maramures",
+    "Mehedinti",
+    "Mures",
+    "Neamt",
+    "Olt",
+    "Prahova",
+    "Salaj",
+    "Satu Mare",
+    "Sibiu",
+    "Suceava",
+    "Teleorman",
+    "Timis",
+    "Tulcea",
+    "Valcea",
+    "Vaslui",
+    "Vrancea",
+  ];
+
+  try {
+    const counts = [];
+
+    for (const judet of counties) {
+      console.log(judet);
+      const q = query(
+        collection(db, "UsersJobs"),
+        where("judet", "==", judet),
+        where("statusCont", "==", "Activ"),
+        where("userType", "==", "Partener")
+      );
+      const querySnapshot = await getDocs(q);
+      const count = querySnapshot.size;
+      if (count > 0) {
+        counts.push({ localitate: judet, count });
+      }
+    }
+
+    // Sortează rezultatele descrescător după count
+    counts.sort((a, b) => b.count - a.count);
+
+    return counts;
+  } catch (error) {
+    console.error("Error during data retrieval and processing: ", error);
+    throw error; // Aruncă eroarea mai departe dacă dorești să o gestionezi și în alte părți ale aplicației
+  }
+}
+
+//-------- PAGINATION -----
+
+const handleGetFirestorePaginated = async (pageSize, collectionPath) => {
+  const ref = collection(db, collectionPath);
+  let pageQuery;
+
+  pageQuery = query(ref, orderBy("firstUploadDate", "desc"), limit(pageSize));
+  setLastVisible(null);
+  setFirstVisible(null);
+};
+
+//-------- PAGINATION -----

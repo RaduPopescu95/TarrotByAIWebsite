@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }) => {
     setAsGuestUser,
     setUserData,
     setCurrentUser,
+    setLoading
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

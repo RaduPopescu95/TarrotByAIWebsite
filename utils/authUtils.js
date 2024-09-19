@@ -4,6 +4,7 @@ import {
   reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signOut,
   updateEmail,
   updatePassword,
@@ -14,6 +15,7 @@ import { authentication } from "../firebase";
 import { FirebaseError } from "firebase/app";
 
 import { deleteUserData } from "./deleteFirebaseData";
+import { emailWithoutSpace } from "./strintText";
 
 const auth = authentication;
 
@@ -155,3 +157,23 @@ export const handleFirebaseAuthError = (error) => {
   }
   return message;
 };
+
+// HANLDE SIGN IN AND RETURN INFOR
+export const handleSignIn = async (email, password) => {
+  const emailNew = emailWithoutSpace(email);
+
+  try {
+    const userCredentials = await signInWithEmailAndPassword(
+      authentication,
+      emailNew,
+      password
+    );
+    console.log("userCredentials...", userCredentials.user.uid);
+    return userCredentials; // Returnează userCredentials pentru succes
+  } catch (error) {
+    console.log("error on sign in user...message...", error.message);
+    console.log("error on sign in user...code...", error.code);
+    throw error; // Propagă eroarea mai departe
+  }
+};
+

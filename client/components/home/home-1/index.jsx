@@ -10,6 +10,8 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Calendar } from "primereact/calendar";
 import Image from "next/image";
+import { Box, CircularProgress } from "@mui/material";
+import { useAuth } from "../../../../context/AuthContext";
 
 // Încărcarea dinamică a componentelor dependente de DOM
 const OwlCarousel = dynamic(() => import("react-owl-carousel"), { ssr: false });
@@ -17,6 +19,7 @@ const Slider = dynamic(() => import("react-slick"), { ssr: false });
 
 const Home1 = () => {
   const [date1, setDate1] = useState(null);
+  const { currentUser, userData, loading, setLoading } = useAuth()
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -161,6 +164,19 @@ const Home1 = () => {
       },
     ],
   };
+
+  if(loading){
+    return (    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center", // Center horizontally
+        alignItems: "center", // Center vertically
+        height: "100vh", // Optional: Set a specific height for the centering container
+      }}
+    >
+      <CircularProgress />
+    </Box>)
+  }
 
   return (
     <div className="main-wrapper home-one">

@@ -15,7 +15,7 @@ import {
 } from "../../imagepath";
 
 import DoctorFooter from "../../common/doctorFooter";
-import userImage from "../../../assets/images/doctors-dashboard/userprofile.png";
+
 import Link from "next/link";
 import Home1Header from "../../home/home-1/header";
 const DoctorDashboard = (props) => {
@@ -198,7 +198,7 @@ const DoctorDashboard = (props) => {
                                     href="/doctor/appointments"
                                     className="table-avatar"
                                   >
-                                    <img src={userImage} alt="Img" />
+                                    <img src="/img/userprofile.png" alt="Img" />
                                   </Link>
                                   <div className="patient-name-info">
                                     <span>#Rez001</span>
@@ -236,7 +236,7 @@ const DoctorDashboard = (props) => {
                                     href="/doctor/appointments"
                                     className="table-avatar"
                                   >
-                                    <img src={userImage} alt="Img" />
+                                    <img src="/img/userprofile.png" alt="Img" />
                                   </Link>
                                   <div className="patient-name-info">
                                     <span>#Rez001</span>
@@ -274,7 +274,7 @@ const DoctorDashboard = (props) => {
                                     href="/doctor/appointments"
                                     className="table-avatar"
                                   >
-                                    <img src={userImage} alt="Img" />
+                                    <img src="/img/userprofile.png" alt="Img" />
                                   </Link>
                                   <div className="patient-name-info">
                                     <span>#Rez001</span>
@@ -312,7 +312,7 @@ const DoctorDashboard = (props) => {
                                     href="/doctor/appointments"
                                     className="table-avatar"
                                   >
-                                    <img src={userImage} alt="Img" />
+                                    <img src="/img/userprofile.png" alt="Img" />
                                   </Link>
                                   <div className="patient-name-info">
                                     <span>#Rez001</span>
@@ -407,32 +407,32 @@ const DoctorDashboard = (props) => {
                       <div className="upcoming-patient-info">
                         <div className="info-details">
                           <span className="img-avatar">
-                            <img src={doctordashboardprofile01} alt="Img" />
+                            <img src="/img/userprofile.png" alt="Img" />
                           </span>
                           <div className="name-info">
-                            <span>#Apt0001</span>
-                            <h6>Adrian Marshall</h6>
+                            <span>#Rez009</span>
+                            <h6>Alexandru</h6>
                           </div>
                         </div>
                         <div className="date-details">
-                          <span>General visit</span>
-                          <h6>Today, 10:45 AM</h6>
+                          <span>Tip consultatie</span>
+                          <h6>Astazi, 19:00 AM</h6>
                         </div>
                       </div>
                       <div className="appointment-card-footer">
                         <h5>
                           <i className="fa-solid fa-video" />
-                          Video Appointment
+                          Consultatie Video
                         </h5>
                         <div className="btn-appointments">
-                          <Link href="/doctor/chat-doctor" className="btn">
+                          {/* <Link href="/doctor/chat-doctor" className="btn">
                             Chat Now
-                          </Link>
+                          </Link> */}
                           <Link
                             href="/doctor/doctor-appointment-start"
                             className="btn"
                           >
-                            Start Appointment
+                            Începe consultatia
                           </Link>
                         </div>
                       </div>
