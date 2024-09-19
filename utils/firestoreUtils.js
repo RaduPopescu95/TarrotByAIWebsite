@@ -51,8 +51,60 @@ export const handleUpdateFirestore = async (location, updatedData) => {
     };
 
     await updateDoc(ref, newData);
+    return newData
   } catch (err) {
     console.log("Error on...handleUpdateFirestore...", err);
+  }
+};
+
+export const handleUploadFirestoreGeneral = async (data, location, actionText) => {
+  try {
+    console.log("test.infor in handle upload firestore...");
+    console.log(location);
+    console.log(data);
+
+    // Crează un nou document în colecție cu un ID generat automat
+
+    const docRef = doc(collection(db, location));
+
+    // preia length of location collection
+
+    const collectionLength = await getFirestoreCollectionLength(location);
+    let id = collectionLength + 1;
+
+    //current date
+    const dateTime = getCurrentDateTime();
+
+    // Adaugă ID-ul generat în obiectul data
+    const newData = {
+      ...data,
+      documentId: docRef.id,
+      id,
+      firstUploadDate: dateTime.date,
+      firstUploadTime: dateTime.time,
+    };
+    // Face upload cu noul obiect de date care include ID-ul documentului
+    await setDoc(docRef, newData);
+
+    console.log(`Documentul cu ID-ul ${docRef.id} a fost adăugat cu succes.`);
+
+    // UPLOAD ACTION OF USER
+    // UPLOAD ACTION OF USER
+    if (actionText) {
+      const currentUser = authentication.currentUser;
+      let actionData = {
+        actionText,
+      };
+
+      await handleUploadFirestoreSubcollection(
+        actionData,
+        `UsersJobs/${currentUser?.uid}/ActiuniJobs`,
+        currentUser?.uid
+      );
+    }
+    return newData;
+  } catch (err) {
+    console.log("Eroare la handleUploadFirestore...", err);
   }
 };
 export const handleUploadFirestore = async (data, location) => {

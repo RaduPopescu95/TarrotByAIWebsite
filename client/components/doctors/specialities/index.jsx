@@ -1,9 +1,11 @@
-import React, { useState } from "react";
-import Header from "../../header";
+import React, { useEffect, useState } from "react";
+
 import DoctorSidebar from "../sidebar";
 import DoctorFooter from "../../common/doctorFooter";
 import Select from "react-select";
 import Link from "next/link";
+import Home1Header from "../../home/home-1/header";
+import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestore, handleUploadFirestoreGeneral } from "../../../../utils/firestoreUtils";
 
 const DoctorSpecialities = (props) => {
   const [speciality, setSpeciality] = useState([]);
@@ -79,7 +81,43 @@ const DoctorSpecialities = (props) => {
     setServices1(services1.filter((service1) => service1.id !== id));
   };
   //
-  const [services2, setServices2] = useState([{}]);
+  const [services2, setServices2] = useState([]);
+  const [dataR, setDataR] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const handleUploadCategorii = async () => {
+
+    try {
+    let data=  {categorii:[...services2]}
+   
+   
+        const dataReturned = await handleUploadFirestoreGeneral(
+          data, // Trimite fiecare obiect separat
+          "CategoriiConsultatii" // Colecția unde înregistrăm fiecare serviciu
+        );
+        console.log("Document added successfully:", dataReturned);
+      } catch (error) {
+        console.error("Error adding document:", error);
+      }
+
+  };
+  const handleUpdateCategorii = async () => {
+    console.log("updateing categorii...")
+    try {
+    let data=  {...dataR,categorii:[...services2]}
+   
+   
+        const dataReturned = await handleUpdateFirestore(
+          `CategoriiConsultatii/${dataR.documentId}`,
+          data, // Trimite fiecare obiect separat
+        );
+        console.log("Document added successfully:", dataReturned);
+      } catch (error) {
+        console.error("Error adding document:", error);
+      }
+
+  };
+  
+
   const addService2 = () => {
     setServices2([
       ...services2,
@@ -94,6 +132,15 @@ const DoctorSpecialities = (props) => {
   const deleteService2 = (id) => {
     setServices2(services2.filter((service2) => service2.id !== id));
   };
+
+    // Funcție pentru actualizarea câmpului "about"
+    const handleAboutChange = (id, newAbout) => {
+      setServices2(
+        services2.map((service2) =>
+          service2.id === id ? { ...service2, about: newAbout } : service2
+        )
+      );
+    };
   //
   const [services3, setServices3] = useState([{}]);
   const addService3 = () => {
@@ -110,23 +157,48 @@ const DoctorSpecialities = (props) => {
   const deleteService3 = (id) => {
     setServices3(services3.filter((service3) => service3.id !== id));
   };
+  const handleGetCategorii = async () => {
+    setLoading(true)
+    try {
+      let dataReturned = await handleGetFirestore("CategoriiConsultatii"); // Asigură-te că `handleGetFirestore` este asincron
+      if (dataReturned && dataReturned.length > 0) {
+        console.log("dataReturned[0].categorii....", dataReturned[0].categorii)
+        setServices2([...dataReturned[0].categorii]);
+        setDataR(dataReturned[0])
+        setLoading(false)
+      } else {
+        console.log("No data found or empty categorii");
+        setLoading(false)
+      }
+      setLoading(false)
+    } catch (error) {
+      setLoading(false)
+      console.error("Error fetching Categorii Consultatii:", error);
+    }
+  };
+  
+  useEffect(() => {
+    handleGetCategorii()
+  },[])
+
+
 
   return (
     <div>
-      <Header {...props} />
+           <Home1Header />
       {/* Breadcrumb */}
       <div className="breadcrumb-bar-two">
         <div className="container">
           <div className="row align-items-center inner-banner">
             <div className="col-md-12 col-12 text-center">
-              <h2 className="breadcrumb-title">Speciality &amp; Services</h2>
+              <h2 className="breadcrumb-title">Categorii Consultatii</h2>
               <nav aria-label="breadcrumb" className="page-breadcrumb">
                 <ol className="breadcrumb">
                   <li className="breadcrumb-item">
-                    <Link href="/home-1">Home</Link>
+                    <Link href="/consultatii">Consultatii</Link>
                   </li>
                   <li className="breadcrumb-item" aria-current="page">
-                    Speciality &amp; Services
+                    Categorii Consultatii
                   </li>
                 </ol>
               </nav>
@@ -146,238 +218,30 @@ const DoctorSpecialities = (props) => {
             </div>
             <div className="col-lg-8 col-xl-9">
               <div className="dashboard-header">
-                <h3>Speciality &amp; Services</h3>
-                <ul>
+                <h3>Categorii Consultatii</h3>
+                {/* <ul>
                   <li>
                     <Link
                       href="#"
                       className="btn btn-primary prime-btn add-speciality"
                       onClick={addSpeciality}
                     >
-                      Add New Speciality
+                      Adauga consultatie
                     </Link>
                   </li>
-                </ul>
+                </ul> */}
               </div>
               <div className="accordions" id="list-accord">
-                {/* Spaciality Item */}
+        
                 <div className="user-accordion-item">
-                  <Link
-                    href="#"
-                    className="accordion-wrap"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#cardiology"
-                  >
-                    Cardiology<span>Delete</span>
-                  </Link>
-                  <div
-                    className="accordion-collapse collapse show"
-                    id="cardiology"
-                    data-bs-parent="#list-accord"
-                  >
-                    <div className="content-collapse">
-                      <div className="add-service-info">
-                        <div className="add-info">
-                          <div className="row">
-                            <div className="col-md-4">
-                              <div className="form-wrap">
-                                <label className="col-form-label">
-                                  Speciality{" "}
-                                  <span className="text-danger">*</span>
-                                </label>
-                                <Select
-                                  options={specialities}
-                                  className="select"
-                                  placeholder="Cardiology"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          {services.map((service) => (
-                            <div className="row service-cont" key={service.id}>
-                              <div className="col-md-3">
-                                <div className="form-wrap">
-                                  <label className="col-form-label">
-                                    Service{" "}
-                                    <span className="text-danger">*</span>
-                                  </label>
-                                  <Select
-                                    options={service}
-                                    className="select"
-                                    placeholder="Select Service"
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-2">
-                                <div className="form-wrap">
-                                  <label className="col-form-label">
-                                    Price ($){" "}
-                                    <span className="text-danger">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder={454}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-7">
-                                <div className="d-flex align-items-center">
-                                  <div className="form-wrap w-100">
-                                    <label className="col-form-label">
-                                      About Service
-                                    </label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                    />
-                                  </div>
-                                  <div className="form-wrap ms-2">
-                                    <label className="col-form-label d-block">
-                                      &nbsp;
-                                    </label>
-                                    <Link
-                                      href="#"
-                                      className="trash-icon trash"
-                                      onClick={() => deleteService(service.id)}
-                                    >
-                                      Delete
-                                    </Link>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-end">
-                          <Link
-                            href="#"
-                            className="add-serv more-item mb-0"
-                            onClick={addService}
-                          >
-                            Add New Service
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* /Spaciality Item */}
-                {/* Spaciality Item */}
-                <div className="user-accordion-item">
-                  <Link
-                    href="#"
-                    className="accordion-wrap collapsed"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#neurology"
-                  >
-                    Neurology<span>Delete</span>
-                  </Link>
-                  <div
-                    className="accordion-collapse"
-                    id="neurology"
-                    data-bs-parent="#list-accord"
-                  >
-                    <div className="content-collapse">
-                      <div className="add-service-info">
-                        <div className="add-info">
-                          <div className="row">
-                            <div className="col-md-4">
-                              <div className="form-wrap">
-                                <label className="col-form-label">
-                                  Speciality{" "}
-                                  <span className="text-danger">*</span>
-                                </label>
-                                <Select
-                                  options={specialities}
-                                  className="select"
-                                  placeholder="Nerology"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          {services1.map((service1) => (
-                            <div className="row service-cont" key={service1.id}>
-                              <div className="col-md-3">
-                                <div className="form-wrap">
-                                  <label className="col-form-label">
-                                    Service{" "}
-                                    <span className="text-danger">*</span>
-                                  </label>
-                                  <Select
-                                    options={service}
-                                    className="select"
-                                    placeholder="Select Service"
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-2">
-                                <div className="form-wrap">
-                                  <label className="col-form-label">
-                                    Price ($){" "}
-                                    <span className="text-danger">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder={454}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-7">
-                                <div className="d-flex align-items-center">
-                                  <div className="form-wrap w-100">
-                                    <label className="col-form-label">
-                                      About Service
-                                    </label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                    />
-                                  </div>
-                                  <div className="form-wrap ms-2">
-                                    <label className="col-form-label d-block">
-                                      &nbsp;
-                                    </label>
-                                    <Link
-                                      href="#"
-                                      className="trash-icon trash"
-                                      onClick={() =>
-                                        deleteService1(service1.id)
-                                      }
-                                    >
-                                      Delete
-                                    </Link>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-end">
-                          <Link
-                            href="#"
-                            className="add-serv more-item mb-0"
-                            onClick={addService1}
-                          >
-                            Add New Service
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* /Spaciality Item */}
-                {/* Spaciality Item */}
-                <div className="user-accordion-item">
-                  <Link
+                  {/* <Link
                     href="#"
                     className="accordion-wrap collapsed"
                     data-bs-toggle="collapse"
                     data-bs-target="#urology"
                   >
                     Urology<span>Delete</span>
-                  </Link>
+                  </Link> */}
                   <div
                     className="accordion-collapse"
                     id="urology"
@@ -386,7 +250,7 @@ const DoctorSpecialities = (props) => {
                     <div className="content-collapse">
                       <div className="add-service-info">
                         <div className="add-info">
-                          <div className="row">
+                          {/* <div className="row">
                             <div className="col-md-4">
                               <div className="form-wrap">
                                 <label className="col-form-label">
@@ -401,10 +265,16 @@ const DoctorSpecialities = (props) => {
                                 />
                               </div>
                             </div>
-                          </div>
+                          </div> */}
+                          {loading &&
+                     
+                            <div className="spinner-border" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                          }
                           {services2.map((service2) => (
                             <div className="row service-cont" key={service2.id}>
-                              <div className="col-md-3">
+                              {/* <div className="col-md-3">
                                 <div className="form-wrap">
                                   <label className="col-form-label">
                                     Service{" "}
@@ -416,8 +286,8 @@ const DoctorSpecialities = (props) => {
                                     placeholder="Select Service"
                                   />
                                 </div>
-                              </div>
-                              <div className="col-md-2">
+                              </div> */}
+                              {/* <div className="col-md-2">
                                 <div className="form-wrap">
                                   <label className="col-form-label">
                                     Price ($){" "}
@@ -429,16 +299,20 @@ const DoctorSpecialities = (props) => {
                                     placeholder={454}
                                   />
                                 </div>
-                              </div>
-                              <div className="col-md-7">
+                              </div> */}
+                              <div className="col-md-12">
                                 <div className="d-flex align-items-center">
                                   <div className="form-wrap w-100">
                                     <label className="col-form-label">
-                                      About Service
+                                      Nume Categorie Consultatie
                                     </label>
                                     <input
                                       type="text"
                                       className="form-control"
+                                      value={service2.about}
+                                      onChange={(e) =>
+                                        handleAboutChange(service2.id, e.target.value)
+                                      }
                                     />
                                   </div>
                                   <div className="form-wrap ms-2">
@@ -452,7 +326,7 @@ const DoctorSpecialities = (props) => {
                                         deleteService2(service2.id)
                                       }
                                     >
-                                      Delete
+                                      Sterge
                                     </Link>
                                   </div>
                                 </div>
@@ -460,21 +334,24 @@ const DoctorSpecialities = (props) => {
                             </div>
                           ))}
                         </div>
+                        {
+                          !loading && 
                         <div className="text-end">
                           <Link
                             href="#"
                             className="add-serv more-item mb-0"
                             onClick={addService2}
                           >
-                            Add New Service
+                            Adauga categorie
                           </Link>
                         </div>
+                        }
                       </div>
                     </div>
                   </div>
                 </div>
                 {/* /Spaciality Item */}
-                {speciality.map((speciality) => (
+                {/* {speciality.map((speciality) => (
                   <div className="user-accordion-item" key={speciality.id}>
                     <Link
                       href="#"
@@ -583,15 +460,15 @@ const DoctorSpecialities = (props) => {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))} */}
               </div>
 
               <div className="modal-btn text-end">
-                <Link href="#" className="btn btn-gray">
+                {/* <Link href="#" className="btn btn-gray">
                   Cancel
-                </Link>
-                <Link href="#" className="btn btn-primary prime-btn">
-                  Save Changes
+                </Link> */}
+                <Link href="#" className="btn btn-primary prime-btn" onClick={dataR ? handleUpdateCategorii : handleUploadCategorii}>
+                  Salveaza categorii
                 </Link>
               </div>
             </div>
