@@ -57,12 +57,13 @@ import "owl.carousel/dist/assets/owl.theme.default.css";
 // import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import Home1Header from "../../home/home-1/header.jsx";
+import Footer from "../../footer.jsx";
 const isBrowser = typeof window !== "undefined";
 
 const OwlCarousel = dynamic(() => import("react-owl-carousel"), { ssr: false });
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-const Dashboard = (props) => {
+const ContClient = (props) => {
   const TextContent = () => <p>Last Visit 25 Mar 2024</p>;
 
   const [count, setCount] = useState(1, 2, 3, 4);
@@ -576,7 +577,7 @@ const Dashboard = (props) => {
                             <div className="doctor-fav-list">
                               <div className="doctor-info-profile">
                                 <Link href="#" className="table-avatar">
-                                  <img src={CristinaImage} alt="Img" />
+                                  <img src={"/img/profilecristina.png"} alt="Cristina Zurba" />
                                 </Link>
                                 <div className="doctor-name-info">
                                   <h5>
@@ -604,7 +605,7 @@ const Dashboard = (props) => {
                                 Chat Now
                               </Link> */}
                               <Link
-                                href="/pages/video-call"
+                                href="/meeting"
                                 className="btn btn-outline-primary"
                               >
                                 <i className="fa-solid fa-calendar-check" />
@@ -782,7 +783,7 @@ const Dashboard = (props) => {
                         Fa o noua <span>REZERVARE</span>
                       </h3>
                       <span className="add-icon">
-                        <Link href="/patient/booking1">
+                        <Link href="/calendar">
                           <i className="fa-solid fa-circle-plus" />
                         </Link>
                       </span>
@@ -866,7 +867,7 @@ const Dashboard = (props) => {
                   </div>
                 </div>
 
-                <div className="col-xl-7 d-flex">
+                <div className="col-xl-8 d-flex">
                   <div className="dashboard-main-col w-100">
                     {/* <div className="dashboard-card w-100">
                       <div className="dashboard-card-head">
@@ -999,7 +1000,7 @@ const Dashboard = (props) => {
                         </div>
                       </div>
                     </div> */}
-                    <div className="dashboard-card w-100">
+                    {/* <div className="dashboard-card w-100">
                       <div className="dashboard-card-head">
                         <div className="header-title">
                           <h5>Rezervari trecut</h5>
@@ -1027,7 +1028,7 @@ const Dashboard = (props) => {
                             <div className="doctor-fav-list">
                               <div className="doctor-info-profile">
                                 <Link href="#" className="table-avatar">
-                                  <img src={CristinaImage} alt="Img" />
+                                  <img src={"/img/profilecristina.png"} alt="Img" />
                                 </Link>
                                 <div className="doctor-name-info">
                                   <h5>
@@ -1044,15 +1045,15 @@ const Dashboard = (props) => {
                               >
                                 Rezerva din nou
                               </Link>
-                              {/* <Link
+                              <Link
                                   href="patient-appointment-details.html"
                                   className="btn btn-primary prime-btn"
                                 >
                                   Vezi detalii
-                                </Link> */}
+                                </Link>
                             </div>
                           </div>
-                          {/* <div className="appointment-dash-card past-appointment">
+                          <div className="appointment-dash-card past-appointment">
                               <div className="appointment-date-info">
                                 <h4>Friday, Mar 2024</h4>
                                 <ul>
@@ -1097,10 +1098,10 @@ const Dashboard = (props) => {
                                   View Details
                                 </Link>
                               </div>
-                            </div> */}
+                            </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                     {/* <div className="dashboard-card w-100">
                       <div className="dashboard-card-head">
                         <div className="header-title">
@@ -2332,9 +2333,9 @@ const Dashboard = (props) => {
         </div>
       </div>
       {/* /Page Content */}
-      <DoctorFooter {...props} />
+      <Footer {...props} />
     </>
   );
 };
 
-export default Dashboard;
+export default ContClient;

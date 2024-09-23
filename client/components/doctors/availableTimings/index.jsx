@@ -21,7 +21,7 @@ const AvailableTimings = () => {
   const [editedDaySlots, setEditedDaySlots] = useState({}); // sloturile modificate pentru o zi specifică
 
   // Ordinea zilelor săptămânii
-  const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dayOrder = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
 
   const handleDaySelection = (day) => {
     // Verifică dacă ziua este deja selectată
@@ -75,6 +75,13 @@ const AvailableTimings = () => {
 
   const sortedSelectedDays = selectedDays.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 
+  const handleSaveChanges = (e) => {
+    e.preventDefault();
+    // Verifică slots-urile selectate și afișează-le în consolă
+    console.log("Saved slots:", slots);
+    // Aici poți implementa și salvarea în baza de date sau în Firebase
+  };
+
   return (
     <>
       <div className="main-wrapper">
@@ -88,7 +95,7 @@ const AvailableTimings = () => {
               </div>
               <div className="col-lg-8 col-xl-9">
                 <div className="dashboard-header">
-                  <h3>Available Timings</h3>
+                  <h3>Intervale de lucru</h3>
                 </div>
                 <TabsComponent activeTab={activeTab} setActiveTab={setActiveTab} />
                 <div className="tab-content pt-0">
@@ -97,7 +104,7 @@ const AvailableTimings = () => {
                       <div className="card custom-card">
                         <div className="card-body">
                           <div className="card-header">
-                            <h3>Select Available Slots</h3>
+                            <h3>Selecteaza Intervale de lucru</h3>
                           </div>
                           <AvailableDays handleDaySelection={handleDaySelection} selectedDays={selectedDays} />
                           <div className="tab-content pt-0">
@@ -113,10 +120,10 @@ const AvailableTimings = () => {
                             ))}
                             <div className="modal-btn text-end">
                               <Link href="#" className="btn btn-gray">
-                                Cancel
+                                Anuleaza
                               </Link>
-                              <button className="btn btn-primary prime-btn">
-                                Save Changes
+                              <button className="btn btn-primary prime-btn" onClick={handleSaveChanges}>
+                                Salveaza
                               </button>
                             </div>
                           </div>
@@ -144,15 +151,15 @@ const AvailableTimings = () => {
       {activeDay && (
         <ModalComponent
           id="add_slot"
-          title={`Add Slot for ${activeDay}`}
+          title={`Adauga ore pentru ${activeDay}`}
           bodyContent={
             <TimePicker
               onChange={(value) => handleAddSlot(activeDay, value.format("HH:mm"))}
-              placeholder="Select Time"
+              placeholder="Selecteaz ora"
             />
           }
-          confirmText="Add Slot"
-          cancelText="Cancel"
+          confirmText="Adauga ora"
+          cancelText="Anuleaza"
           isVisible={!!activeDay}
           onClose={handleCloseModal}
         />
@@ -162,9 +169,9 @@ const AvailableTimings = () => {
         <ModalComponent
           id="delete_slot"
           title={`Delete All Slots for ${deleteDay}`}
-          bodyContent={<p>Are you sure you want to delete all slots for {deleteDay}?</p>}
-          confirmText="Delete All"
-          cancelText="Cancel"
+          bodyContent={<p>Esti sigur ca vrei sa stergi orele pentru {deleteDay}?</p>}
+          confirmText="Sterge ore"
+          cancelText="Anuleaza"
           isVisible={!!deleteDay}
           onClose={handleCloseModal}
           onConfirm={() => handleDeleteSlots(deleteDay)}
@@ -174,10 +181,10 @@ const AvailableTimings = () => {
       {deleteSlot.day && deleteSlot.slot && (
         <ModalComponent
           id="delete_single_slot"
-          title={`Delete Slot for ${deleteSlot.day}`}
-          bodyContent={<p>Are you sure you want to delete slot {deleteSlot.slot} for {deleteSlot.day}?</p>}
-          confirmText="Delete Slot"
-          cancelText="Cancel"
+          title={`Sterge ora pentru ${deleteSlot.day}`}
+          bodyContent={<p>Esti sigur ca vrei sa stergi {deleteSlot.slot} pentru {deleteSlot.day}?</p>}
+          confirmText="Sterge ora"
+          cancelText="Anuleaza"
           isVisible={!!deleteSlot.day}
           onClose={handleCloseModal}
           onConfirm={confirmDeleteSlot}

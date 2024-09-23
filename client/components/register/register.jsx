@@ -1,116 +1,170 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-// import loginBanner from "../../../assets/images/login-banner.png";
-import loginBanner from "../../../assets/images/login-banner.png";
-import Header from "../header";
 import Footer from "../footer";
+import Home1Header from "../home/home-1/header";
+import { emailWithoutSpace } from "../../../utils/strintText";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { authentication, db } from "../../../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { handleFirebaseAuthError } from "../../../utils/authUtils";
+import { useRouter } from "next/router";
 
-const Register = (props) => {
-  // const history = useHistory();
+const RegisterClient = (props) => {
+  const [firstName, setFirstName] = useState(""); // Stare pentru prenume
+  const [lastName, setLastName] = useState(""); // Stare pentru nume
+  const [email, setEmail] = useState(""); // Stare pentru email
+  const [password, setPassword] = useState(""); // Stare pentru parolă
+  const [confirmPassword, setConfirmPassword] = useState(""); // Stare pentru confirmarea parolei
+  const [error, setError] = useState(""); // Stare pentru mesaje de eroare
+  const router = useRouter();
 
-  useEffect(() => {
-    document.body.classList.add("account-page");
+  // Functia de inscriere
+  const handleSignUp = async (event) => {
+    event.preventDefault(); // Prevenim comportamentul default al formularului
 
-    return () => document.body.classList.remove("account-page");
-  }, []);
+    // Validare pentru coincidența parolelor
+    if (password !== confirmPassword) {
+      setError("Parolele nu coincid!");
+      return;
+    }
+
+    try {
+      const emailFormatted = emailWithoutSpace(email); // Formatam emailul pentru a elimina spatiile
+      const userCredential = await createUserWithEmailAndPassword(
+        authentication,
+        emailFormatted,
+        password
+      );
+      
+      console.log("User created successfully with email: ", userCredential.user);
+      const owner_uid = userCredential.user.uid;
+
+      // Crearea unui nou document în Firebase Firestore
+      const userData = {
+        email: emailFormatted,
+        first_name: firstName,
+        last_name: lastName,
+        owner_uid,
+      };
+
+      await setDoc(doc(db, "Users", owner_uid), userData).then(() => {
+        console.log("Înregistrare cu succes");
+      });
+
+      setTimeout(() => {
+        router.push("/consultatii");
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Eroare la crearea utilizatorului: ", error);
+      const message = handleFirebaseAuthError(error); // Gestionăm eroarea folosind utilitarul nostru
+      setError(message);
+    }
+  };
 
   return (
     <>
-      <Header {...props} />
-
-      <>
-        {/* Page Content */}
-        <div className="content top-space">
-          <div className="container-fluid">
-            <div className="row">
-              <div className="col-md-8 offset-md-2">
-                {/* Register Content */}
-                <div className="account-content">
-                  <div className="row align-items-center justify-content-center">
-                    <div className="col-md-7 col-lg-6 login-left">
-                      <img
-                        src={"../../../assets/img/login-banner-cristina.png"}
-                        className="img-fluid"
-                        alt="Doccure Register"
-                      />
+      <Home1Header />
+      <div className="content top-space">
+        <div className="container-fluid">
+          <div className="row">
+            <div className="col-md-8 offset-md-2">
+              <div className="account-content">
+                <div className="row align-items-center justify-content-center">
+                  <div className="col-md-7 col-lg-6 login-left">
+                    <img
+              src={"/img/banner-image.png"}
+              className="img-fluid"
+              alt="Cristina Zurba login"
+                    />
+                  </div>
+                  <div className="col-md-12 col-lg-6 login-right">
+                    <div className="login-header">
+                      <h3>Înregistrează cont</h3>
                     </div>
-                    <div className="col-md-12 col-lg-6 login-right">
-                      <div className="login-header">
-                        <h3>
-                          Înregistrează cont{" "}
-                          {/* <Link href="/doctor/doctor-register">
-                            Are you a Doctor?
-                          </Link> */}
-                        </h3>
+                    {/* Register Form */}
+                    <form onSubmit={handleSignUp}>
+                      <div className="form-group form-focus">
+                        <input
+                          type="text"
+                          className="form-control floating"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)} // Actualizare stare prenume
+                          required
+                        />
+                        <label className="focus-label">Prenume</label>
                       </div>
-                      {/* Register Form */}
-                      <form>
-                        <div className="form-group form-focus">
-                          <input
-                            type="text"
-                            className="form-control floating"
-                          />
-                          <label className="focus-label">Nume</label>
-                        </div>
 
-                        <div className="form-group form-focus">
-                          <input
-                            type="password"
-                            className="form-control floating"
-                          />
-                          <label className="focus-label">Parolă</label>
-                        </div>
-                        <div className="form-group form-focus">
-                          <input
-                            type="password"
-                            className="form-control floating"
-                          />
-                          <label className="focus-label">Confirmă parolă</label>
-                        </div>
-                        <div className="text-end">
-                          <Link className="forgot-link" href="/login">
-                            Ai deja cont?
-                          </Link>
-                        </div>
-                        <Link
-                          href="/patient/patientregisterstep-1"
-                          className="btn btn-primary w-100 btn-lg login-btn"
-                          type="submit"
-                        >
-                          Înregistrează
+                      <div className="form-group form-focus">
+                        <input
+                          type="text"
+                          className="form-control floating"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)} // Actualizare stare nume
+                          required
+                        />
+                        <label className="focus-label">Nume</label>
+                      </div>
+
+                      <div className="form-group form-focus">
+                        <input
+                          type="email"
+                          className="form-control floating"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)} // Actualizare stare email
+                          required
+                        />
+                        <label className="focus-label">Email</label>
+                      </div>
+
+                      <div className="form-group form-focus">
+                        <input
+                          type="password"
+                          className="form-control floating"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)} // Actualizare stare parolă
+                          required
+                        />
+                        <label className="focus-label">Parolă</label>
+                      </div>
+
+                      <div className="form-group form-focus">
+                        <input
+                          type="password"
+                          className="form-control floating"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)} // Actualizare stare confirmare parolă
+                          required
+                        />
+                        <label className="focus-label">Confirmă parolă</label>
+                      </div>
+
+                      {error && <p className="text-danger">{error}</p>}
+
+                      <div className="text-end">
+                        <Link className="forgot-link" href="/login">
+                          Ai deja cont?
                         </Link>
-                        <div className="login-or">
-                          <span className="or-line" />
-                          <span className="span-or">or</span>
-                        </div>
-                        <div className="row form-row social-login">
-                          <div className="col-6">
-                            <Link href="#" className="btn btn-facebook w-100">
-                              <i className="fab fa-facebook-f me-1" /> Facebook
-                            </Link>
-                          </div>
-                          <div className="col-6">
-                            <Link href="#" className="btn btn-google w-100">
-                              <i className="fab fa-google me-1" /> Google
-                            </Link>
-                          </div>
-                        </div>
-                      </form>
-                      {/* /Register Form */}
-                    </div>
+                      </div>
+
+                      <button
+                        className="btn btn-primary w-100 btn-lg login-btn"
+                        type="submit"
+                      >
+                        Înregistrează
+                      </button>
+                    </form>
+                    {/* /Register Form */}
                   </div>
                 </div>
-                {/* /Register Content */}
               </div>
             </div>
           </div>
         </div>
-        {/* /Page Content */}
-      </>
-
+      </div>
       <Footer {...props} />
     </>
   );
 };
 
-export default Register;
+export default RegisterClient;

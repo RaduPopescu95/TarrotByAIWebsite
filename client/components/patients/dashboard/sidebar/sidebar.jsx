@@ -1,9 +1,37 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { doctordashboardprofile06 } from "../../../imagepath";
 import userImage from "../../../../assets/images/doctors-dashboard/userprofile.png";
+import { useRouter } from "next/router";
+import { useAuth } from "../../../../../context/AuthContext";
+import { authentication } from "../../../../../firebase";
+import { handleLogout } from "../../../../../utils/authUtils";
+import { onAuthStateChanged } from "firebase/auth";
 
 export const DashboardSidebar = () => {
+  const router = useRouter();
+  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
+  useEffect(() => {
+    setLoading(true);
+    const authenticated = authentication;
+    onAuthStateChanged(authenticated, (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const uid = user.uid;
+        console.log("is user.......");
+        setLoading(false);
+        // ...
+      } else {
+        console.log("is user......no.");
+        router.push("/login-client");
+        setLoading(false);
+        // User is signed out
+        // ...
+      }
+    });
+  },[]);
+
   return (
     <>
       {/* Profile Sidebar */}
@@ -11,7 +39,7 @@ export const DashboardSidebar = () => {
         <div className="widget-profile pro-widget-content">
           <div className="profile-info-widget">
             <Link href="/patient/profile" className="booking-doc-img">
-              <img src={userImage} alt="User Image" />
+              <img src={"/img/userprofile.png"} alt="User Image" />
             </Link>
             <div className="profile-det-info">
               <h3>
@@ -30,17 +58,17 @@ export const DashboardSidebar = () => {
           <nav className="dashboard-menu">
             <ul>
               <li className={false ? "active" : ""}>
-                <Link href="/patient/dashboard">
+                <Link href="/cont-client">
                   <i className="fa-solid fa-shapes me-2" />
                   <span>Panou principal</span>
                 </Link>
               </li>
-              <li className={false ? "active" : ""}>
+              {/* <li className={false ? "active" : ""}>
                 <Link href="/patient/patient-appointments">
                   <i className="fa-solid fa-calendar-days me-2" />
                   <span>Rezervarile mele</span>
                 </Link>
-              </li>
+              </li> */}
               {/* <li
                 className={
                   pathnames.includes("/patient/favourites") ? "active" : ""
@@ -122,14 +150,23 @@ export const DashboardSidebar = () => {
                   <span>Medical Details</span>
                 </Link>
               </li> */}
-              <li className={false ? "active" : ""}>
+              {/* <li className={false ? "active" : ""}>
                 <Link href="/patient/change-password">
                   <i className="fa-solid fa-key me-2" />
                   <span>Schimba parola</span>
                 </Link>
-              </li>
+              </li> */}
               <li>
-                <Link href="/login">
+                <Link href="/login-client"  onClick={async(e) => {
+                    // Prevenim comportamentul default al link-ului dacă este necesar
+                    e.preventDefault();
+                    await handleLogout().then(() => {
+                     setCurrentUser(null);
+                     setUserData(null);
+                     router.push("/consultatii");
+                    })
+          
+                  }}>
                   <i className="fa-solid fa-calendar-check me-2" />
                   <span>Deconectare</span>
                 </Link>

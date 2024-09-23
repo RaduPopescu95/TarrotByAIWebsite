@@ -20,12 +20,14 @@ import Link from "next/link";
 import { authentication } from "../../firebase";
 import Head from "next/head";
 import { handleLogout } from "../../utils/authUtils";
+import { useAuth } from "../../context/AuthContext";
 
 const defaultTheme = createTheme();
 
 export default function SignIn() {
   const route = useRouter();
   const [progressBar, setProgressBar] = useState(false);
+  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
 
   const [isInvalid, setIsInvalid] = useState(false);
   const [formData, setFormData] = useState({
@@ -105,6 +107,8 @@ export default function SignIn() {
             console.log("Nu ai permisiunea de a accesa această pagină.");
             // Opțional: Deloghează utilizatorul
             // route.push("/signin");
+            setCurrentUser(null);
+            setUserData(null);
             handleLogout();
           }
           setProgressBar(false);

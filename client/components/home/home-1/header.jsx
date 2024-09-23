@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 // import ImageWithBasePath from "../../../../core/img/imagewithbasebath";
 import Link from "next/link";
+import { useAuth } from "../../../../context/AuthContext";
 
 const Home1Header = () => {
   const [searchField, setSearchField] = useState(false);
+  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
+
 
   const toggleSearch = () => {
     setSearchField(!searchField);
@@ -13,6 +16,9 @@ const Home1Header = () => {
   // const directionPath = () => {
   //   history.push("/patient/search-doctor1");
   // };
+  useEffect(() => {
+    console.log("currentUser....",  currentUser)
+  },[])
 
   return (
     <>
@@ -661,24 +667,38 @@ const Home1Header = () => {
                   </div>
                 </li> */}
                 <li className="login-link">
-                  <Link href="/login">Login / Signup</Link>
+                  <Link href="/login-client">Login / Signup</Link>
                 </li>
               </ul>
             </div>
+            {
+              currentUser && currentUser.uid != "AW8kjQIhAiaJM5q0QgGlOKpGF2j1"
+              ?
+            <ul className="nav header-navbar-rht">
+    
+              <li className="register-btn">
+                <Link href="/cont-client" className="btn btn-primary log-btn">
+                  <i className="feather icon-user" />
+                  Cont
+                </Link>
+              </li>
+            </ul>
+              :
             <ul className="nav header-navbar-rht">
               <li className="register-btn">
-                <Link href="/register" className="btn reg-btn">
+                <Link href="/register-client" className="btn reg-btn">
                   <i className="feather icon-user" />
                   înregistrează
                 </Link>
               </li>
               <li className="register-btn">
-                <Link href="/login" className="btn btn-primary log-btn">
+                <Link href="/login-client" className="btn btn-primary log-btn">
                   <i className="feather icon-lock" />
                   Login
                 </Link>
               </li>
             </ul>
+            }
           </nav>
         </div>
       </header>

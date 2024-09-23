@@ -3,9 +3,9 @@ import React from "react";
 
 const AvailableDays = ({ handleDaySelection, selectedDays }) => (
   <div className="available-tab">
-    <label className="form-label">Select Available days</label>
+    <label className="form-label">Selecteaza zile disponibile</label>
     <ul className="nav">
-      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+      {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
         <li key={day}>
           <Link
             href="#"

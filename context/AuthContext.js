@@ -1,6 +1,12 @@
+"use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { authentication } from "../firebase";
-import { handleGetUserInfo } from "../utils/handleFirebaseQuery";
+import { authentication, db } from "../firebase";
+import {
+  handleGetUserInfo,
+  handleGetUserInfoJobs,
+} from "../utils/handleFirebaseQuery";
+import { handleGetFirestore } from "@/utils/firestoreUtils";
+import { doc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -9,44 +15,87 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null); // Inițializare cu null
+  const [userData, setUserData] = useState(null); // Inițializare cu null
   const [loading, setLoading] = useState(true);
-  const [isGuestUser, setIsGuestUser] = useState(false); // Inițializat ca false
+  const [isGuestUser, setIsGuestUser] = useState(false);
 
+  // Acces la localStorage doar pe client
   useEffect(() => {
-    // Verificăm dacă suntem pe partea de client (browser)
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("currentUser");
-      const storedUserData = localStorage.getItem("userData");
-      const storedGuestUser = localStorage.getItem("isGuestUser");
+    const storedCurrentUser = localStorage.getItem("currentUser");
+    const storedUserData = localStorage.getItem("userData");
+    const storedIsGuestUser = localStorage.getItem("isGuestUser");
 
-      // Inițializăm stările cu valorile din localStorage (dacă există)
-      setCurrentUser(storedUser ? JSON.parse(storedUser) : null);
-      setUserData(storedUserData ? JSON.parse(storedUserData) : null);
-      setIsGuestUser(storedGuestUser === "true");
+    if (storedCurrentUser) {
+      setCurrentUser(JSON.parse(storedCurrentUser));
+    }
+
+    if (storedUserData) {
+      setUserData(JSON.parse(storedUserData));
+    }
+
+    if (storedIsGuestUser) {
+      setIsGuestUser(storedIsGuestUser === "true");
     }
   }, []);
 
-  // Funcția pentru a seta utilizatorul ca guest user
   const setAsGuestUser = (isGuest) => {
-    if (typeof window !== "undefined") {
+    try {
       localStorage.setItem("isGuestUser", isGuest ? "true" : "false");
+      setIsGuestUser(isGuest);
+    } catch (e) {
+      console.error("Failed to update isGuestUser in localStorage:", e);
     }
-    setIsGuestUser(isGuest);
   };
 
   useEffect(() => {
-    if (currentUser && typeof window !== "undefined") {
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    }
-  }, [currentUser]);
+    const unsubscribe = authentication.onAuthStateChanged(async (user) => {
+      console.log("start use effect from auth context", user);
+      if (user) {
+        try {
+          let userDataFromFirestore = await handleGetUserInfoJobs();
+          console.log(
+            "User data fetched at onAuthStateChanged from handleGetUserInfoJobs...",
+            userDataFromFirestore
+          );
 
+          if (!userDataFromFirestore) {
+            console.log(
+              "No data found in handleGetUserInfoJobs, trying handleGetUsersInfo..."
+            );
+            userDataFromFirestore = await handleGetUserInfo();
+          }
+
+          setUserData(userDataFromFirestore);
+        } catch (error) {
+          console.error("Failed to fetch user data:", error);
+        }
+      }
+      setCurrentUser(user);
+
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Salvarea userData în localStorage
   useEffect(() => {
-    if (userData && typeof window !== "undefined") {
+    if (userData) {
       localStorage.setItem("userData", JSON.stringify(userData));
+    } else {
+      localStorage.removeItem("userData");
     }
   }, [userData]);
+
+  // Salvarea currentUser în localStorage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
+  }, [currentUser]);
 
   const value = {
     currentUser,

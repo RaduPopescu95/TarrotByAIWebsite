@@ -44,6 +44,7 @@ import { authentication } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { handleLogout } from "../../utils/authUtils";
 import { useParams, useSearchParams } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
 
 const drawerWidth = 240;
 
@@ -102,6 +103,8 @@ export default function CustomDrawer(props) {
   const [drawerText, setDrawerText] = React.useState(
     props.selectedItem ? props.selectedItem : ""
   );
+  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
+
 
   const router = useRouter();
   const toggleDrawer = () => {
@@ -133,6 +136,8 @@ export default function CustomDrawer(props) {
         if (uid === "LQheTX2moAhKbu72gaStkZgaGz32" || uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2") {
           router.push(router.asPath);
         } else {
+          setCurrentUser(null);
+          setUserData(null);
           handleLogout();
           router.push("/signin");
         }

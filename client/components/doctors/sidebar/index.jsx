@@ -3,7 +3,7 @@ import Link from "next/link";
 import { doctorprofileimg } from "../../imagepath";
 import { handleSignIn } from "@/utils/authUtils";
 import Select from "react-select";
-import { handleLogout } from "@/utils/authUtils";
+import { handleLogout } from "../../../../utils/authUtils";
 import { useRouter } from "next/router";
 import { useAuth } from "../../../../context/AuthContext";
 import { onAuthStateChanged } from "firebase/auth";
@@ -11,7 +11,7 @@ import { authentication } from "../../../../firebase";
 import { Box, CircularProgress } from "@mui/material";
 const DoctorSidebar = () => {
   const router = useRouter();
-  const { currentUser, userData, loading, setLoading } = useAuth()
+  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
 
   const availablity = [
     { value: "Online acum", label: "Online acum" },
@@ -133,7 +133,7 @@ const DoctorSidebar = () => {
                     : ""
                 }
               >
-                <Link href="/doctor/available-timings">
+                <Link href="/calendar-admin">
                   <i className="fa-solid fa-calendar-day me-2" />
                   <span>Calendar</span>
                 </Link>
@@ -248,12 +248,15 @@ const DoctorSidebar = () => {
                 </Link>
               </li> */}
               <li className={false ? "active" : ""}>
-                <Link href="/login"     onClick={(e) => {
+                <Link href="/login"     onClick={async (e) => {
                     // Prevenim comportamentul default al link-ului dacă este necesar
-                 
+
                       e.preventDefault();
-                      handleLogout();
+                     await handleLogout().then(() => {
+                      setCurrentUser(null);
+                      setUserData(null);
                       router.push("/consultatii");
+                     })
           
                   }}>
                   <i className="fa-solid fa-calendar-check me-2" />

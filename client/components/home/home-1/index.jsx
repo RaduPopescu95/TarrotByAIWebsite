@@ -165,18 +165,18 @@ const Home1 = () => {
     ],
   };
 
-  if(loading){
-    return (    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center", // Center horizontally
-        alignItems: "center", // Center vertically
-        height: "100vh", // Optional: Set a specific height for the centering container
-      }}
-    >
-      <CircularProgress />
-    </Box>)
-  }
+  // if(loading){
+  //   return (    <Box
+  //     sx={{
+  //       display: "flex",
+  //       justifyContent: "center", // Center horizontally
+  //       alignItems: "center", // Center vertically
+  //       height: "100vh", // Optional: Set a specific height for the centering container
+  //     }}
+  //   >
+  //     <CircularProgress />
+  //   </Box>)
+  // }
 
   return (
     <div className="main-wrapper home-one">

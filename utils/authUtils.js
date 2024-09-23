@@ -1,10 +1,13 @@
 import {
   EmailAuthProvider,
+  FacebookAuthProvider,
+  GoogleAuthProvider,
   deleteUser,
   reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateEmail,
   updatePassword,
@@ -177,3 +180,33 @@ export const handleSignIn = async (email, password) => {
   }
 };
 
+// Autentificare cu Google
+export const handleGoogleSignIn = async () => {
+  const provider = new GoogleAuthProvider();
+  
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("rezultate la google sign in...", result)
+    return result; // Returnează credențialele utilizatorului dacă autentificarea are succes
+  } catch (error) {
+    console.error("Error during Google sign in:", error.message); // Afișează eroarea în consolă
+    throw new Error("Autentificarea cu Google a eșuat: " + error.message); // Returnează eroarea pentru a fi gestionată în componenta apelantă
+  }
+};
+
+// Autentificare cu Facebook
+export const handleFacebookSignIn = async () => {
+  const provider = new FacebookAuthProvider();
+  
+  // Adaugă permisiunea 'email' explicit
+  provider.addScope('email');
+  
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Rezultate la Facebook sign in...", result);
+    return result; // Returnează credențialele utilizatorului dacă autentificarea are succes
+  } catch (error) {
+    console.error("Error during Facebook sign in:", error.message); // Afișează eroarea în consolă
+    throw new Error("Autentificarea cu Facebook a eșuat: " + error.message); // Returnează eroarea pentru a fi gestionată în componenta apelantă
+  }
+};

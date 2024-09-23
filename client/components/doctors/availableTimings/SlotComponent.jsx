@@ -9,12 +9,12 @@ const SlotComponent = ({ day, slots, onAddSlot, onDeleteAll, onDeleteSlot  }) =>
         <ul>
           <li>
             <Link href="#" className="add-slot" onClick={onAddSlot}>
-              Add Slots
+              Adauga ora
             </Link>
           </li>
           <li>
             <Link href="#" className="del-slot" onClick={onDeleteAll}>
-              Delete All
+              Sterge ore
             </Link>
           </li>
         </ul>
@@ -29,7 +29,7 @@ const SlotComponent = ({ day, slots, onAddSlot, onDeleteAll, onDeleteSlot  }) =>
             ))}
           </ul>
         ) : (
-          <p>No Slots Available</p>
+          <p>Nu sunt adaugate ore</p>
         )}
       </div>
     </div>

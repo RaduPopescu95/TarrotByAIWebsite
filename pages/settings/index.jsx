@@ -78,7 +78,7 @@ export async function getServerSideProps({ locale }) {
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
-  const { currentUser, isGuestUser, setAsGuestUser, setUserData, userData } =
+  const { currentUser, isGuestUser, setAsGuestUser, setUserData, userData, setCurrentUser } =
     useAuth();
   const [emailError, setEmailError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
@@ -284,6 +284,8 @@ export default function SignInSide() {
                   <Button
                     onClick={() => {
                       handleLogout().then(() => {
+                        setCurrentUser(null);
+                        setUserData(null);
                         setAsGuestUser(false);
                         router.push("login");
                       });
@@ -483,6 +485,8 @@ export default function SignInSide() {
                         variant="body2"
                         onClick={() => {
                           handleLogout().then(() => {
+                            setCurrentUser(null);
+                            setUserData(null);
                             setAsGuestUser(false);
                             router.push("/login");
                           });

@@ -18,6 +18,7 @@ import DoctorFooter from "../../common/doctorFooter";
 
 import Link from "next/link";
 import Home1Header from "../../home/home-1/header";
+import Footer from "../../footer";
 const DoctorDashboard = (props) => {
   // revenue chart
   const chartRef1 = useRef(null);
@@ -963,7 +964,7 @@ const DoctorDashboard = (props) => {
         </div>
       </div>
       {/* /Page Content */}
-      <DoctorFooter {...props} />
+      <Footer {...props} />
     </div>
   );
 };
