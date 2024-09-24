@@ -10,6 +10,11 @@ import AvailableDays from "./AvailableDays";
 import SlotComponent from "./SlotComponent";
 import ModalComponent from "./ModalComponent";
 import CalendarComponent from "./CalendarComponent";
+import moment from 'moment';
+import 'moment/locale/ro'; // Importăm localizarea în română
+
+// Setăm moment la limba română
+moment.locale('ro');
 
 const AvailableTimings = () => {
   const [selectedDays, setSelectedDays] = useState([]); // zilele selectate
@@ -17,14 +22,14 @@ const AvailableTimings = () => {
   const [activeDay, setActiveDay] = useState(null); // ziua curentă pentru modalul de adăugare slot
   const [deleteDay, setDeleteDay] = useState(null); // ziua curentă pentru modalul de ștergere toate sloturile
   const [deleteSlot, setDeleteSlot] = useState({ day: null, slot: null }); // ziua și slotul curent pentru ștergerea unui slot
-  const [activeTab, setActiveTab] = useState('intervale'); // tab-ul activ
+  const [activeTab, setActiveTab] = useState("intervale"); // tab-ul activ
   const [editedDaySlots, setEditedDaySlots] = useState({}); // sloturile modificate pentru o zi specifică
+  const [yearlySlots, setYearlySlots] = useState(null); // inițializăm cu null pentru a verifica dacă sloturile sunt încă generate
 
   // Ordinea zilelor săptămânii
   const dayOrder = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
 
   const handleDaySelection = (day) => {
-    // Verifică dacă ziua este deja selectată
     if (selectedDays.includes(day)) {
       setSelectedDays(selectedDays.filter((selectedDay) => selectedDay !== day));
     } else {
@@ -74,13 +79,118 @@ const AvailableTimings = () => {
   };
 
   const sortedSelectedDays = selectedDays.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+  const daysOfWeek = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
 
+   // Maparea zilelor de la moment (diacritice) la zilele din array-ul tău (fără diacritice)
+   const dayMapping = {
+    "luni": "Luni",
+    "marți": "Marti",
+    "miercuri": "Miercuri",
+    "joi": "Joi",
+    "vineri": "Vineri",
+    "sâmbătă": "Sambata",
+    "duminică": "Duminica"
+  };
+
+ // Functie pentru a genera toate zilele din anul curent cu sloturile asociate pe fiecare zi a săptămânii
+ const generateYearWithSlots = (year, slotsPerDay) => {
+  const allSlotsPerMonth = {};
+
+  // Parcurgem lunile anului (index de la 0 la 11, așa cum Moment.js așteaptă)
+  for (let month = 0; month < 12; month++) {
+    // Obținem numărul de zile din lună corect
+    const daysInMonth = moment(`${year}-${month + 1}`, 'YYYY-MM').daysInMonth();
+    const monthSlots = [];
+    
+    console.log("days in month....", year);
+    console.log("days in month....", month);
+    console.log("days in month....", daysInMonth - 1);
+
+    // Parcurgem zilele fiecărei luni
+    for (let day = 1; day <= daysInMonth - 1; day++) {
+      const date = moment(`${year}-${month}-${day}`, 'YYYY-MM-DD');
+      const weekdayWithDiacritics = date.format('dddd').toLowerCase(); // Obținem numele complet al zilei (ex. 'luni', 'marți')
+      const weekday = dayMapping[weekdayWithDiacritics]; // Convertim numele cu diacritice la cel din array-ul tău
+
+      // Verificăm dacă avem sloturi pentru ziua săptămânii respective
+      const slotsForDay = slotsPerDay[weekday] || [];
+
+      console.log(`Calculating slots for: ${date.format('YYYY-MM-DD')} (Weekday: ${weekday})`);
+
+      // Adăugăm ziua în sloturile lunii
+      monthSlots.push({ day, slots: slotsForDay });
+    }
+
+    // Salvăm sloturile pentru lună în allSlotsPerMonth
+    allSlotsPerMonth[month] = monthSlots;
+  }
+
+  console.log("All Slots per Month:", allSlotsPerMonth);
+  return allSlotsPerMonth;
+};
+
+  
   const handleSaveChanges = (e) => {
     e.preventDefault();
-    // Verifică slots-urile selectate și afișează-le în consolă
-    console.log("Saved slots:", slots);
-    // Aici poți implementa și salvarea în baza de date sau în Firebase
+    const currentYear = moment().year();
+    const yearWithSlots = generateYearWithSlots(currentYear, slots); // Generăm zilele pe întregul an cu sloturi
+
+    setYearlySlots(yearWithSlots); // Salvăm sloturile în state
+    console.log("Saved slots for the entire year:", yearWithSlots);
   };
+
+  // FUNCTII PENTRU CALENDAR COMPONENT CRUD FUNCTION
+
+    // Funcția pentru a edita sloturile dintr-o zi din `yearlySlots`
+    const handleEditDaySlotsCalendar = (dayKey, newSlots) => {
+      setYearlySlots(prevYearlySlots => {
+        const [month, day] = dayKey.split("-").map(Number);
+        const updatedMonth = prevYearlySlots[month].map(slotObj =>
+          slotObj.day === day ? { ...slotObj, slots: newSlots } : slotObj
+        );
+        return { ...prevYearlySlots, [month]: updatedMonth };
+      });
+    };
+  
+    // Funcția pentru adăugarea unui slot
+    const handleAddSlotCalendar = (day, newSlot) => {
+      setYearlySlots(prevYearlySlots => {
+        const [month, dayKey] = day.split("-").map(Number);
+        const updatedMonth = prevYearlySlots[month].map(slotObj =>
+          slotObj.day === dayKey ? { ...slotObj, slots: [...slotObj.slots, newSlot] } : slotObj
+        );
+        return { ...prevYearlySlots, [month]: updatedMonth };
+      });
+      setActiveDay(null);
+    };
+  
+    // Funcția pentru ștergerea tuturor sloturilor dintr-o zi
+    const handleDeleteSlotsCalendar = (day) => {
+      setYearlySlots(prevYearlySlots => {
+        const [month, dayKey] = day.split("-").map(Number);
+        const updatedMonth = prevYearlySlots[month].map(slotObj =>
+          slotObj.day === dayKey ? { ...slotObj, slots: [] } : slotObj
+        );
+        return { ...prevYearlySlots, [month]: updatedMonth };
+      });
+      setDeleteDay(null);
+    };
+  
+    // Funcția pentru ștergerea unui slot specific
+    const confirmDeleteSlotCalendar = () => {
+      const { day, slot } = deleteSlot;
+      setYearlySlots(prevYearlySlots => {
+        const [month, dayKey] = day.split("-").map(Number);
+        const updatedMonth = prevYearlySlots[month].map(slotObj =>
+          slotObj.day === dayKey
+            ? { ...slotObj, slots: slotObj.slots.filter(s => s !== slot) }
+            : slotObj
+        );
+        return { ...prevYearlySlots, [month]: updatedMonth };
+      });
+      setDeleteSlot({ day: null, slot: null });
+    };
+  
 
   return (
     <>
@@ -131,10 +241,10 @@ const AvailableTimings = () => {
                       </div>
                     </div>
                   )}
-                  {activeTab === 'calendar' && (
+                   {activeTab === 'calendar' && yearlySlots && (
                     <div className="tab-pane fade show active" id="calendar-availability">
                       <CalendarComponent
-                        weeklySlots={slots}
+                        yearlySlots={yearlySlots}
                         onEditDaySlots={handleEditDaySlots}
                         editedDaySlots={editedDaySlots}
                       />

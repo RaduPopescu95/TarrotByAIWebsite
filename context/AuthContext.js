@@ -59,12 +59,7 @@ export const AuthProvider = ({ children }) => {
             userDataFromFirestore
           );
 
-          if (!userDataFromFirestore) {
-            console.log(
-              "No data found in handleGetUserInfoJobs, trying handleGetUsersInfo..."
-            );
-            userDataFromFirestore = await handleGetUserInfo();
-          }
+     
 
           setUserData(userDataFromFirestore);
         } catch (error) {

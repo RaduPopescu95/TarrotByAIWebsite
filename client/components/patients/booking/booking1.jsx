@@ -1,11 +1,50 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import "bootstrap-daterangepicker/daterangepicker.css";
 
 import Footer from "../../footer";
 import Home1Header from "../../home/home-1/header";
+import { handleGetFirestore } from "../../../../utils/firestoreUtils";
 
 const Booking = (props) => {
+  const [yearlySlots, setYearlySlots] = useState({}); // inițializăm cu null pentru a verifica dacă sloturile sunt generate
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdate, setIsUpdate] = useState(null);
+
+  const handleGetYearlySlots = async ()  => {
+    const data = await handleGetFirestore("YearlySlots")
+    return data[0]
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const data = await handleGetYearlySlots();
+        const currentYear = moment().year();
+        if (data?.yearlySlots && data?.currentYear === currentYear) {
+          console.log("yes it is....", data);
+          setYearlySlots(data.yearlySlots);
+          setIsLoading(false)
+          setIsUpdate(data.documentId)
+        } else {
+          console.log("no it is....", data);
+          const emptyYearWithSlots = generateEmptyYearWithSlots(currentYear);
+          setYearlySlots(emptyYearWithSlots);
+          setIsLoading(false)
+        }
+        setIsLoading(false)
+      } catch (error) {
+        setIsLoading(false)
+        console.error("Error fetching yearly slots:", error);
+      }
+      
+    };
+  
+    fetchData();
+  }, []);  // <- dependențele rămân goale pentru a executa doar o dată la montare
+
+  
   return (
     <div>
       <Home1Header />

@@ -88,20 +88,20 @@ export const handleUploadFirestoreGeneral = async (data, location, actionText) =
 
     console.log(`Documentul cu ID-ul ${docRef.id} a fost adăugat cu succes.`);
 
-    // UPLOAD ACTION OF USER
-    // UPLOAD ACTION OF USER
-    if (actionText) {
-      const currentUser = authentication.currentUser;
-      let actionData = {
-        actionText,
-      };
+    // // UPLOAD ACTION OF USER
+    // // UPLOAD ACTION OF USER
+    // if (actionText) {
+    //   const currentUser = authentication.currentUser;
+    //   let actionData = {
+    //     actionText,
+    //   };
 
-      await handleUploadFirestoreSubcollection(
-        actionData,
-        `UsersJobs/${currentUser?.uid}/ActiuniJobs`,
-        currentUser?.uid
-      );
-    }
+    //   await handleUploadFirestoreSubcollection(
+    //     actionData,
+    //     `UsersJobs/${currentUser?.uid}/ActiuniJobs`,
+    //     currentUser?.uid
+    //   );
+    // }
     return newData;
   } catch (err) {
     console.log("Eroare la handleUploadFirestore...", err);
