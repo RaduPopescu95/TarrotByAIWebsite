@@ -10,18 +10,24 @@ const LoginClient = (props) => {
   const [email, setEmail] = useState(""); // Stare pentru email
   const [password, setPassword] = useState(""); // Stare pentru parolă
   const [error, setError] = useState(""); // Stare pentru erori
-  const { setCurrentUser,  currentUser } = useAuth();
+  const { setCurrentUser,  currentUser, userData } = useAuth();
   const router = useRouter();
 
   // Functie pentru a gestiona trimiterea formularului de autentificare
   const handleSubmit = (event) => {
     event.preventDefault();
-
+    console.log(router.query.fromPayment)
     handleSignIn(email, password)
       .then((userCredentials) => {
         console.log("user credentials...", userCredentials);
         setCurrentUser(userCredentials.user); // Setează utilizatorul curent
-        router.push("/consultatii"); // Redirecționează după autentificare
+        if(router?.query?.fromPayment){
+
+          router.push("/calendar"); // Redirecționează după autentificare
+        }else{
+
+          router.push("/consultatii"); // Redirecționează după autentificare
+        }
       })
       .catch((error) => {
         console.error("Error during sign in:", error.message);
@@ -34,7 +40,13 @@ const LoginClient = (props) => {
     handleGoogleSignIn()
       .then((userCredentials) => {
         setCurrentUser(userCredentials.user);
-        router.push("/consultatii");
+        if(router?.query?.fromPayment){
+
+          router.push("/calendar"); // Redirecționează după autentificare
+        }else{
+
+          router.push("/consultatii"); // Redirecționează după autentificare
+        }
       })
       .catch((error) => {
         console.error("Error during Google sign in:", error.message);

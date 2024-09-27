@@ -12,14 +12,14 @@ const HeaderComponent = () => (
     <div className="container">
       <div className="row align-items-center inner-banner">
         <div className="col-md-12 col-12 text-center">
-          <h2 className="breadcrumb-title">Available Timings</h2>
+          <h2 className="breadcrumb-title">Disponibilitate</h2>
           <nav aria-label="breadcrumb" className="page-breadcrumb">
             <ol className="breadcrumb">
               <li className="breadcrumb-item">
-                <Link href="/home-1">Home</Link>
+                <Link href="/home-1">Consulatii</Link>
               </li>
               <li className="breadcrumb-item" aria-current="page">
-                Available Timings
+                Disponibilitate
               </li>
             </ol>
           </nav>

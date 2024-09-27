@@ -11,7 +11,7 @@ const VideoCall = (props) => {
   const [stream, setStream] = useState(null); // Salvează fluxul video
   const [videoEnabled, setVideoEnabled] = useState(true); // Starea pentru video activ/inactiv
   const [audioEnabled, setAudioEnabled] = useState(true); // Starea pentru audio activ/inactiv
-  const [showModal, setShowModal] = useState(true); // Starea pentru audio activ/inactiv
+  const [showModal, setShowModal] = useState(false); // Starea pentru audio activ/inactiv
   const [callTime, setCallTime] = useState(0); // Starea pentru durata apelului în secunde
   const userVideoRef = useRef(); // Referință pentru video-ul utilizatorului
   const router = useRouter()
@@ -125,8 +125,10 @@ const VideoCall = (props) => {
                                 title="Charlene Reed"
                               >
                                 <img
-                                  src={"/img/userprofile.png"}
-                                  alt="User Image"
+                                      src={
+                                        "/img/profilecristina.png"
+                                      }
+                                      alt="Cristina Zurba"
                                   className="rounded-circle"
                                 />
                                 <span className="status online" />
@@ -163,22 +165,41 @@ const VideoCall = (props) => {
                       <div className="call-contents">
                         <div className="call-content-wrap">
                           <div className="user-video">
-                          {/* <video
-                            ref={userVideoRef}
-                            autoPlay
-                            playsInline
-                            style={{ width: "100%" }}
-                          ></video>                       */}
+                            {
+                              true
+                              ?
+                              <video
+                                ref={userVideoRef}
+                                autoPlay
+                                playsInline
+                                style={{ width: "100%" }}
+                              ></video>                      
+                              :
+                              <>
+                              <img
+                              src={
+                                "/img/profilecristina.png"
+                              }
+                              alt="Cristina Zurba"
+                          className="rounded-circle mt-5"
+                        />
+<div class="d-flex justify-content-center align-items-center  mt-3">
+  <h2>Cristina Zurba trebuie să înceapă întâlnirea</h2>
+</div>
+
+
+                        </>
+                            }
                               </div>
                           <div className="my-video">
                             <ul>
                               <li>
-                              <video
+                              {/* <video
                             ref={userVideoRef}
                             autoPlay
                             playsInline
                             style={{ width: "100%" }}
-                          ></video>
+                          ></video> */}
                               </li>
                             </ul>
                           </div>

@@ -1,5 +1,6 @@
 .booking-doc-info {
 	@extend %display-flex;
+	flex-direction: column; 
 	.booking-doc-img {
 	    width: 80px;
 	    margin-right: 15px;
@@ -24,6 +25,9 @@
 		    }
 		}
 	}
+}
+.booking-info{
+	margin-top: 5%;
 }
 .schedule-widget {
     min-height: 100px;

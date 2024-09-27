@@ -363,7 +363,7 @@ const DoctorDashboard = (props) => {
                       </div>
                       <div className="dashboard-widget-icon">
                         <span className="dash-icon-box">
-                          <i className="fa-solid fa-user-injured" />
+                          <i className="fa-solid fa-user" />
                         </span>
                       </div>
                     </div>

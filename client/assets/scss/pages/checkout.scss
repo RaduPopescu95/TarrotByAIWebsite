@@ -92,20 +92,21 @@
 	}
 }
 .booking-date {
+	margin-top: 5%;
     list-style: $__none;
     @include margin-padding(null, 0);
     li {
 	    position: $__relative;
 	    font-size: $__font__size__14;
-	    font-weight: $__medium;
+		font-weight: $__bold;
 	    color: $__dark__blue;
 	    text-transform: $__capitalize;
 	    margin-bottom: 15px;
 		margin-right: 5px;
 	    span {
 		    float: $__right;
-		    color: $__smokey-gray;
-		    font-weight: $__regular;
+		    color: #20c0f3;
+		    font-weight: $__bold;
 		    font-size: $__font__size__15;
 		}
 	}

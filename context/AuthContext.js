@@ -19,6 +19,8 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null); // Inițializare cu null
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState({ day: null, slot: null }); // ziua și slotul curent pentru ștergerea unui slot
+
 
   // Acces la localStorage doar pe client
   useEffect(() => {
@@ -100,7 +102,9 @@ export const AuthProvider = ({ children }) => {
     setAsGuestUser,
     setUserData,
     setCurrentUser,
-    setLoading
+    setLoading,
+    selectedSlot,
+    setSelectedSlot 
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

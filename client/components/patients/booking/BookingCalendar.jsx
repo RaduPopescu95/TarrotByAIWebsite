@@ -10,12 +10,11 @@ import moment from 'moment';
 import 'moment/locale/ro'; // Importăm localizarea în română
 import { TimePicker } from "antd";
 import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestore, handleUploadFirestoreGeneral } from "../../../../utils/firestoreUtils";
-import Footer from "../../footer";
 
 
 moment.locale('ro');
 
-const AvailableTimings = () => {
+const CalendarAdmin = () => {
   const [yearlySlots, setYearlySlots] = useState({}); // inițializăm cu null pentru a verifica dacă sloturile sunt generate
   const [activeDay, setActiveDay] = useState(null); // ziua curentă pentru modalul de adăugare slot
   const [deleteDay, setDeleteDay] = useState(null); // ziua curentă pentru modalul de ștergere toate sloturile
@@ -267,7 +266,7 @@ const AvailableTimings = () => {
             </div>
           </div>
         </div>
-        <Footer  />
+        <DoctorFooter />
       </div>
 
       {/* Modal pentru adăugarea unui slot */}
@@ -359,4 +358,4 @@ const AvailableTimings = () => {
   );
 };
 
-export default AvailableTimings;
+export default CalendarAdmin;

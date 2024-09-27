@@ -144,9 +144,14 @@ const CalendarComponent = ({handleUpdateSubmitInfo,handleSubmitInfo, selectedDay
             }
 
             .calendar-day.has-slots {
-              background-color: #007bff;
+              background-color: #66b2ff;
               color: white;
             }
+
+                 .calendar-day.selected {
+                background-color: #007bff !important; /* Asigură-te că selected are prioritate */
+                color: white;
+              }
 
             .slots-grid {
               display: grid;

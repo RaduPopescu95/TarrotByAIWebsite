@@ -141,6 +141,14 @@ const DoctorSpecialities = (props) => {
         )
       );
     };
+    // Funcție pentru actualizarea câmpului "timp"
+    const handleTimpChange = (id, time) => {
+      setServices2(
+        services2.map((service2) =>
+          service2.id === id ? { ...service2, timp: time} : service2
+        )
+      );
+    };
   //
   const [services3, setServices3] = useState([{}]);
   const addService3 = () => {
@@ -315,6 +323,19 @@ const DoctorSpecialities = (props) => {
                                       }
                                     />
                                   </div>
+                                  <div className="form-wrap w-100 ms-5">
+                                    <label className="col-form-label">
+                                      Timp alocat
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      value={service2.timp}
+                                      onChange={(e) =>
+                                        handleTimpChange(service2.id, e.target.value)
+                                      }
+                                    />
+                                      </div>
                                   <div className="form-wrap ms-2">
                                     <label className="col-form-label d-block">
                                       &nbsp;

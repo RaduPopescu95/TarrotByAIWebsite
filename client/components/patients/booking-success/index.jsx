@@ -2,8 +2,10 @@ import React from "react";
 import Link from "next/link";
 import Footer from "../../footer";
 import Home1Header from "../../home/home-1/header";
+import { useAuth } from "../../../../context/AuthContext";
 
 const BookingSuccess = (props) => {
+  const {currentUser} = useAuth()
   return (
     <>
       <Home1Header />
@@ -43,12 +45,24 @@ const BookingSuccess = (props) => {
                       <br /> pe <strong>12 09 2019</strong> de la{" "}
                       <strong>15:00 la 16:00</strong>
                     </p>
+                    {
+                      currentUser?.uid
+                      ?
                     <Link
-                      href="/panou-utilizator"
+                      href={currentUser?.uid ? "/panou-utilizator" : "/login-client"}
                       className="btn btn-primary view-inv-btn"
                     >
                       Verifica programarile tale
                     </Link>
+                    :
+                    <>
+                    {/* <h4>Link-ul pentru intalnire a fost transmit pe e-mail si pe numarul de telefon</h4> */}
+                    <p>
+                      Pe adresa de e-mail precum si pe numarul de telefon a fost transmis link-ul de conectare. Conectati-va la link la <strong>12 09 2019</strong> ora <strong>15:00</strong>.
+                     
+                    </p>
+                    </>
+                    }
                   </div>
                 </div>
               </div>

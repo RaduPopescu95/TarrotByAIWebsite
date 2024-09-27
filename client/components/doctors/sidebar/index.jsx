@@ -69,7 +69,7 @@ const DoctorSidebar = () => {
             </div>
           </div>
         </div>
-        <div className="doctor-available-head">
+        {/* <div className="doctor-available-head">
           <div className="input-block input-block-new">
             <label className="form-label">
               Vizibilitate <span className="text-danger">*</span>
@@ -81,7 +81,7 @@ const DoctorSidebar = () => {
               defaultValue={availablity[0]}
             />
           </div>
-        </div>
+        </div> */}
         <div className="dashboard-widget">
           <nav className="dashboard-menu">
             <ul>
@@ -90,7 +90,7 @@ const DoctorSidebar = () => {
                   false ? "active" : ""
                 }
               >
-                <Link href="/doctor/doctor-dashboard">
+                <Link href="/admin-consultatii">
                   <i className="fa-solid fa-shapes me-2" />
                   <span>Panou principal</span>
                 </Link>
@@ -158,7 +158,7 @@ const DoctorSidebar = () => {
                     : ""
                 }
               >
-                <Link href="/doctor/doctor-specialities">
+                <Link href="/categorii-consultatii">
                   <i className="fa-solid fa-clock me-2" />
                   <span>Categorii Consultatii</span>
                 </Link>
@@ -186,7 +186,7 @@ const DoctorSidebar = () => {
                   false ? "active" : ""
                 }
               >
-                <Link href="/doctor/invoices">
+                <Link href="/facturi-clienti">
                   <i className="fa-solid fa-file-lines me-2" />
                   <span>Facturi</span>
                 </Link>

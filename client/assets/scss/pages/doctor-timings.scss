@@ -90,7 +90,8 @@
         font-size: $__font__size__15;
       }
     }
-    .time-slots {
+  
+    .time-slots-client {
       li {
         background: $__white__shade;
         @include margin-padding(0 15px 15px 0, 12px 13px);
@@ -103,10 +104,12 @@
         text-align: center;
         position: relative;
         transition: 0.5s;
+  
+        // Stiluri hover pentru sloturile ne-rezervate
         &:hover {
           &::before {
-            content: "Sterge Ora";
-            background: red;
+            content: "Selecteaza";
+            background: blue;
             color: $__white;
             width: 100%;
             height: 100%;
@@ -119,19 +122,48 @@
             cursor: pointer;
           }
         }
-        i {
-          margin-right: 10px;
-        }
-        &.slot-space {
-          background: $__black__shade;
+  
+        &.Rezervat {
+          background: red; // Fundal pentru sloturile rezervate
           color: $__white;
+          cursor: not-allowed; // Cursor specific pentru sloturile rezervate
+  
+          // Modificare hover pentru sloturile rezervate
+          &:hover {
+            &::before {
+              content: "Rezervat"; // Afișează "Rezervat" la hover
+              background: red;
+              color: $__white;
+              width: 100%;
+              height: 100%;
+              position: absolute;
+              left: 0;
+              top: 0;
+              border-radius: 6px;
+              @include margin-padding(0 15px 15px 0, 12px 13px);
+              transition: 0.5s;
+              cursor: not-allowed;
+            }
+          }
         }
+  
+        &.selected-slot {
+          background: blue; /* Culoare personalizată pentru slotul selectat */
+          color: #fff;
+        }
+  
+        &.not-selected-slot {
+          background: #f1f5f9;
+          color: #333; /* Culoare text pentru sloturile ne-selectate */
+        }
+  
         &:last-child {
           margin-right: 0;
         }
       }
     }
   }
+  
 }
 .available-tab {
   margin-bottom: 15px;
