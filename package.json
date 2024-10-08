@@ -41,6 +41,7 @@
     "agora-rtc-react": "^2.3.0",
     "agora-rtc-sdk-ng": "^4.22.1",
     "animate.css": "^4.1.1",
+    "antd": "^5.21.2",
     "aos": "^2.3.4",
     "apexcharts": "^3.49.0",
     "archiver": "^7.0.1",
