@@ -347,15 +347,14 @@ function Landing(props) {
           }}
         >
           <div className={classes.containerGeneral}>
-            <Box pt={{ xs: 5, sm: 3, md: 4 }}>  
-   
+            <Box pt={{ xs: 5, sm: 3, md: 4 }}>
               {articles.articlesData.length > 0 ? (
-                <Container style={{ minWidth: "80%"}}>
-                      <Grid container spacing={3}>
+                <Container style={{ minWidth: "80%" }}>
+                  {/* <Grid container spacing={3}>
                     <Grid item sm={12}>
                       <HeadlineConsultatii isRo={false} />
                     </Grid>
-                  </Grid>
+                  </Grid> */}
                   <Grid container spacing={3} mt={8}>
                     <Grid item sm={12}>
                       <Headline newestArticle={lastArticle} isRo={false} />
