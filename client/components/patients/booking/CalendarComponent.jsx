@@ -202,7 +202,10 @@ const CalendarComponent = ({
               }
 
               .calendar-day.today {
-                border: 2px solid #007bff;
+                border: 2px solid #28a745; /* Verde puternic */
+                background-color: #fff3cd; /* Galben deschis pentru evidențiere */
+                color: #004085; /* Albastru închis pentru text */
+                box-shadow: 0 0 10px rgba(0, 123, 255, 0.6); /* Umbră ușoară albastră */
               }
 
               .calendar-day.has-slots {

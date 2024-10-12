@@ -46,7 +46,7 @@ const AdminVideoCall = () => {
                 <AgoraUIKit
                   rtcProps={{
                     appId: "e17715cba7c84bfc9dbd1b5231b6f86f", // Folosește propriul tău appId
-                    channel: "test-channel",
+                    channel: documentId,
                     token: null, // Adaugă token-ul tău dacă folosești aplicația în mod securizat
                     role: isHost ? "host" : "audience",
                     layout: isPinned ? layout.pin : layout.grid,
