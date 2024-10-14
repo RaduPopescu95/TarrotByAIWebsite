@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(JSON.parse(storedCurrentUser));
     }
 
-    if (storedUserData) {
+    if (storedUserData && storedUserData !== "undefined") {
       setUserData(JSON.parse(storedUserData));
     }
 

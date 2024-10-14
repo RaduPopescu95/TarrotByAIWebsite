@@ -32,71 +32,20 @@ const Home1Header = () => {
         <div className="container">
           <nav className="navbar navbar-expand-lg header-nav">
             <div className="navbar-header">
-              <Link
-                href="#0"
-                id="mobile_btn"
-                onClick={() => onHandleMobileMenu()}
-              >
+              <button id="mobile_btn" href="#">
                 <span className="bar-icon">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+                  <span />
+                  <span />
+                  <span />
                 </span>
-              </Link>
-              <Link href="/home-2" className="navbar-brand logo">
-                {pathnames.includes("/index-5") ? (
-                  <img src={logo_white} className="img-fluid" alt="Logo" />
-                ) : pathnames.includes(
-                    "/react/template/Pharmacy/Pharmacy-index"
-                  ) ? (
-                  <div className="browse-categorie">
-                    <div className="dropdown categorie-dropdown">
-                      <Link
-                        href="#"
-                        className="dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                      >
-                        <img src={Browser_categorie} alt /> Browse Categories
-                      </Link>
-                      <div className="dropdown-menu">
-                        <Link className="dropdown-item" href="#">
-                          Ayush
-                        </Link>
-                        <Link className="dropdown-item" href="#">
-                          Covid Essentials
-                        </Link>
-                        <Link className="dropdown-item" href="#">
-                          Devices
-                        </Link>
-                        <Link className="dropdown-item" href="#">
-                          Glucometers
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={
-                      pathnames === "/react/template/index-6" ||
-                      pathnames === "/react/template/index-4"
-                        ? logosvg
-                        : pathnames === "/react/template/index-11"
-                          ? logo_15
-                          : pathnames === "/react/template/index-10"
-                            ? logo_15
-                            : pathnames === "/react/template/index-9"
-                              ? logo_03
-                              : pathnames === "/react/template/index-7"
-                                ? logo_svg
-                                : pathnames == "/react/template/index-13"
-                                  ? logo_white
-                                  : logo
-                    }
-                    className="img-fluid"
-                    alt="Logo"
-                  />
-                )}
-              </Link>
+              </button>
+              {/* <Link href="/home-1" className="navbar-brand logo">
+                <ImageWithBasePath
+                  src="assets/img/logo-01.svg"
+                  className="img-fluid"
+                  alt="Logo"
+                />
+              </Link> */}
             </div>
             <div className="main-menu-wrapper">
               <div className="menu-header">
