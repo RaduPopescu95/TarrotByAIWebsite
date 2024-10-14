@@ -169,7 +169,7 @@ const Checkout = (props) => {
 
   return (
     <div>
-      <Header {...props} />
+      <Home1Header />
 
       {/* <!-- Breadcrumb --> */}
       <div className="breadcrumb-bar-two">
