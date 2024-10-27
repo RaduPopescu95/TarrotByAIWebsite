@@ -5,19 +5,24 @@ import DoctorFooter from "../../common/doctorFooter";
 import Select from "react-select";
 import Link from "next/link";
 import Home1Header from "../../home/home-1/header";
-import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestore, handleUploadFirestoreGeneral } from "../../../../utils/firestoreUtils";
+import {
+  handleGetFirestore,
+  handleUpdateFirestore,
+  handleUploadFirestore,
+  handleUploadFirestoreGeneral,
+} from "../../../../utils/firestoreUtils";
 import AlertMessage from "../../AlertMessage";
 
 const DoctorSpecialities = (props) => {
   const [speciality, setSpeciality] = useState([]);
   const [alert, setAlert] = useState({ type: "", message: "", visible: false });
-    // Funcția pentru afișarea mesajului de avertizare
-    const showAlert = (type, message) => {
-      setAlert({ type, message, visible: true });
-      setTimeout(() => {
-        setAlert({ type: "", message: "", visible: false });
-      }, 5000); // Mesajul va dispărea după 3 secunde
-    };
+  // Funcția pentru afișarea mesajului de avertizare
+  const showAlert = (type, message) => {
+    setAlert({ type, message, visible: true });
+    setTimeout(() => {
+      setAlert({ type: "", message: "", visible: false });
+    }, 5000); // Mesajul va dispărea după 3 secunde
+  };
   const addSpeciality = () => {
     const newSpeciality = {
       id: speciality.length + 1,
@@ -94,16 +99,16 @@ const DoctorSpecialities = (props) => {
   const [dataR, setDataR] = useState(null);
   const [loading, setLoading] = useState(false);
   const handleUploadCategorii = async (event) => {
-    event.preventDefault()
+    event.preventDefault();
     // Verifică dacă există vreun serviciu fără `about`, `timp` sau `price` sau dacă `price` este nevalid
     const invalidService = services2.find(
       (service) =>
         !service.about || // Verifică dacă `about` este definit și nu este gol
-        !service.timp ||  // Verifică dacă `timp` este definit și nu este gol
+        !service.timp || // Verifică dacă `timp` este definit și nu este gol
         !service.price || // Verifică dacă `price` este definit
         parseFloat(service.price) <= 0 // Verifică dacă `price` este nevalid (mai mic sau egal cu 0)
     );
-  
+
     if (invalidService) {
       showAlert(
         "danger",
@@ -111,10 +116,10 @@ const DoctorSpecialities = (props) => {
       );
       return; // Întrerupe executarea funcției dacă există date nevalide
     }
-  
+
     try {
       let data = { categorii: [...services2] };
-  
+
       const dataReturned = await handleUploadFirestoreGeneral(
         data, // Trimite fiecare obiect separat
         "CategoriiConsultatii" // Colecția unde înregistrăm fiecare serviciu
@@ -126,19 +131,18 @@ const DoctorSpecialities = (props) => {
       showAlert("danger", "A apărut o eroare la salvarea categoriilor.");
     }
   };
-  
-  
+
   const handleUpdateCategorii = async (event) => {
-    event.preventDefault()
+    event.preventDefault();
     // Verifică dacă există vreun serviciu fără `about`, `timp` sau `price` sau dacă `price` este nevalid
     const invalidService = services2.find(
       (service) =>
         !service.about || // Verifică dacă `about` este definit și nu este gol
-        !service.timp ||  // Verifică dacă `timp` este definit și nu este gol
+        !service.timp || // Verifică dacă `timp` este definit și nu este gol
         !service.price || // Verifică dacă `price` este definit
         parseFloat(service.price) <= 0 // Verifică dacă `price` este nevalid (mai mic sau egal cu 0)
     );
-  
+
     if (invalidService) {
       showAlert(
         "danger",
@@ -146,13 +150,13 @@ const DoctorSpecialities = (props) => {
       );
       return; // Întrerupe executarea funcției dacă există date nevalide
     }
-  
+
     try {
       let data = { ...dataR, categorii: [...services2] };
-  
+
       const dataReturned = await handleUpdateFirestore(
         `CategoriiConsultatii/${dataR.documentId}`,
-        data, // Trimite fiecare obiect separat
+        data // Trimite fiecare obiect separat
       );
       console.log("Document updated successfully:", dataReturned);
       showAlert("success", "Categorii actualizate cu succes!");
@@ -161,7 +165,6 @@ const DoctorSpecialities = (props) => {
       showAlert("danger", "A apărut o eroare la actualizarea categoriilor.");
     }
   };
-  
 
   const addService2 = () => {
     setServices2([
@@ -178,30 +181,30 @@ const DoctorSpecialities = (props) => {
     setServices2(services2.filter((service2) => service2.id !== id));
   };
 
-    // Funcție pentru actualizarea câmpului "about"
-    const handleAboutChange = (id, newAbout) => {
-      setServices2(
-        services2.map((service2) =>
-          service2.id === id ? { ...service2, about: newAbout } : service2
-        )
-      );
-    };
-    // Funcție pentru actualizarea câmpului "timp"
-    const handleTimpChange = (id, time) => {
-      setServices2(
-        services2.map((service2) =>
-          service2.id === id ? { ...service2, timp: time} : service2
-        )
-      );
-    };
-    // Funcție pentru actualizarea câmpului "price"
-    const handlePretChange = (id, pret) => {
-      setServices2(
-        services2.map((service2) =>
-          service2.id === id ? { ...service2, price: pret} : service2
-        )
-      );
-    };
+  // Funcție pentru actualizarea câmpului "about"
+  const handleAboutChange = (id, newAbout) => {
+    setServices2(
+      services2.map((service2) =>
+        service2.id === id ? { ...service2, about: newAbout } : service2
+      )
+    );
+  };
+  // Funcție pentru actualizarea câmpului "timp"
+  const handleTimpChange = (id, time) => {
+    setServices2(
+      services2.map((service2) =>
+        service2.id === id ? { ...service2, timp: time } : service2
+      )
+    );
+  };
+  // Funcție pentru actualizarea câmpului "price"
+  const handlePretChange = (id, pret) => {
+    setServices2(
+      services2.map((service2) =>
+        service2.id === id ? { ...service2, price: pret } : service2
+      )
+    );
+  };
   //
   const [services3, setServices3] = useState([{}]);
   const addService3 = () => {
@@ -219,34 +222,32 @@ const DoctorSpecialities = (props) => {
     setServices3(services3.filter((service3) => service3.id !== id));
   };
   const handleGetCategorii = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       let dataReturned = await handleGetFirestore("CategoriiConsultatii"); // Asigură-te că `handleGetFirestore` este asincron
       if (dataReturned && dataReturned.length > 0) {
-        console.log("dataReturned[0].categorii....", dataReturned[0].categorii)
+        console.log("dataReturned[0].categorii....", dataReturned[0].categorii);
         setServices2([...dataReturned[0].categorii]);
-        setDataR(dataReturned[0])
-        setLoading(false)
+        setDataR(dataReturned[0]);
+        setLoading(false);
       } else {
         console.log("No data found or empty categorii");
-        setLoading(false)
+        setLoading(false);
       }
-      setLoading(false)
+      setLoading(false);
     } catch (error) {
-      setLoading(false)
+      setLoading(false);
       console.error("Error fetching Categorii Consultatii:", error);
     }
   };
-  
+
   useEffect(() => {
-    handleGetCategorii()
-  },[])
-
-
+    handleGetCategorii();
+  }, []);
 
   return (
     <div>
-           <Home1Header />
+      <Home1Header />
       {/* Breadcrumb */}
       <div className="breadcrumb-bar-two">
         <div className="container">
@@ -293,7 +294,6 @@ const DoctorSpecialities = (props) => {
                 </ul> */}
               </div>
               <div className="accordions" id="list-accord">
-        
                 <div className="user-accordion-item">
                   {/* <Link
                     href="#"
@@ -327,12 +327,13 @@ const DoctorSpecialities = (props) => {
                               </div>
                             </div>
                           </div> */}
-                          {loading &&
-                     
+                          {loading && (
                             <div className="spinner-border" role="status">
-                              <span className="visually-hidden">Loading...</span>
+                              <span className="visually-hidden">
+                                Loading...
+                              </span>
                             </div>
-                          }
+                          )}
                           {services2.map((service2) => (
                             <div className="row service-cont" key={service2.id}>
                               {/* <div className="col-md-3">
@@ -372,23 +373,32 @@ const DoctorSpecialities = (props) => {
                                       className="form-control"
                                       value={service2.about}
                                       onChange={(e) =>
-                                        handleAboutChange(service2.id, e.target.value)
+                                        handleAboutChange(
+                                          service2.id,
+                                          e.target.value
+                                        )
                                       }
                                     />
                                   </div>
                                   <div className="form-wrap w-100 ms-5">
                                     <label className="col-form-label">
-                                      Timp alocat
+                                      Timp alocat (în nr. minute, pe timpul
+                                      fiecarei întâlniri cu 10 minute înainte de
+                                      expirarea timpului alocat în minute va
+                                      exista un mesaj de informare)
                                     </label>
                                     <input
-                                      type="text"
+                                      type="number"
                                       className="form-control"
                                       value={service2.timp}
                                       onChange={(e) =>
-                                        handleTimpChange(service2.id, e.target.value)
+                                        handleTimpChange(
+                                          service2.id,
+                                          e.target.value
+                                        )
                                       }
                                     />
-                                      </div>
+                                  </div>
                                   <div className="form-wrap w-100 ms-5">
                                     <label className="col-form-label">
                                       Pret (în RON)
@@ -400,10 +410,13 @@ const DoctorSpecialities = (props) => {
                                       // step="0.01" // Permite două zecimale
                                       min="0" // Minimul este 0 pentru a evita valori negative
                                       onChange={(e) =>
-                                        handlePretChange(service2.id, e.target.value)
+                                        handlePretChange(
+                                          service2.id,
+                                          e.target.value
+                                        )
                                       }
                                     />
-                                      </div>
+                                  </div>
                                   <div className="form-wrap ms-2">
                                     <label className="col-form-label d-block">
                                       &nbsp;
@@ -423,18 +436,17 @@ const DoctorSpecialities = (props) => {
                             </div>
                           ))}
                         </div>
-                        {
-                          !loading && 
-                        <div className="text-end">
-                          <Link
-                            href="#"
-                            className="add-serv more-item mb-0"
-                            onClick={addService2}
-                          >
-                            Adauga categorie
-                          </Link>
-                        </div>
-                        }
+                        {!loading && (
+                          <div className="text-end">
+                            <Link
+                              href="#"
+                              className="add-serv more-item mb-0"
+                              onClick={addService2}
+                            >
+                              Adauga categorie
+                            </Link>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -556,7 +568,13 @@ const DoctorSpecialities = (props) => {
                 {/* <Link href="#" className="btn btn-gray">
                   Cancel
                 </Link> */}
-                <Link href="#" className="btn btn-primary prime-btn" onClick={dataR ? handleUpdateCategorii : handleUploadCategorii}>
+                <Link
+                  href="#"
+                  className="btn btn-primary prime-btn"
+                  onClick={
+                    dataR ? handleUpdateCategorii : handleUploadCategorii
+                  }
+                >
                   Salveaza categorii
                 </Link>
               </div>
@@ -565,7 +583,9 @@ const DoctorSpecialities = (props) => {
         </div>
       </div>
       {/* /Page Content */}
-      {alert.visible && <AlertMessage type={alert.type} message={alert.message} />}
+      {alert.visible && (
+        <AlertMessage type={alert.type} message={alert.message} />
+      )}
       <DoctorFooter {...props} />
     </div>
   );

@@ -44,7 +44,7 @@ const PatientAppointments = () => {
         const [month, day] = selectedSlot.day.split("-").map(Number);
         const reservationDate = new Date(
           parseInt(selectedSlot.currentYear, 10),
-          month - 1,
+          month,
           day,
           ...selectedSlot.slot.split(":").map(Number)
         );

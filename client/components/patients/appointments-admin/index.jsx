@@ -8,6 +8,7 @@ import { useAuth } from "../../../../context/AuthContext";
 import { handleQueryFirestore } from "../../../../utils/firestoreUtils";
 import { formatSelectedSlot } from "../../../../utils/commonUtils";
 import DoctorSidebar from "../../doctors/sidebar";
+import moment from "moment";
 
 const AppointmentsAdmin = () => {
   const { userData } = useAuth();
@@ -42,7 +43,7 @@ const AppointmentsAdmin = () => {
         const [month, day] = selectedSlot.day.split("-").map(Number);
         const reservationDate = new Date(
           parseInt(selectedSlot.currentYear, 10),
-          month - 1,
+          month,
           day,
           ...selectedSlot.slot.split(":").map(Number)
         );
@@ -90,13 +91,24 @@ const AppointmentsAdmin = () => {
     return Array.from({ length: pageCount }, (_, index) => index + 1);
   };
 
-  const now = new Date();
-  const upcomingReservations = currentReservations.filter(
-    (res) => res.reservationDate <= now
-  );
-  const completedReservations = currentReservations.filter(
-    (res) => res.reservationDate > now
-  );
+  const now = moment(); // Include ziua și ora curentă
+  console.log("Current time (now):", now.format("YYYY-MM-DD HH:mm:ss"));
+
+  const upcomingReservations = currentReservations.filter((res) => {
+    console.log(
+      "Reservation date:",
+      moment(res.reservationDate).format("YYYY-MM-DD HH:mm:ss")
+    );
+    const isAfterNow = moment(res.reservationDate).isAfter(now);
+    console.log("Is reservation after now?", isAfterNow);
+    return isAfterNow;
+  });
+
+  const completedReservations = currentReservations.filter((res) => {
+    const isBeforeOrSameNow = moment(res.reservationDate).isSameOrBefore(now);
+    console.log("Is reservation before or same as now?", isBeforeOrSameNow);
+    return isBeforeOrSameNow;
+  });
 
   console.log("Current page reservations:", currentReservations);
   console.log("Upcoming reservations:", upcomingReservations);
@@ -228,13 +240,10 @@ const AppointmentsAdmin = () => {
                           <li>
                             <div className="patinet-information">
                               <Link href="#">
-                                <img
-                                  src={"/img/profilecristina.png"}
-                                  alt="User"
-                                />
+                                <img src="/img/userprofile.png" alt="User" />
                               </Link>
                               <div className="patient-info">
-                                <p>#{res.documentId}</p>
+                                {/* <p>#{res.documentId}</p> */}
                                 <h6>
                                   <Link href="#">{res.nume}</Link>
                                 </h6>
@@ -248,14 +257,14 @@ const AppointmentsAdmin = () => {
                               {res.selectedSlot.slot}
                             </p>
                           </li>
-                          <li className="appointment-action">
+                          {/* <li className="appointment-action">
                             <Link
-                              href={`/meeting?meetingCode=${res.meetingCode}__${res.documentId}`}
+                              href={`/meeting-admin?meetingCode=${res.meetingCode}__${res.documentId}`}
                             >
                               <i className="fa-solid fa-calendar-check" /> Vezi
-                              Detalii
+                              Începe consultația
                             </Link>
-                          </li>
+                          </li> */}
                         </ul>
                       </div>
                     ))}

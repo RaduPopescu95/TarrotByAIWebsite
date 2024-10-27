@@ -3,6 +3,11 @@ import AgoraUIKit, { layout } from "agora-react-uikit";
 import "agora-react-uikit/dist/index.css";
 import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { db } from "../../../../firebase";
+
+// Funcție pentru a obține timpul curent
+const getCurrentTime = () => Math.floor(Date.now() / 1000);
 
 const AdminVideoCall = () => {
   const [videocall, setVideocall] = useState(true);
@@ -29,6 +34,53 @@ const AdminVideoCall = () => {
     window.addEventListener("resize", handleResize); // Adăugăm un event listener pentru a detecta redimensionarea
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // video call counter start
+  const [isSessionActive, setSessionActive] = useState(false); // Starea de activitate a sesiunii
+  const [elapsedTime, setElapsedTime] = useState(0); // Timpul scurs
+  const intervalRef = useRef(null); // Referință pentru intervalul de cronometrare
+
+  const [totalTime, setTotalTime] = useState(null);
+  const userRole = "admin"; // Identifică rolul utilizatorului (admin sau client)
+
+  useEffect(() => {
+    if (documentId) {
+      const docRef = doc(db, "RezervariConsultatii", documentId);
+
+      // Setăm prezența utilizatorului
+      updateDoc(docRef, { [`presence.${userRole}`]: true });
+
+      const unsubscribe = onSnapshot(docRef, (snapshot) => {
+        const data = snapshot.data();
+        setTotalTime(data?.categorie?.timp);
+        // Verificăm dacă ambele părți sunt prezente
+        if (data?.presence?.admin && data?.presence?.client) {
+          // Inițializăm cronometrul când ambele părți sunt prezente
+          setElapsedTime(0); // Resetare la 0 când începe sesiunea
+          setSessionActive(true); // Pornește cronometru
+
+          // Pornim intervalul pentru cronometru
+          if (!intervalRef.current) {
+            intervalRef.current = setInterval(() => {
+              setElapsedTime((prevElapsedTime) => prevElapsedTime + 1);
+            }, 1000);
+          }
+        } else {
+          // Oprim cronometru și ștergem intervalul dacă o parte părăsește sesiunea
+          setSessionActive(false);
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      });
+
+      return () => {
+        updateDoc(docRef, { [`presence.${userRole}`]: false });
+        unsubscribe();
+      };
+    }
+  }, [documentId, userRole]);
+
+  // video call counter end
 
   useEffect(() => {
     if (meetingCode) {
@@ -57,6 +109,8 @@ const AdminVideoCall = () => {
     }
     setFullscreen(!isFullscreen);
   };
+
+  const isWarning = totalTime && elapsedTime >= (totalTime - 10) * 60;
 
   return (
     <>
@@ -217,6 +271,23 @@ const AdminVideoCall = () => {
                 </h3>
               </div>
             )}
+            {isSessionActive && (
+              <div
+                style={{
+                  ...(isMobile ? styles.timerMobile : styles.timer),
+                  backgroundColor: isWarning
+                    ? "rgba(255, 0, 0, 0.7)"
+                    : "rgba(0, 0, 0, 0.5)",
+                  animation: isWarning ? "pulsate 1s infinite" : "none",
+                }}
+              >
+                {`${Math.floor(elapsedTime / 60)
+                  .toString()
+                  .padStart(2, "0")}:${(elapsedTime % 60)
+                  .toString()
+                  .padStart(2, "0")}`}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -225,6 +296,30 @@ const AdminVideoCall = () => {
 };
 
 const styles = {
+  timer: {
+    position: "absolute",
+    bottom: "12%",
+    left: "5%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "#ffffff",
+    padding: "10px 20px",
+    borderRadius: "8px",
+    fontSize: "24px",
+    zIndex: 1000,
+  },
+  timerMobile: {
+    position: "absolute",
+    bottom: "10%",
+    left: "20%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "#ffffff",
+    padding: "10px 20px",
+    borderRadius: "8px",
+    fontSize: "24px",
+    zIndex: 1000,
+  },
   container: {
     width: "100vw",
     height: "100vh",
