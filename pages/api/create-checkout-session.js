@@ -18,10 +18,13 @@ export default async (req, res) => {
     } = req.body;
 
     try {
-      console.log("Stripe session data:", { costConsultatie, nume, email, ... });
-      console.log("Stripe Public Key:", process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST);
+      console.log("Stripe session data:", { costConsultatie, nume, email });
+      console.log(
+        "Stripe Public Key:",
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
+      );
       console.log("Stripe Secret Key:", process.env.STRIPE_SECRET_KEY_TEST);
-      
+
       // Creează sesiunea de checkout cu opțiunea de creare factură
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
