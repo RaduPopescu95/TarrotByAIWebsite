@@ -30,6 +30,7 @@ export default async (req, res) => {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "payment",
+        locale: "ro", // Setează limba pentru interfața de checkout
         line_items: [
           {
             price_data: {
