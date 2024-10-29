@@ -29,18 +29,15 @@ function HeadlineConsultatii({ newestArticle, isRo }) {
 
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  let nume ="Cristina Zurba – Consultatii"
-  let descriere = "Ghidare spirituală personalizată pentru echilibrul tău."
+  let nume = "Cristina Zurba – Consultatii";
+  let descriere = "Ghidare spirituală personalizată pentru echilibrul tău.";
   const route = useRouter();
 
   // return;
   return (
     <>
       <CssBaseline />
-      <Card
-        className={classes.blogHeadline}
-        style={{ position: "relative", backgroundColor: colors.primary2 }}
-      >
+      <Card className={classes.blogHeadline} style={{ position: "relative" }}>
         <img
           className={classes.media}
           src={"https://i.ibb.co/54vbZrk/Screenshot-2024-09-18-171832.png"}
@@ -70,7 +67,7 @@ function HeadlineConsultatii({ newestArticle, isRo }) {
             <CardContent
               style={{
                 textAlign: "center",
-                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                backgroundColor: "rgba(0, 0, 0, 0)",
                 width: "100%",
                 height: "100%",
                 display: "flex",

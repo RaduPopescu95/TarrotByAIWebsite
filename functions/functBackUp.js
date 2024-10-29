@@ -30,8 +30,8 @@ const formatSelectedSlot = (selectedSlotDay) => {
 
   // Creează un obiect moment folosind anul curent, luna și ziua
   const formattedDate = moment(
-    `${currentYear}-${correctMonth}-${day}`,
-    "YYYY-MM-DD"
+      `${currentYear}-${correctMonth}-${day}`,
+      "YYYY-MM-DD",
   ).format("DD-MM-YYYY");
 
   return formattedDate;
@@ -39,96 +39,96 @@ const formatSelectedSlot = (selectedSlotDay) => {
 
 // Funcție pentru a trimite notificări la o rezervare nouă
 exports.sendNotificationOnNewReservation = functions.firestore
-  .document("RezervariConsultatii/{documentId}")
-  .onCreate((snap, context) => {
-    console.log("Funcția sendNotificationOnNewReservation a fost apelată.");
+    .document("RezervariConsultatii/{documentId}")
+    .onCreate((snap, context) => {
+      console.log("Funcția sendNotificationOnNewReservation a fost apelată.");
 
-    const newReservation = snap.data();
-    console.log("Datele noii rezervări:", newReservation);
+      const newReservation = snap.data();
+      console.log("Datele noii rezervări:", newReservation);
 
-    // Extrage datele din documentul nou creat
-    const email = newReservation.email;
-    let telefon = newReservation.telefon;
-    const meetingCode = newReservation.meetingCode;
-    const day = newReservation.selectedSlot.day;
-    const year = newReservation.selectedSlot.currentYear;
-    const time = newReservation.selectedSlot.slot;
-    const documentId = context.params.documentId;
+      // Extrage datele din documentul nou creat
+      const email = newReservation.email;
+      let telefon = newReservation.telefon;
+      const meetingCode = newReservation.meetingCode;
+      const day = newReservation.selectedSlot.day;
+      const year = newReservation.selectedSlot.currentYear;
+      const time = newReservation.selectedSlot.slot;
+      const documentId = context.params.documentId;
 
-    console.log(
-      `Email: ${email}, Telefon: ${telefon}, Meeting Code: ${meetingCode}`
-    );
-    console.log(`Data: ${day}-${year}, Ora: ${time}, Doc: ${documentId}`);
+      console.log(
+          `Email: ${email}, Telefon: ${telefon}, Meeting Code: ${meetingCode}`,
+      );
+      console.log(`Data: ${day}-${year}, Ora: ${time}, Doc: ${documentId}`);
 
-    // Asigură-te că este în formatul corect E.164
-    if (telefon && !telefon.startsWith("+")) {
+      // Asigură-te că este în formatul corect E.164
+      if (telefon && !telefon.startsWith("+")) {
       // Dacă numărul nu începe cu "+", adaugă codul de țară
-      telefon = "+40" + telefon.replace(/^0+/, ""); // Elimină 0-ul
-      console.log(`Numărul de telefon formatat: ${telefon}`);
-    }
+        telefon = "+40" + telefon.replace(/^0+/, ""); // Elimină 0-ul
+        console.log(`Numărul de telefon formatat: ${telefon}`);
+      }
 
-    // Construcția mesajului de e-mail
-    const emailMessage = `
+      // Construcția mesajului de e-mail
+      const emailMessage = `
       Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.
       Vă rugăm să accesați
       www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
     `;
 
-    // Construcția mesajului de SMS/WhatsApp
-    const smsMessage = `
+      // Construcția mesajului de SMS/WhatsApp
+      const smsMessage = `
       Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.
       Vă rugăm să accesați
       www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
     `;
 
-    // Trimiterea e-mailului
-    const mailOptions = {
-      from: "webdynamicx@gmail.com",
-      to: email,
-      subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
-      text: emailMessage,
-    };
+      // Trimiterea e-mailului
+      const mailOptions = {
+        from: "webdynamicx@gmail.com",
+        to: email,
+        subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
+        text: emailMessage,
+      };
 
-    console.log("Opțiunile de email:", mailOptions);
+      console.log("Opțiunile de email:", mailOptions);
 
-    // Verificare format telefon (dacă începe cu "+", e valid pentru Twilio)
-    if (!telefon || !/^\+\d+$/.test(telefon)) {
-      console.error(`Număr de telefon invalid: ${telefon}`);
-      return;
-    }
+      // Verificare format telefon (dacă începe cu "+", e valid pentru Twilio)
+      if (!telefon || !/^\+\d+$/.test(telefon)) {
+        console.error(`Număr de telefon invalid: ${telefon}`);
+        return;
+      }
 
-    console.log("Trimiterea email-ului, SMS-ului și WhatsApp-ului...");
+      console.log("Trimiterea email-ului, SMS-ului și WhatsApp-ului...");
 
-    // Trimiterea emailului, SMS-ului și a mesajului WhatsApp
-    return Promise.all([
-      transporter.sendMail(mailOptions).then((info) => {
-        console.log("E-mail trimis cu succes:", info);
-      }),
-      client.messages
-        .create({
-          body: smsMessage,
-          from: "+15042266134", // Număr Twilio valid
-          to: telefon,
-        })
-        .then((message) => {
-          console.log("SMS trimis cu succes:", message.sid);
+      // Trimiterea emailului, SMS-ului și a mesajului WhatsApp
+      return Promise.all([
+        transporter.sendMail(mailOptions).then((info) => {
+          console.log("E-mail trimis cu succes:", info);
         }),
-      client.messages
-        .create({
-          body: smsMessage,
-          from: "whatsapp:+14155238886", // Număr Twilio WhatsApp valid
-          to: `whatsapp:${telefon}`,
-        })
-        .then((message) => {
-          console.log("WhatsApp trimis cu succes:", message.sid);
-        }),
-    ])
-      .then(() => {
-        console.log("E-mail, SMS și WhatsApp trimise cu succes!");
-      })
-      .catch((error) => {
-        console.error("Eroare la trimiterea notificărilor:", error);
-      });
-  });
+        client.messages
+            .create({
+              body: smsMessage,
+              from: "+15042266134", // Număr Twilio valid
+              to: telefon,
+            })
+            .then((message) => {
+              console.log("SMS trimis cu succes:", message.sid);
+            }),
+        client.messages
+            .create({
+              body: smsMessage,
+              from: "whatsapp:+14155238886", // Număr Twilio WhatsApp valid
+              to: `whatsapp:${telefon}`,
+            })
+            .then((message) => {
+              console.log("WhatsApp trimis cu succes:", message.sid);
+            }),
+      ])
+          .then(() => {
+            console.log("E-mail, SMS și WhatsApp trimise cu succes!");
+          })
+          .catch((error) => {
+            console.error("Eroare la trimiterea notificărilor:", error);
+          });
+    });
