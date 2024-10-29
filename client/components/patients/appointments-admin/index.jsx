@@ -211,6 +211,12 @@ const AppointmentsAdmin = () => {
                           <li className="appointment-info">
                             <p>
                               <i className="fa-solid fa-clock" />
+                              {res.categorie.timp} minute
+                            </p>
+                          </li>
+                          <li className="appointment-info">
+                            <p>
+                              <i className="fa-solid fa-clock" />
                               {formatSelectedSlot(
                                 res.selectedSlot.day,
                                 res.selectedSlot.currentYear
