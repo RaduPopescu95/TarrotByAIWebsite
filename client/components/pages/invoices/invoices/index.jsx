@@ -10,6 +10,8 @@ const Invoices = () => {
   const [selectedMonth, setSelectedMonth] = useState(""); // Stare pentru luna selectată
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false); // Stare pentru descărcare
+
   const itemsPerPage = 5;
 
   const fetchInvoices = async () => {
@@ -44,6 +46,8 @@ const Invoices = () => {
   // Funcția pentru descărcarea tuturor facturilor din luna selectată ca arhivă ZIP
   const handleDownloadAllInvoicesAsZip = async () => {
     try {
+      setIsDownloading(true); // Pornește loaderul
+
       // Filtrare facturi pe baza lunii selectate
       const filteredInvoices = invoices.filter((invoice) => {
         const invoiceMonth = new Date(invoice.created * 1000).getMonth() + 1; // Obține luna facturii
@@ -90,6 +94,8 @@ const Invoices = () => {
       }
     } catch (error) {
       console.error("Eroare la descărcarea arhivei ZIP:", error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -229,12 +235,25 @@ const Invoices = () => {
               {/* Buton descărcare facturi */}
               {selectedMonth ? (
                 <div className="download-all-button">
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleDownloadAllInvoicesAsZip}
-                  >
-                    Descarcă toate facturile din luna selectată (ZIP)
-                  </button>
+                  {isDownloading ? (
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <span>Procesul poate dura câteva minute...</span>
+                      <div
+                        className="spinner-border text-primary"
+                        role="status"
+                        style={{ marginLeft: "10px" }}
+                      >
+                        <span className="sr-only">Loading...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleDownloadAllInvoicesAsZip}
+                    >
+                      Descarcă toate facturile din luna selectată (ZIP)
+                    </button>
+                  )}
                 </div>
               ) : null}
 
@@ -363,7 +382,7 @@ const Invoices = () => {
           </div>
         </div>
       </div>
-      <DoctorFooter />
+      {/* <DoctorFooter /> */}
     </div>
   );
 };

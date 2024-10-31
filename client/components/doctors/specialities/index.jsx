@@ -586,7 +586,7 @@ const DoctorSpecialities = (props) => {
       {alert.visible && (
         <AlertMessage type={alert.type} message={alert.message} />
       )}
-      <DoctorFooter {...props} />
+      {/* <DoctorFooter {...props} /> */}
     </div>
   );
 };

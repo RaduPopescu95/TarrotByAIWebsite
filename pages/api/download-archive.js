@@ -32,7 +32,7 @@ export default async function handler(req, res) {
         try {
           // Obține URL-ul PDF al facturii folosind API-ul existent
           const pdfResponse = await fetch(
-            `http://${url}/api/get-invoice-pdf?invoiceId=${invoiceId}`
+            `https://${url}/api/get-invoice-pdf?invoiceId=${invoiceId}`
           );
           const { pdfUrl } = await pdfResponse.json();
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
             // Aici adăugăm logica pentru a include ziua, luna și anul în numele fișierului PDF
             const invoiceDetailsResponse = await fetch(
-              `http://${url}/api/get-invoice-details?invoiceId=${invoiceId}`
+              `https://${url}/api/get-invoice-details?invoiceId=${invoiceId}`
             );
             const invoiceDetails = await invoiceDetailsResponse.json();
 
