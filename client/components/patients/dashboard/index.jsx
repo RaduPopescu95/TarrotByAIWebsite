@@ -335,7 +335,7 @@ const ContClient = (props) => {
                                   className="btn btn-outline-primary"
                                 >
                                   <i className="fa-solid fa-calendar-check" />
-                                  Începe consultul
+                                  Începe sedinta
                                 </Link>
                               </div>
                             </div>
@@ -427,7 +427,7 @@ const ContClient = (props) => {
                                           color: "white",
                                         }}
                                       >
-                                        Începe consultatia
+                                        Începe sedinta
                                       </Link>
                                     </div>
                                   </td>

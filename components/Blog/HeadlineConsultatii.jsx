@@ -109,7 +109,7 @@ function HeadlineConsultatii({ newestArticle, isRo }) {
                       href="/calendar"
                       className="btn btn-consult-start-index"
                     >
-                      începe consultul
+                      începe sedinta
                     </Link>
                   </div>
                 </div>

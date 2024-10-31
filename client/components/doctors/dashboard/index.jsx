@@ -373,7 +373,7 @@ const DoctorDashboard = (props) => {
                                 href={`/meeting-admin?meetingCode=${nextReservation?.meetingCode}__${nextReservation?.documentId}`}
                                 className="btn"
                               >
-                                Începe consultatia
+                                Începe sedinta
                               </Link>
                             </div>
                           </div>
@@ -663,7 +663,7 @@ const DoctorDashboard = (props) => {
                                           color: "white",
                                         }}
                                       >
-                                        Începe consultatia
+                                        Începe sedinta
                                       </Link>
                                     </div>
                                   </td>

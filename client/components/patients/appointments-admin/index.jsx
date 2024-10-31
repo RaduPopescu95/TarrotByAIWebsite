@@ -229,7 +229,7 @@ const AppointmentsAdmin = () => {
                               href={`/meeting-admin?meetingCode=${res.meetingCode}__${res.documentId}`}
                             >
                               <i className="fa-solid fa-calendar-check" />{" "}
-                              Începe consultatia
+                              Începe sedinta
                             </Link>
                           </li>
                         </ul>
@@ -274,7 +274,7 @@ const AppointmentsAdmin = () => {
                               href={`/meeting-admin?meetingCode=${res.meetingCode}__${res.documentId}`}
                             >
                               <i className="fa-solid fa-calendar-check" /> Vezi
-                              Începe consultația
+                              Începe sedinta
                             </Link>
                           </li> */}
                         </ul>

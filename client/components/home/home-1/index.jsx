@@ -79,7 +79,7 @@ const Home1 = () => {
                 </p>
                 {/* Daca nu este autentificat functioneaza si fara */}
                 <Link href="/calendar" className="btn btn-consult-start">
-                  începe consultul
+                  începe sedinta
                 </Link>
                 {/* <div className="banner-arrow-img mt10">
                   <ImageWithBasePath
