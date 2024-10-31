@@ -3,7 +3,7 @@ import { buffer } from "micro";
 import Stripe from "stripe";
 import { handleUploadFirestoreGeneral } from "../../utils/firestoreUtils";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY_TEST);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Dezactivăm parserul de corp implicit al API-ului Next.js pentru a putea utiliza buffer-ul
 export const config = {

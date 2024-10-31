@@ -1,7 +1,7 @@
 // pages/api/create-checkout-session.js
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY_TEST);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async (req, res) => {
   if (req.method === "POST") {
@@ -22,9 +22,9 @@ export default async (req, res) => {
       console.log("Stripe session data:", { costConsultatie, nume, email });
       console.log(
         "Stripe Public Key:",
-        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
       );
-      console.log("Stripe Secret Key:", process.env.STRIPE_SECRET_KEY_TEST);
+      console.log("Stripe Secret Key:", process.env.STRIPE_SECRET_KEY);
 
       // Creează sesiunea de checkout cu opțiunea de creare factură
       const session = await stripe.checkout.sessions.create({

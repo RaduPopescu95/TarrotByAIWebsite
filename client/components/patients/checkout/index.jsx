@@ -54,7 +54,7 @@ const Checkout = (props) => {
   const [alert, setAlert] = useState({ type: "", message: "" });
 
   const stripePromise = loadStripe(
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   );
 
   const handleGetCategories = async () => {
