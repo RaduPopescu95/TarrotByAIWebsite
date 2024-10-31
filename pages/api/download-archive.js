@@ -3,6 +3,8 @@ import archiver from "archiver";
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
+  let url = "cristinazurba.com";
+  // let url = "localhost:3000";
   if (req.method === "POST") {
     try {
       // Preia ID-urile facturilor din corpul cererii (body)
@@ -30,7 +32,7 @@ export default async function handler(req, res) {
         try {
           // Obține URL-ul PDF al facturii folosind API-ul existent
           const pdfResponse = await fetch(
-            `http://localhost:3000/api/get-invoice-pdf?invoiceId=${invoiceId}`
+            `http://${url}/api/get-invoice-pdf?invoiceId=${invoiceId}`
           );
           const { pdfUrl } = await pdfResponse.json();
 
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
 
             // Aici adăugăm logica pentru a include ziua, luna și anul în numele fișierului PDF
             const invoiceDetailsResponse = await fetch(
-              `http://localhost:3000/api/get-invoice-details?invoiceId=${invoiceId}`
+              `http://${url}/api/get-invoice-details?invoiceId=${invoiceId}`
             );
             const invoiceDetails = await invoiceDetailsResponse.json();
 
