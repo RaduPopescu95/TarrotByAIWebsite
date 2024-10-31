@@ -19,6 +19,13 @@ import {
   formatSelectedSlot,
   validatePhoneNumber,
 } from "../../../../utils/commonUtils";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import {
+  isValidPhoneNumber,
+  parsePhoneNumberFromString,
+  getExampleNumber,
+} from "libphonenumber-js";
 
 const Checkout = (props) => {
   const config = "/react/template";
@@ -29,6 +36,7 @@ const Checkout = (props) => {
   const [tipConsultatie, setTipConsultatie] = useState("");
   const [costConsultatie, setCostConsultatie] = useState("100");
   const [adresa, setAdresa] = useState("");
+  const [language, setLanguage] = useState("ro"); // Poate fi "ro" pentru română sau "en" pentru engleză
 
   const [nume, setNume] = useState(
     (userData?.first_name?.length > 0 ? `${userData.first_name}` : "") +
@@ -46,7 +54,7 @@ const Checkout = (props) => {
   const [alert, setAlert] = useState({ type: "", message: "" });
 
   const stripePromise = loadStripe(
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
   );
 
   const handleGetCategories = async () => {
@@ -99,6 +107,7 @@ const Checkout = (props) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("phone number....", telefon);
 
     const newErrors = {};
     if (!nume) newErrors.nume = true;
@@ -108,17 +117,30 @@ const Checkout = (props) => {
     if (!tipConsultatie) newErrors.tipConsultatie = true;
     if (!adresa) newErrors.adresa = true;
 
-    // Validează numărul de telefon
-    const { isValid, formattedNumber } = validatePhoneNumber(telefon);
-    if (!isValid) {
+    // Validare număr de telefon cu sugestii de format
+    let prefixSugerat = "";
+    let lungimeNecesară = 0;
+    if (telefon) {
+      const parsedPhone = parsePhoneNumberFromString(telefon);
+      if (parsedPhone) {
+        prefixSugerat = parsedPhone.countryCallingCode;
+
+        // Obține un exemplu de număr pentru a calcula lungimea corectă
+        const exampleNumber = getExampleNumber(parsedPhone.country);
+        if (exampleNumber) {
+          lungimeNecesară = exampleNumber.nationalNumber.length;
+        }
+      }
+    }
+
+    if (!telefon || !isValidPhoneNumber(telefon)) {
       newErrors.telefon = true;
+      const phoneErrorMessage = `Numărul de telefon nu este valid.`;
+
       setAlert({
         type: "danger",
-        message:
-          "Numărul de telefon nu este valid. Folosiți formatul +407xxxxxxxx.",
+        message: phoneErrorMessage,
       });
-    } else {
-      setTelefon(formattedNumber); // Actualizează numărul cu formatul E.164 corect
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -126,6 +148,7 @@ const Checkout = (props) => {
       return;
     }
 
+    // Continuă cu trimiterea formularului dacă nu există erori
     setIsLoading(true);
     const stripe = await stripePromise;
     const pret = parseInt(categorie.price) * 100;
@@ -137,7 +160,18 @@ const Checkout = (props) => {
       }
 
       selectedSlot.currentYear = activeYear;
-
+      console.log("body....sent...", {
+        costConsultatie: pret,
+        nume,
+        email,
+        alteInformatii,
+        telefon, // Trimitere telefon formatat corect
+        categorie,
+        tipConsultatie,
+        selectedSlot,
+        owner_uid,
+        adresaClient: adresa,
+      });
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
@@ -148,7 +182,7 @@ const Checkout = (props) => {
           nume,
           email,
           alteInformatii,
-          telefon: formattedNumber, // Trimitere telefon formatat corect
+          telefon, // Trimitere telefon formatat corect
           categorie,
           tipConsultatie,
           selectedSlot,
@@ -277,7 +311,7 @@ const Checkout = (props) => {
                             }`}
                           >
                             <label>Telefon</label>
-                            <input
+                            {/* <input
                               className={`form-control ${
                                 errors.telefon ? "border-danger" : ""
                               }`}
@@ -290,6 +324,27 @@ const Checkout = (props) => {
                                   telefon: false,
                                 }));
                               }}
+                            /> */}
+                            <PhoneInput
+                              international
+                              defaultCountry="RO" // Setează România ca țară implicită, dacă este necesar
+                              value={telefon}
+                              onChange={(value) => {
+                                setTelefon(value); // Setează telefonul în format E.164
+
+                                if (value && isValidPhoneNumber(value)) {
+                                  setErrors((prev) => ({
+                                    ...prev,
+                                    telefon: false,
+                                  }));
+                                } else {
+                                  setErrors((prev) => ({
+                                    ...prev,
+                                    telefon: true,
+                                  }));
+                                }
+                              }}
+                              className={`form-control ${errors.telefon ? "border-danger" : ""}`}
                             />
                           </div>
                         </div>

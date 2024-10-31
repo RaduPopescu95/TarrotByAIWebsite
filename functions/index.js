@@ -22,15 +22,22 @@ const transporter = nodemailer.createTransport({
 admin.initializeApp();
 
 // Funcție pentru a formata data slotului selectat
-const formatSelectedSlot = (selectedSlotDay) => {
-  console.log("selectedSlotDay....", selectedSlotDay);
-  const [monthIndex, day] = selectedSlotDay.split("-").map(Number);
-  const currentYear = moment().year(); // Obține anul curent folosind moment
-  const correctMonth = monthIndex + 1;
+const formatSelectedSlot = (selectedSlotDay, selectedyear) => {
+  // Verificăm dacă `selectedSlotDay` este valid înainte de a-l procesa
+  if (!selectedSlotDay || !selectedyear) {
+    console.warn("Date incomplete: selectedSlotDay sau selectedyear lipsesc.");
+    return null; // Sau o valoare prestabilită, ex: `""`
+  }
 
-  // Creează un obiect moment folosind anul curent, luna și ziua
+  console.log("selectedSlotDay....", selectedSlotDay);
+  console.log("selectedyear....", selectedyear);
+
+  // Split și conversie în numere doar dacă selectedSlotDay este definit
+  const [monthIndex, day] = selectedSlotDay.split("-").map(Number);
+  const correctMonth = monthIndex + 1; // Corectare index lună
+
   const formattedDate = moment(
-      `${currentYear}-${correctMonth}-${day}`,
+      `${selectedyear}-${correctMonth}-${day}`,
       "YYYY-MM-DD",
   ).format("DD-MM-YYYY");
 
@@ -48,7 +55,7 @@ exports.sendNotificationOnNewReservation = functions.firestore
 
       // Extrage datele din documentul nou creat
       const email = newReservation.email;
-      let telefon = newReservation.telefon;
+      const telefon = newReservation.telefon;
       const meetingCode = newReservation.meetingCode;
       const day = newReservation.selectedSlot.day;
       const year = newReservation.selectedSlot.currentYear;
@@ -59,13 +66,6 @@ exports.sendNotificationOnNewReservation = functions.firestore
           `Email: ${email}, Telefon: ${telefon}, Meeting Code: ${meetingCode}`,
       );
       console.log(`Data: ${day}-${year}, Ora: ${time}, Doc: ${documentId}`);
-
-      // Asigură-te că este în formatul corect E.164
-      if (telefon && !telefon.startsWith("+")) {
-      // Dacă numărul nu începe cu "+", adaugă codul de țară
-        telefon = "+40" + telefon.replace(/^0+/, ""); // Elimină 0-ul
-        console.log(`Numărul de telefon formatat: ${telefon}`);
-      }
 
       // Construcția mesajului de e-mail
       const emailMessage =
@@ -82,32 +82,23 @@ exports.sendNotificationOnNewReservation = functions.firestore
 
       // Construcția mesajului de SMS/WhatsApp
       const smsMessage =
-      `<p>Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.</p>` +
-      `<p>Vă rugăm să accesați:</p>` +
-      `<p><a href="https://www.cristinazurba.com/meeting?meetingCode=` +
-      `${meetingCode}__${documentId}">` +
-      `www.cristinazurba.com/meeting?meetingCode=` +
-      `${meetingCode}__${documentId}</a></p>` +
-      `<p>la data de ${formatSelectedSlot(day, year)} la ora ${time}.</p>` +
-      `<p>Dacă întâmpinați dificultăți în utilizarea platformei, ` +
+      `Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.\n` +
+      `Vă rugăm să accesați:\n` +
+      `https://www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}\n` +
+      `la data de ${formatSelectedSlot(day, year)} la ora ${time}.\n` +
+      `Dacă întâmpinați dificultăți în utilizarea platformei, ` +
       `nu ezitați să contactați echipa de dezvoltare la ` +
-      `<a href="https://www.webappdynamicx.ro/contact">www.webappdynamicx.ro/contact</a>.</p>`;
+      `https://www.webappdynamicx.ro/contact`;
 
       // Trimiterea e-mailului
       const mailOptions = {
         from: "webdynamicx@gmail.com",
         to: email,
         subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
-        text: emailMessage,
+        html: emailMessage,
       };
 
       console.log("Opțiunile de email:", mailOptions);
-
-      // Verificare format telefon (dacă începe cu "+", e valid pentru Twilio)
-      if (!telefon || !/^\+\d+$/.test(telefon)) {
-        console.error(`Număr de telefon invalid: ${telefon}`);
-        return;
-      }
 
       console.log("Trimiterea email-ului, SMS-ului și WhatsApp-ului...");
 

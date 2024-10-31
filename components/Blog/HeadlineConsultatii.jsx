@@ -40,7 +40,7 @@ function HeadlineConsultatii({ newestArticle, isRo }) {
       <Card className={classes.blogHeadline} style={{ position: "relative" }}>
         <img
           className={classes.media}
-          src={"https://i.ibb.co/54vbZrk/Screenshot-2024-09-18-171832.png"}
+          src={"https://i.ibb.co/FwXyfBx/SL-042620-30310-19.jpg"}
           alt="News Headline"
           width={500}
           height={500}
@@ -76,36 +76,62 @@ function HeadlineConsultatii({ newestArticle, isRo }) {
                 flexDirection: "column",
               }}
             >
-              {/* <Typography
-                variant="h1"
-                className={cx(text.title2)}
-                style={{
-                  fontSize: isMobile ? "1.5rem" : "2.0rem", // Responsive font size
-                  color: "white",
-                  textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
-                }}
+              <div
+                className="row align-items-center"
+                style={{ position: "relative", top: !isMobile && "20%" }}
               >
-                {nume}
-              </Typography> */}
-              {/* {isDesktop && (
-                <Typography
-                  variant="p"
-                  className={cx(text.title2)}
+                <div
+                  className="col-lg-6 order-2 order-lg-1"
                   style={{
-                    fontSize: "20px",
-                    color: "white",
-                    textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)", // Text shadow for legibility
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 4,
-                    WebkitBoxOrient: "vertical",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "normal",
+                    padding: isMobile ? "0px" : "20px",
+                    paddingTop: "40px",
                   }}
                 >
-                  {descriere}
-                </Typography>
-              )} */}
+                  <div
+                    style={{ paddingBottom: "0px" }}
+                    className="banner-content aos"
+                    data-aos="fade-up"
+                  >
+                    <h1 style={{ fontSize: isMobile && "20px" }}>
+                      Ghidare spirituală <span>personalizată</span> pentru
+                      echilibrul tău.
+                    </h1>
+                    <p
+                      style={{
+                        fontSize: isMobile && "12px",
+                        marginBottom: isMobile && "0px",
+                      }}
+                    >
+                      Cristina Zurba – Îndrumare spirituală autentică pentru o
+                      viață armonioasă
+                    </p>
+                    <Link
+                      href="/calendar"
+                      className="btn btn-consult-start-index"
+                    >
+                      începe consultul
+                    </Link>
+                  </div>
+                </div>
+                {!isMobile && (
+                  <div
+                    className="col-lg-6 order-1 order-lg-2"
+                    style={{
+                      display: "flex", // Ascunde pe mobil
+                      justifyContent: "center",
+                      paddingBottom: !isMobile && "1%",
+                    }}
+                  >
+                    <Image
+                      src="/img/banner-image.png"
+                      alt="Cristina Zurba"
+                      width={300}
+                      height={400}
+                      style={{ width: "65%", height: "auto" }}
+                    />
+                  </div>
+                )}
+              </div>
             </CardContent>
           </CardActionArea>
         </Link>

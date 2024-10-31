@@ -163,7 +163,7 @@ function Mixed(props) {
                       justifyContent: "space-around",
                     }}
                   >
-                    {!props.isSlug && <Settings isWhiteBg={true} />}
+                    {/* {!props.isSlug && <Settings isWhiteBg={true} />} */}
                     <div
                       style={{
                         height: "3rem",
@@ -234,7 +234,6 @@ function Mixed(props) {
                         IOS
                       </p>
                     </div>
-               
                   </div>
                 </>
               )}
