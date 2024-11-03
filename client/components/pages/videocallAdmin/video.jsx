@@ -129,8 +129,8 @@ const AdminVideoCall = () => {
       // Setăm prezența adminului și a clientului la false în baza de date
       await updateDoc(docRef, {
         "presence.admin": false,
-        "presence.client": false,
       });
+      router.push("admin-consultatii");
     }
   };
 

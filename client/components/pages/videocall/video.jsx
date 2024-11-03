@@ -130,7 +130,6 @@ const VideoCall = () => {
 
       // Setăm prezența adminului și a clientului la false în baza de date
       await updateDoc(docRef, {
-        "presence.admin": false,
         "presence.client": false,
       });
     }
@@ -309,7 +308,7 @@ const VideoCall = () => {
             ) : (
               <div style={styles.nav}>
                 <h4>Apelul a fost incheiat</h4>
-                <h3 style={styles.btn} onClick={() => setVideocall(true)}>
+                <h3 style={styles.btn} onClick={() => router.reload()}>
                   Intră în apel
                 </h3>
               </div>
