@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import DoctorSidebar from "../sidebar";
 import Header from "../../header";
 import DoctorFooter from "../../common/doctorFooter";
@@ -8,23 +8,71 @@ import {
   doctordashboardprofile3,
 } from "../../imagepath";
 import Link from "next/link";
+import Footer from "../../footer";
+import Home1Header from "../../home/home-1/header";
+import { useRouter } from "next/router";
+import { handleQueryFirestore } from "../../../../utils/firestoreUtils";
+import { formatSelectedSlot } from "../../../../utils/commonUtils";
 const DoctorUpcomingAppointment = (props) => {
+  const router = useRouter();
+  const { meetingId } = router.query;
+  const [appointmentDetails, setAppointmentDetails] = useState(null);
+
+  useEffect(() => {
+    const fetchAppointmentDetails = async () => {
+      if (meetingId) {
+        try {
+          // Aici se preiau datele din Firestore pe baza `meetingId`
+          const data = await handleQueryFirestore(
+            "RezervariConsultatii",
+            "documentId",
+            meetingId
+          );
+          if (data) {
+            console.log("data...here.", data);
+            setAppointmentDetails(data[0]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch appointment details:", error);
+        }
+      }
+    };
+
+    fetchAppointmentDetails();
+  }, [meetingId]);
+
+  const handleBackClick = (e) => {
+    e.preventDefault(); // Previi comportamentul implicit al link-ului
+
+    if (window.history.length > 1) {
+      // Verifici dacă există o pagină anterioară în istoric
+      router.back();
+    } else {
+      // Dacă nu, redirecționezi la "/rezervari"
+      router.push("/rezervari");
+    }
+  };
+
+  if (!appointmentDetails) {
+    return <p>Se incarca informatiile....</p>;
+  }
+
   return (
     <div>
-      <Header {...props} />
+      <Home1Header />
       {/* Breadcrumb */}
       <div className="breadcrumb-bar-two">
         <div className="container">
           <div className="row align-items-center inner-banner">
             <div className="col-md-12 col-12 text-center">
-              <h2 className="breadcrumb-title">Appointment Detail</h2>
+              <h2 className="breadcrumb-title">Detalii rezervare</h2>
               <nav aria-label="breadcrumb" className="page-breadcrumb">
                 <ol className="breadcrumb">
                   <li className="breadcrumb-item">
-                    <Link href="/home-1">Home</Link>
+                    <Link href="/consultatii">Consultatii</Link>
                   </li>
                   <li className="breadcrumb-item" aria-current="page">
-                    Appointment Detail
+                    Detalii rezervare
                   </li>
                 </ol>
               </nav>
@@ -45,10 +93,14 @@ const DoctorUpcomingAppointment = (props) => {
             <div className="col-lg-8 col-xl-9">
               <div className="dashboard-header">
                 <div className="header-back">
-                  <Link href="/doctor/appointments" className="back-arrow">
+                  <Link
+                    href="/rezervari"
+                    onClick={handleBackClick}
+                    className="back-arrow"
+                  >
                     <i className="fa-solid fa-arrow-left" />
                   </Link>
-                  <h3>Appointment Details</h3>
+                  <h3>Detalii rezervare</h3>
                 </div>
               </div>
               <div className="appointment-details-wrap">
@@ -58,25 +110,22 @@ const DoctorUpcomingAppointment = (props) => {
                     <li>
                       <div className="patinet-information">
                         <Link href="#">
-                          <img
-                            src={doctordashboardprofile02}
-                            alt="User Image"
-                          />
+                          <img src="/img/userprofile.png" alt="User Image" />
                         </Link>
                         <div className="patient-info">
-                          <p>#Apt0001</p>
+                          <p>{appointmentDetails?.documentId}</p>
                           <h6>
-                            <Link href="#">Kelly Joseph </Link>
+                            <Link href="#">{appointmentDetails?.nume}</Link>
                           </h6>
                           <div className="mail-info-patient">
                             <ul>
                               <li>
                                 <i className="fa-solid fa-envelope" />
-                                kelly@example.com
+                                {appointmentDetails?.email}
                               </li>
                               <li>
                                 <i className="fa-solid fa-phone" />
-                                +1 504 368 6874
+                                {appointmentDetails?.telefon}
                               </li>
                             </ul>
                           </div>
@@ -85,22 +134,47 @@ const DoctorUpcomingAppointment = (props) => {
                     </li>
                     <li className="appointment-info">
                       <div className="person-info">
-                        <p>Type of Appointment</p>
+                        <p style={{ color: "#1d7ed8" }}>Alte informatii</p>
                         <ul className="d-flex apponitment-types">
                           <li>
-                            <i className="fa-solid fa-hospital text-green" />
-                            Direct Visit
+                            {/* <i className="fa-solid fa-hospital text-green" /> */}
+                            {appointmentDetails?.alteInformatii ||
+                              "Nu au fost adaugate alte informatii la rezervare"}
                           </li>
                         </ul>
                       </div>
                     </li>
-                    <li className="appointment-action">
+                    {/* <li className="appointment-info">
+                      <div className="person-info">
+                        <p>Timp</p>
+                        <ul className="d-flex apponitment-types">
+                          <li style={{ color: "#1d7ed8" }}>
+                            <i className="fa-solid fa-hospital text-green" />
+                            {appointmentDetails?.categorie?.about}
+                          </li>
+                        </ul>
+                      </div>
+                    </li> */}
+                    {/* <li className="appointment-info">
+                      <div className="person-info">
+                        <p>Pret</p>
+                        <ul className="d-flex apponitment-types">
+                          <li style={{ color: "#1d7ed8" }}>
+                            <i className="fa-solid fa-hospital text-green" />
+                            {appointmentDetails?.categorie?.price} RON
+                          </li>
+                        </ul>
+                      </div>
+                    </li> */}
+                    {/* <li className="appointment-action">
                       <div className="detail-badge-info">
                         <span className="badge bg-grey me-2">New Patient</span>
                         <span className="badge bg-yellow">Upcoming</span>
                       </div>
                       <div className="consult-fees">
-                        <h6>Consultation Fees : $200</h6>
+                        <h6>
+                          Pret: {appointmentDetails?.categorie?.price} RON
+                        </h6>
                       </div>
                       <ul>
                         <li>
@@ -114,24 +188,31 @@ const DoctorUpcomingAppointment = (props) => {
                           </Link>
                         </li>
                       </ul>
-                    </li>
+                    </li> */}
                   </ul>
                   <ul className="detail-card-bottom-info">
                     <li>
-                      <h6>Appointment Date &amp; Time</h6>
-                      <span>22 Jul 2023 - 12:00 pm</span>
+                      <h6>Data &amp; Ora</h6>
+                      <span>
+                        {" "}
+                        {formatSelectedSlot(
+                          appointmentDetails?.selectedSlot?.day,
+                          appointmentDetails?.selectedSlot?.currentYear
+                        )}{" "}
+                        ; {appointmentDetails?.selectedSlot?.slot}
+                      </span>
                     </li>
                     <li>
-                      <h6>Clinic Location</h6>
-                      <span>Adrian’s Dentistry</span>
+                      <h6>Tip Consultatie</h6>
+                      <span> {appointmentDetails?.tipConsultatie}</span>
                     </li>
                     <li>
-                      <h6>Location</h6>
-                      <span>Newyork, United States</span>
+                      <h6>Timp</h6>
+                      <span> {appointmentDetails?.categorie?.about}</span>
                     </li>
                     <li>
-                      <h6>Visit Type</h6>
-                      <span>General</span>
+                      <h6>Pret</h6>
+                      <span> {appointmentDetails?.categorie?.price} RON</span>
                     </li>
                     <li>
                       <div className="start-btn">
@@ -146,9 +227,9 @@ const DoctorUpcomingAppointment = (props) => {
                   </ul>
                 </div>
                 {/* /Appointment Detail Card */}
-                <div className="recent-appointments">
+                {/* <div className="recent-appointments">
                   <h5 className="head-text">Recent Appointments</h5>
-                  {/* Appointment List */}
+
                   <div className="appointment-wrap">
                     <ul>
                       <li>
@@ -200,8 +281,7 @@ const DoctorUpcomingAppointment = (props) => {
                       </li>
                     </ul>
                   </div>
-                  {/* /Appointment List */}
-                  {/* Appointment List */}
+
                   <div className="appointment-wrap">
                     <ul>
                       <li>
@@ -253,15 +333,14 @@ const DoctorUpcomingAppointment = (props) => {
                       </li>
                     </ul>
                   </div>
-                  {/* /Appointment List */}
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
         </div>
       </div>
-      {/* /Page Content */}
-      <DoctorFooter {...props} />
+
+      <Footer />
     </div>
   );
 };

@@ -83,6 +83,8 @@ const AppointmentsAdmin = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  console.log("currentReservations....", filteredReservations);
+  console.log("currentReservations....", currentReservations);
 
   const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -96,12 +98,15 @@ const AppointmentsAdmin = () => {
 
   const upcomingReservations = currentReservations.filter((res) => {
     console.log(
-      "Reservation date:",
+      "Reservation date upcomming:",
       moment(res.reservationDate).format("YYYY-MM-DD HH:mm:ss")
     );
-    const isAfterNow = moment(res.reservationDate).isAfter(now);
-    console.log("Is reservation after now?", isAfterNow);
-    return isAfterNow;
+    const isSameOrAfterNow = moment(res.reservationDate).isSameOrAfter(
+      now,
+      "day"
+    );
+    console.log("Is reservation same or after today?", isSameOrAfterNow);
+    return isSameOrAfterNow;
   });
 
   const completedReservations = currentReservations.filter((res) => {
@@ -232,6 +237,13 @@ const AppointmentsAdmin = () => {
                               Începe sedinta
                             </Link>
                           </li>
+                          <li>
+                            <Link
+                              href={`/detalii-rezervare?meetingId=${res.documentId}`}
+                            >
+                              <i className="fa-solid fa-eye" />
+                            </Link>
+                          </li>
                         </ul>
                       </div>
                     ))}
@@ -269,14 +281,15 @@ const AppointmentsAdmin = () => {
                               , ora {res.selectedSlot.slot}
                             </p>
                           </li>
-                          {/* <li className="appointment-action">
-                            <Link
-                              href={`/meeting-admin?meetingCode=${res.meetingCode}__${res.documentId}`}
-                            >
-                              <i className="fa-solid fa-calendar-check" /> Vezi
-                              Începe sedinta
-                            </Link>
-                          </li> */}
+                          <li className="appointment-action">
+                            <li>
+                              <Link
+                                href={`/detalii-rezervare?meetingId=${res.documentId}`}
+                              >
+                                <i className="fa-solid fa-eye" />
+                              </Link>
+                            </li>
+                          </li>
                         </ul>
                       </div>
                     ))}
@@ -285,16 +298,19 @@ const AppointmentsAdmin = () => {
               </div>
 
               <div className="pagination dashboard-pagination">
-                {generatePageNumbers().map((pageNumber) => (
-                  <Link
-                    key={pageNumber}
-                    href="#"
-                    className={`page-link ${currentPage === pageNumber ? "active" : ""}`}
-                    onClick={() => handlePageChange(pageNumber)}
-                  >
-                    {pageNumber}
-                  </Link>
-                ))}
+                {generatePageNumbers().map(
+                  (pageNumber) =>
+                    pageNumber ? (
+                      <Link
+                        key={pageNumber}
+                        href="#"
+                        className={`page-link ${currentPage === pageNumber ? "active" : ""}`}
+                        onClick={() => handlePageChange(pageNumber)}
+                      >
+                        {pageNumber}
+                      </Link>
+                    ) : null // Rendează doar dacă `pageNumber` există
+                )}
               </div>
             </div>
           </div>

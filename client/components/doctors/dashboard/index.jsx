@@ -375,6 +375,12 @@ const DoctorDashboard = (props) => {
                               >
                                 Începe sedinta
                               </Link>
+                              <Link
+                                href={`/detalii-rezervare?meetingId=${nextReservation?.documentId}`}
+                                className="btn"
+                              >
+                                Vezi detalii
+                              </Link>
                             </div>
                           </div>
                         </div>
@@ -664,6 +670,12 @@ const DoctorDashboard = (props) => {
                                         }}
                                       >
                                         Începe sedinta
+                                      </Link>
+                                      <Link
+                                        href={`/detalii-rezervare?meetingId=${r?.documentId}`}
+                                        className="btn"
+                                      >
+                                        Vezi detalii
                                       </Link>
                                     </div>
                                   </td>
