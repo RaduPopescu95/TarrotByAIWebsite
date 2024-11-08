@@ -217,10 +217,10 @@ const DoctorUpcomingAppointment = (props) => {
                     <li>
                       <div className="start-btn">
                         <Link
-                          href="/doctor/doctor-appointment-start"
+                          href={`/meeting-admin?meetingCode=${appointmentDetails.meetingCode}__${appointmentDetails.documentId}`}
                           className="btn btn-secondary"
                         >
-                          Start Session
+                          Începe sedinta
                         </Link>
                       </div>
                     </li>
