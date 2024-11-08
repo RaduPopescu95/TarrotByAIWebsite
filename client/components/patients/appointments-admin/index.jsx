@@ -88,32 +88,43 @@ const AppointmentsAdmin = () => {
 
   const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
 
-  const generatePageNumbers = () => {
-    const pageCount = Math.ceil(filteredReservations.length / itemsPerPage);
-    return Array.from({ length: pageCount }, (_, index) => index + 1);
-  };
-
   const now = moment(); // Include ziua și ora curentă
   console.log("Current time (now):", now.format("YYYY-MM-DD HH:mm:ss"));
 
-  const upcomingReservations = currentReservations.filter((res) => {
-    console.log(
-      "Reservation date upcomming:",
-      moment(res.reservationDate).format("YYYY-MM-DD HH:mm:ss")
-    );
-    const isSameOrAfterNow = moment(res.reservationDate).isSameOrAfter(
-      now,
-      "day"
-    );
-    console.log("Is reservation same or after today?", isSameOrAfterNow);
-    return isSameOrAfterNow;
-  });
+  const totalUpcomingPages = Math.ceil(
+    filteredReservations.filter((res) =>
+      moment(res.reservationDate).isSameOrAfter(now, "day")
+    ).length / itemsPerPage
+  );
 
-  const completedReservations = currentReservations.filter((res) => {
-    const isBeforeOrSameNow = moment(res.reservationDate).isSameOrBefore(now);
-    console.log("Is reservation before or same as now?", isBeforeOrSameNow);
-    return isBeforeOrSameNow;
-  });
+  const totalCompletedPages = Math.ceil(
+    filteredReservations.filter((res) =>
+      moment(res.reservationDate).isSameOrBefore(now)
+    ).length / itemsPerPage
+  );
+
+  const generatePageNumbers = () => {
+    const pageCount =
+      activeTab === "upcoming" ? totalUpcomingPages : totalCompletedPages;
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  };
+
+  const upcomingReservations = filteredReservations
+    .filter((res) => {
+      const isSameOrAfterNow = moment(res.reservationDate).isSameOrAfter(
+        now,
+        "day"
+      );
+      return isSameOrAfterNow;
+    })
+    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const completedReservations = filteredReservations
+    .filter((res) => {
+      const isBeforeOrSameNow = moment(res.reservationDate).isSameOrBefore(now);
+      return isBeforeOrSameNow;
+    })
+    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   console.log("Current page reservations:", currentReservations);
   console.log("Upcoming reservations:", upcomingReservations);
@@ -174,7 +185,10 @@ const AppointmentsAdmin = () => {
                     <li className="nav-item">
                       <button
                         className={`nav-link ${activeTab === "upcoming" ? "active" : ""}`}
-                        onClick={() => setActiveTab("upcoming")}
+                        onClick={() => {
+                          setActiveTab("upcoming");
+                          setCurrentPage(1);
+                        }}
                       >
                         Viitoare
                       </button>
@@ -182,7 +196,10 @@ const AppointmentsAdmin = () => {
                     <li className="nav-item">
                       <button
                         className={`nav-link ${activeTab === "completed" ? "active" : ""}`}
-                        onClick={() => setActiveTab("completed")}
+                        onClick={() => {
+                          setActiveTab("completed");
+                          setCurrentPage(1);
+                        }}
                       >
                         Finalizate
                       </button>
