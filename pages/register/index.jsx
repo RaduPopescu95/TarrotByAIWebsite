@@ -47,7 +47,7 @@ function Copyright(props) {
         <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
         {"."}
       </Typography>
-      <Typography
+      {/* <Typography
         variant="body2"
         color="text.secondary"
         align="center"
@@ -58,7 +58,7 @@ function Copyright(props) {
           Web App Dynamicx
         </Link>{" "}
         {"."}
-      </Typography>
+      </Typography> */}
     </div>
   );
 }

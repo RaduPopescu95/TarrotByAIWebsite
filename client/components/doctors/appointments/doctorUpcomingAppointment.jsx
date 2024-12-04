@@ -216,6 +216,28 @@ const DoctorUpcomingAppointment = (props) => {
                     </li>
                     <li>
                       <div className="start-btn">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            const link = `${window.location.origin}/meeting?meetingCode=${appointmentDetails.meetingCode}__${appointmentDetails.documentId}`;
+                            navigator.clipboard
+                              .writeText(link)
+                              .then(() => alert("Link copiat în clipboard!"))
+                              .catch((err) =>
+                                console.error(
+                                  "Eroare la copierea link-ului:",
+                                  err
+                                )
+                              );
+                          }}
+                        >
+                          Link întâlnire
+                        </button>
+                      </div>
+                    </li>
+
+                    <li>
+                      <div className="start-btn">
                         <Link
                           href={`/meeting-admin?meetingCode=${appointmentDetails.meetingCode}__${appointmentDetails.documentId}`}
                           className="btn btn-secondary"

@@ -49,7 +49,7 @@ function Copyright(props) {
         <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
         {"."}
       </Typography>
-      <Typography
+      {/* <Typography
         variant="body2"
         color="text.secondary"
         align="center"
@@ -60,7 +60,7 @@ function Copyright(props) {
           Web App Dynamicx
         </Link>{" "}
         {"."}
-      </Typography>
+      </Typography> */}
     </div>
   );
 }
@@ -78,8 +78,14 @@ export async function getServerSideProps({ locale }) {
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
-  const { currentUser, isGuestUser, setAsGuestUser, setUserData, userData, setCurrentUser } =
-    useAuth();
+  const {
+    currentUser,
+    isGuestUser,
+    setAsGuestUser,
+    setUserData,
+    userData,
+    setCurrentUser,
+  } = useAuth();
   const [emailError, setEmailError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
   const [message, setMessage] = React.useState("email");
