@@ -71,145 +71,145 @@ export default function AfirmatiiPozitiveFields({
 
   //---RO---
   const [numeRo, setNumeRo] = useState(
-    dialogData.info ? dialogData.info.ro.nume : ""
+    dialogData.info ? dialogData.info.ro?.nume : ""
   );
   const [descriereRo, setDescriereRo] = useState(
-    dialogData.info ? dialogData.info.ro.descriere : ""
+    dialogData.info ? dialogData.info.ro?.descriere : ""
   );
 
   //---EN---
   const [numeEn, setNumeEn] = useState(
-    dialogData.info ? dialogData.info.en.nume : ""
+    dialogData.info ? dialogData.info.en?.nume : ""
   );
   const [descriereEn, setDescriereEn] = useState(
-    dialogData.info ? dialogData.info.en.descriere : ""
+    dialogData.info ? dialogData.info.en?.descriere : ""
   );
 
   //---ES---
   const [numeEs, setNumeEs] = useState(
-    dialogData.info ? dialogData.info.es.nume : ""
+    dialogData.info ? dialogData.info.es?.nume : ""
   );
   const [descriereEs, setDescriereEs] = useState(
-    dialogData.info ? dialogData.info.es.descriere : ""
+    dialogData.info ? dialogData.info.es?.descriere : ""
   );
 
   //---IT---
   const [numeIt, setNumeIt] = useState(
-    dialogData.info ? dialogData.info.it.nume : ""
+    dialogData.info ? dialogData.info.it?.nume : ""
   );
   const [descriereIt, setDescriereIt] = useState(
-    dialogData.info ? dialogData.info.it.descriere : ""
+    dialogData.info ? dialogData.info.it?.descriere : ""
   );
   //---PL---
   const [numePl, setNumePl] = useState(
-    dialogData.info ? dialogData.info.pl.nume : ""
+    dialogData.info ? dialogData.info.pl?.nume : ""
   );
   const [descrierePl, setDescrierePl] = useState(
-    dialogData.info ? dialogData.info.pl.descriere : ""
+    dialogData.info ? dialogData.info.pl?.descriere : ""
   );
 
   //---DE---
   const [numeDe, setNumeDe] = useState(
-    dialogData.info ? dialogData.info.de.nume : ""
+    dialogData.info ? dialogData.info.de?.nume : ""
   );
   const [descriereDe, setDescriereDe] = useState(
-    dialogData.info ? dialogData.info.de.descriere : ""
+    dialogData.info ? dialogData.info.de?.descriere : ""
   );
 
   //---HU care este HI---
   const [numeHu, setNumeHu] = useState(
-    dialogData.info ? dialogData.info.hu.nume : ""
+    dialogData.info ? dialogData.info.hu?.nume : ""
   );
   const [descriereHu, setDescriereHu] = useState(
-    dialogData.info ? dialogData.info.hu.descriere : ""
+    dialogData.info ? dialogData.info.hu?.descriere : ""
   );
 
   //---CS---
   const [numeCs, setNumeCs] = useState(
-    dialogData.info ? dialogData.info.cs.nume : ""
+    dialogData.info ? dialogData.info.cs?.nume : ""
   );
   const [descriereCs, setDescriereCs] = useState(
-    dialogData.info ? dialogData.info.cs.descriere : ""
+    dialogData.info ? dialogData.info.cs?.descriere : ""
   );
 
   //---SK---
   const [numeSk, setNumeSk] = useState(
-    dialogData.info ? dialogData.info.sk.nume : ""
+    dialogData.info ? dialogData.info.sk?.nume : ""
   );
   const [descriereSk, setDescriereSk] = useState(
-    dialogData.info ? dialogData.info.sk.descriere : ""
+    dialogData.info ? dialogData.info.sk?.descriere : ""
   );
 
   //---HR---
   const [numeHr, setNumeHr] = useState(
-    dialogData.info ? dialogData.info.hr.nume : ""
+    dialogData.info ? dialogData.info.hr?.nume : ""
   );
   const [descriereHr, setDescriereHr] = useState(
-    dialogData.info ? dialogData.info.hr.descriere : ""
+    dialogData.info ? dialogData.info.hr?.descriere : ""
   );
 
   //---RU care este ID---
   const [numeRu, setNumeRu] = useState(
-    dialogData.info ? dialogData.info.ru.nume : ""
+    dialogData.info ? dialogData.info.ru?.nume : ""
   );
   const [descriereRu, setDescriereRu] = useState(
-    dialogData.info ? dialogData.info.ru.descriere : ""
+    dialogData.info ? dialogData.info.ru?.descriere : ""
   );
 
   //---BG---
   const [numeBg, setNumeBg] = useState(
-    dialogData.info ? dialogData.info.bg.nume : ""
+    dialogData.info ? dialogData.info.bg?.nume : ""
   );
   const [descriereBg, setDescriereBg] = useState(
-    dialogData.info ? dialogData.info.bg.descriere : ""
+    dialogData.info ? dialogData.info.bg?.descriere : ""
   );
 
   //---EL---
   const [numeEl, setNumeEl] = useState(
-    dialogData.info ? dialogData.info.el.nume : ""
+    dialogData.info ? dialogData.info.el?.nume : ""
   );
   const [descriereEl, setDescriereEl] = useState(
-    dialogData.info ? dialogData.info.el.descriere : ""
+    dialogData.info ? dialogData.info.el?.descriere : ""
   );
 
   //---FR---
   const [numeFr, setNumeFr] = useState(
-    dialogData.info ? dialogData.info.fr.nume : ""
+    dialogData.info ? dialogData.info.fr?.nume : ""
   );
   const [descriereFr, setDescriereFr] = useState(
-    dialogData.info ? dialogData.info.fr.descriere : ""
+    dialogData.info ? dialogData.info.fr?.descriere : ""
   );
 
   // --- RU (Rusa) care este Rusa pentru ca exista ru pentru id mai sus ---
   const [numeRusa, setNumeRusa] = useState(
-    dialogData.info ? dialogData.info.rusa.nume : ""
+    dialogData.info ? dialogData.info.rusa?.nume : ""
   );
   const [descriereRusa, setDescriereRusa] = useState(
-    dialogData.info ? dialogData.info.rusa.descriere : ""
+    dialogData.info ? dialogData.info.rusa?.descriere : ""
   );
 
   // --- TR (Turca) ---
   const [numeTr, setNumeTr] = useState(
-    dialogData.info ? dialogData.info.tr.nume : ""
+    dialogData.info ? dialogData.info.tr?.nume : ""
   );
   const [descriereTr, setDescriereTr] = useState(
-    dialogData.info ? dialogData.info.tr.descriere : ""
+    dialogData.info ? dialogData.info.tr?.descriere : ""
   );
 
   // --- AR (Araba) ---
   const [numeAr, setNumeAr] = useState(
-    dialogData.info ? dialogData.info.ar.nume : ""
+    dialogData.info ? dialogData.info.ar?.nume : ""
   );
   const [descriereAr, setDescriereAr] = useState(
-    dialogData.info ? dialogData.info.ar.descriere : ""
+    dialogData.info ? dialogData.info.ar?.descriere : ""
   );
 
   // --- SQ (Albaneza) ---
   const [numeSq, setNumeSq] = useState(
-    dialogData.info ? dialogData.info.sq.nume : ""
+    dialogData.info ? dialogData.info.sq?.nume : ""
   );
   const [descriereSq, setDescriereSq] = useState(
-    dialogData.info ? dialogData.info.sq.descriere : ""
+    dialogData.info ? dialogData.info.sq?.descriere : ""
   );
 
   const languageFields = [
@@ -447,8 +447,8 @@ export default function AfirmatiiPozitiveFields({
     {
       id: "descriere-ru",
       label: LANGUAGE_LABELS.ru.description,
-      value: descriereRu,
-      setValue: setDescriereRu,
+      value: descriereRusa,
+      setValue: setDescriereRusa,
       denumire: LANGUAGE_LABELS.ru.denumire,
     },
     // Turcă
@@ -538,10 +538,49 @@ export default function AfirmatiiPozitiveFields({
       sq: { nume: numeSq, descriere: descriereSq },
     };
 
-    console.log(data);
+    console.log("data...at upload", data);
     console.log("youtube...", youtubeLink);
 
     const oldFileName = dialogData.image ? dialogData.image.fileName : "";
+    if (isEdit) {
+      handleEdit(
+        data,
+        selectedImages,
+        image,
+        oldFileName,
+        categorie,
+        youtubeLink,
+        timpProgramat,
+        dataProgramata
+      )
+        .then(() => {
+          setLoading(false);
+          console.log("Edit successful");
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.error("Error during edit:", error);
+        });
+    } else {
+      console.log("else.....");
+      console.log(selectedImages);
+      console.log(data);
+      handleUpload(
+        data,
+        selectedImages,
+        categorie,
+        youtubeLink,
+        timpProgramat,
+        dataProgramata
+      )
+        .then(() => {
+          setLoading(false);
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.error("Error during upload:", error);
+        });
+    }
     if (isEdit) {
       handleEdit(
         data,
@@ -579,6 +618,9 @@ export default function AfirmatiiPozitiveFields({
     console.log("translate text...", text);
     try {
       const res = await gTranslateFetch(text, target);
+      if (target === "ru") {
+        console.log("res translate...", res);
+      }
       return res;
     } catch (err) {
       console.error("Error on translate.....:", err);

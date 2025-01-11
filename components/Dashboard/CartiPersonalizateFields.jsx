@@ -49,59 +49,79 @@ export default function CartiViitorFields({
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   const [numeRo, setNumeRo] = useState(
-    dialogData.info ? dialogData.info.ro.nume : ""
+    dialogData.info ? dialogData.info.ro?.nume : ""
   );
 
   const [numeEn, setNumeEn] = useState(
-    dialogData.info ? dialogData.info.en.nume : ""
+    dialogData.info ? dialogData.info.en?.nume : ""
   );
 
   const [numeEs, setNumeEs] = useState(
-    dialogData.info ? dialogData.info.es.nume : ""
+    dialogData.info ? dialogData.info.es?.nume : ""
   );
 
   const [numeIt, setNumeIt] = useState(
-    dialogData.info ? dialogData.info.it.nume : ""
+    dialogData.info ? dialogData.info.it?.nume : ""
   );
 
   const [numePl, setNumePl] = useState(
-    dialogData.info ? dialogData.info.pl.nume : ""
+    dialogData.info ? dialogData.info.pl?.nume : ""
   );
 
   const [numeDe, setNumeDe] = useState(
-    dialogData.info ? dialogData.info.de.nume : ""
+    dialogData.info ? dialogData.info.de?.nume : ""
   );
 
   const [numeHu, setNumeHu] = useState(
-    dialogData.info ? dialogData.info.hu.nume : ""
+    dialogData.info ? dialogData.info.hu?.nume : ""
   );
 
   const [numeCs, setNumeCs] = useState(
-    dialogData.info ? dialogData.info.cs.nume : ""
+    dialogData.info ? dialogData.info.cs?.nume : ""
   );
 
   const [numeSk, setNumeSk] = useState(
-    dialogData.info ? dialogData.info.sk.nume : ""
+    dialogData.info ? dialogData.info.sk?.nume : ""
   );
 
   const [numeHr, setNumeHr] = useState(
-    dialogData.info ? dialogData.info.hr.nume : ""
+    dialogData.info ? dialogData.info.hr?.nume : ""
   );
 
   const [numeRu, setNumeRu] = useState(
-    dialogData.info ? dialogData.info.ru.nume : ""
+    dialogData.info ? dialogData.info.ru?.nume : ""
   );
 
   const [numeBg, setNumeBg] = useState(
-    dialogData.info ? dialogData.info.bg.nume : ""
+    dialogData.info ? dialogData.info.bg?.nume : ""
   );
 
   const [numeEl, setNumeEl] = useState(
-    dialogData.info ? dialogData.info.el.nume : ""
+    dialogData.info ? dialogData.info.el?.nume : ""
   );
 
   const [numeFr, setNumeFr] = useState(
-    dialogData.info ? dialogData.info.fr.nume : ""
+    dialogData.info ? dialogData.info.fr?.nume : ""
+  );
+
+  // Limba Rusă (Ru)
+  const [numeRusa, setNumeRusa] = useState(
+    dialogData.info ? dialogData.info.ru?.nume : ""
+  );
+
+  // Limba Turcă (Tr)
+  const [numeTr, setNumeTr] = useState(
+    dialogData.info ? dialogData.info.tr?.nume : ""
+  );
+
+  // Limba Arabă (Ar)
+  const [numeAr, setNumeAr] = useState(
+    dialogData.info ? dialogData.info.ar?.nume : ""
+  );
+
+  // Limba Albaneză (Sq)
+  const [numeSq, setNumeSq] = useState(
+    dialogData.info ? dialogData.info.sq?.nume : ""
   );
 
   const languageFields = [
@@ -202,6 +222,35 @@ export default function CartiViitorFields({
       value: numeFr,
       setValue: setNumeFr,
     },
+
+    // Limba Rusă (Ru)
+    {
+      id: "nume-rusa",
+      label: LANGUAGE_LABELS.ru.name,
+      value: numeRusa,
+      setValue: setNumeRusa,
+    },
+    // Limba Turcă (Tr)
+    {
+      id: "nume-tr",
+      label: LANGUAGE_LABELS.tr.name,
+      value: numeTr,
+      setValue: setNumeTr,
+    },
+    // Limba Arabă (Ar)
+    {
+      id: "nume-ar",
+      label: LANGUAGE_LABELS.ar.name,
+      value: numeAr,
+      setValue: setNumeAr,
+    },
+    // Limba Albaneză (Sq)
+    {
+      id: "nume-sq",
+      label: LANGUAGE_LABELS.sq.name,
+      value: numeSq,
+      setValue: setNumeSq,
+    },
   ];
 
   const handleImageDelete = (index) => {
@@ -234,6 +283,10 @@ export default function CartiViitorFields({
       bg: { nume: numeBg },
       el: { nume: numeEl },
       fr: { nume: numeFr },
+      rusa: { nume: numeRusa },
+      tr: { nume: numeTr },
+      ar: { nume: numeAr },
+      sq: { nume: numeSq },
     };
     console.log(data);
     console.log("image...", dialogData.images);

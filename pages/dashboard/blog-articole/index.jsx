@@ -13,7 +13,15 @@ export async function getServerSideProps(context) {
     const data = await handleGetFirestore("BlogArticole");
 
     let rawData = [...data];
-    const articles = rawData.sort((a, b) => a.id - b.id);
+    const articles = rawData
+      .filter((article) => article.firstUploadTimestamp) // Filtrăm doar articolele cu firstUploadTimestamp
+      .map((article) => ({
+        ...article,
+        firstUploadTimestamp: new Date(
+          article.firstUploadTimestamp.seconds * 1000
+        ).toISOString(), // Conversie din Firestore Timestamp
+      }))
+      .sort((a, b) => a.id - b.id); // Sortare după ID
 
     console.log("articles.....", articles[0]);
     return {

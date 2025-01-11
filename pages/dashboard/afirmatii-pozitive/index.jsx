@@ -13,9 +13,18 @@ export async function getServerSideProps(context) {
     const data = await handleGetFirestore("AfirmatiiPozitive");
 
     let rawData = [...data];
-    const articles = rawData.sort((a, b) => a.id - b.id);
 
-    console.log("articles...", articles[0]);
+    const articles = rawData
+      .filter((article) => article.firstUploadTimestamp) // Filtrăm doar articolele cu firstUploadTimestamp
+      .map((article) => ({
+        ...article,
+        firstUploadTimestamp: article.firstUploadTimestamp.seconds
+          ? new Date(article.firstUploadTimestamp.seconds * 1000).toISOString()
+          : null, // Conversie din Firestore Timestamp
+      }))
+      .sort((a, b) => a.id - b.id); // Sortare după ID
+
+    console.log("articles...aiciiii", articles.length);
     return {
       props: {
         articles,
@@ -37,6 +46,7 @@ export async function getServerSideProps(context) {
 
 export default function index(props) {
   const { articles } = props;
+  console.log("articles...here", articles);
   return (
     <>
       <Head>

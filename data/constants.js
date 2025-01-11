@@ -98,6 +98,34 @@ export const LANGUAGE_LABELS = {
     denumire: "Franceză",
   },
   // Adaugă aici orice alte limbi necesare
+  ru: {
+    name: "Nume în rusă",
+    description: "Descriere în rusă",
+    video: "Video în rusă",
+    content: "Conținut în rusă",
+    denumire: "Rusă",
+  },
+  tr: {
+    name: "Nume în turcă",
+    description: "Descriere în turcă",
+    video: "Video în turcă",
+    content: "Conținut în turcă",
+    denumire: "Turcă",
+  },
+  ar: {
+    name: "Nume în arabă",
+    description: "Descriere în arabă",
+    video: "Video în arabă",
+    content: "Conținut în arabă",
+    denumire: "Arabă",
+  },
+  sq: {
+    name: "Nume în albaneză",
+    description: "Descriere în albaneză",
+    video: "Video în albaneză",
+    content: "Conținut în albaneză",
+    denumire: "Albaneză",
+  },
 };
 
 export const customStyles = `

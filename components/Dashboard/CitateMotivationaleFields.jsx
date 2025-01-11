@@ -51,59 +51,79 @@ export default function CitateMotivationaleFields({
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   const [descriereRo, setDescriereRo] = useState(
-    dialogData.info ? dialogData.info.ro.descriere : ""
+    dialogData.info ? dialogData.info.ro?.descriere : ""
   );
 
   const [descriereEn, setDescriereEn] = useState(
-    dialogData.info ? dialogData.info.en.descriere : ""
+    dialogData.info ? dialogData.info.en?.descriere : ""
   );
 
   const [descriereEs, setDescriereEs] = useState(
-    dialogData.info ? dialogData.info.es.descriere : ""
+    dialogData.info ? dialogData.info.es?.descriere : ""
   );
 
   const [descriereIt, setDescriereIt] = useState(
-    dialogData.info ? dialogData.info.it.descriere : ""
+    dialogData.info ? dialogData.info.it?.descriere : ""
   );
 
   const [descrierePl, setDescrierePl] = useState(
-    dialogData.info ? dialogData.info.pl.descriere : ""
+    dialogData.info ? dialogData.info.pl?.descriere : ""
   );
 
   const [descriereDe, setDescriereDe] = useState(
-    dialogData.info ? dialogData.info.de.descriere : ""
+    dialogData.info ? dialogData.info.de?.descriere : ""
   );
 
   const [descriereHu, setDescriereHu] = useState(
-    dialogData.info ? dialogData.info.hu.descriere : ""
+    dialogData.info ? dialogData.info.hu?.descriere : ""
   );
 
   const [descriereCs, setDescriereCs] = useState(
-    dialogData.info ? dialogData.info.cs.descriere : ""
+    dialogData.info ? dialogData.info.cs?.descriere : ""
   );
 
   const [descriereSk, setDescriereSk] = useState(
-    dialogData.info ? dialogData.info.sk.descriere : ""
+    dialogData.info ? dialogData.info.sk?.descriere : ""
   );
 
   const [descriereHr, setDescriereHr] = useState(
-    dialogData.info ? dialogData.info.hr.descriere : ""
+    dialogData.info ? dialogData.info.hr?.descriere : ""
   );
 
   const [descriereRu, setDescriereRu] = useState(
-    dialogData.info ? dialogData.info.ru.descriere : ""
+    dialogData.info ? dialogData.info.ru?.descriere : ""
   );
 
   const [descriereBg, setDescriereBg] = useState(
-    dialogData.info ? dialogData.info.bg.descriere : ""
+    dialogData.info ? dialogData.info.bg?.descriere : ""
   );
 
   const [descriereEl, setDescriereEl] = useState(
-    dialogData.info ? dialogData.info.el.descriere : ""
+    dialogData.info ? dialogData.info.el?.descriere : ""
   );
 
   const [descriereFr, setDescriereFr] = useState(
-    dialogData.info ? dialogData.info.fr.descriere : ""
+    dialogData.info ? dialogData.info.fr?.descriere : ""
+  );
+
+  // Limba Rusă (Ru)
+  const [descriereRusa, setDescriereRusa] = useState(
+    dialogData.info ? dialogData.info.rusa?.descriere : ""
+  );
+
+  // Limba Turcă (Tr)
+  const [descriereTr, setDescriereTr] = useState(
+    dialogData.info ? dialogData.info.tr?.descriere : ""
+  );
+
+  // Limba Arabă (Ar)
+  const [descriereAr, setDescriereAr] = useState(
+    dialogData.info ? dialogData.info.ar?.descriere : ""
+  );
+
+  // Limba Albaneză (Sq)
+  const [descriereSq, setDescriereSq] = useState(
+    dialogData.info ? dialogData.info.sq?.descriere : ""
   );
 
   const languageFields = [
@@ -204,6 +224,34 @@ export default function CitateMotivationaleFields({
       value: descriereFr,
       setValue: setDescriereFr,
     },
+    // Limba Rusă (Ru)
+    {
+      id: "descriere-rusa",
+      label: LANGUAGE_LABELS.ru.description,
+      value: descriereRusa,
+      setValue: setDescriereRusa,
+    },
+    // Limba Turcă (Tr)
+    {
+      id: "descriere-tr",
+      label: LANGUAGE_LABELS.tr.description,
+      value: descriereTr,
+      setValue: setDescriereTr,
+    },
+    // Limba Arabă (Ar)
+    {
+      id: "descriere-ar",
+      label: LANGUAGE_LABELS.ar.description,
+      value: descriereAr,
+      setValue: setDescriereAr,
+    },
+    // Limba Albaneză (Sq)
+    {
+      id: "descriere-sq",
+      label: LANGUAGE_LABELS.sq.description,
+      value: descriereSq,
+      setValue: setDescriereSq,
+    },
   ];
 
   const handleUploadData = () => {
@@ -223,6 +271,10 @@ export default function CitateMotivationaleFields({
       bg: { descriere: descriereBg },
       el: { descriere: descriereEl },
       fr: { descriere: descriereFr },
+      rusa: { descriere: descriereRusa },
+      tr: { descriere: descriereTr },
+      ar: { descriere: descriereAr },
+      sq: { descriere: descriereSq },
     };
     console.log(data);
 
@@ -268,6 +320,10 @@ export default function CitateMotivationaleFields({
       "bg",
       "el",
       "fr",
+      "rusa",
+      "tr",
+      "ar",
+      "sq",
     ];
 
     // Creăm un obiect de mapare pentru funcțiile set
@@ -285,6 +341,10 @@ export default function CitateMotivationaleFields({
       bg: setDescriereBg,
       el: setDescriereEl,
       fr: setDescriereFr,
+      rusa: setDescriereRusa,
+      tr: setDescriereTr,
+      ar: setDescriereAr,
+      sq: setDescriereSq,
     };
 
     for (let l of languages) {
@@ -296,6 +356,8 @@ export default function CitateMotivationaleFields({
         translation = await handleTranslate(descriereRoValue, "hi");
       } else if (l === "ru") {
         translation = await handleTranslate(descriereRoValue, "id");
+      } else if (l === "rusa") {
+        translation = await handleTranslate(descriereRoValue, "ru");
       } else {
         translation = await handleTranslate(descriereRoValue, l);
       }

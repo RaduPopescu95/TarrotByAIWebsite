@@ -71,156 +71,200 @@ export default function BlogArticoleFields({
 
   //---RO---
   const [numeRo, setNumeRo] = useState(
-    dialogData.info ? dialogData.info.ro.nume : ""
+    dialogData.info ? dialogData?.info?.ro?.nume : ""
   );
   const [descriereRo, setDescriereRo] = useState(
-    dialogData.info ? dialogData.info.ro.descriere : ""
+    dialogData.info ? dialogData?.info?.ro?.descriere : ""
   );
   const [contentRo, setContentRo] = useState(
-    dialogData.info ? dialogData.info.ro.content : ""
+    dialogData.info ? dialogData?.info?.ro?.content : ""
   );
 
   //---EN---
   const [numeEn, setNumeEn] = useState(
-    dialogData.info ? dialogData.info.en.nume : ""
+    dialogData.info ? dialogData?.info?.en?.nume : ""
   );
   const [descriereEn, setDescriereEn] = useState(
-    dialogData.info ? dialogData.info.en.descriere : ""
+    dialogData.info ? dialogData?.info?.en?.descriere : ""
   );
   const [contentEn, setContentEn] = useState(
-    dialogData.info ? dialogData.info.en.content : ""
+    dialogData.info ? dialogData?.info?.en?.content : ""
   );
 
   //---ES---
   const [numeEs, setNumeEs] = useState(
-    dialogData.info ? dialogData.info.es.nume : ""
+    dialogData.info ? dialogData?.info?.es?.nume : ""
   );
   const [descriereEs, setDescriereEs] = useState(
-    dialogData.info ? dialogData.info.es.descriere : ""
+    dialogData.info ? dialogData?.info?.es?.descriere : ""
   );
   const [contentEs, setContentEs] = useState(
-    dialogData.info ? dialogData.info.es.content : ""
+    dialogData.info ? dialogData?.info?.es?.content : ""
   );
 
   //---IT---
   const [numeIt, setNumeIt] = useState(
-    dialogData.info ? dialogData.info.it.nume : ""
+    dialogData.info ? dialogData?.info?.it?.nume : ""
   );
   const [descriereIt, setDescriereIt] = useState(
-    dialogData.info ? dialogData.info.it.descriere : ""
+    dialogData.info ? dialogData?.info?.it?.descriere : ""
   );
   const [contentIt, setContentIt] = useState(
-    dialogData.info ? dialogData.info.it.content : ""
+    dialogData.info ? dialogData?.info?.it?.content : ""
   );
 
   //---PL---
   const [numePl, setNumePl] = useState(
-    dialogData.info ? dialogData.info.pl.nume : ""
+    dialogData.info ? dialogData?.info?.pl?.nume : ""
   );
   const [descrierePl, setDescrierePl] = useState(
-    dialogData.info ? dialogData.info.pl.descriere : ""
+    dialogData.info ? dialogData?.info?.pl?.descriere : ""
   );
   const [contentPl, setContentPl] = useState(
-    dialogData.info ? dialogData.info.pl.content : ""
+    dialogData.info ? dialogData?.info?.pl?.content : ""
   );
 
   //---DE---
   const [numeDe, setNumeDe] = useState(
-    dialogData.info ? dialogData.info.de.nume : ""
+    dialogData.info ? dialogData?.info?.de?.nume : ""
   );
   const [descriereDe, setDescriereDe] = useState(
-    dialogData.info ? dialogData.info.de.descriere : ""
+    dialogData.info ? dialogData?.info?.de?.descriere : ""
   );
   const [contentDe, setContentDe] = useState(
-    dialogData.info ? dialogData.info.de.content : ""
+    dialogData.info ? dialogData?.info?.de?.content : ""
   );
 
   //---HU care este HI---
   const [numeHu, setNumeHu] = useState(
-    dialogData.info ? dialogData.info.hu.nume : ""
+    dialogData.info ? dialogData?.info?.hu?.nume : ""
   );
   const [descriereHu, setDescriereHu] = useState(
-    dialogData.info ? dialogData.info.hu.descriere : ""
+    dialogData.info ? dialogData?.info?.hu?.descriere : ""
   );
   const [contentHu, setContentHu] = useState(
-    dialogData.info ? dialogData.info.hu.content : ""
+    dialogData.info ? dialogData?.info?.hu?.content : ""
   );
 
   //---CS---
   const [numeCs, setNumeCs] = useState(
-    dialogData.info ? dialogData.info.cs.nume : ""
+    dialogData.info ? dialogData?.info?.cs?.nume : ""
   );
   const [descriereCs, setDescriereCs] = useState(
-    dialogData.info ? dialogData.info.cs.descriere : ""
+    dialogData.info ? dialogData?.info?.cs?.descriere : ""
   );
   const [contentCs, setContentCs] = useState(
-    dialogData.info ? dialogData.info.cs.content : ""
+    dialogData.info ? dialogData?.info?.cs?.content : ""
   );
 
   //---SK---
   const [numeSk, setNumeSk] = useState(
-    dialogData.info ? dialogData.info.sk.nume : ""
+    dialogData.info ? dialogData?.info?.sk?.nume : ""
   );
   const [descriereSk, setDescriereSk] = useState(
-    dialogData.info ? dialogData.info.sk.descriere : ""
+    dialogData.info ? dialogData?.info?.sk?.descriere : ""
   );
   const [contentSk, setContentSk] = useState(
-    dialogData.info ? dialogData.info.sk.content : ""
+    dialogData.info ? dialogData?.info?.sk?.content : ""
   );
 
   //---HR---
   const [numeHr, setNumeHr] = useState(
-    dialogData.info ? dialogData.info.hr.nume : ""
+    dialogData.info ? dialogData?.info?.hr?.nume : ""
   );
   const [descriereHr, setDescriereHr] = useState(
-    dialogData.info ? dialogData.info.hr.descriere : ""
+    dialogData.info ? dialogData?.info?.hr?.descriere : ""
   );
   const [contentHr, setContentHr] = useState(
-    dialogData.info ? dialogData.info.hr.content : ""
+    dialogData.info ? dialogData?.info?.hr?.content : ""
   );
 
   //---RU care este ID---
   const [numeRu, setNumeRu] = useState(
-    dialogData.info ? dialogData.info.ru.nume : ""
+    dialogData.info ? dialogData?.info?.ru?.nume : ""
   );
   const [descriereRu, setDescriereRu] = useState(
-    dialogData.info ? dialogData.info.ru.descriere : ""
+    dialogData.info ? dialogData?.info?.ru?.descriere : ""
   );
   const [contentRu, setContentRu] = useState(
-    dialogData.info ? dialogData.info.ru.content : ""
+    dialogData.info ? dialogData?.info?.ru?.content : ""
   );
 
   //---BG---
   const [numeBg, setNumeBg] = useState(
-    dialogData.info ? dialogData.info.bg.nume : ""
+    dialogData.info ? dialogData?.info?.bg?.nume : ""
   );
   const [descriereBg, setDescriereBg] = useState(
-    dialogData.info ? dialogData.info.bg.descriere : ""
+    dialogData.info ? dialogData?.info?.bg?.descriere : ""
   );
   const [contentBg, setContentBg] = useState(
-    dialogData.info ? dialogData.info.bg.content : ""
+    dialogData.info ? dialogData?.info?.bg?.content : ""
   );
 
   //---EL---
   const [numeEl, setNumeEl] = useState(
-    dialogData.info ? dialogData.info.el.nume : ""
+    dialogData.info ? dialogData?.info?.el?.nume : ""
   );
   const [descriereEl, setDescriereEl] = useState(
-    dialogData.info ? dialogData.info.el.descriere : ""
+    dialogData.info ? dialogData?.info?.el?.descriere : ""
   );
   const [contentEl, setContentEl] = useState(
-    dialogData.info ? dialogData.info.el.content : ""
+    dialogData.info ? dialogData?.info?.el?.content : ""
   );
 
   //---FR---
   const [numeFr, setNumeFr] = useState(
-    dialogData.info ? dialogData.info.fr.nume : ""
+    dialogData.info ? dialogData?.info?.fr?.nume : ""
   );
   const [descriereFr, setDescriereFr] = useState(
-    dialogData.info ? dialogData.info.fr.descriere : ""
+    dialogData.info ? dialogData?.info?.fr?.descriere : ""
   );
   const [contentFr, setContentFr] = useState(
-    dialogData.info ? dialogData.info.fr.content : ""
+    dialogData.info ? dialogData?.info?.fr?.content : ""
+  );
+
+  // --- RU (Rusa) ---
+  const [numeRusa, setNumeRusa] = useState(
+    dialogData.info ? dialogData?.info?.rusa?.nume : ""
+  );
+  const [descriereRusa, setDescriereRusa] = useState(
+    dialogData.info ? dialogData?.info?.rusa?.descriere : ""
+  );
+  const [contentRusa, setContentRusa] = useState(
+    dialogData.info ? dialogData?.info?.rusa?.content : ""
+  );
+
+  // --- TR (Turca) ---
+  const [numeTr, setNumeTr] = useState(
+    dialogData.info ? dialogData?.info?.tr?.nume : ""
+  );
+  const [descriereTr, setDescriereTr] = useState(
+    dialogData.info ? dialogData?.info?.tr?.descriere : ""
+  );
+  const [contentTr, setContentTr] = useState(
+    dialogData.info ? dialogData?.info?.tr?.content : ""
+  );
+
+  // --- AR (Araba) ---
+  const [numeAr, setNumeAr] = useState(
+    dialogData.info ? dialogData?.info?.ar?.nume : ""
+  );
+  const [descriereAr, setDescriereAr] = useState(
+    dialogData.info ? dialogData?.info?.ar?.descriere : ""
+  );
+  const [contentAr, setContentAr] = useState(
+    dialogData.info ? dialogData?.info?.ar?.content : ""
+  );
+
+  // --- SQ (Albaneza) ---
+  const [numeSq, setNumeSq] = useState(
+    dialogData.info ? dialogData?.info?.sq?.nume : ""
+  );
+  const [descriereSq, setDescriereSq] = useState(
+    dialogData.info ? dialogData?.info?.sq?.descriere : ""
+  );
+  const [contentSq, setContentSq] = useState(
+    dialogData.info ? dialogData?.info?.sq?.content : ""
   );
 
   const languageFields = [
@@ -241,7 +285,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-ro",
-      label: LANGUAGE_LABELS.ro.content,
+      label: LANGUAGE_LABELS.ro?.content,
       value: contentRo,
       setValue: setContentRo,
       denumire: LANGUAGE_LABELS.ro.denumire,
@@ -263,7 +307,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-en",
-      label: LANGUAGE_LABELS.en.content,
+      label: LANGUAGE_LABELS.en?.content,
       value: contentEn,
       setValue: setContentEn,
       denumire: LANGUAGE_LABELS.en.denumire,
@@ -285,7 +329,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-es",
-      label: LANGUAGE_LABELS.es.content,
+      label: LANGUAGE_LABELS.es?.content,
       value: contentEs,
       setValue: setContentEs,
       denumire: LANGUAGE_LABELS.es.denumire,
@@ -307,7 +351,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-it",
-      label: LANGUAGE_LABELS.it.content,
+      label: LANGUAGE_LABELS.it?.content,
       value: contentIt,
       setValue: setContentIt,
       denumire: LANGUAGE_LABELS.it.denumire,
@@ -329,7 +373,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-pl",
-      label: LANGUAGE_LABELS.pl.content,
+      label: LANGUAGE_LABELS.pl?.content,
       value: contentPl,
       setValue: setContentPl,
       denumire: LANGUAGE_LABELS.pl.denumire,
@@ -351,7 +395,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-de",
-      label: LANGUAGE_LABELS.de.content,
+      label: LANGUAGE_LABELS.de?.content,
       value: contentDe,
       setValue: setContentDe,
       denumire: LANGUAGE_LABELS.de.denumire,
@@ -373,7 +417,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-hu",
-      label: LANGUAGE_LABELS.hi.content,
+      label: LANGUAGE_LABELS.hi?.content,
       value: contentHu,
       setValue: setContentHu,
       denumire: LANGUAGE_LABELS.hi.denumire,
@@ -395,7 +439,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-cs",
-      label: LANGUAGE_LABELS.cs.content,
+      label: LANGUAGE_LABELS.cs?.content,
       value: contentCs,
       setValue: setContentCs,
       denumire: LANGUAGE_LABELS.cs.denumire,
@@ -417,7 +461,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-sk",
-      label: LANGUAGE_LABELS.sk.content,
+      label: LANGUAGE_LABELS.sk?.content,
       value: contentSk,
       setValue: setContentSk,
       denumire: LANGUAGE_LABELS.sk.denumire,
@@ -439,7 +483,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-hr",
-      label: LANGUAGE_LABELS.hr.content,
+      label: LANGUAGE_LABELS.hr?.content,
       value: contentHr,
       setValue: setContentHr,
       denumire: LANGUAGE_LABELS.hr.denumire,
@@ -461,7 +505,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-ru",
-      label: LANGUAGE_LABELS.id.content,
+      label: LANGUAGE_LABELS.id?.content,
       value: contentRu,
       setValue: setContentRu,
       denumire: LANGUAGE_LABELS.id.denumire,
@@ -483,7 +527,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-bg",
-      label: LANGUAGE_LABELS.bg.content,
+      label: LANGUAGE_LABELS.bg?.content,
       value: contentBg,
       setValue: setContentBg,
       denumire: LANGUAGE_LABELS.bg.denumire,
@@ -505,7 +549,7 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-el",
-      label: LANGUAGE_LABELS.el.content,
+      label: LANGUAGE_LABELS.el?.content,
       value: contentEl,
       setValue: setContentEl,
       denumire: LANGUAGE_LABELS.el.denumire,
@@ -527,11 +571,103 @@ export default function BlogArticoleFields({
     },
     {
       id: "content-fr",
-      label: LANGUAGE_LABELS.fr.content,
+      label: LANGUAGE_LABELS.fr?.content,
       value: contentFr,
       setValue: setContentFr,
       denumire: LANGUAGE_LABELS.fr.denumire,
     },
+    // --- RU (Rusa) ---
+    {
+      id: "nume-rusa",
+      label: LANGUAGE_LABELS.ru.name,
+      value: numeRusa,
+      setValue: setNumeRusa,
+      denumire: LANGUAGE_LABELS.ru.denumire,
+    },
+    {
+      id: "descriere-rusa",
+      label: LANGUAGE_LABELS.ru.description,
+      value: descriereRusa,
+      setValue: setDescriereRusa,
+      denumire: LANGUAGE_LABELS.ru.denumire,
+    },
+    {
+      id: "content-rusa",
+      label: LANGUAGE_LABELS.ru?.content,
+      value: contentRusa,
+      setValue: setContentRusa,
+      denumire: LANGUAGE_LABELS.ru.denumire,
+    },
+
+    // --- TR (Turca) ---
+    {
+      id: "nume-tr",
+      label: LANGUAGE_LABELS.tr.name,
+      value: numeTr,
+      setValue: setNumeTr,
+      denumire: LANGUAGE_LABELS.tr.denumire,
+    },
+    {
+      id: "descriere-tr",
+      label: LANGUAGE_LABELS.tr.description,
+      value: descriereTr,
+      setValue: setDescriereTr,
+      denumire: LANGUAGE_LABELS.tr.denumire,
+    },
+    {
+      id: "content-tr",
+      label: LANGUAGE_LABELS.tr?.content,
+      value: contentTr,
+      setValue: setContentTr,
+      denumire: LANGUAGE_LABELS.tr.denumire,
+    },
+
+    // --- AR (Araba) ---
+    {
+      id: "nume-ar",
+      label: LANGUAGE_LABELS.ar.name,
+      value: numeAr,
+      setValue: setNumeAr,
+      denumire: LANGUAGE_LABELS.ar.denumire,
+    },
+    {
+      id: "descriere-ar",
+      label: LANGUAGE_LABELS.ar.description,
+      value: descriereAr,
+      setValue: setDescriereAr,
+      denumire: LANGUAGE_LABELS.ar.denumire,
+    },
+    {
+      id: "content-ar",
+      label: LANGUAGE_LABELS.ar?.content,
+      value: contentAr,
+      setValue: setContentAr,
+      denumire: LANGUAGE_LABELS.ar.denumire,
+    },
+
+    // --- SQ (Albaneza) ---
+    {
+      id: "nume-sq",
+      label: LANGUAGE_LABELS.sq.name,
+      value: numeSq,
+      setValue: setNumeSq,
+      denumire: LANGUAGE_LABELS.sq.denumire,
+    },
+    {
+      id: "descriere-sq",
+      label: LANGUAGE_LABELS.sq.description,
+      value: descriereSq,
+      setValue: setDescriereSq,
+      denumire: LANGUAGE_LABELS.sq.denumire,
+    },
+    {
+      id: "content-sq",
+      label: LANGUAGE_LABELS.sq?.content,
+      value: contentSq,
+      setValue: setContentSq,
+      denumire: LANGUAGE_LABELS.sq.denumire,
+    },
+
     // Adaugă aici orice alte limbi necesare, respectând acest format.
   ];
 
@@ -567,6 +703,10 @@ export default function BlogArticoleFields({
       bg: { nume: numeBg, descriere: descriereBg, content: contentBg },
       el: { nume: numeEl, descriere: descriereEl, content: contentEl },
       fr: { nume: numeFr, descriere: descriereFr, content: contentFr },
+      rusa: { nume: numeRusa, descriere: descriereRusa, content: contentRusa },
+      tr: { nume: numeTr, descriere: descriereTr, content: contentTr },
+      ar: { nume: numeAr, descriere: descriereAr, content: contentAr },
+      sq: { nume: numeSq, descriere: descriereSq, content: contentSq },
     };
 
     console.log(data);
@@ -634,6 +774,10 @@ export default function BlogArticoleFields({
       "bg",
       "el",
       "fr",
+      "rusa",
+      "tr",
+      "ar",
+      "sq",
     ];
 
     // Creăm un obiect de mapare pentru funcțiile set
@@ -651,6 +795,10 @@ export default function BlogArticoleFields({
       bg: setNumeBg,
       el: setNumeEl,
       fr: setNumeFr,
+      rusa: setNumeRusa,
+      tr: setNumeTr,
+      ar: setNumeAr,
+      sq: setNumeSq,
     };
 
     // Funcție de delay
@@ -667,6 +815,8 @@ export default function BlogArticoleFields({
         translation = await handleTranslate(numeRoValue, "hi");
       } else if (l === "ru") {
         translation = await handleTranslate(numeRoValue, "id");
+      } else if (l === "rusa") {
+        translation = await handleTranslate(numeRoValue, "ru");
       } else {
         translation = await handleTranslate(numeRoValue, l);
       }
@@ -704,6 +854,10 @@ export default function BlogArticoleFields({
       "bg",
       "el",
       "fr",
+      "rusa",
+      "tr",
+      "ar",
+      "sq",
     ];
 
     // Creăm un obiect de mapare pentru funcțiile set
@@ -721,6 +875,10 @@ export default function BlogArticoleFields({
       bg: setDescriereBg,
       el: setDescriereEl,
       fr: setDescriereFr,
+      rusa: setDescriereRusa,
+      tr: setDescriereTr,
+      ar: setDescriereAr,
+      sq: setDescriereSq,
     };
 
     // Funcție de delay
@@ -737,6 +895,8 @@ export default function BlogArticoleFields({
         translation = await handleTranslate(descriereRoValue, "hi");
       } else if (l === "ru") {
         translation = await handleTranslate(descriereRoValue, "id");
+      } else if (l === "rusa") {
+        translation = await handleTranslate(descriereRoValue, "ru");
       } else {
         translation = await handleTranslate(descriereRoValue, l);
       }
@@ -773,6 +933,10 @@ export default function BlogArticoleFields({
       "bg",
       "el",
       "fr",
+      "rusa",
+      "tr",
+      "ar",
+      "sq",
     ];
 
     // Creăm un obiect de mapare pentru funcțiile set
@@ -790,6 +954,10 @@ export default function BlogArticoleFields({
       bg: setContentBg,
       el: setContentEl,
       fr: setContentFr,
+      rusa: setContentRusa,
+      tr: setContentTr,
+      ar: setContentAr,
+      sq: setContentSq,
     };
 
     // Funcție de delay
@@ -806,6 +974,8 @@ export default function BlogArticoleFields({
         translation = await handleTranslate(contentRoValue, "hi");
       } else if (l === "ru") {
         translation = await handleTranslate(contentRoValue, "id");
+      } else if (l === "rusa") {
+        translation = await handleTranslate(contentRoValue, "ru");
       } else {
         translation = await handleTranslate(contentRoValue, l);
       }

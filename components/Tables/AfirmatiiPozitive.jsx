@@ -28,7 +28,9 @@ export default function AfirmatiiPozitive({ articles }) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-
+  useEffect(() => {
+    console.log("Start......articles", articles);
+  }, []);
   const [db, setDb] = useState([...articles]);
 
   const [dialogData, setDialogData] = useState({});
@@ -180,17 +182,20 @@ export default function AfirmatiiPozitive({ articles }) {
     timpProgramat,
     dataProgramata
   ) => {
-    console.log("youtubeLink....");
-    console.log(youtubeLink);
+    console.log("dialogData.id....", dialogData.id);
 
     try {
       const updateData = db.map(async (item) => {
         if (item.id === dialogData.id) {
-          console.log("is found");
+          console.log("dialogData.id....is found");
           let data;
+          console.log("Start 1....");
           if (image.length === 0) {
+            console.log("Start 2....");
+            console.log("Start 2....");
             let date;
             if (timpProgramat.length > 0) {
+              console.log("Start 3.1....");
               const dateParts = dataProgramata.split("-");
               const timeParts = timpProgramat.split(":");
               date = new Date(
@@ -201,33 +206,22 @@ export default function AfirmatiiPozitive({ articles }) {
                 timeParts[1]
               );
             } else {
-              const dateParts = item.firstUploadDate.split("-");
-              const timeParts = item.firstUploadTime.split(":");
-              date = new Date(
-                dateParts[2],
-                dateParts[1] - 1,
-                dateParts[0],
-                timeParts[0],
-                timeParts[1]
-              );
+              console.log("Start 3.2....", item);
+
+              console.log("Start 3.2.1....");
+
+              console.log("Start 3.2.2....");
             }
+            console.log("Start 4....");
             data = {
               ...item,
-              firstUploadtime:
-                timpProgramat.length > 0 ? timpProgramat : item.firstUploadTime,
-              firstUploadDate:
-                dataProgramata.length > 0
-                  ? dataProgramata
-                  : item.firstUploadDate,
-              firstUploadTimestamp: date,
-              info,
 
-              timpProgramat,
-              dataProgramata,
+              info,
             };
+            console.log("Start 5....");
             console.log("if.....", data);
           } else {
-            console.log("else.....", data);
+            console.log("else.....", data.documentId);
 
             let date;
             if (timpProgramat.length > 0) {
@@ -266,6 +260,7 @@ export default function AfirmatiiPozitive({ articles }) {
               dataProgramata,
             };
           }
+          console.log("data.documentId...", data.documentId);
           await handleUpdateFirestore(
             `AfirmatiiPozitive/${data.documentId}`,
             data

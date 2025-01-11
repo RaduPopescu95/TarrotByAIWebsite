@@ -189,6 +189,19 @@ const BookingSuccess = (props) => {
                       </>
                     ) : !loading && dateRezervari?.selectedSlot?.day ? (
                       <>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `https://www.cristinazurba.com/meeting?meetingCode=${dateRezervari?.meetingCode}__${dateRezervari?.documentId}`
+                            );
+                            alert(
+                              "Link-ul a fost copiat, vă rugăm să îl salvați și să îl accesați la momentul rezervării."
+                            );
+                          }}
+                        >
+                          Copiaza Link de conectare
+                        </button>
                         <p>
                           Link de conectare:
                           <a
