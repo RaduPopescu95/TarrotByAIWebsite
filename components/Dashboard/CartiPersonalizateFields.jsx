@@ -26,6 +26,8 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 import LoadingDialog from "../DialogBox/DialogLoader";
 import { LANGUAGE_LABELS } from "../../data/constants";
+import GTranslateIcon from "@mui/icons-material/GTranslate";
+import { gTranslateFetch } from "../../utils/apiUtils";
 
 export default function CartiViitorFields({
   handleUpload,
@@ -106,7 +108,7 @@ export default function CartiViitorFields({
 
   // Limba Rusă (Ru)
   const [numeRusa, setNumeRusa] = useState(
-    dialogData.info ? dialogData.info.ru?.nume : ""
+    dialogData.info ? dialogData.info.rusa?.nume : ""
   );
 
   // Limba Turcă (Tr)
@@ -304,6 +306,90 @@ export default function CartiViitorFields({
   };
 
   const theme = useTheme();
+
+  // HANDLE TRANSLATE
+  const handleTranslate = async (text, target) => {
+    try {
+      const res = await gTranslateFetch(text, target);
+      return res;
+    } catch (err) {
+      console.error("Error on translate.....:", err);
+      // Handle error (e.g., show error message to user)
+    }
+  };
+
+  //---------- NUME -----------
+
+  const handleToTranslateNume = async (numeRoValue) => {
+    const languages = [
+      "en",
+      "es",
+      "it",
+      "pl",
+      "de",
+      "hu",
+      "cs",
+      "sk",
+      "hr",
+      "ru",
+      "bg",
+      "el",
+      "fr",
+      "rusa" /* Limba Rusă */,
+      "tr" /* Limba Turcă */,
+      "ar" /* Limba Arabă */,
+      "sq" /* Limba Albaneză */,
+    ];
+
+    // Creăm un obiect de mapare pentru funcțiile set
+    const setFunctions = {
+      en: setNumeEn,
+      es: setNumeEs,
+      it: setNumeIt,
+      pl: setNumePl,
+      de: setNumeDe,
+      hu: setNumeHu,
+      cs: setNumeCs,
+      sk: setNumeSk,
+      hr: setNumeHr,
+      ru: setNumeRu,
+      bg: setNumeBg,
+      el: setNumeEl,
+      fr: setNumeFr,
+      rusa: setNumeRusa, // Limba Rusă
+      tr: setNumeTr, // Limba Turcă
+      ar: setNumeAr, // Limba Arabă
+      sq: setNumeSq, // Limba Albaneză
+    };
+
+    for (let l of languages) {
+      console.log(l);
+
+      let translation;
+
+      if (l === "hu") {
+        translation = await handleTranslate(numeRoValue, "hi");
+      } else if (l === "ru") {
+        translation = await handleTranslate(numeRoValue, "id");
+      } else if (l === "rusa") {
+        translation = await handleTranslate(numeRoValue, "ru");
+      } else {
+        translation = await handleTranslate(numeRoValue, l);
+      }
+
+      // console.log("translation", translation);
+      if (translation) {
+        console.log("language round...", l);
+        console.log("translation", translation);
+
+        // Verificăm dacă există o funcție de setare corespunzătoare și actualizăm starea
+
+        if (setFunctions[l]) {
+          setFunctions[l](translation);
+        }
+      }
+    }
+  };
 
   return (
     <>
@@ -506,6 +592,17 @@ export default function CartiViitorFields({
                   onChange={(event) => field.setValue(event.target.value)}
                   widthLabel="10%"
                 />
+                {field.id === "nume-ro" && (
+                  <IconButton
+                    color="primary"
+                    aria-label="add an alarm"
+                    sx={{ position: "relative", left: 5, top: 15 }}
+                    onClick={() => handleToTranslateNume(numeRo)}
+                  >
+                    {" "}
+                    <GTranslateIcon />{" "}
+                  </IconButton>
+                )}
                 {index < languageFields.length - 1 && (
                   <HorizontalLineWithText style={{ marginTop: "3%" }} />
                 )}

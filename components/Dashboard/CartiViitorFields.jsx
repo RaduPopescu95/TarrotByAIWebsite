@@ -18,6 +18,7 @@ import {
   useTheme,
 } from "@mui/material";
 import GTranslateIcon from "@mui/icons-material/GTranslate";
+import { gTranslateFetch } from "../../utils/apiUtils";
 import { StyledTextField } from "../../styles/FormStyles";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
@@ -27,7 +28,6 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FieldRow from "./FieldRow";
 import LoadingDialog from "../DialogBox/DialogLoader";
 import { LANGUAGE_LABELS } from "../../data/constants";
-import { gTranslateFetch } from "../../utils/apiUtils";
 
 export default function CartiViitorFields({
   handleUpload,
