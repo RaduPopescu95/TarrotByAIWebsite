@@ -27,6 +27,7 @@ export default function CategoriiViitorTable() {
   const [showAddContract, setShowAddContract] = React.useState(false);
   const [openSoloPopup, setOpenSoloPopup] = React.useState(false);
   const settingsRef = React.useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const classes = useStyles();
 
   const [searchedDb, setSearchedDb] = useState([]);
@@ -283,6 +284,8 @@ export default function CategoriiViitorTable() {
                   </Typography>
                 ) : (
                   <CustomTableContainer
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
                     db={db}
                     searchedDb={searchedDb}
                     searchValue={searchValue}

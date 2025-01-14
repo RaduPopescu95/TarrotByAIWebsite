@@ -21,6 +21,7 @@ export default function CartiViitorTable() {
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [db, setDb] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [dialogData, setDialogData] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
@@ -332,6 +333,8 @@ export default function CartiViitorTable() {
                   </Typography>
                 ) : (
                   <CustomTableContainer
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
                     db={db}
                     searchedDb={searchedDb}
                     searchValue={searchValue}

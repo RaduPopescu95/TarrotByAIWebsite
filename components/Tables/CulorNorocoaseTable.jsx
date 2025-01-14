@@ -26,6 +26,7 @@ import {
 export default function CuloriNorocoaseTable() {
   // const { localDb } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isEdit, setIsEdit] = useState(false);
   const [localDb, setLocalDb] = useState([]);
   const [dialogData, setDialogData] = useState({});
@@ -372,6 +373,8 @@ export default function CuloriNorocoaseTable() {
                 ) : (
                   <>
                     <CustomTableContainer
+                      currentPage={currentPage}
+                      setCurrentPage={setCurrentPage}
                       db={localDb}
                       searchedDb={searchedDb}
                       searchValue={searchValue}

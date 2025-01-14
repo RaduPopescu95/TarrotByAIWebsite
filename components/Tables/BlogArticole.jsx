@@ -27,6 +27,7 @@ import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 export default function BlogArticole({ articles }) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isEdit, setIsEdit] = useState(false);
 
   const [db, setDb] = useState([...articles]);
@@ -408,6 +409,8 @@ export default function BlogArticole({ articles }) {
                   </Typography>
                 ) : (
                   <CustomTableContainer
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
                     db={articles}
                     searchedDb={searchedDb}
                     searchValue={searchValue}

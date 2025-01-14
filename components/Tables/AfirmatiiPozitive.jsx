@@ -27,6 +27,7 @@ import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 export default function AfirmatiiPozitive({ articles }) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isEdit, setIsEdit] = useState(false);
   useEffect(() => {
     console.log("Start......articles", articles);
@@ -363,6 +364,8 @@ export default function AfirmatiiPozitive({ articles }) {
                   </Typography>
                 ) : (
                   <CustomTableContainer
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
                     db={articles}
                     searchedDb={searchedDb}
                     searchValue={searchValue}

@@ -29,6 +29,7 @@ export default function CartiPersonalizateTable() {
   const [openSoloPopup, setOpenSoloPopup] = React.useState(false);
   const settingsRef = React.useRef(null);
   const classes = useStyles();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -331,6 +332,8 @@ export default function CartiPersonalizateTable() {
                   </Typography>
                 ) : (
                   <CustomTableContainer
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
                     db={db}
                     searchedDb={searchedDb}
                     searchValue={searchValue}

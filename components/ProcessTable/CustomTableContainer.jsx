@@ -14,13 +14,12 @@ import {
 import { ArrowDropUp, ArrowDropDown } from "@mui/icons-material";
 
 export default function CustomTableContainer(props) {
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24; // Ajustează numărul de elemente pe pagină după nevoie
 
   const handleChangePage = (event, newPage) => {
     console.log("props.searchedDb");
     console.log(props.searchedDb);
-    setCurrentPage(newPage);
+    props.setCurrentPage(newPage);
   };
 
   // Alege între props.db și props.searchedDb
@@ -28,10 +27,10 @@ export default function CustomTableContainer(props) {
     props.searchedDb && props.searchedDb.length > 0 && props.searchedValue
       ? props.searchedDb
       : props.searchedDb && props.searchValue.length > 0
-      ? props.searchedDb
-      : props.db;
+        ? props.searchedDb
+        : props.db;
 
-  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfLastItem = props.currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = dataSource.slice(indexOfFirstItem, indexOfLastItem);
   const idInterval = `${indexOfFirstItem + 1}-${
@@ -165,7 +164,7 @@ export default function CustomTableContainer(props) {
       >
         <Pagination
           count={Math.ceil(dataSource.length / itemsPerPage)}
-          page={currentPage}
+          page={props.currentPage}
           onChange={handleChangePage}
           color="primary"
           sx={{
