@@ -55,10 +55,10 @@ export async function getServerSideProps({ locale }) {
   let articlesRef = collection(db, "BlogArticole");
   let q = query(
     articlesRef,
-    orderBy("firstUploadDate", "desc"),
-    orderBy("firstUploadtime", "desc"),
+    orderBy("firstUploadTimestamp", "desc"),
     limit(PAGE_SIZE)
   );
+
 
   const documentSnapshots = await getDocs(q);
   let articlesData = documentSnapshots.docs.map((doc) => ({

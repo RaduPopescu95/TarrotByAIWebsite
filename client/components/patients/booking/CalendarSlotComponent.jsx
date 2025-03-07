@@ -15,6 +15,11 @@ const CalendarSlotComponent = ({
     console.log("selected...slots...", slots);
   }, [selectedSlot, slots]); // Actualizăm de fiecare dată când selectedSlot sau slots se schimbă
 
+
+  const availableSlots = slots.filter(
+    (slot) => !reservedSlots || !reservedSlots.includes(slot)
+  );
+  
   return (
     <div className="tab-pane active show" id={day.toLowerCase()}>
       <div className="slot-box">
@@ -22,9 +27,9 @@ const CalendarSlotComponent = ({
           <h5>{day}</h5>
         </div>
         <div className="slot-body">
-          {slots.length > 0 ? (
+          {availableSlots.length > 0 ? (
             <ul className="time-slots-client">
-              {slots.map((slot, index) => {
+              {availableSlots.map((slot, index) => {
                 // Verificăm dacă slot-ul se află în reservedSlots
                 const isReserved = reservedSlots && reservedSlots.includes(slot);
 
@@ -51,7 +56,7 @@ const CalendarSlotComponent = ({
               })}
             </ul>
           ) : (
-            <p>No Slots Available</p>
+            <p>Nu sunt intervale disponibile</p>
           )}
         </div>
       </div>

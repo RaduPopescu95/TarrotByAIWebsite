@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import CalendarSlotComponent from "./CalendarSlotComponent";
 import moment from "moment";
 import "moment/locale/ro"; // Importăm localizarea în română
@@ -26,8 +26,6 @@ const CalendarComponent = ({
   setActiveYear,
   activeYear,
 }) => {
-  const currentYear = new Date().getFullYear();
-
   const today = new Date();
   const isToday = (day, month) =>
     day === today.getDate() && month === today.getMonth();
@@ -36,14 +34,12 @@ const CalendarComponent = ({
 
   // Generăm zilele din luna selectată
   const generateDaysInMonth = (year, month) => {
-    const startOfMonth = moment(`${year}-${month + 1}`, "YYYY-MM").startOf(
-      "month"
-    );
+    const startOfMonth = moment(`${year}-${month + 1}`, "YYYY-MM").startOf("month");
     const daysInMonth = startOfMonth.daysInMonth();
     const firstDayOfMonth = startOfMonth.day();
 
     const daysArray = [];
-    const emptyDaysCount = (firstDayOfMonth + 6) % 7; // Zilele dinaintea primei zile a lunii
+    const emptyDaysCount = (firstDayOfMonth + 6) % 7; // zilele înaintea primei zile a lunii
 
     // Zilele goale dinaintea primei zile a lunii (null)
     for (let i = 0; i < emptyDaysCount; i++) {
@@ -52,11 +48,9 @@ const CalendarComponent = ({
 
     // Zilele lunii selectate
     for (let day = 1; day <= daysInMonth; day++) {
-      const daySlots =
-        yearlySlots[month]?.find((slot) => slot.day === day)?.slots || [];
-      const reservedSlots =
-        yearlySlots[month]?.find((slot) => slot.day === day)?.reservedSlots ||
-        [];
+      const dayData = yearlySlots[month]?.find((slot) => slot.day === day);
+      const daySlots = dayData ? dayData.slots || [] : [];
+      const reservedSlots = dayData ? dayData.reservedSlots || [] : [];
       daysArray.push({ day, slots: daySlots, reservedSlots });
     }
 
@@ -66,7 +60,7 @@ const CalendarComponent = ({
   const daysInSelectedMonth = generateDaysInMonth(activeYear, selectedMonth);
 
   const handleDayClick = (dayObj) => {
-    if (!dayObj || dayObj === null) return;
+    if (!dayObj) return;
     setSelectedDay(dayObj);
     setSelectedSlot({ day: null, slot: null });
   };
@@ -82,14 +76,14 @@ const CalendarComponent = ({
     <div className="card custom-card">
       <div className="card-body">
         <div className="card-header">
-          <h3>Calendar disponibilitati</h3>
+          <h3>Calendar disponibilități</h3>
         </div>
         {isLoading ? (
           <div className="spinner-border text-primary" role="status">
             <span className="sr-only">Loading...</span>
           </div>
         ) : (
-          <div className="calendar-component">
+          <>
             {/* Selector de an */}
             <div className="year-selector">
               <select
@@ -141,24 +135,29 @@ const CalendarComponent = ({
                   </div>
                 ))}
 
-                {daysInSelectedMonth.map((dayObj, index) => (
-                  <div
-                    key={index}
-                    className={`calendar-day ${
-                      dayObj?.slots.length > 0 ? "has-slots" : ""
-                    } 
-                    ${dayObj === null ? "empty-day" : ""} 
-                    ${isToday(dayObj?.day, selectedMonth) ? "today" : ""} 
-                    ${
-                      dayObj && selectedDay?.day === dayObj.day
-                        ? "selected"
-                        : ""
-                    }`}
-                    onClick={() => handleDayClick(dayObj)}
-                  >
-                    {dayObj ? dayObj.day : ""}
-                  </div>
-                ))}
+                {daysInSelectedMonth.map((dayObj, index) => {
+                  // Pentru zilele necompletate, afișăm un div gol
+                  if (!dayObj) return <div key={index} className="calendar-day empty-day"></div>;
+
+                  // Calculăm dacă ziua este complet rezervată:
+                  const isFullyReserved =
+                    dayObj.slots.length > 0 &&
+                    dayObj.reservedSlots.length === dayObj.slots.length;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`calendar-day 
+                        ${isFullyReserved ? "fully-reserved" : ""}
+                        ${dayObj.slots.length > 0 ? "has-slots" : ""}
+                        ${isToday(dayObj.day, selectedMonth) ? "today" : ""}
+                        ${selectedDay && selectedDay.day === dayObj.day ? "selected" : ""}`}
+                      onClick={() => handleDayClick(dayObj)}
+                    >
+                      {dayObj.day}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -172,9 +171,7 @@ const CalendarComponent = ({
                     openAddSlotModal(`${selectedMonth}-${selectedDay.day}`)
                   }
                   onDeleteAll={() =>
-                    openDeleteAllSlotsModal(
-                      `${selectedMonth}-${selectedDay.day}`
-                    )
+                    openDeleteAllSlotsModal(`${selectedMonth}-${selectedDay.day}`)
                   }
                   onDeleteSlot={(day, slot) =>
                     onDeleteSlot(`${selectedMonth}-${selectedDay.day}`, slot)
@@ -184,95 +181,99 @@ const CalendarComponent = ({
                 />
               </div>
             )}
-
-            <style jsx>{`
-              .calendar-grid {
-                display: grid;
-                grid-template-columns: repeat(7, 1fr); /* 7 zile pe rând */
-                gap: 10px;
-                margin-top: 20px;
-              }
-
-              /* Container pentru scroll orizontal */
-              .calendar-scroll-wrapper {
-                overflow-x: auto; /* Permite scroll orizontal */
-                -webkit-overflow-scrolling: touch; /* Scroll lin pe mobil */
-              }
-
-              .day-header {
-                background-color: #007bff;
-                color: white;
-                text-align: center;
-                padding: 10px;
-                border-radius: 5px;
-              }
-
-              .calendar-day {
-                background-color: #f0f0f0;
-                padding: 10px;
-                text-align: center;
-                border-radius: 5px;
-                cursor: pointer;
-              }
-
-              .calendar-day.empty-day {
-                background-color: #e0e0e0;
-                cursor: default;
-                color: #c0c0c0;
-              }
-
-              .calendar-day:hover:not(.empty-day),
-              .calendar-day.selected:not(.empty-day) {
-                background-color: #007bff;
-                color: white;
-              }
-
-              .calendar-day.today {
-                border: 2px solid #28a745;
-                background-color: #fff3cd;
-                color: #004085;
-                box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
-              }
-
-              .calendar-day.has-slots {
-                background-color: #66b2ff;
-                color: white;
-              }
-
-              .calendar-day.selected {
-                background-color: #007bff !important;
-                color: white;
-              }
-
-              .calendar-day.empty-day.selected {
-                background-color: #e0e0e0 !important;
-                color: #c0c0c0;
-              }
-
-              .slots-grid {
-                display: grid;
-                grid-template-columns: repeat(1, 1fr);
-                gap: 10px;
-                margin-top: 20px;
-              }
-
-              .month-selector {
-                margin-bottom: 20px;
-              }
-
-              .year-selector {
-                margin-bottom: 10px;
-              }
-
-              /* Media query pentru mobil: activează scroll-ul orizontal */
-              @media (max-width: 768px) {
-                .calendar-grid {
-                  width: max-content; /* Activează scroll-ul orizontal */
-                }
-              }
-            `}</style>
-          </div>
+          </>
         )}
+
+        <style jsx>{`
+          .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* 7 zile pe rând */
+            gap: 10px;
+            margin-top: 20px;
+          }
+
+          .calendar-scroll-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .day-header {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+          }
+
+          .calendar-day {
+            background-color: #f0f0f0;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+          }
+
+          .calendar-day.empty-day {
+            background-color: #e0e0e0;
+            cursor: default;
+            color: #c0c0c0;
+          }
+
+          .calendar-day:hover:not(.empty-day),
+          .calendar-day.selected:not(.empty-day) {
+            background-color: #007bff;
+            color: white;
+          }
+
+          .calendar-day.today {
+            border: 2px solid #28a745;
+            background-color: #fff3cd;
+            color: #004085;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
+          }
+
+          .calendar-day.has-slots {
+            background-color: #66b2ff;
+            color: white;
+          }
+
+          /* Ziua complet rezervată va avea fundal roșu */
+          .calendar-day.fully-reserved {
+            background-color: #dc3545;
+            color: white;
+          }
+
+          .calendar-day.selected {
+            background-color: #007bff !important;
+            color: white;
+          }
+
+          .calendar-day.empty-day.selected {
+            background-color: #e0e0e0 !important;
+            color: #c0c0c0;
+          }
+
+          .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+          }
+
+          .month-selector {
+            margin-bottom: 20px;
+          }
+
+          .year-selector {
+            margin-bottom: 10px;
+          }
+
+          @media (max-width: 768px) {
+            .calendar-grid {
+              width: max-content;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
