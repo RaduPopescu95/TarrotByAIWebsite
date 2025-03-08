@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "physical-therapy-dictionary",
+  "private_key_id": "bf836a21a0a684e43464cc86088708132c4af912",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCbD574YO2BoB7X\nK8Pr4lbloYXme0HdYLQSuqU7yIc2F9OFgMC4O8K+6EvDw4tHchR4DtlvOiDNASWf\n4rJm527jtRlkqt1oc3GU+tmIHkoiTvCc19xMQ+bA2kcKB3P6oO/2jqiOK/c1sY6c\nTRNgIzztDwIoGlTQvntB0Ct66cvnvkKo9znc58sFRkERLxe46SEDQRFBb4jRYS0/\n8QQ9CTlpGUF9QyQni0OA3NgmQNm1fpLzCOlYTAWg5znD1fmHeABlWL7p+4E3OmWh\nZKJPQUuMaS/V2N//mmW1IF4y/4YRGuYFlAFCAga/NlIIIbhSF6ImmyhFJWknSYWE\nAJ4EKV2VAgMBAAECggEAAImCnxuXhF5a4XCMyg9CovgP231035fPv+HcI9cgoeSI\ng8y9hUej8JfcsOI5K0Pw4ERfWJ78yigf/9MnE8gDoGizDkrNWLcWxkcKEl+rYHao\n7nG3itf7Ci98uOazGOdciscVdTqftJSpWp1svOWaWmZutx51ybNxcggAt+PP8n0X\nYlUM0o+GLY5JRckjjOsDCjaXJneJOj0i1KDfo90X1OYtTyWwKjsfVqjmV/0Zfqmx\nz/C3wWlGcL49Agu1aA1EwhPxd+ieIkWN1Lx0wfsW415QV2MPD50MdT0sSgdqt+6L\nDygor2WP5Xx5tiBP8/hvYDDNo6ZCSOMfJhsnvWBmEQKBgQDUNBmN5UtLhuIyR2tD\nooOexfLJ7YSiySrepTfhuoPr7zl1LEm1G0hSYOrBymxESz/C197LnsydmvSNzwQA\nQidLF1TlTKqOess8XJOCkVzDjvajZHJ81hwpqWTsHo5f5eXF4N0Uu8WMWUZ1Ov5R\nqJkOj8yE20o/wv2NWkkV/o1w0QKBgQC7EFzy+eIEDhOwfQ/IXw6y0VCgCBA0L3Tn\nyYIcgqI2ZmnCPZ63RnK5faUXpLgxUzqcxdbL27rmE4dD3TWSLRfqUbQM5muOSKRL\nPWoMTIU9JSfzvOf3F7QXcyskTBbZSSOISO2afYAWHHklYvWEmdWDgQ4qH3RPSLaN\nEIkAzCnxhQKBgCY6FHhpW/0JGWpxTzNp7UgG5MvXi9M/Zgehv8VcMjOobrNa/RQx\nDAA7EU9DxekvnRbeiHYp7zZdGb0KE/Bv+mAend6IxxjPqhj/nFsjEJDyCiA5Eh7G\n+1/N8i5O+trvsUrKTUlU4it8UaMAs5vGQXxMD03Hq0J9P+vc3dmmd5hhAoGAe4yq\nJ1y9V3pIrNdc1jVaSuaOfrP0p9L0PqbLxbLOGmn3ze/O5TOlUDfZE02azhEvdB4C\n6S/eOFmLjFoNKNeZpQyDg8WoIhh+UqdkZG0hzym8QnJxLrS8IITTaKzMpoR08G1i\naRgcwf3aUcQTbpn/+FQDm/ScaEUZNQBHzHwL89UCgYBQBEQ6iQTQwS8HMMMnbhsf\nQ1lLYnZzHuECqX63Rsu5KVY6LrNd0ZTNWmjFBXQjR6vCreG6soOMATLYE56ZL9pt\nUH2as2JQRC16G6B8z2R1GC4sAb7XQGjAftgEPnkh2zBo8LZSct+z/NYyYF4DZgRh\ntrG1DV/cwObjB1nbc+ssnw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "youtube-helper@physical-therapy-dictionary.iam.gserviceaccount.com",
+  "client_id": "110276638833901067891",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/youtube-helper%40physical-therapy-dictionary.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
