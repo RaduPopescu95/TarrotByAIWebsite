@@ -162,29 +162,36 @@ const CalendarComponent = ({
             </div>
 
             {selectedDay && (
-              <div className="slots-grid">
-                <CalendarSlotComponent
-                  day={`${selectedDay.day}`}
-                  slots={selectedDay.slots}
-                  reservedSlots={selectedDay.reservedSlots || []}
-                  onAddSlot={() =>
-                    openAddSlotModal(`${selectedMonth}-${selectedDay.day}`)
-                  }
-                  onDeleteAll={() =>
-                    openDeleteAllSlotsModal(`${selectedMonth}-${selectedDay.day}`)
-                  }
-                  onDeleteSlot={(day, slot) =>
-                    onDeleteSlot(`${selectedMonth}-${selectedDay.day}`, slot)
-                  }
-                  repeatDay={repeatDay}
-                  selectedSlot={selectedSlot}
-                />
-              </div>
-            )}
+  <div className="slots-grid">
+ <p style={{ fontSize: "0.9em", marginBottom: "10px" }}>
+  Orele pentru programări sunt valabile pentru{" "}
+  <span style={{ color: "red", fontWeight: "bold" }}>
+    ora României
+  </span>.
+</p>
+
+    <CalendarSlotComponent
+      day={`${selectedDay.day}`}
+      slots={selectedDay.slots}
+      reservedSlots={selectedDay.reservedSlots || []}
+      onAddSlot={() => openAddSlotModal(`${selectedMonth}-${selectedDay.day}`)}
+      onDeleteAll={() => openDeleteAllSlotsModal(`${selectedMonth}-${selectedDay.day}`)}
+      onDeleteSlot={(day, slot) => onDeleteSlot(`${selectedMonth}-${selectedDay.day}`, slot)}
+      repeatDay={repeatDay}
+      selectedSlot={selectedSlot}
+    />
+  </div>
+)}
+
           </>
         )}
 
         <style jsx>{`
+         .timezone-message {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 10px;
+  }
           .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr); /* 7 zile pe rând */
