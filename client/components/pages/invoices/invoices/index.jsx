@@ -151,7 +151,7 @@ const Invoices = () => {
     setCurrentPage(pageNumber);
   };
 
-  const totalPages = Math.ceil(invoices.length / itemsPerPage);
+
 
   // Filtrare facturi pe baza textului de căutare și lunii selectate
   const filteredInvoices = invoices
@@ -165,6 +165,9 @@ const Invoices = () => {
       const invoiceMonth = new Date(invoice.created * 1000).getMonth() + 1;
       return invoiceMonth === parseInt(selectedMonth);
     });
+
+    const totalPages = Math.ceil((filteredInvoices?.length || 0) / itemsPerPage);
+
 
   const currentInvoices = filteredInvoices.slice(
     (currentPage - 1) * itemsPerPage,
