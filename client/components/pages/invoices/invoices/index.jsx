@@ -298,18 +298,18 @@ const Invoices = () => {
                       </div>
                     </div>
                   ) : (
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleDownloadAllInvoicesIndividually}
-                    >
-                      Descarcă toate facturile din luna selectată
-                    </button>
                     // <button
                     //   className="btn btn-primary"
-                    //   onClick={handleDownloadAllInvoicesAsZip}
+                    //   onClick={handleDownloadAllInvoicesIndividually}
                     // >
-                    //   Descarcă toate facturile din luna selectată (ZIP)
+                    //   Descarcă toate facturile din luna selectată
                     // </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleDownloadAllInvoicesAsZip}
+                    >
+                      Descarcă toate facturile din luna selectată (ZIP)
+                    </button>
                   )}
                 </div>
               ) : null}
