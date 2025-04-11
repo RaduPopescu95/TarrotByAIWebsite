@@ -37,9 +37,11 @@ export default async function handler(req, res) {
           const { pdfUrl } = await pdfResponse.json();
 
           if (pdfUrl) {
-            // Fetch pentru a obține conținutul PDF de la link-ul furnizat de Stripe
-            const pdfBuffer = await fetch(pdfUrl).then((res) => res.buffer());
-
+// Preia conținutul PDF de la link-ul furnizat de Stripe
+const pdfResponse = await fetch(pdfUrl);
+const arrayBuffer = await pdfResponse.arrayBuffer();
+const pdfBuffer = Buffer.from(arrayBuffer);
+            
             // Aici adăugăm logica pentru a include ziua, luna și anul în numele fișierului PDF
             const invoiceDetailsResponse = await fetch(
               `https://${url}/api/get-invoice-details?invoiceId=${invoiceId}`
