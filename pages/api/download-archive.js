@@ -3,6 +3,7 @@
 import archiver from "archiver";
 import fetch from "node-fetch";
 import getStream from "get-stream";
+import { PassThrough } from "stream";
 
 export default async function handler(req, res) {
   // Folosește direct URL-ul de bază
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
       // Creează o arhivă ZIP cu nivel maxim de compresie
       const archive = archiver("zip", { zlib: { level: 9 } });
 
-      // Ascultă eventualele erori din timpul arhivării
+      // Adaugă un listener pentru erori pe arhivă
       archive.on("error", (err) => {
         console.error("Eroare la arhivare:", err);
         if (!res.headersSent) {
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
         }
       });
 
-      // Procesează facturile în paralel pentru a reduce timpul total
+      // Procesează facturile în paralel pentru a reduce timpul total de execuție
       const invoiceFiles = await Promise.all(
         invoiceIds.map(async (invoiceId) => {
           try {
@@ -46,10 +47,12 @@ export default async function handler(req, res) {
               throw new Error(`Link PDF indisponibil pentru invoice ${invoiceId}`);
             }
 
-            // Efectuează simultan fetch pentru conținutul PDF și pentru detaliile facturii
+            // Efectuează simultan fetch-ul pentru conținutul PDF și pentru detaliile facturii
             const [pdfFileResponse, invoiceDetailsResponse] = await Promise.all([
               fetch(pdfUrl),
-              fetch(`https://${baseUrl}/api/get-invoice-details?invoiceId=${invoiceId}`),
+              fetch(
+                `https://${baseUrl}/api/get-invoice-details?invoiceId=${invoiceId}`
+              ),
             ]);
 
             if (!pdfFileResponse.ok) {
@@ -96,14 +99,17 @@ export default async function handler(req, res) {
         }
       }
 
-      // Finalizează arhivarea
+      // Pentru a colecta datele arhivei, utilizează un stream PassThrough
+      const passThroughStream = new PassThrough();
+      archive.pipe(passThroughStream);
+
+      // Finalizează arhivarea; aceasta va începe să scrie datele în passThroughStream
       archive.finalize();
 
-      // Acumulăm întregul conținut al arhivei într-un buffer,
-      // specificând { encoding: null } pentru a obține un Buffer
-      const buffer = await getStream(archive, { encoding: null });
+      // Colectează întregul conținut al stream-ului într-un buffer
+      const buffer = await getStream(passThroughStream, { encoding: null });
 
-      // Setează headerele pentru descărcare și trimite fișierul ZIP
+      // Setează headerele de răspuns pentru descărcarea fișierului ZIP
       res.setHeader("Content-Type", "application/zip");
       res.setHeader(
         "Content-Disposition",

@@ -93,6 +93,7 @@
     "next-images": "^1.7.0",
     "next-language-detector": "^1.1.0",
     "next-seo": "^6.5.0",
+    "node-fetch": "^3.3.2",
     "openai": "^4.86.2",
     "owl.carousel": "^2.3.4",
     "play-dl": "^1.9.7",
