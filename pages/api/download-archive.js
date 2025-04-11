@@ -1,63 +1,79 @@
 // pages/api/download-archive.js
+
 import archiver from "archiver";
 import fetch from "node-fetch";
+import getStream from "get-stream";
 
 export default async function handler(req, res) {
-  let url = "cristinazurba.com";
-  // let url = "localhost:3000";
+  // Utilizează variabila de mediu pentru URL-ul de bază sau folosește valoarea implicită
+  const baseUrl = process.env.API_URL || "cristinazurba.com";
+
   if (req.method === "POST") {
     try {
       // Preia ID-urile facturilor din corpul cererii (body)
       const { invoiceIds } = req.body;
-
       if (!invoiceIds || invoiceIds.length === 0) {
         return res
           .status(400)
           .json({ error: "Nu au fost furnizate ID-uri ale facturilor." });
       }
 
-      // Setează răspunsul pentru a indica un fișier de tip ZIP
-      res.setHeader("Content-Type", "application/zip");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=facturi_${Date.now()}.zip`
-      );
-
-      // Creează un obiect de arhivare
+      // Creează un obiect de arhivare ZIP cu nivel de compresie maxim
       const archive = archiver("zip", { zlib: { level: 9 } });
-      archive.pipe(res);
 
-      // Parcurge ID-urile facturilor și preia link-ul PDF folosind API-ul existent
+      // Atașează un handler pentru erori la procesul de arhivare
+      archive.on("error", (err) => {
+        console.error("Eroare la arhivare:", err);
+        // Este posibil ca răspunsul să fi fost deja inițiat,
+        // dar în orice caz trimitem un mesaj de eroare
+        res.status(500).send("Eroare la crearea arhivei ZIP.");
+      });
+
+      // Parcurge fiecare ID din invoiceIds și încearcă să adauge PDF-ul în arhivă
       for (const invoiceId of invoiceIds) {
         try {
-          // Obține URL-ul PDF al facturii folosind API-ul existent
+          // Obține URL-ul PDF pentru factura dată
           const pdfResponse = await fetch(
-            `https://${url}/api/get-invoice-pdf?invoiceId=${invoiceId}`
+            `https://${baseUrl}/api/get-invoice-pdf?invoiceId=${invoiceId}`
           );
+          if (!pdfResponse.ok) {
+            throw new Error(
+              `Fetch PDF pentru invoice ${invoiceId} a returnat statusul ${pdfResponse.status}`
+            );
+          }
           const { pdfUrl } = await pdfResponse.json();
 
           if (pdfUrl) {
-            // Fetch pentru a obține conținutul PDF de la link-ul furnizat de Stripe
-            const pdfBuffer = await fetch(pdfUrl).then((res) => res.buffer());
+            // Obține conținutul PDF ca buffer
+            const pdfFileResponse = await fetch(pdfUrl);
+            if (!pdfFileResponse.ok) {
+              throw new Error(
+                `Fetch pentru fișierul PDF al invoice ${invoiceId} a eșuat cu status ${pdfFileResponse.status}`
+              );
+            }
+            const pdfBuffer = await pdfFileResponse.buffer();
 
-            // Aici adăugăm logica pentru a include ziua, luna și anul în numele fișierului PDF
+            // Preia detaliile facturii pentru a construi numele fișierului
             const invoiceDetailsResponse = await fetch(
-              `https://${url}/api/get-invoice-details?invoiceId=${invoiceId}`
+              `https://${baseUrl}/api/get-invoice-details?invoiceId=${invoiceId}`
             );
+            if (!invoiceDetailsResponse.ok) {
+              throw new Error(
+                `Fetch pentru detaliile invoice ${invoiceId} a returnat statusul ${invoiceDetailsResponse.status}`
+              );
+            }
             const invoiceDetails = await invoiceDetailsResponse.json();
 
-            // Obține data facturii (ziua și luna) din detaliile facturii
-            const invoiceDate = new Date(invoiceDetails.created * 1000); // `created` este timestamp-ul în secunde
-            const day = invoiceDate.getDate().toString().padStart(2, "0"); // Ziua (e.g., "05" pentru 5)
-            const month = (invoiceDate.getMonth() + 1)
-              .toString()
-              .padStart(2, "0"); // Luna (e.g., "03" pentru Martie)
-            const year = new Date().getFullYear(); // Anul curent
+            // Extrage data facturii din detalii
+            const invoiceDate = new Date(invoiceDetails.created * 1000);
+            const day = invoiceDate.getDate().toString().padStart(2, "0");
+            const month = (invoiceDate.getMonth() + 1).toString().padStart(2, "0");
+            const year = invoiceDate.getFullYear();
 
-            // Construiește numele fișierului cu ziua, luna și anul curent
-            const fileName = `Factura_${day}-${month}-${year}.pdf`;
+            // Construiește numele fișierului folosind invoiceId pentru unicitate
+            const fileName = `Factura_${invoiceId}_${day}-${month}-${year}.pdf`;
 
-            // Adaugă fișierul PDF în arhivă cu numele personalizat
+            // Adaugă PDF-ul în arhivă
             archive.append(pdfBuffer, { name: fileName });
           } else {
             console.error(
@@ -81,9 +97,22 @@ export default async function handler(req, res) {
 
       // Finalizează arhivarea
       await archive.finalize();
+      // Acumulăm tot conținutul arhivei într-un buffer folosind getStream
+      const buffer = await getStream.buffer(archive);
+
+      // Setează headerele pentru descărcare
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=facturi_${Date.now()}.zip`
+      );
+      res.setHeader("Content-Length", buffer.length);
+
+      // Trimite bufferul ca răspuns
+      return res.status(200).end(buffer);
     } catch (error) {
       console.error("Eroare la crearea arhivei ZIP:", error);
-      res.status(500).send("Eroare la crearea arhivei ZIP.");
+      return res.status(500).send("Eroare la crearea arhivei ZIP.");
     }
   } else {
     res.setHeader("Allow", ["POST"]);
