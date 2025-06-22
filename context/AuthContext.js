@@ -61,14 +61,36 @@ export const AuthProvider = ({ children }) => {
             userDataFromFirestore
           );
 
-          setUserData(userDataFromFirestore);
-          localStorage.setItem("currentUser", JSON.stringify(user));
-          localStorage.setItem(
-            "userData",
-            JSON.stringify(userDataFromFirestore)
-          );
+          // Handle null/undefined userData properly
+          if (userDataFromFirestore) {
+            setUserData(userDataFromFirestore);
+            localStorage.setItem("currentUser", JSON.stringify(user));
+            localStorage.setItem("userData", JSON.stringify(userDataFromFirestore));
+          } else {
+            console.log("No user data found in Firestore, user might not have a profile yet");
+            // Set basic user data from Firebase Auth
+            let basicUserData = {
+              first_name: user.displayName || "",
+              last_name: "",
+              email: user.email || "",
+              owner_uid: user.uid
+            };
+            setUserData(basicUserData);
+            localStorage.setItem("currentUser", JSON.stringify(user));
+            localStorage.setItem("userData", JSON.stringify(basicUserData));
+          }
         } catch (error) {
           console.error("Failed to fetch user data:", error);
+          // Set fallback user data in case of error
+          let fallbackUserData = {
+            first_name: user.displayName || "",
+            last_name: "",
+            email: user.email || "",
+            owner_uid: user.uid
+          };
+          setUserData(fallbackUserData);
+          localStorage.setItem("currentUser", JSON.stringify(user));
+          localStorage.setItem("userData", JSON.stringify(fallbackUserData));
         }
       } else {
         console.log("user....other...", user);
@@ -81,6 +103,17 @@ export const AuthProvider = ({ children }) => {
           setUserData(data);
           localStorage.setItem("currentUser", JSON.stringify(user));
           localStorage.setItem("userData", JSON.stringify(data));
+        } else if (user) {
+          // Handle case where user exists but has no displayName
+          let basicData = {
+            first_name: "",
+            last_name: "",
+            email: user.email || "",
+            owner_uid: user.uid
+          };
+          setUserData(basicData);
+          localStorage.setItem("currentUser", JSON.stringify(user));
+          localStorage.setItem("userData", JSON.stringify(basicData));
         }
       }
       setCurrentUser(user);

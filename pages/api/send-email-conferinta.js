@@ -115,20 +115,25 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
             </div>
             </div>
             
-        <!-- Link de acces -->
-        <div style="background-color: #e7f3ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
+                <!-- Link de acces -->
+        <div style="background-color: #e7f3ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
           <h3 style="color: #007bff; margin: 0 0 15px 0; font-size: 18px;">🔗 Link de Acces</h3>
-          <p style="margin-bottom: 15px; font-size: 14px; color: #6c757d;">
-            Folosește acest link pentru a accesa ${tipConferinta === 'course' ? 'cursul' : 'conferința'}:
+          <p style="margin-bottom: 15px; font-size: 16px; color: #333; font-weight: bold;">
+            Accesează ${tipConferinta === 'course' ? 'cursul' : 'conferința'}:
           </p>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}" 
-             style="display: inline-block; background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
-            🎥 Accesează ${tipConferinta === 'course' ? 'Cursul' : 'Conferința'}
-          </a>
+          <p style="margin-bottom: 15px; font-size: 16px; color: #007bff; word-break: break-all; line-height: 1.4;">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}" 
+               style="color: #007bff; text-decoration: underline; font-weight: bold;">
+              ${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}
+            </a>
+          </p>
           <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">
             ${tipConferinta === 'course' ? 'Link-ul este valabil pentru toată perioada cursului' : 'Salvează acest link într-un loc sigur'}
-                    </p>
-                </div>
+          </p>
+          <p style="margin-top: 10px; font-size: 14px; color: #28a745; font-weight: bold;">
+            💡 Copiază și salvează acest link pentru acces rapid!
+          </p>
+        </div>
 
         <!-- Instrucțiuni -->
         <div style="margin-bottom: 25px;">

@@ -489,8 +489,22 @@ const AdminConferinteGrup = () => {
   };
 
   const isParticipantOnline = (participant) => {
+    // Verifică dacă participantul există și are link de acces
+    if (!participant || (!participant.uniqueAccessLink && !participant.accessLink)) {
+      return false;
+    }
+    
     const onlineList = participantsOnline[selectedConferinta?.documentId] || [];
-    return onlineList.some(p => p.uniqueAccessLink === participant.uniqueAccessLink);
+    const participantAccessLink = participant.uniqueAccessLink || participant.accessLink;
+    
+    // Verifică dacă participantul este în lista online, cu protecție pentru participanți null/undefined
+    return onlineList.some(p => {
+      // Protecție împotriva participanților null/undefined din lista online
+      if (!p) return false;
+      
+      const onlineAccessLink = p.uniqueAccessLink || p.accessLink;
+      return onlineAccessLink && onlineAccessLink === participantAccessLink;
+    });
   };
 
   const formatDataDisplay = (conferinta) => {
@@ -502,7 +516,7 @@ const AdminConferinteGrup = () => {
   };
 
   const exportParticipants = (conferinta) => {
-    const participantsData = conferinta.participanti || [];
+    const participantsData = (conferinta.participanti || []).filter(p => p !== null && p !== undefined);
     const csvContent = [
       ["Nume", "Email", "Telefon", "Data Înscrierii", "Status", "Observații"],
       ...participantsData.map(p => [
@@ -631,9 +645,17 @@ const AdminConferinteGrup = () => {
       return;
     }
 
-    // Dacă există un singur participant, copiez direct link-ul său
-    if (conferinta.participanti.length === 1) {
-      const participant = conferinta.participanti[0];
+    // Filtrează participanții valizi (nu null/undefined)
+    const validParticipants = conferinta.participanti.filter(p => p && (p.uniqueAccessLink || p.accessLink));
+    
+    if (validParticipants.length === 0) {
+      showAlert("warning", "Nu există participanți cu link-uri de acces valide");
+      return;
+    }
+
+    // Dacă există un singur participant valid, copiez direct link-ul său
+    if (validParticipants.length === 1) {
+      const participant = validParticipants[0];
       const accessLink = participant.uniqueAccessLink || participant.accessLink;
       const conferenceLink = `${window.location.origin}/conferinta-grup/${accessLink}`;
       
@@ -651,9 +673,9 @@ const AdminConferinteGrup = () => {
       return;
     }
 
-    // Dacă sunt mai mulți participanți, afișez o listă
+    // Dacă sunt mai mulți participanți valizi, afișez o listă
     let participantsList = "Există mai mulți participanți înscrși:\n\n";
-    conferinta.participanti.forEach((participant, index) => {
+    validParticipants.forEach((participant, index) => {
       const accessLink = participant.uniqueAccessLink || participant.accessLink;
       participantsList += `${index + 1}. ${participant.nume} ${participant.prenume} (${participant.email})\n`;
       participantsList += `   Link: ${window.location.origin}/conferinta-grup/${accessLink}\n\n`;
@@ -664,8 +686,8 @@ const AdminConferinteGrup = () => {
     showAlert("info", "Vezi consola pentru link-urile tuturor participanților");
     console.log("🔗 [CONFERENCE LINKS] Link-uri participanți:", participantsList);
     
-    // Opțional: copiez link-ul primului participant
-    const firstParticipant = conferinta.participanti[0];
+    // Opțional: copiez link-ul primului participant valid
+    const firstParticipant = validParticipants[0];
     const firstAccessLink = firstParticipant.uniqueAccessLink || firstParticipant.accessLink;
     const firstConferenceLink = `${window.location.origin}/conferinta-grup/${firstAccessLink}`;
     
@@ -749,7 +771,15 @@ const AdminConferinteGrup = () => {
       return;
     }
 
-    if (!window.confirm(`Ești sigur că vrei să trimiți email-ul către toți ${conferinta.participanti.length} participanții?`)) {
+    // Filtrează participanții valizi
+    const validParticipants = conferinta.participanti.filter(p => p && p.email);
+    
+    if (validParticipants.length === 0) {
+      showAlert("warning", "Nu există participanți valizi pentru această conferință");
+      return;
+    }
+
+    if (!window.confirm(`Ești sigur că vrei să trimiți email-ul către toți ${validParticipants.length} participanții valizi?`)) {
       return;
     }
 
@@ -760,8 +790,8 @@ const AdminConferinteGrup = () => {
       let successful = 0;
       let failed = 0;
 
-      // Trimit email-uri individuale pentru fiecare participant
-      for (const participant of conferinta.participanti) {
+      // Trimit email-uri individuale pentru fiecare participant valid
+      for (const participant of validParticipants) {
         try {
           console.log(`📧 [EMAIL ALL] Trimitere către: ${participant.email}`);
           
@@ -800,7 +830,7 @@ const AdminConferinteGrup = () => {
       console.log(`📊 [EMAIL ALL] Rezultate finale: ${successful} succese, ${failed} eșecuri`);
       
       showAlert("success", 
-        `Email-uri trimise! ✅ ${successful} succese, ❌ ${failed} eșecuri din ${conferinta.participanti.length} total`
+        `Email-uri trimise! ✅ ${successful} succese, ❌ ${failed} eșecuri din ${validParticipants.length} total`
       );
       
     } catch (error) {
@@ -817,6 +847,68 @@ const AdminConferinteGrup = () => {
     const timestamp = Date.now();
     const conferintaPrefix = "conf";
     return `${conferintaPrefix}_${timestamp}_${randomString}`;
+  };
+
+  // Funcție pentru a genera și actualiza link-ul de acces pentru un participant
+  const generateAccessLinkForParticipant = async (conferinta, participantIndex) => {
+    if (!window.confirm("Ești sigur că vrei să generezi un nou link de acces pentru acest participant?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`🔗 [GENERATE LINK] Generare link pentru participant index ${participantIndex}`);
+      
+      const updatedParticipants = [...conferinta.participanti];
+      const participant = updatedParticipants[participantIndex];
+      
+      if (!participant) {
+        throw new Error("Participantul nu a fost găsit");
+      }
+      
+      // Generez un nou uniqueAccessLink
+      const newAccessLink = `grup_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      console.log(`🔗 [GENERATE LINK] Link nou generat: ${newAccessLink}`);
+      
+      // Actualizez participantul cu noul link
+      updatedParticipants[participantIndex] = {
+        ...participant,
+        uniqueAccessLink: newAccessLink,
+        accessLinkGeneratedAt: new Date().toISOString()
+      };
+      
+      // Actualizez în Firestore
+      await handleUpdateFirestore(`ConferinteGrup/${conferinta.documentId}`, {
+        participanti: updatedParticipants
+      });
+      
+      console.log(`✅ [GENERATE LINK] Link actualizat în Firestore pentru ${participant.nume} ${participant.prenume}`);
+      
+      // Actualizez state-ul local
+      const updatedConferinta = { ...conferinta, participanti: updatedParticipants };
+      setSelectedConferinta(updatedConferinta);
+      
+      // Reîmprospătez lista de conferințe
+      await fetchConferinte(true);
+      
+      showAlert("success", `Link de acces generat cu succes pentru ${participant.nume} ${participant.prenume}!`);
+      
+      // Întreb dacă vrea să trimit emailul cu noul link
+      if (window.confirm(`Vrei să trimiți emailul cu noul link de acces către ${participant.nume} ${participant.prenume}?`)) {
+        await sendConferenceEmail(updatedParticipants[participantIndex], updatedConferinta);
+      }
+      
+    } catch (error) {
+      console.error("💥 [GENERATE LINK] Eroare la generarea link-ului:", error);
+      showAlert("danger", "Eroare la generarea link-ului de acces");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funcție pentru a verifica dacă un participant are link de acces valid
+  const hasValidAccessLink = (participant) => {
+    return participant && (participant.uniqueAccessLink || participant.accessLink);
   };
 
   return (
@@ -1507,7 +1599,9 @@ const AdminConferinteGrup = () => {
 
                     {/* Lista participanților - Format carduri */}
                     <div className="row">
-                          {(selectedConferinta.participanti || []).map((participant, index) => (
+                          {(selectedConferinta.participanti || [])
+                            .filter(participant => participant !== null && participant !== undefined)
+                            .map((participant, index) => (
                         <div key={index} className="col-lg-4 col-md-6 col-sm-12 mb-4">
                           <div 
                             className="card h-100 border-0 shadow-sm"
@@ -1651,9 +1745,24 @@ const AdminConferinteGrup = () => {
                                 )}
                               </div>
 
-                              {/* Status participare */}
+                              {/* Status participare și link de acces */}
                               <div className="text-center mb-3">
                                 {getParticipantStatus(participant)}
+                                
+                                {/* Indicator pentru link de acces */}
+                                <div className="mt-2">
+                                  {hasValidAccessLink(participant) ? (
+                                    <span className="badge bg-success">
+                                      <i className="fa fa-link me-1"></i>
+                                      Link generat
+                                    </span>
+                                  ) : (
+                                    <span className="badge bg-warning">
+                                      <i className="fa fa-exclamation-triangle me-1"></i>
+                                      Link lipsește
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Observații */}
@@ -1669,47 +1778,84 @@ const AdminConferinteGrup = () => {
 
                             {/* Footer cu butoanele de acțiune */}
                             <div 
-                              className="card-footer border-0 d-flex justify-content-center gap-2"
+                              className="card-footer border-0"
                               style={{ backgroundColor: "#f8f9fa", padding: "15px 20px" }}
                             >
-                              {/* Buton pentru trimiterea email-ului individual */}
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => sendConferenceEmail(participant, selectedConferinta)}
-                                disabled={loading}
-                                title={`Trimite email cu link-ul către ${participant.nume}`}
-                                style={{ borderRadius: "8px", padding: "8px 12px" }}
-                              >
-                                <i className="fa fa-envelope me-1"></i>
-                                Email
-                              </button>
+                              {/* Prima linie de butoane */}
+                              <div className="d-flex justify-content-center gap-2 mb-2">
+                                {/* Buton pentru trimiterea email-ului individual */}
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => sendConferenceEmail(participant, selectedConferinta)}
+                                  disabled={loading || !hasValidAccessLink(participant)}
+                                  title={hasValidAccessLink(participant) ? `Trimite email cu link-ul către ${participant.nume}` : "Nu poate trimite email - link lipsește"}
+                                  style={{ borderRadius: "8px", padding: "8px 12px" }}
+                                >
+                                  <i className="fa fa-envelope me-1"></i>
+                                  Email
+                                </button>
+                                
+                                {/* Buton pentru copierea link-ului */}
+                                <button
+                                  className="btn btn-sm btn-info"
+                                  onClick={() => {
+                                    if (hasValidAccessLink(participant)) {
+                                      const accessLink = participant.uniqueAccessLink || participant.accessLink;
+                                      const conferenceLink = `${window.location.origin}/conferinta-grup/${accessLink}`;
+                                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                                        navigator.clipboard.writeText(conferenceLink)
+                                          .then(() => {
+                                            showAlert("success", `Link copiat pentru ${participant.nume} ${participant.prenume}!`);
+                                          })
+                                          .catch(() => {
+                                            fallbackCopyText(conferenceLink);
+                                          });
+                                      } else {
+                                        fallbackCopyText(conferenceLink);
+                                      }
+                                    } else {
+                                      showAlert("warning", "Nu există link de acces pentru acest participant");
+                                    }
+                                  }}
+                                  disabled={loading || !hasValidAccessLink(participant)}
+                                  title={hasValidAccessLink(participant) ? "Copiază link-ul individual" : "Nu poate copia - link lipsește"}
+                                  style={{ borderRadius: "8px", padding: "8px 12px" }}
+                                >
+                                  <i className="fa fa-copy me-1"></i>
+                                  Link
+                                </button>
+                                
+                                {/* Buton pentru eliminare */}
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleRemoveParticipant(selectedConferinta, index)}
+                                  disabled={loading}
+                                  title={`Elimină participantul ${participant.nume}`}
+                                  style={{ borderRadius: "8px", padding: "8px 12px" }}
+                                >
+                                  {loading ? (
+                                    <i className="fa fa-spinner fa-spin"></i>
+                                  ) : (
+                                    <i className="fa fa-trash"></i>
+                                  )}
+                                </button>
+                              </div>
                               
-                              {/* Buton pentru copierea link-ului */}
-                              <button
-                                className="btn btn-sm btn-info"
-                                onClick={() => copyConferenceLink(selectedConferinta)}
-                                disabled={loading}
-                                title="Copiază link-ul conferinței"
-                                style={{ borderRadius: "8px", padding: "8px 12px" }}
-                              >
-                                <i className="fa fa-copy me-1"></i>
-                                Link
-                              </button>
-                              
-                              {/* Buton pentru eliminare */}
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleRemoveParticipant(selectedConferinta, index)}
-                                disabled={loading}
-                                title={`Elimină participantul ${participant.nume}`}
-                                style={{ borderRadius: "8px", padding: "8px 12px" }}
-                              >
-                                {loading ? (
-                                  <i className="fa fa-spinner fa-spin"></i>
-                                ) : (
-                                  <i className="fa fa-trash"></i>
-                                )}
-                              </button>
+                              {/* A doua linie - buton pentru generarea link-ului dacă lipsește */}
+                              {!hasValidAccessLink(participant) && (
+                                <div className="d-flex justify-content-center">
+                                  <button
+                                    className="btn btn-sm btn-warning"
+                                    onClick={() => generateAccessLinkForParticipant(selectedConferinta, index)}
+                                    disabled={loading}
+                                    title="Generează link de acces pentru acest participant"
+                                    style={{ borderRadius: "8px", padding: "8px 16px" }}
+                                  >
+                                    <i className="fa fa-magic me-1"></i>
+                                    Generează Link
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

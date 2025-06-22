@@ -372,34 +372,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 <span className="visually-hidden">Se încarcă conferința...</span>
               </div>
               <p className="mt-3">Se încarcă datele conferinței...</p>
-              <div className="mt-4">
-                <button 
-                  className="btn btn-warning me-2"
-                  onClick={() => {
-                    console.log("🔧 [DEBUG] Buton debug apăsat");
-                    loadConferenceData();
-                  }}
-                >
-                  🔧 Debug: Reîncearcă încărcarea
-                </button>
-                <button 
-                  className="btn btn-info"
-                  onClick={() => {
-                    console.log("🔍 [DEBUG] State curent:", {
-                      loading,
-                      error,
-                      conferinta: conferinta ? "DA" : "NU",
-                      conferenceId,
-                      currentUser: currentUser?.uid,
-                      userDisplayName: currentUser?.displayName,
-                      userEmail: currentUser?.email,
-                      isAdmin: currentUser && ["zFsAwNZA5bUonVRIQzRn2HZB3y62", "BhJZdiWVQJNnbLOCGWxzjGHVjHB2"].includes(currentUser.uid)
-                    });
-                  }}
-                >
-                  🔍 Debug: Vezi State
-                </button>
-              </div>
+         
             </div>
           </div>
         </div>
