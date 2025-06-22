@@ -413,10 +413,7 @@ const Aboutus = (props) => {
                     Învață prin experiențe comune și beneficiază de energia colectivă.
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, marginBottom: '2rem' }}>
-                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
-                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
-                      Grupuri de 8-12 participanți
-                    </li>
+             
                     <li style={{ padding: '0.5rem 0', color: '#555' }}>
                       <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
                       Interacțiune în timp real
