@@ -53,7 +53,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
     <html lang="ro">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Confirmare Înscriere - ${titlu}</title>
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
@@ -67,7 +67,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px;">
             ${isTestMode ? 'Simularea ta a fost completată cu succes!' : 'Plata ta a fost procesată cu succes!'}
           </p>
-        </div>
+                </div>
 
         <!-- Salut personal -->
         <div style="margin-bottom: 25px;">
@@ -83,38 +83,38 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Titlu:</strong> ${titlu}
-          </div>
-          
+            </div>
+            
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Tip:</strong> 
             <span style="background-color: ${tipConferinta === 'course' ? '#17a2b8' : '#007bff'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
               ${tipConferinta === 'course' ? 'CURS' : 'CONFERINȚĂ'}
             </span>
-          </div>
-          
+                </div>
+                
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Data:</strong> ${dataDisplay}
-          </div>
-          
+                </div>
+
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Ora:</strong> ${oraInceput}${tipConferinta === 'course' ? ` - ${oraFinal}` : ''}
-          </div>
-          
+                </div>
+
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Participant:</strong> ${nume} ${prenume}
-          </div>
-          
+                </div>
+
           <div style="margin-bottom: 12px;">
             <strong style="color: #495057;">Email:</strong> ${email}
-          </div>
-          
+            </div>
+
           <div>
             <strong style="color: #495057;">Preț:</strong> 
             <span style="color: #28a745; font-weight: bold; font-size: 18px;">${pretParticipare} RON</span>
             ${isTestMode ? ' <span style="color: #856404; font-size: 14px;">(SIMULAT)</span>' : ''}
-          </div>
-        </div>
-
+            </div>
+            </div>
+            
         <!-- Link de acces -->
         <div style="background-color: #e7f3ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
           <h3 style="color: #007bff; margin: 0 0 15px 0; font-size: 18px;">🔗 Link de Acces</h3>
@@ -127,8 +127,8 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           </a>
           <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">
             ${tipConferinta === 'course' ? 'Link-ul este valabil pentru toată perioada cursului' : 'Salvează acest link într-un loc sigur'}
-          </p>
-        </div>
+                    </p>
+                </div>
 
         <!-- Instrucțiuni -->
         <div style="margin-bottom: 25px;">
@@ -139,8 +139,8 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
             <li style="margin-bottom: 8px;">Asigură-te că ai o conexiune stabilă la internet</li>
             <li style="margin-bottom: 8px;">Recomandăm folosirea unui laptop sau computer pentru o experiență optimă</li>
             ${tipConferinta === 'course' ? '<li style="margin-bottom: 8px;">Link-ul de acces este același pentru toate sesiunile cursului</li>' : ''}
-          </ul>
-        </div>
+                    </ul>
+                </div>
 
         <!-- Contact -->
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
@@ -149,7 +149,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
             Pentru orice întrebări sau probleme tehnice, nu ezita să ne contactezi.
             Suntem aici să te ajutăm!
           </p>
-        </div>
+            </div>
 
         <!-- Footer -->
         <div style="text-align: center; border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
@@ -159,8 +159,8 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           <p style="color: #6c757d; font-size: 12px; margin: 10px 0 0 0;">
             Acest email a fost trimis automat. Te rugăm să nu răspunzi la acest mesaj.
           </p>
+            </div>
         </div>
-      </div>
     </body>
     </html>
   `;

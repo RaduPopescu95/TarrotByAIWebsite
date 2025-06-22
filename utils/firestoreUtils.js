@@ -15,6 +15,7 @@ import {
   query,
   collectionGroup,
   startAt,
+  startAfter,
   getCountFromServer,
   orderBy,
   limit,
@@ -964,16 +965,124 @@ export async function getLocalitatiWithUserCounts() {
 
 //-------- PAGINATION -----
 
-const handleGetFirestorePaginated = async (pageSize, collectionPath) => {
-  const ref = collection(db, collectionPath);
-  let pageQuery;
+// Funcție pentru paginația conferințelor de grup
+export const handleGetConferintePaginated = async (pageSize = 8, lastVisible = null) => {
+  try {
+    const ref = collection(db, "ConferinteGrup");
+    let pageQuery;
 
-  pageQuery = query(ref, orderBy("firstUploadDate", "desc"), limit(pageSize));
-  setLastVisible(null);
-  setFirstVisible(null);
+    if (lastVisible) {
+      // Pentru paginile următoare
+      pageQuery = query(
+        ref, 
+        orderBy("firstUploadDate", "desc"), 
+        startAfter(lastVisible),
+        limit(pageSize)
+      );
+    } else {
+      // Pentru prima pagină
+      pageQuery = query(
+        ref, 
+        orderBy("firstUploadDate", "desc"), 
+        limit(pageSize)
+      );
+    }
+
+    const querySnapshot = await getDocs(pageQuery);
+    const conferinte = [];
+    let newLastVisible = null;
+
+    querySnapshot.forEach((doc) => {
+      conferinte.push(doc.data());
+    });
+
+    // Setează ultimul document vizibil pentru următoarea pagină
+    if (querySnapshot.docs.length > 0) {
+      newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+    }
+
+    return {
+      conferinte,
+      lastVisible: newLastVisible,
+      hasMore: querySnapshot.docs.length === pageSize
+    };
+  } catch (error) {
+    console.error("Error fetching paginated conferences:", error);
+    throw error;
+  }
 };
 
-//-------- PAGINATION -----
+// Funcție pentru paginația conferințelor ACTIVE pentru calendar public
+export const handleGetConferinteActivePaginated = async (pageSize = 10, lastVisible = null) => {
+  try {
+    const ref = collection(db, "ConferinteGrup");
+    let pageQuery;
+
+    if (lastVisible) {
+      // Pentru paginile următoare
+      pageQuery = query(
+        ref, 
+        where("status", "==", "activa"),
+        orderBy("dataInceput", "asc"), // Sortare după data începerii
+        startAfter(lastVisible),
+        limit(pageSize)
+      );
+    } else {
+      // Pentru prima pagină
+      pageQuery = query(
+        ref, 
+        where("status", "==", "activa"),
+        orderBy("dataInceput", "asc"), // Sortare după data începerii
+        limit(pageSize)
+      );
+    }
+
+    const querySnapshot = await getDocs(pageQuery);
+    const conferinte = [];
+    let newLastVisible = null;
+
+    querySnapshot.forEach((doc) => {
+      conferinte.push(doc.data());
+    });
+
+    // Setează ultimul document vizibil pentru următoarea pagină
+    if (querySnapshot.docs.length > 0) {
+      newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+    }
+
+    return {
+      conferinte,
+      lastVisible: newLastVisible,
+      hasMore: querySnapshot.docs.length === pageSize
+    };
+  } catch (error) {
+    console.error("Error fetching paginated active conferences:", error);
+    throw error;
+  }
+};
+
+// Funcție optimizată pentru preluarea doar a conferințelor active (cu query Firestore)
+export const handleGetConferinteActive = async () => {
+  try {
+    const ref = collection(db, "ConferinteGrup");
+    const activeQuery = query(
+      ref, 
+      where("status", "==", "activa")
+    );
+
+    const querySnapshot = await getDocs(activeQuery);
+    const conferinte = [];
+
+    querySnapshot.forEach((doc) => {
+      conferinte.push(doc.data());
+    });
+
+    return conferinte;
+  } catch (error) {
+    console.error("Error fetching active conferences:", error);
+    throw error;
+  }
+};
 
 // LISTEN TO CHANGE FOR VIDEO AUDIO CALL
 

@@ -6,7 +6,8 @@ import StickyBox from "react-sticky-box";
 import { 
   handleGetFirestore, 
   handleUpdateFirestore, 
-  handleUploadFirestoreGeneral 
+  handleUploadFirestoreGeneral,
+  handleGetConferintePaginated
 } from "../../../utils/firestoreUtils";
 import AlertMessage from "../AlertMessage";
 import { useAuth } from "../../../context/AuthContext";
@@ -28,6 +29,17 @@ const AdminConferinteGrup = () => {
   const [editingConferinta, setEditingConferinta] = useState(null);
   const [selectedConferinta, setSelectedConferinta] = useState(null);
   const [participantsOnline, setParticipantsOnline] = useState({});
+  
+  // State-uri pentru paginație
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalStats, setTotalStats] = useState({
+    total: 0,
+    active: 0,
+    participants: 0,
+    courses: 0
+  });
 
   // Log pentru a verifica dacă funcțiile Firestore sunt importate corect
   console.log("🔧 [INIT] Funcții Firestore disponibile:", {
@@ -101,14 +113,32 @@ const AdminConferinteGrup = () => {
     }
   };
 
-  const fetchConferinte = async () => {
+  const fetchConferinte = async (reset = true) => {
     try {
       console.log("📥 [FETCH] Începe încărcarea conferințelor...");
       setLoading(true);
-      const data = await handleGetFirestore("ConferinteGrup");
-      console.log("📦 [FETCH] Date primite din Firestore:", data);
-      console.log("📊 [FETCH] Numărul de conferințe găsite:", data?.length || 0);
-      setConferinte(data || []);
+      
+      if (reset) {
+        // Reset pentru prima încărcare
+        setLastVisible(null);
+        setHasMore(true);
+      }
+      
+      const result = await handleGetConferintePaginated(8, reset ? null : lastVisible);
+      console.log("📦 [FETCH] Date primite din Firestore:", result);
+      
+      if (reset) {
+        setConferinte(result.conferinte || []);
+      } else {
+        setConferinte(prev => [...prev, ...(result.conferinte || [])]);
+      }
+      
+      setLastVisible(result.lastVisible);
+      setHasMore(result.hasMore);
+      
+      // Calculează statisticile pentru toate conferințele (nu doar cele încărcate)
+      await calculateTotalStats();
+      
       console.log("✅ [FETCH] Conferințele au fost setate în state");
     } catch (error) {
       console.error("💥 [FETCH] Eroare la încărcarea conferințelor:");
@@ -118,6 +148,48 @@ const AdminConferinteGrup = () => {
     } finally {
       setLoading(false);
       console.log("🏁 [FETCH] Loading setat pe false");
+    }
+  };
+
+  const loadMoreConferinte = async () => {
+    if (!hasMore || loadingMore) return;
+    
+    try {
+      setLoadingMore(true);
+      console.log("📥 [LOAD MORE] Încărcare conferințe suplimentare...");
+      
+      const result = await handleGetConferintePaginated(8, lastVisible);
+      console.log("📦 [LOAD MORE] Date suplimentare primite:", result);
+      
+      setConferinte(prev => [...prev, ...(result.conferinte || [])]);
+      setLastVisible(result.lastVisible);
+      setHasMore(result.hasMore);
+      
+      console.log("✅ [LOAD MORE] Conferințele suplimentare au fost adăugate");
+    } catch (error) {
+      console.error("💥 [LOAD MORE] Eroare la încărcarea conferințelor suplimentare:", error);
+      showAlert("danger", "Eroare la încărcarea conferințelor suplimentare");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const calculateTotalStats = async () => {
+    try {
+      // Pentru statistici, încărcăm toate conferințele o singură dată
+      const allConferinte = await handleGetFirestore("ConferinteGrup");
+      
+      const stats = {
+        total: allConferinte.length,
+        active: allConferinte.filter(c => c.status === "activa").length,
+        participants: allConferinte.reduce((total, c) => total + (c.participanti?.length || 0), 0),
+        courses: allConferinte.filter(c => c.tipConferinta === "course").length
+      };
+      
+      setTotalStats(stats);
+      console.log("📊 [STATS] Statistici calculate:", stats);
+    } catch (error) {
+      console.error("💥 [STATS] Eroare la calcularea statisticilor:", error);
     }
   };
 
@@ -153,8 +225,8 @@ const AdminConferinteGrup = () => {
     console.log(`📝 [INPUT] Schimbare câmp: ${name} = ${value}`);
     setFormData(prev => {
       const newData = {
-        ...prev,
-        [name]: value
+      ...prev,
+      [name]: value
       };
       console.log("📝 [INPUT] FormData actualizat:", newData);
       return newData;
@@ -345,7 +417,7 @@ const AdminConferinteGrup = () => {
       console.log("🔄 [CONFERINTA] Resetez formularul și reîmprospătez lista...");
       resetForm();
       setActiveTab("list");
-      await fetchConferinte();
+      await fetchConferinte(true); // Reset și încarcă prima pagină
       console.log("🎉 [CONFERINTA] Procesul de salvare s-a finalizat cu succes!");
       
     } catch (error) {
@@ -486,7 +558,7 @@ const AdminConferinteGrup = () => {
           showAlert("success", `Conferința "${conferinta.titlu}" a fost activată! Utilizatorii pot participa acum.`);
           
           // Reîmprospătez lista pentru a reflecta schimbarea
-          await fetchConferinte();
+          await fetchConferinte(true);
           
           // Actualizez și conferința selectată dacă este cazul
           if (selectedConferinta && selectedConferinta.documentId === conferinta.documentId) {
@@ -535,7 +607,7 @@ const AdminConferinteGrup = () => {
       });
       
       showAlert("success", `Participantul ${removedParticipant.nume} a fost eliminat cu succes`);
-      await fetchConferinte();
+      await fetchConferinte(true); // Reset și încarcă prima pagină
       
       // Actualizează conferința selectată
       const updatedConferinta = { ...conferinta, participanti: updatedParticipants };
@@ -759,7 +831,7 @@ const AdminConferinteGrup = () => {
                       {/* Butoane pentru email și copierea link-ului */}
                       {selectedConferinta?.participanti && selectedConferinta.participanti.length > 0 && (
                         <>
-                          <button
+                    <button
                             className="btn btn-primary me-2"
                             onClick={() => sendEmailToAllParticipants(selectedConferinta)}
                             disabled={loading}
@@ -783,11 +855,11 @@ const AdminConferinteGrup = () => {
                       
                       <button
                         className="btn btn-outline-success me-2"
-                        onClick={() => exportParticipants(selectedConferinta)}
-                      >
-                        <i className="fa fa-download me-2"></i>
-                        Export CSV
-                      </button>
+                      onClick={() => exportParticipants(selectedConferinta)}
+                    >
+                      <i className="fa fa-download me-2"></i>
+                      Export CSV
+                    </button>
                       <button
                         className="btn btn-success"
                         onClick={() => handleJoinAsAdmin(selectedConferinta)}
@@ -803,143 +875,415 @@ const AdminConferinteGrup = () => {
               </div>
 
               {activeTab === "list" && (
-                <div className="card">
-                  <div className="card-body">
-                    <div className="table-responsive">
-                      <table className="table table-hover">
-                        <thead>
-                          <tr>
-                            <th>Imagine</th>
-                            <th>Titlu</th>
-                            <th>Tip</th>
-                            <th>Data & Ora</th>
-                            <th>Participanți</th>
-                            <th>Locuri Disponibile</th>
-                            <th>Preț</th>
-                            <th>Status</th>
-                            <th>Acțiuni</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {conferinte.map((conferinta) => (
-                            <tr key={conferinta.documentId}>
-                              <td>
-                                {conferinta.imageUrl ? (
-                                  <img 
-                                    src={conferinta.imageUrl} 
-                                    alt={conferinta.titlu}
-                                    style={{
-                                      width: "50px",
-                                      height: "50px",
-                                      objectFit: "cover",
-                                      borderRadius: "8px"
-                                    }}
-                                  />
-                                ) : (
-                                  <div style={{
-                                    width: "50px",
-                                    height: "50px",
-                                    backgroundColor: "#f8f9fa",
-                                    borderRadius: "8px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "#6c757d"
-                                  }}>
-                                    <i className="fa fa-image"></i>
-                                  </div>
-                                )}
-                              </td>
-                              <td>
-                                <div>
-                                  <strong>{conferinta.titlu}</strong>
-                                  <br />
-                                  <small className="text-muted">
-                                    {conferinta.descriere?.substring(0, 50)}...
+                <div>
+                  {/* Loading State pentru încărcarea inițială */}
+                  {loading && conferinte.length === 0 && (
+                    <div className="text-center py-5">
+                      <div className="d-flex flex-column align-items-center">
+                        <div 
+                          className="spinner-border text-primary mb-4" 
+                          role="status"
+                          style={{ width: "3rem", height: "3rem" }}
+                        >
+                          <span className="visually-hidden">Se încarcă...</span>
+                        </div>
+                        <h5 className="text-muted mb-2">Se încarcă conferințele...</h5>
+                        <p className="text-muted small mb-0">
+                          <i className="fa fa-info-circle me-1"></i>
+                          Preluăm datele din Firestore
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content principal - afișat doar când nu se încarcă inițial */}
+                  {(!loading || conferinte.length > 0) && (
+                    <>
+                      {/* Statistici generale */}
+                      <div className="row mb-4">
+                    <div className="col-md-3 mb-3">
+                      <div 
+                        className="card border-0 shadow-sm h-100"
+                        style={{
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          borderRadius: "12px",
+                          transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-3px)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.25)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                        }}
+                      >
+                        <div className="card-body text-center py-4">
+                          <div 
+                            className="d-inline-flex align-items-center justify-content-center mb-3"
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              background: "rgba(255,255,255,0.2)",
+                              borderRadius: "50%",
+                              backdropFilter: "blur(10px)"
+                            }}
+                          >
+                            <i className="fa fa-calendar fa-lg text-white"></i>
+                          </div>
+                          <h3 className="text-white mb-1 fw-bold">{totalStats.total}</h3>
+                          <p className="text-white-50 mb-0 small">Total Conferințe</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="col-md-3 mb-3">
+                      <div 
+                        className="card border-0 shadow-sm h-100"
+                        style={{
+                          background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+                          borderRadius: "12px",
+                          transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-3px)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(17, 153, 142, 0.25)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                        }}
+                      >
+                        <div className="card-body text-center py-4">
+                          <div 
+                            className="d-inline-flex align-items-center justify-content-center mb-3"
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              background: "rgba(255,255,255,0.2)",
+                              borderRadius: "50%",
+                              backdropFilter: "blur(10px)"
+                            }}
+                          >
+                            <i className="fa fa-check-circle fa-lg text-white"></i>
+                          </div>
+                          <h3 className="text-white mb-1 fw-bold">{totalStats.active}</h3>
+                          <p className="text-white-50 mb-0 small">Conferințe Active</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="col-md-3 mb-3">
+                      <div 
+                        className="card border-0 shadow-sm h-100"
+                        style={{
+                          background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                          borderRadius: "12px",
+                          transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-3px)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(79, 172, 254, 0.25)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                        }}
+                      >
+                        <div className="card-body text-center py-4">
+                          <div 
+                            className="d-inline-flex align-items-center justify-content-center mb-3"
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              background: "rgba(255,255,255,0.2)",
+                              borderRadius: "50%",
+                              backdropFilter: "blur(10px)"
+                            }}
+                          >
+                            <i className="fa fa-users fa-lg text-white"></i>
+                          </div>
+                          <h3 className="text-white mb-1 fw-bold">{totalStats.participants}</h3>
+                          <p className="text-white-50 mb-0 small">Total Participanți</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="col-md-3 mb-3">
+                      <div 
+                        className="card border-0 shadow-sm h-100"
+                        style={{
+                          background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+                          borderRadius: "12px",
+                          transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-3px)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(250, 112, 154, 0.25)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                        }}
+                      >
+                        <div className="card-body text-center py-4">
+                          <div 
+                            className="d-inline-flex align-items-center justify-content-center mb-3"
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              background: "rgba(255,255,255,0.2)",
+                              borderRadius: "50%",
+                              backdropFilter: "blur(10px)"
+                            }}
+                          >
+                            <i className="fa fa-graduation-cap fa-lg text-white"></i>
+                          </div>
+                          <h3 className="text-white mb-1 fw-bold">{totalStats.courses}</h3>
+                          <p className="text-white-50 mb-0 small">Cursuri Disponibile</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informații despre paginație */}
+                  <div className="row mb-3">
+                    <div className="col-md-8">
+                      <p className="text-muted mb-0">
+                        <i className="fa fa-info-circle me-1"></i>
+                        Afișează {conferinte.length} din {totalStats.total} conferințe
+                        {hasMore && " (încarcă mai multe pentru a vedea toate)"}
+                      </p>
+                    </div>
+                    <div className="col-md-4 text-end">
+                      {hasMore && (
+                        <small className="text-primary">
+                          <i className="fa fa-arrow-down me-1"></i>
+                          Mai multe disponibile
                                   </small>
+                      )}
                                 </div>
-                              </td>
-                              <td>
+                  </div>
+
+                  {/* Carduri pentru conferințe */}
+                  <div className="row">
+                    {conferinte.map((conferinta) => (
+                      <div key={conferinta.documentId} className="col-lg-6 col-xl-4 mb-4">
+                        <div 
+                          className="card h-100 shadow-sm border-0" 
+                          style={{ 
+                            borderRadius: "15px",
+                            overflow: "hidden",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-5px)";
+                            e.currentTarget.style.boxShadow = "0 10px 25px rgba(0,0,0,0.15)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          {/* Header cu imagine */}
+                          <div className="position-relative" style={{ height: "200px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+                            {conferinta.imageUrl ? (
+                              <img 
+                                src={conferinta.imageUrl} 
+                                alt={conferinta.titlu}
+                                className="w-100 h-100"
+                                style={{ objectFit: "cover" }}
+                              />
+                            ) : (
+                              <div className="d-flex align-items-center justify-content-center h-100">
+                                <i className="fa fa-calendar fa-4x text-white opacity-50"></i>
+                              </div>
+                            )}
+                            
+                            {/* Badge pentru tip și status */}
+                            <div className="position-absolute top-0 start-0 m-3">
                                 <span className={`badge ${
-                                  conferinta.tipConferinta === "course" 
-                                    ? "bg-info" 
-                                    : "bg-primary"
-                                }`}>
-                                  {conferinta.tipConferinta === "course" ? "Curs" : "Conferință"}
+                                conferinta.tipConferinta === "course" ? "bg-info" : "bg-primary"
+                              } me-2`} style={{ fontSize: "0.75rem" }}>
+                                {conferinta.tipConferinta === "course" ? "CURS" : "CONFERINȚĂ"}
                                 </span>
-                              </td>
-                              <td>
-                                <small>{formatDataDisplay(conferinta)}</small>
-                              </td>
-                              <td>
-                                <span className="fw-bold">
+                              <span className={`badge ${
+                                conferinta.status === "activa" ? "bg-success" : "bg-secondary"
+                              }`} style={{ fontSize: "0.75rem" }}>
+                                {conferinta.status.toUpperCase()}
+                              </span>
+                            </div>
+
+                            {/* Preț */}
+                            <div className="position-absolute top-0 end-0 m-3">
+                              <div className="bg-white rounded-pill px-3 py-1">
+                                <strong className="text-primary">{conferinta.pretParticipare} RON</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Conținut card */}
+                          <div className="card-body d-flex flex-column">
+                            <h5 className="card-title mb-2" style={{ color: "#2c3e50", fontWeight: "600" }}>
+                              {conferinta.titlu}
+                            </h5>
+                            
+                            <p className="card-text text-muted mb-3" style={{ 
+                              fontSize: "0.9rem",
+                              lineHeight: "1.4",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden"
+                            }}>
+                              {conferinta.descriere}
+                            </p>
+
+                            {/* Informații detaliate */}
+                            <div className="mb-3">
+                              <div className="d-flex align-items-center mb-2">
+                                <i className="fa fa-calendar text-primary me-2"></i>
+                                <small className="text-muted">{formatDataDisplay(conferinta)}</small>
+                              </div>
+                              
+                              <div className="d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center">
+                                  <i className="fa fa-users text-info me-2"></i>
+                                  <span className="fw-bold text-info">
                                   {conferinta.participanti?.length || 0}
                                 </span>
-                                {conferinta.numarMaxParticipanti && 
-                                  ` / ${conferinta.numarMaxParticipanti}`
-                                }
-                              </td>
-                              <td>
+                                  {conferinta.numarMaxParticipanti && (
+                                    <span className="text-muted">
+                                      /{conferinta.numarMaxParticipanti}
+                                    </span>
+                                  )}
+                                  <small className="text-muted ms-1">participanți</small>
+                                </div>
+                                
                                 <span className={`badge ${
                                   calculateAvailableSpots(conferinta) === 0 ? "bg-danger" : 
                                   calculateAvailableSpots(conferinta) === "Nelimitat" ? "bg-success" : "bg-warning"
                                 }`}>
-                                  {calculateAvailableSpots(conferinta)}
+                                  {calculateAvailableSpots(conferinta) === "Nelimitat" ? 
+                                    "Nelimitat" : 
+                                    `${calculateAvailableSpots(conferinta)} locuri`
+                                  }
                                 </span>
-                              </td>
-                              <td>{conferinta.pretParticipare} RON</td>
-                              <td>
-                                <span className={`badge ${
-                                  conferinta.status === "activa" 
-                                    ? "bg-success" 
-                                    : "bg-secondary"
-                                }`}>
-                                  {conferinta.status}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="d-flex gap-1">
+                              </div>
+                            </div>
+
+                            {/* Butoane de acțiune */}
+                            <div className="mt-auto">
+                              <div className="row g-2">
+                                <div className="col-4">
                                   <button
-                                    className="btn btn-sm btn-outline-primary"
+                                    className="btn btn-outline-primary btn-sm w-100"
                                     onClick={() => handleEdit(conferinta)}
-                                    title="Editează"
+                                    title="Editează conferința"
                                   >
                                     <i className="fa fa-edit"></i>
                                   </button>
+                                </div>
+                                <div className="col-4">
                                   <button
-                                    className="btn btn-sm btn-outline-info"
+                                    className="btn btn-outline-info btn-sm w-100"
                                     onClick={() => handleViewParticipants(conferinta)}
-                                    title="Participanți"
+                                    title="Vezi participanții"
                                   >
                                     <i className="fa fa-users"></i>
                                   </button>
+                                </div>
+                                <div className="col-4">
                                   <button
-                                    className="btn btn-sm btn-success"
+                                    className={`btn btn-sm w-100 ${
+                                      isConferenceActive(conferinta) ? "btn-success" : "btn-warning"
+                                    }`}
                                     onClick={() => handleJoinAsAdmin(conferinta)}
-                                    title={isConferenceActive(conferinta) ? "Alătură-te ca Admin/Host" : `Conferință ${conferinta.status} - Click pentru activare`}
+                                    title={isConferenceActive(conferinta) ? 
+                                      "Alătură-te ca Admin/Host" : 
+                                      `Conferință ${conferinta.status} - Click pentru activare`
+                                    }
                                     disabled={loading}
                                   >
                                     <i className="fa fa-video"></i>
-                                    {!isConferenceActive(conferinta) && (
-                                      <span className="ms-1 badge bg-warning">
-                                        {conferinta.status === "inactiva" ? "INACTIVĂ" : "COMPLETATĂ"}
-                                      </span>
-                                    )}
                                   </button>
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      
-                      {conferinte.length === 0 && !loading && (
+                              </div>
+                              
+                              {/* Informații suplimentare pentru conferințe inactive */}
+                              {!isConferenceActive(conferinta) && (
+                                <div className="text-center mt-2">
+                                  <small className="text-warning">
+                                    <i className="fa fa-exclamation-triangle me-1"></i>
+                                    {conferinta.status === "inactiva" ? "Conferință inactivă" : "Conferință completată"}
+                                  </small>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Buton Show More */}
+                  {hasMore && conferinte.length > 0 && (
                         <div className="text-center py-4">
-                          <p className="text-muted">Nu există conferințe create încă.</p>
+                      <button
+                        className="btn btn-outline-primary btn-lg"
+                        onClick={loadMoreConferinte}
+                        disabled={loadingMore}
+                        style={{
+                          borderRadius: "25px",
+                          padding: "12px 30px",
+                          fontWeight: "500",
+                          transition: "all 0.3s ease"
+                        }}
+                      >
+                        {loadingMore ? (
+                          <>
+                            <i className="fa fa-spinner fa-spin me-2"></i>
+                            Se încarcă...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa fa-chevron-down me-2"></i>
+                            Încarcă mai multe ({totalStats.total - conferinte.length} rămase)
+                          </>
+                        )}
+                      </button>
                         </div>
                       )}
+
+                  {/* Mesaj când toate conferințele au fost încărcate */}
+                  {!hasMore && conferinte.length > 0 && (
+                    <div className="text-center py-3">
+                      <div className="alert alert-info d-inline-block">
+                        <i className="fa fa-check-circle me-2"></i>
+                        Toate conferințele au fost încărcate ({conferinte.length} total)
                     </div>
                   </div>
+                  )}
+                  
+                      {/* Mesaj când nu există conferințe */}
+                      {conferinte.length === 0 && !loading && (
+                        <div className="text-center py-5">
+                          <div className="mb-4">
+                            <i className="fa fa-calendar fa-4x text-muted mb-3"></i>
+                            <h4 className="text-muted">Nu există conferințe create încă</h4>
+                            <p className="text-muted">Începe prin a crea prima ta conferință de grup!</p>
+                          </div>
+                          <button
+                            className="btn btn-primary btn-lg"
+                            onClick={() => setActiveTab("create")}
+                          >
+                            <i className="fa fa-plus me-2"></i>
+                            Creează Prima Conferință
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -959,35 +1303,146 @@ const AdminConferinteGrup = () => {
                   <div className="card-body">
                     {/* Statistici rapide */}
                     <div className="row mb-4">
-                      <div className="col-md-3">
-                        <div className="card bg-primary text-white">
-                          <div className="card-body text-center">
-                            <h4>{selectedConferinta.participanti?.length || 0}</h4>
-                            <p className="mb-0">Total Înregistrați</p>
+                      <div className="col-md-3 mb-3">
+                        <div 
+                          className="card border-0 shadow-sm h-100"
+                          style={{
+                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            borderRadius: "12px",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-3px)";
+                            e.currentTarget.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.25)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          <div className="card-body text-center py-4">
+                            <div 
+                              className="d-inline-flex align-items-center justify-content-center mb-3"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                background: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                backdropFilter: "blur(10px)"
+                              }}
+                            >
+                              <i className="fa fa-users fa-lg text-white"></i>
+                          </div>
+                            <h3 className="text-white mb-1 fw-bold">{selectedConferinta.participanti?.length || 0}</h3>
+                            <p className="text-white-50 mb-0 small">Total Înregistrați</p>
+                        </div>
+                      </div>
+                          </div>
+                      
+                      <div className="col-md-3 mb-3">
+                        <div 
+                          className="card border-0 shadow-sm h-100"
+                          style={{
+                            background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+                            borderRadius: "12px",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-3px)";
+                            e.currentTarget.style.boxShadow = "0 8px 25px rgba(17, 153, 142, 0.25)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          <div className="card-body text-center py-4">
+                            <div 
+                              className="d-inline-flex align-items-center justify-content-center mb-3"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                background: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                backdropFilter: "blur(10px)"
+                              }}
+                            >
+                              <i className="fa fa-wifi fa-lg text-white"></i>
+                        </div>
+                            <h3 className="text-white mb-1 fw-bold">{(participantsOnline[selectedConferinta.documentId] || []).length}</h3>
+                            <p className="text-white-50 mb-0 small">Online Acum</p>
+                      </div>
+                          </div>
+                        </div>
+                      
+                      <div className="col-md-3 mb-3">
+                        <div 
+                          className="card border-0 shadow-sm h-100"
+                          style={{
+                            background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                            borderRadius: "12px",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-3px)";
+                            e.currentTarget.style.boxShadow = "0 8px 25px rgba(79, 172, 254, 0.25)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          <div className="card-body text-center py-4">
+                            <div 
+                              className="d-inline-flex align-items-center justify-content-center mb-3"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                background: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                backdropFilter: "blur(10px)"
+                              }}
+                            >
+                              <i className="fa fa-ticket fa-lg text-white"></i>
+                      </div>
+                            <h3 className="text-white mb-1 fw-bold">{calculateAvailableSpots(selectedConferinta)}</h3>
+                            <p className="text-white-50 mb-0 small">Locuri Disponibile</p>
                           </div>
                         </div>
                       </div>
-                      <div className="col-md-3">
-                        <div className="card bg-success text-white">
-                          <div className="card-body text-center">
-                            <h4>{(participantsOnline[selectedConferinta.documentId] || []).length}</h4>
-                            <p className="mb-0">Online Acum</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-3">
-                        <div className="card bg-warning text-white">
-                          <div className="card-body text-center">
-                            <h4>{calculateAvailableSpots(selectedConferinta)}</h4>
-                            <p className="mb-0">Locuri Disponibile</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-3">
-                        <div className="card bg-info text-white">
-                          <div className="card-body text-center">
-                            <h4>{selectedConferinta.pretParticipare * (selectedConferinta.participanti?.length || 0)} RON</h4>
-                            <p className="mb-0">Venituri Total</p>
+                      
+                      <div className="col-md-3 mb-3">
+                        <div 
+                          className="card border-0 shadow-sm h-100"
+                          style={{
+                            background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+                            borderRadius: "12px",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-3px)";
+                            e.currentTarget.style.boxShadow = "0 8px 25px rgba(250, 112, 154, 0.25)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          <div className="card-body text-center py-4">
+                            <div 
+                              className="d-inline-flex align-items-center justify-content-center mb-3"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                background: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                backdropFilter: "blur(10px)"
+                              }}
+                            >
+                              <i className="fa fa-money fa-lg text-white"></i>
+                            </div>
+                            <h3 className="text-white mb-1 fw-bold">{selectedConferinta.pretParticipare * (selectedConferinta.participanti?.length || 0)} RON</h3>
+                            <p className="text-white-50 mb-0 small">Venituri Total</p>
                           </div>
                         </div>
                       </div>
@@ -995,117 +1450,194 @@ const AdminConferinteGrup = () => {
 
                     {/* Lista participanților - Format carduri */}
                     <div className="row">
-                      {(selectedConferinta.participanti || []).map((participant, index) => (
+                          {(selectedConferinta.participanti || []).map((participant, index) => (
                         <div key={index} className="col-lg-4 col-md-6 col-sm-12 mb-4">
-                          <div className="card h-100 shadow-sm border-0">
-                            <div className="card-body">
-                              {/* Header cu avatar și status online */}
-                              <div className="d-flex justify-content-between align-items-start mb-3">
-                                <div className="d-flex align-items-center">
+                          <div 
+                            className="card h-100 border-0 shadow-sm"
+                            style={{
+                              borderRadius: "15px",
+                              overflow: "hidden",
+                              transition: "all 0.3s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "translateY(-3px)";
+                              e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.12)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.08)";
+                            }}
+                          >
+                            {/* Header gradient cu avatar */}
+                            <div 
+                              className="position-relative"
+                              style={{
+                                background: isParticipantOnline(participant) ? 
+                                  "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)" : 
+                                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                padding: "20px 20px 60px 20px"
+                              }}
+                            >
+                              {/* Status online badge */}
+                              <div className="position-absolute top-0 end-0 m-3">
+                                {isParticipantOnline(participant) ? (
+                                  <span className="badge bg-light text-success" style={{ fontSize: "0.75rem" }}>
+                                    <i className="fa fa-circle me-1"></i>
+                                    Online
+                                  </span>
+                                ) : (
+                                  <span className="badge bg-light text-muted" style={{ fontSize: "0.75rem" }}>
+                                    <i className="fa fa-circle me-1"></i>
+                                    Offline
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Guest user indicator */}
+                              {participant.isGuestUser && (
+                                <div className="position-absolute top-0 start-0 m-3">
+                                  <span className="badge bg-light text-info" style={{ fontSize: "0.75rem" }}>
+                                    <i className="fa fa-user-o me-1"></i>
+                                    Vizitator
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Avatar centrat */}
+                            <div 
+                              className="position-absolute"
+                              style={{
+                                top: "50px",
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                                zIndex: 10
+                              }}
+                            >
                                   <div style={{
-                                    width: "50px",
-                                    height: "50px",
+                                width: "70px",
+                                height: "70px",
                                     borderRadius: "50%",
-                                    background: "linear-gradient(135deg, #007bff, #0056b3)",
+                                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     color: "white",
                                     fontWeight: "bold",
-                                    fontSize: "18px",
-                                    marginRight: "12px",
-                                    boxShadow: "0 2px 8px rgba(0,123,255,0.3)"
+                                fontSize: "24px",
+                                border: "4px solid white",
+                                boxShadow: "0 4px 15px rgba(0,0,0,0.15)"
                                   }}>
-                                    {participant.nume?.charAt(0)?.toUpperCase() || "U"}
+                                {participant.nume?.charAt(0)?.toUpperCase() || participant.prenume?.charAt(0)?.toUpperCase() || "U"}
                                   </div>
-                                  <div>
-                                    <h6 className="mb-1 fw-bold">{participant.nume}</h6>
-                                    <small className="text-muted">ID: {participant.userId}</small>
                                   </div>
+
+                            <div className="card-body" style={{ paddingTop: "50px" }}>
+                              {/* Nume și prenume */}
+                              <div className="text-center mb-3">
+                                <h5 className="mb-1 fw-bold" style={{ color: "#2c3e50" }}>
+                                  {participant.nume} {participant.prenume}
+                                </h5>
+                                <small className="text-muted">
+                                  Înregistrat: {moment(participant.dataInscrierii).format("DD/MM/YYYY")}
+                                </small>
                                 </div>
-                                
-                                {/* Status online */}
-                                <div className="text-end">
-                                  {isParticipantOnline(participant) ? (
-                                    <span className="badge bg-success">
-                                      <i className="fa fa-circle me-1"></i>
-                                      Online
-                                    </span>
-                                  ) : (
-                                    <span className="badge bg-secondary">
-                                      <i className="fa fa-circle me-1"></i>
-                                      Offline
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
 
                               {/* Informații contact */}
                               <div className="mb-3">
-                                <div className="d-flex align-items-center mb-2">
-                                  <i className="fa fa-envelope text-primary me-2" style={{width: "16px"}}></i>
-                                  <a href={`mailto:${participant.email}`} className="text-decoration-none small">
-                                    {participant.email}
-                                  </a>
+                                <div className="d-flex align-items-center mb-2 p-2 rounded" style={{ backgroundColor: "#f8f9fa" }}>
+                                  <div 
+                                    className="d-flex align-items-center justify-content-center me-3"
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      borderRadius: "8px",
+                                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                                    }}
+                                  >
+                                    <i className="fa fa-envelope fa-sm text-white"></i>
                                 </div>
-                                <div className="d-flex align-items-center mb-2">
-                                  <i className="fa fa-phone text-success me-2" style={{width: "16px"}}></i>
-                                  <a href={`tel:${participant.telefon}`} className="text-decoration-none small">
-                                    {participant.telefon}
-                                  </a>
+                                  <div className="flex-grow-1">
+                                    <a 
+                                      href={`mailto:${participant.email}`} 
+                                      className="text-decoration-none small text-dark fw-medium"
+                                      style={{ fontSize: "0.85rem" }}
+                                    >
+                                      {participant.email}
+                                    </a>
                                 </div>
-                                <div className="d-flex align-items-center">
-                                  <i className="fa fa-calendar text-info me-2" style={{width: "16px"}}></i>
-                                  <small className="text-muted">
-                                    {moment(participant.dataInscrierii).format("DD/MM/YYYY HH:mm")}
-                                  </small>
                                 </div>
+
+                                {participant.telefon && (
+                                  <div className="d-flex align-items-center mb-2 p-2 rounded" style={{ backgroundColor: "#f8f9fa" }}>
+                                    <div 
+                                      className="d-flex align-items-center justify-content-center me-3"
+                                      style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        borderRadius: "8px",
+                                        background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
+                                      }}
+                                    >
+                                      <i className="fa fa-phone fa-sm text-white"></i>
+                                    </div>
+                                    <div className="flex-grow-1">
+                                      <a 
+                                        href={`tel:${participant.telefon}`} 
+                                        className="text-decoration-none small text-dark fw-medium"
+                                        style={{ fontSize: "0.85rem" }}
+                                      >
+                                        {participant.telefon}
+                                      </a>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Status participare */}
-                              <div className="mb-3">
-                                <div className="d-flex align-items-center justify-content-between">
-                                  <span className="small fw-medium">Status:</span>
-                                  {getParticipantStatus(participant)}
-                                </div>
+                              <div className="text-center mb-3">
+                                {getParticipantStatus(participant)}
                               </div>
 
                               {/* Observații */}
                               {participant.observatii && (
-                                <div className="mb-3">
-                                  <small className="text-muted">
-                                    <i className="fa fa-sticky-note me-1"></i>
+                                <div className="mb-3 p-2 rounded" style={{ backgroundColor: "#fff3cd" }}>
+                                <small className="text-muted">
+                                    <i className="fa fa-sticky-note me-1 text-warning"></i>
                                     {participant.observatii}
-                                  </small>
+                                </small>
                                 </div>
                               )}
                             </div>
 
                             {/* Footer cu butoanele de acțiune */}
-                            <div className="card-footer bg-light border-0 d-flex justify-content-between align-items-center">
-                              <div className="d-flex gap-2">
-                                {/* Buton pentru trimiterea email-ului individual */}
-                                <button
-                                  className="btn btn-sm btn-outline-primary"
-                                  onClick={() => sendConferenceEmail(participant, selectedConferinta)}
-                                  disabled={loading}
-                                  title={`Trimite email cu link-ul către ${participant.nume}`}
-                                >
-                                  <i className="fa fa-envelope me-1"></i>
-                                  Trimite Email
-                                </button>
-                                
-                                {/* Buton pentru copierea link-ului */}
-                                <button
-                                  className="btn btn-sm btn-outline-info"
-                                  onClick={() => copyConferenceLink(selectedConferinta)}
-                                  disabled={loading}
-                                  title="Copiază link-ul conferinței"
-                                >
-                                  <i className="fa fa-copy me-1"></i>
-                                  Copiază Link
-                                </button>
-                              </div>
+                            <div 
+                              className="card-footer border-0 d-flex justify-content-center gap-2"
+                              style={{ backgroundColor: "#f8f9fa", padding: "15px 20px" }}
+                            >
+                              {/* Buton pentru trimiterea email-ului individual */}
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => sendConferenceEmail(participant, selectedConferinta)}
+                                disabled={loading}
+                                title={`Trimite email cu link-ul către ${participant.nume}`}
+                                style={{ borderRadius: "8px", padding: "8px 12px" }}
+                              >
+                                <i className="fa fa-envelope me-1"></i>
+                                Email
+                              </button>
+                              
+                              {/* Buton pentru copierea link-ului */}
+                              <button
+                                className="btn btn-sm btn-info"
+                                onClick={() => copyConferenceLink(selectedConferinta)}
+                                disabled={loading}
+                                title="Copiază link-ul conferinței"
+                                style={{ borderRadius: "8px", padding: "8px 12px" }}
+                              >
+                                <i className="fa fa-copy me-1"></i>
+                                Link
+                              </button>
                               
                               {/* Buton pentru eliminare */}
                               <button
@@ -1113,17 +1645,12 @@ const AdminConferinteGrup = () => {
                                 onClick={() => handleRemoveParticipant(selectedConferinta, index)}
                                 disabled={loading}
                                 title={`Elimină participantul ${participant.nume}`}
+                                style={{ borderRadius: "8px", padding: "8px 12px" }}
                               >
                                 {loading ? (
-                                  <>
-                                    <i className="fa fa-spinner fa-spin me-1"></i>
-                                    Eliminare...
-                                  </>
+                                  <i className="fa fa-spinner fa-spin"></i>
                                 ) : (
-                                  <>
-                                    <i className="fa fa-trash me-1"></i>
-                                    Elimină
-                                  </>
+                                  <i className="fa fa-trash"></i>
                                 )}
                               </button>
                             </div>
@@ -1133,15 +1660,15 @@ const AdminConferinteGrup = () => {
                     </div>
                     
                     {/* Mesaj când nu există participanți */}
-                    {(!selectedConferinta.participanti || selectedConferinta.participanti.length === 0) && (
+                      {(!selectedConferinta.participanti || selectedConferinta.participanti.length === 0) && (
                       <div className="text-center py-5">
                         <div className="mb-3">
                           <i className="fa fa-users fa-3x text-muted"></i>
                         </div>
                         <h5 className="text-muted">Nu există participanți înregistrați</h5>
                         <p className="text-muted">Participanții vor apărea aici după ce se vor înregistra la conferință.</p>
-                      </div>
-                    )}
+                        </div>
+                      )}
                   </div>
                 </div>
               )}

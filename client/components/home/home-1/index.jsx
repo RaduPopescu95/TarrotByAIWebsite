@@ -85,7 +85,7 @@ const Home1 = () => {
                   <Link href="/calendar-conferinte-grup" className="btn btn-outline-light">
                     <i className="fa fa-users me-2"></i>
                     Conferințe de Grup
-                  </Link>
+                </Link>
                 </div>
                 {/* <div className="banner-arrow-img mt10">
                   <ImageWithBasePath

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Home1Header from "../home/home-1/header";
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
+import { handleGetFirestore, handleGetConferinteActive } from "../../../utils/firestoreUtils";
 import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
@@ -21,13 +21,13 @@ const CalendarConferinteGrup = () => {
   const fetchConferinte = async () => {
     try {
       setLoading(true);
-      const data = await handleGetFirestore("ConferinteGrup");
-      // Filtrăm doar conferințele active (nu mai verificăm timpul, doar statusul)
-      const activeConferinte = data
-        .filter(conferinta => conferinta.status === "activa")
+      // Folosim query-ul optimizat care preia doar conferințele active din Firestore
+      const activeConferinte = await handleGetConferinteActive();
+      // Sortăm local doar după data începerii
+      const sortedConferinte = activeConferinte
         .sort((a, b) => moment(a.dataInceput).diff(moment(b.dataInceput)));
         
-      setConferinte(activeConferinte || []);
+      setConferinte(sortedConferinte || []);
     } catch (error) {
       console.error("Error fetching conferinte:", error);
     } finally {
