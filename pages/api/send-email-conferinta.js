@@ -135,7 +135,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">📋 Instrucțiuni Importante</h3>
           <ul style="padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 8px;">Conferința se desfășoară online prin video call</li>
-            <li style="margin-bottom: 8px;">Conectează-te cu 5-10 minute înainte de începere</li>
+            <li style="margin-bottom: 8px;">Accesați link-ul la data si ora de începere a conferinței</li>
             <li style="margin-bottom: 8px;">Asigură-te că ai o conexiune stabilă la internet</li>
             <li style="margin-bottom: 8px;">Recomandăm folosirea unui laptop sau computer pentru o experiență optimă</li>
             ${tipConferinta === 'course' ? '<li style="margin-bottom: 8px;">Link-ul de acces este același pentru toate sesiunile cursului</li>' : ''}
@@ -148,16 +148,14 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           <p style="margin: 0; font-size: 14px; color: #6c757d;">
             Pentru orice întrebări sau probleme tehnice, nu ezita să ne contactezi.
             Suntem aici să te ajutăm!
+            webdynamicx@gmail.com
           </p>
             </div>
 
         <!-- Footer -->
         <div style="text-align: center; border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
-          <p style="color: #6c757d; font-size: 14px; margin: 0;">
-            Mulțumim că ai ales să participi! 🙏
-          </p>
           <p style="color: #6c757d; font-size: 12px; margin: 10px 0 0 0;">
-            Acest email a fost trimis automat. Te rugăm să nu răspunzi la acest mesaj.
+            Acest email a fost trimis automat.
           </p>
             </div>
         </div>

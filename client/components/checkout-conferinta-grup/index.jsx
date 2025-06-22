@@ -645,7 +645,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                           </div>
 
                           {/* Test Mode Checkbox */}
-                          <div className="form-check mb-3 p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                          <div className="form-check mb-4 p-4 bg-warning bg-opacity-10 border border-warning rounded">
                             <input
                               className="form-check-input"
                               type="checkbox"
@@ -655,13 +655,9 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                             />
                             <label className="form-check-label" htmlFor="testMode">
                               <i className="fa fa-flask text-warning me-2"></i>
-                              <strong>Mod Test - Simulează plata fără Stripe</strong>
+                              <strong>Mod Test - Simulează fara plata</strong>
                             </label>
-                            <div className="mt-1">
-                              <small className="text-muted">
-                                ⚠️ Folosește doar pentru testare. Completează întreg fluxul fără plată reală.
-                              </small>
-                            </div>
+                          
                           </div>
 
                           {testMode ? (
@@ -678,8 +674,8 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                                 </>
                               ) : (
                                 <>
-                                  <i className="fa fa-flask me-2"></i>
-                                  🧪 Simulează Plata (TEST MODE)
+                                
+                                  Simulează Plata (TEST MODE)
                                 </>
                               )}
                             </button>

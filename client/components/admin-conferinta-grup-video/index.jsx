@@ -44,26 +44,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
-  // Enhanced controls pentru admin
-  const [showParticipants, setShowParticipants] = useState(true); // Admin vede participanții by default
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [screenSharing, setScreenSharing] = useState(false);
+  // Minimal state pentru Agora UIKit
 
-  // Logging pentru starea inițială
-  useEffect(() => {
-    console.log("🎥 [ADMIN INIT] Stare inițială video:", cameraEnabled);
-    console.log("🎵 [ADMIN INIT] Stare inițială audio:", micEnabled);
-  }, []);
-
-  // Logging pentru schimbările de stare
-  useEffect(() => {
-    console.log("🎥 [ADMIN STATE] Cameră activată:", cameraEnabled);
-  }, [cameraEnabled]);
-
-  useEffect(() => {
-    console.log("🎵 [ADMIN STATE] Microfon activat:", micEnabled);
-  }, [micEnabled]);
+  // Clean Agora UIKit implementation
 
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
@@ -219,6 +202,10 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setConferinta(conferintaFound);
       setConferenceStarted(true); // Simplificat pentru debug
 
+      // Ascultă pentru actualizări în timp real
+      console.log("🔗 [ADMIN VIDEO] Inițializează ascultarea actualizărilor...");
+      listenToConferenceUpdates(conferenceId);
+
       console.log("🎉 [ADMIN VIDEO] === ÎNCĂRCARE COMPLETĂ ===");
 
     } catch (error) {
@@ -258,14 +245,31 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         role: "host"
       };
       
-      await updateDoc(docRef, {
-        [`admin`]: {
-          isPresent: isPresent,
-          lastSeen: new Date().toISOString(),
-          joinedAt: isPresent ? new Date().toISOString() : null,
-          adminData: adminData
-        }
-      });
+      // Încercăm să facem update, dacă documentul nu există, folosim setDoc
+      try {
+        await updateDoc(docRef, {
+          [`admin`]: {
+            isPresent: isPresent,
+            lastSeen: new Date().toISOString(),
+            joinedAt: isPresent ? new Date().toISOString() : null,
+            adminData: adminData
+          }
+        });
+      } catch (updateError) {
+        // Dacă updateDoc eșuează (document inexistent), creăm documentul
+        console.log("📝 [ADMIN PRESENCE] Document nu există, îl creez...");
+        const { setDoc } = await import("firebase/firestore");
+        await setDoc(docRef, {
+          admin: {
+            isPresent: isPresent,
+            lastSeen: new Date().toISOString(),
+            joinedAt: isPresent ? new Date().toISOString() : null,
+            adminData: adminData
+          },
+          participants: {}
+        });
+      }
+      
       console.log(`🔄 [ADMIN PRESENCE] Admin presence updated: ${isPresent}`);
       console.log(`🔄 [ADMIN PRESENCE] Admin data used:`, adminData);
     } catch (error) {
@@ -295,28 +299,14 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   };
 
   const joinConference = async () => {
-    try {
-      // Verificăm și cerem permisiuni pentru cameră și microfon
-      console.log("🎥 [ADMIN PERMISSIONS] Verificare permisiuni cameră și microfon...");
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: cameraEnabled, 
-        audio: micEnabled 
-      });
-      
-      console.log("✅ [ADMIN PERMISSIONS] Permisiuni obținute cu succes");
-      console.log("🎥 [ADMIN PERMISSIONS] Video tracks:", stream.getVideoTracks().length);
-      console.log("🎵 [ADMIN PERMISSIONS] Audio tracks:", stream.getAudioTracks().length);
-      
-      // Oprim stream-ul temporar pentru că Agora va gestiona propriul stream
-      stream.getTracks().forEach(track => track.stop());
-      
-      console.log("🎥 [ADMIN] Admin se alătură conferinței ca HOST");
-      setIsInCall(true);
-    } catch (error) {
-      console.error("❌ [ADMIN PERMISSIONS] Eroare la obținerea permisiunilor:", error);
-      alert("Pentru a începe conferința, trebuie să accepți permisiunile pentru cameră și microfon. Te rugăm să reîmprospătezi pagina și să accepți permisiunile.");
+    console.log("🎥 [ADMIN] Admin se alătură conferinței - Agora va gestiona permisiunile");
+    
+    // Marchează adminul ca prezent în Firestore
+    if (conferinta) {
+      await updateAdminPresence(conferinta.documentId, true);
     }
+    
+    setIsInCall(true);
   };
 
   const leaveConference = async () => {
@@ -447,275 +437,26 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
   const displayInfo = formatDataDisplay(conferinta);
 
-  // Admin in video call - show video interface
+  // Admin in video call - show pure Agora UIKit interface
   if (isInCall && conferenceStarted) {
     return (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1 }} ref={videoContainerRef}>
-          {/* Admin Control Panel */}
-          <div style={{
-            position: "absolute",
-            top: "20px",
-            left: "20px",
-            zIndex: 1000,
-            background: "rgba(0,0,0,0.8)",
-            borderRadius: "12px",
-            padding: "15px",
-            color: "white"
-          }}>
-            <div style={{ marginBottom: "10px" }}>
-              <strong>🎯 ADMIN HOST</strong>
-                                            {!isConferenceActive(conferinta) && (
-                                <span style={{
-                                  background: "#dc3545",
-                                  color: "#fff",
-                                  padding: "2px 6px",
-                                  borderRadius: "4px",
-                                  fontSize: "10px",
-                                  marginLeft: "8px"
-                                }}>
-                                  {conferinta.status === "inactiva" ? "INACTIVĂ" : "COMPLETATĂ"}
-                                </span>
-                              )}
-            </div>
-            <div style={{ fontSize: "14px" }}>
-              <div>📹 {conferinta.titlu}</div>
-              <div>👥 {participantsOnline.length} participanți online</div>
-            </div>
-          </div>
-
-          {/* Participants Panel */}
-          {showParticipants && (
-            <div style={{
-              position: "absolute",
-              top: "20px",
-              right: "20px",
-              zIndex: 1000,
-              background: "rgba(0,0,0,0.8)",
-              borderRadius: "12px",
-              padding: "15px",
-              color: "white",
-              width: "250px",
-              maxHeight: "300px",
-              overflowY: "auto"
-            }}>
-              <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
-                👥 Participanți Online ({participantsOnline.length})
-              </div>
-              {participantsOnline.map((participant, index) => (
-                <div key={index} style={{
-                  padding: "5px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.2)",
-                  fontSize: "12px"
-                }}>
-                  <div>{participant.nume}</div>
-                  <div style={{ color: "#ccc" }}>{participant.email}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Enhanced Control Panel */}
-          <div style={{
-            position: "absolute",
-            bottom: "30px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 1000,
-            display: "flex",
-            gap: "15px",
-            background: "rgba(0,0,0,0.8)",
-            borderRadius: "25px",
-            padding: "15px 25px"
-          }}>
-            {/* Camera Control */}
-            <button
-              style={{
-                background: cameraEnabled ? "rgba(255,255,255,0.2)" : "#dc3545",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={() => {
-                console.log("🎥 [ADMIN CAMERA] Schimbare stare cameră:", !cameraEnabled);
-                setCameraEnabled(!cameraEnabled);
-              }}
-              title={cameraEnabled ? "Dezactivează Camera" : "Activează Camera"}
-            >
-              <i className={`fa ${cameraEnabled ? "fa-video" : "fa-video-slash"}`} />
-            </button>
-
-            {/* Microphone Control */}
-            <button
-              style={{
-                background: micEnabled ? "rgba(255,255,255,0.2)" : "#dc3545",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={() => {
-                console.log("🎵 [ADMIN MIC] Schimbare stare microfon:", !micEnabled);
-                setMicEnabled(!micEnabled);
-              }}
-              title={micEnabled ? "Dezactivează Microfonul" : "Activează Microfonul"}
-            >
-              <i className={`fa ${micEnabled ? "fa-microphone" : "fa-microphone-slash"}`} />
-            </button>
-
-            {/* Screen Share */}
-            <button
-              style={{
-                background: screenSharing ? "#28a745" : "rgba(255,255,255,0.2)",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={() => setScreenSharing(!screenSharing)}
-              title="Partajare Ecran"
-            >
-              <i className="fa fa-desktop" />
-            </button>
-
-            {/* Layout Toggle */}
-            <button
-              style={{
-                background: "rgba(255,255,255,0.2)",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={() => setPinned(!isPinned)}
-              title={isPinned ? "Grid View" : "Speaker View"}
-            >
-              <i className={`fas ${isPinned ? "fa-th-large" : "fa-thumbtack"}`} />
-            </button>
-
-            {/* Participants Toggle */}
-            <button
-              style={{
-                background: showParticipants ? "#007bff" : "rgba(255,255,255,0.2)",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={() => setShowParticipants(!showParticipants)}
-              title="Toggle Participanți"
-            >
-              <i className="fas fa-users" />
-            </button>
-
-            {/* Fullscreen */}
-            <button
-              style={{
-                background: "rgba(255,255,255,0.2)",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "50px",
-                height: "50px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-              onClick={handleFullscreen}
-              title="Fullscreen"
-            >
-              <i className={`fa ${isFullscreen ? "fa-compress" : "fa-expand"}`} />
-            </button>
-
-            {/* Leave Call */}
-            <button
-              style={{
-                background: "#dc3545",
-                color: "white",
-                border: "none",
-                borderRadius: "25px",
-                padding: "12px 20px",
-                cursor: "pointer",
-                fontSize: "16px",
-                fontWeight: "bold"
-              }}
-              onClick={leaveConference}
-            >
-              <i className="fa fa-phone-slash me-2"></i>
-              Părăsește
-            </button>
-          </div>
-
-          <AgoraUIKit
-            rtcProps={{
-              appId: appID,
-              channel: conferinta.documentId,
-              token: null,
-              role: "host", // Admin este HOST
-              layout: isPinned ? LAYOUT_TYPES.pin : LAYOUT_TYPES.grid,
-              enableScreensharing: screenSharing,
-              enableVideo: cameraEnabled,
-              enableAudio: micEnabled,
-              videoMode: {
-                max: "cover",
-                min: "contain",
-              },
-              // Configurații suplimentare pentru debugging
-              dual: false,
-              activeSpeaker: true,
-            }}
-            styleProps={{
-              localBtnContainer: {
-                display: "none" // Ascundem controalele default
-              },
-              maxViewRemoteBtnContainer: {
-                display: "none"
-              },
-            }}
-            callbacks={{
-              EndCall: leaveConference,
-              'rtc-sdk': {
-                onUserJoined: (uid) => {
-                  console.log("🎥 [ADMIN AGORA] User joined:", uid);
-                },
-                onUserLeft: (uid) => {
-                  console.log("🎥 [ADMIN AGORA] User left:", uid);
-                },
-                onConnectionStateChanged: (curState, revState) => {
-                  console.log("🎥 [ADMIN AGORA] Connection state changed:", curState, revState);
-                }
-              }
-            }}
-          />
-        </div>
-      </div>
+      <AgoraUIKit
+        rtcProps={{
+          appId: appID,
+          channel: conferinta.documentId,
+          token: null,
+          role: "host",
+        }}
+        styleProps={{
+          UIKitContainer: {
+            width: '100vw',
+            height: '100vh',
+          },
+        }}
+        callbacks={{
+          EndCall: leaveConference,
+        }}
+      />
     );
   }
 

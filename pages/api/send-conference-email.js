@@ -130,10 +130,10 @@ export default async function handler(req, res) {
               <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 25px;">
                 <h3 style="color: #856404; margin-top: 0; margin-bottom: 15px;">📝 INSTRUCȚIUNI IMPORTANTE</h3>
                 <ol style="color: #856404; line-height: 1.6; margin: 0; padding-left: 20px;">
-                  <li style="margin-bottom: 8px;">Accesați link-ul cu <strong>30 de minute înainte</strong> de începerea conferinței</li>
+                  <li style="margin-bottom: 8px;">Accesați link-ul la data si ora de începere a conferinței</li>
                   <li style="margin-bottom: 8px;">Asigurați-vă că aveți o <strong>conexiune stabilă la internet</strong></li>
                   <li style="margin-bottom: 8px;">Testați <strong>camera și microfonul</strong> înainte de conferință</li>
-                  <li style="margin-bottom: 8px;">Pentru suport tehnic, contactați-ne la acest email</li>
+                  <li style="margin-bottom: 8px;">Pentru suport tehnic, contactați-ne la acest email: webdynamicx@gmail.com</li>
                 </ol>
               </div>
 
@@ -142,10 +142,7 @@ export default async function handler(req, res) {
                 <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">
                   Vă așteptăm cu drag la conferință! 🌟
                 </p>
-                <p style="color: #34495e; font-weight: bold; margin: 0;">
-                  Cu stimă,<br>
-                  <span style="color: #3498db;">Echipa Cristina Zurba</span>
-                </p>
+               
               </div>
 
             </div>

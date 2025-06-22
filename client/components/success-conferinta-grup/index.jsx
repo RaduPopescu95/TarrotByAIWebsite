@@ -354,12 +354,9 @@ const SuccessConferintaGrup = () => {
                       <ul className="list-unstyled">
                         <li className="mb-2">
                           <i className="fa fa-envelope text-primary me-2"></i>
-                          Email: contact@cristinazurba.ro
+                          Email: webdynamicx@gmail.com
                         </li>
-                        <li className="mb-2">
-                          <i className="fa fa-phone text-primary me-2"></i>
-                          Telefon: +40 xxx xxx xxx
-                        </li>
+                     
                       </ul>
                     </div>
                   </div>
