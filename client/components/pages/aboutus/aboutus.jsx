@@ -86,627 +86,547 @@ const Aboutus = (props) => {
 
   return (
     <>
-      <Home1Header />
-      <>
-        {/* Breadcrumb */}
-        <div className="breadcrumb-bar-two">
+      <style jsx>{`
+        .about-platform {
+          overflow-x: hidden;
+          background: #f8f9fa;
+        }
+        
+        .hero-section {
+          background: white;
+          color: #333;
+          padding: 120px 0 80px;
+          position: relative;
+        }
+        
+        .feature-card {
+          background: white;
+          border-radius: 20px;
+          padding: 2.5rem;
+          height: 100%;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+          border: 1px solid #e9ecef;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .feature-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: #667eea;
+        }
+        
+        .feature-card:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .feature-icon {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: #667eea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+          transition: all 0.3s ease;
+        }
+        
+        .feature-icon i {
+          font-size: 2rem;
+          color: white;
+        }
+        
+        .feature-card:hover .feature-icon {
+          transform: scale(1.1);
+        }
+        
+        .stats-section {
+          background: white;
+          padding: 80px 0;
+        }
+        
+        .stat-card {
+          text-align: center;
+          padding: 2rem 1rem;
+        }
+        
+        .stat-number {
+          font-size: 3rem;
+          font-weight: 700;
+          color: #667eea;
+          margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+          color: #666;
+          font-weight: 500;
+        }
+        
+        .technology-section {
+          padding: 100px 0;
+          background: #f8f9fa;
+        }
+        
+        .tech-feature {
+          text-align: center;
+          padding: 2rem 1rem;
+        }
+        
+        .tech-icon {
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          background: #667eea;
+          margin: 0 auto 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+        }
+        
+        .tech-icon i {
+          font-size: 2.5rem;
+          color: white;
+        }
+        
+        .tech-icon:hover {
+          transform: scale(1.1);
+          box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+        }
+        
+        .cta-section {
+          background: #667eea;
+          color: white;
+          padding: 100px 0;
+          position: relative;
+        }
+        
+        .btn-custom {
+          background: white;
+          color: #667eea;
+          border: 2px solid white;
+          padding: 15px 30px;
+          border-radius: 50px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          display: inline-block;
+          margin: 10px;
+        }
+        
+        .btn-custom:hover {
+          background: transparent;
+          color: white;
+          border-color: white;
+          transform: translateY(-3px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+          text-decoration: none;
+        }
+        
+        .section-title {
+          font-size: 2.5rem;
+          font-weight: 700;
+          color: #333;
+          margin-bottom: 1rem;
+          text-align: center;
+        }
+        
+        .section-subtitle {
+          font-size: 1.1rem;
+          color: #666;
+          text-align: center;
+          max-width: 600px;
+          margin: 0 auto 3rem;
+          line-height: 1.6;
+        }
+        
+        .hero-title {
+          font-size: 3.5rem;
+          font-weight: 800;
+          margin-bottom: 1.5rem;
+          text-align: center;
+          color: #333;
+        }
+        
+        .hero-subtitle {
+          font-size: 1.3rem;
+          margin-bottom: 2rem;
+          text-align: center;
+          color: #666;
+          max-width: 800px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
+        @media (max-width: 768px) {
+          .hero-title {
+            font-size: 2.5rem;
+          }
+          
+          .hero-subtitle {
+            font-size: 1.1rem;
+          }
+          
+          .section-title {
+            font-size: 2rem;
+          }
+          
+          .stat-number {
+            font-size: 2.5rem;
+          }
+        }
+      `}</style>
+
+      <div className="about-platform">
+        <Home1Header />
+        
+        {/* Hero Section */}
+        <section className="hero-section">
           <div className="container">
-            <div className="row align-items-center inner-banner">
-              <div className="col-md-12 col-12 text-center">
-                <h2 className="breadcrumb-title">Despre Platforma</h2>
-                <nav aria-label="breadcrumb" className="page-breadcrumb">
-                  <ol className="breadcrumb">
-                    <li className="breadcrumb-item">
-                      <Link href="/home-2">Consultatii</Link>
-                    </li>
-                    <li className="breadcrumb-item" aria-current="page">
-                      Despre Platforma
-                    </li>
-                  </ol>
-                </nav>
+            <div className="row">
+              <div className="col-12">
+                <h1 className="hero-title">Despre Platforma Noastră</h1>
+                <p className="hero-subtitle">
+                  Descoperă o platformă modernă de ghidare spirituală cu tehnologie avansată, 
+                  consultații video personalizate și conferințe de grup interactive pentru 
+                  dezvoltarea ta personală și spirituală.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-        {/* /Breadcrumb */}
-        {/* About Us */}
-        <section className="about-section">
+        </section>
+
+        {/* About Cristina Section */}
+        <section className="py-5" style={{ padding: '100px 0' }}>
           <div className="container">
             <div className="row align-items-center">
-              <div className="col-lg-6 col-md-12">
-                <div className="about-img-info">
-                  <div className="row">
-                    <div className="col-md-6">
-                      <div className="about-inner-img">
-                        <div className="about-img">
-                          <Image
-                            src="/img/banner-image.png" // Calea relativă din folderul public
-                            alt="Cristina Zurba"
-                            width={512} // Lățimea originală a imaginii
-                            height={672} // Înălțimea originală a imaginii
-                          />
-                        </div>
-                        {/* <div className="about-img">
-                          <img
-                            src="/img/banner-image.png"
-                            className="img-fluid"
-                            alt=""
-                          />
-                        </div> */}
-                      </div>
-                    </div>
-                    <div className="col-md-6">
-                      <div className="about-inner-img">
-                        <div className="about-box">
-                          <h4>Peste 130 000 de urmăritori pe Youtube</h4>
-                        </div>
-                        <div className="about-img">
-                          <img src={aboutimg3} className="img-fluid" alt="" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="col-lg-6 mb-4 mb-lg-0">
+                <div className="text-center">
+                  <Image
+                    src="/img/banner-image.png"
+                    alt="Cristina Zurba"
+                    width={400}
+                    height={500}
+                    className="img-fluid"
+                    style={{ borderRadius: '20px' }}
+                  />
                 </div>
               </div>
-              <div className="col-lg-6 col-md-12">
-                <div className="section-inner-header about-inner-header">
-                  <h6>Despre Platformă</h6>
-                  <h2>
-                    Ghidare Spirituală și Consiliere Personalizată pentru
-                    Echilibrul Tău Interior
-                  </h2>
-                </div>
-
-                <div className="about-content">
-                  <div className="about-content-details">
-                    <p>
-                      Cu peste 130.000 de urmăritori dedicați pe YouTube,
-                      Cristina Zurba este o creatoare de conținut de renume,
-                      cunoscută pentru abordarea sa autentică și profundă în
-                      domeniul dezvoltării personale și spiritualității. Prin
-                      videoclipurile sale inspiraționale și sesiuni de mentorat,
-                      ea a ajutat mii de oameni să descopere echilibrul interior
-                      și să depășească provocările vieții.
-                    </p>
-                    <p>
-                      Platforma sa de consultații online este dedicată celor
-                      care doresc să exploreze și să se conecteze cu
-                      spiritualitatea la un nivel mai profund. Clienții pot
-                      rezerva sesiuni individuale sau de grup pentru a primi
-                      ghidare personalizată, consiliere pe teme de dezvoltare
-                      spirituală și sprijin în gestionarea emoțiilor și a
-                      blocajelor personale. Totodată, aceasta este o
-                      oportunitate unică de a interacționa direct cu Cristina
-                      Zurb și de a beneficia de înțelepciunea și îndrumarea sa
-                      într-un cadru privat și sigur.
-                    </p>
-                  </div>
-                  {/* <div className="about-contact">
-                    <div className="about-contact-icon">
-                      <span>
-                        <img src={phoneicon} alt="" />
-                      </span>
-                    </div>
-                    <div className="about-contact-text">
-                      <p>Dorești să afli mai multe?</p>
-                      <h4>Contactează-ne la: +1 315 369 5943</h4>
-                    </div>
-                  </div> */}
+              <div className="col-lg-6">
+                <h2 className="section-title text-start">Cristina Zurba</h2>
+                <h3 style={{ color: '#667eea', marginBottom: '1.5rem' }}>
+                  Ghid Spiritual & Creator de Conținut
+                </h3>
+                <p style={{ fontSize: '1.1rem', lineHeight: '1.8', marginBottom: '1.5rem' }}>
+                  Cu peste <strong>130.000 de urmăritori</strong> pe YouTube, Cristina Zurba 
+                  este o voce de încredere în domeniul dezvoltării personale și spiritualității. 
+                  Prin abordarea sa autentică și profundă, ea a transformat viețile a mii de oameni.
+                </p>
+                <p style={{ fontSize: '1.1rem', lineHeight: '1.8', marginBottom: '1.5rem' }}>
+                  Platforma sa online oferă acces direct la sesiuni de consiliere spirituală, 
+                  ghidare personalizată și sprijin în gestionarea emoțiilor și blocajelor personale. 
+                  Este o oportunitate unică de a beneficia de înțelepciunea și îndrumarea Cristinei 
+                  într-un cadru privat și sigur.
+                </p>
+                <div className="d-flex flex-wrap gap-2">
+                  <span className="badge bg-primary" style={{ padding: '8px 15px', fontSize: '14px' }}>
+                    130K+ Urmăritori YouTube
+                  </span>
+                  <span className="badge bg-success" style={{ padding: '8px 15px', fontSize: '14px' }}>
+                    Expert în Spiritualitate
+                  </span>
+                  <span className="badge bg-info" style={{ padding: '8px 15px', fontSize: '14px' }}>
+                    Consilier Personal
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </section>
-        {/* /About Us */}
-        {/* Why Choose Us */}
-        {/* <section className="why-choose-section">
+
+        {/* Platform Features */}
+        <section className="py-5" style={{ background: '#f8f9fa', padding: '100px 0' }}>
           <div className="container">
-            <div className="row">
-              <div className="col-md-12">
-                <div className="section-inner-header text-center">
-                  <h2>Why Choose Us</h2>
+            <h2 className="section-title">Modalități de Consultanță</h2>
+            <p className="section-subtitle">
+              Alege modalitatea care ți se potrivește cel mai bine pentru călătoria ta spirituală
+            </p>
+            
+            <div className="row g-4">
+              <div className="col-lg-6">
+                <div className="feature-card">
+                  <div className="feature-icon">
+                    <i className="fa fa-video"></i>
+                  </div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Consultații Video One-to-One
+                  </h3>
+                  <p style={{ color: '#666', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                    Sesiuni private individuale prin video call securizat cu Cristina Zurba. 
+                    Primești atenție completă și îndrumare personalizată pentru situația ta specifică.
+                  </p>
+                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '2rem' }}>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Sesiuni private de 60 de minute
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Video HD de înaltă calitate
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Confidențialitate garantată
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Programare flexibilă
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Înregistrare disponibilă la cerere
+                    </li>
+                  </ul>
+                  <Link href="/calendar" className="btn btn-outline-primary">
+                    Programează Consultație
+                  </Link>
                 </div>
               </div>
-            </div>
-            <div className="row">
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="card why-choose-card w-100">
-                  <div className="card-body">
-                    <div className="why-choose-icon">
-                      <span>
-                        <img src={choose01} alt="" />
-                      </span>
-                    </div>
-                    <div className="why-choose-content">
-                      <h4>Qualified Staff of Doctors</h4>
-                      <p>
-                        Lorem ipsum sit amet consectetur incididunt ut labore et
-                        exercitation ullamco laboris nisi dolore magna enim
-                        veniam aliqua.{" "}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="card why-choose-card w-100">
-                  <div className="card-body">
-                    <div className="why-choose-icon">
-                      <span>
-                        <img src={choose02} alt="" />
-                      </span>
-                    </div>
-                    <div className="why-choose-content">
-                      <h4>Qualified Staff of Doctors</h4>
-                      <p>
-                        Lorem ipsum sit amet consectetur incididunt ut labore et
-                        exercitation ullamco laboris nisi dolore magna enim
-                        veniam aliqua.{" "}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="card why-choose-card w-100">
-                  <div className="card-body">
-                    <div className="why-choose-icon">
-                      <span>
-                        <img src={choose03} alt="" />
-                      </span>
-                    </div>
-                    <div className="why-choose-content">
-                      <h4>Qualified Staff of Doctors</h4>
-                      <p>
-                        Lorem ipsum sit amet consectetur incididunt ut labore et
-                        exercitation ullamco laboris nisi dolore magna enim
-                        veniam aliqua.{" "}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="card why-choose-card w-100">
-                  <div className="card-body">
-                    <div className="why-choose-icon">
-                      <span>
-                        <img src={choose04} alt="" />
-                      </span>
-                    </div>
-                    <div className="why-choose-content">
-                      <h4>Qualified Staff of Doctors</h4>
-                      <p>
-                        Lorem ipsum sit amet consectetur incididunt ut labore et
-                        exercitation ullamco laboris nisi dolore magna enim
-                        veniam aliqua.{" "}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section> */}
-        {/* /Why Choose Us */}
-        {/* Way Section */}
-        <section className="way-section">
-          <div className="container">
-            <div className="way-bg">
-              <div className="way-shapes-img">
-                <div className="way-shapes-left">
-                  <img src={shape06} alt="" />
-                </div>
-                <div className="way-shapes-right">
-                  <img src={shape07} alt="" />
-                </div>
-              </div>
-              <div className="row align-items-end">
-                <div className="col-lg-7 col-md-12">
-                  <div className="section-inner-header way-inner-header mb-0">
-                    <h2>
-                      Descoperă Echilibrul Interioar prin Ghidare Spirituală
-                    </h2>
-                    <p>
-                      Programează o sesiune de consiliere spirituală și începe
-                      călătoria ta către o stare de bine. Explorează calendarul
-                      disponibilităților și alege momentul potrivit pentru tine.
-                    </p>
-                    <Link href="/calendar" className="btn btn-primary">
-                      Rezervă o Sesiune
-                    </Link>
-                  </div>
-                </div>
-                <div className="col-lg-5 col-md-12">
-                  <div className="way-img-cta">
-                    <Image
-                      src="/img/shape-07.png" // Calea relativă din folderul public
-                      alt="Cristina Zurba"
-                      width={312} // Lățimea originală a imaginii
-                      height={372} // Înălțimea originală a imaginii
-                    />
-                  </div>
+
+                             <div className="col-lg-6">
+                 <div className="feature-card">
+                   <div className="feature-icon">
+                     <i className="fa fa-users"></i>
+                   </div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Conferințe de Grup Interactive
+                  </h3>
+                  <p style={{ color: '#666', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                    Participă la sesiuni de grup cu persoane care împărtășesc aceleași căutări spirituale. 
+                    Învață prin experiențe comune și beneficiază de energia colectivă.
+                  </p>
+                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '2rem' }}>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Grupuri de 8-12 participanți
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Interacțiune în timp real
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Teme spirituale diverse
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Moderare profesională
+                    </li>
+                    <li style={{ padding: '0.5rem 0', color: '#555' }}>
+                      <i className="fa fa-check" style={{ color: '#28a745', marginRight: '0.5rem' }}></i>
+                      Prețuri accesibile
+                    </li>
+                  </ul>
+                  <Link href="/calendar-conferinte-grup" className="btn btn-outline-secondary">
+                    Alătură-te unei Conferințe
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </section>
-        {/* /Way Choose Us */}
-        {/* Doctors Section */}
-        {/* <section className="doctors-section professional-section">
+
+   
+        {/* Technology Features */}
+        <section className="technology-section">
           <div className="container">
-            <div className="row">
-              <div className="col-md-12">
-                <div className="section-inner-header text-center">
-                  <h2>Best Doctors</h2>
-                </div>
-              </div>
-            </div>
-            <div className="row">
-        
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="doctor-profile-widget w-100">
-                  <div className="doc-pro-img">
-                    <Link href="/patient/doctor-profile">
-                      <div className="doctor-profile-img">
-                        <img src={doctor03} className="img-fluid" alt="" />
-                      </div>
-                    </Link>
-                    <div className="doctor-amount">
-                      <span>$ 200</span>
-                    </div>
-                  </div>
-                  <div className="doc-content">
-                    <div className="doc-pro-info">
-                      <div className="doc-pro-name">
-                        <Link href="/patient/doctor-profile">
-                          Dr. Ruby Perrin
-                        </Link>
-                        <p>Cardiology</p>
-                      </div>
-                      <div className="reviews-ratings">
-                        <p>
-                          <span>
-                            <i className="fas fa-star" /> 4.5
-                          </span>{" "}
-                          (35)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="doc-pro-location">
-                      <p>
-                        <i className="feather-map-pin" /> Newyork, USA
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-        
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="doctor-profile-widget w-100">
-                  <div className="doc-pro-img">
-                    <Link href="/patient/doctor-profile">
-                      <div className="doctor-profile-img">
-                        <img src={doctor04} className="img-fluid" alt="" />
-                      </div>
-                    </Link>
-                    <div className="doctor-amount">
-                      <span>$ 360</span>
-                    </div>
-                  </div>
-                  <div className="doc-content">
-                    <div className="doc-pro-info">
-                      <div className="doc-pro-name">
-                        <Link href="/patient/doctor-profile">
-                          Dr. Darren Elder
-                        </Link>
-                        <p>Neurology</p>
-                      </div>
-                      <div className="reviews-ratings">
-                        <p>
-                          <span>
-                            <i className="fas fa-star" /> 4.0
-                          </span>{" "}
-                          (20)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="doc-pro-location">
-                      <p>
-                        <i className="feather-map-pin" /> Florida, USA
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-       
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="doctor-profile-widget w-100">
-                  <div className="doc-pro-img">
-                    <Link href="/patient/doctor-profile">
-                      <div className="doctor-profile-img">
-                        <img src={doctor05} className="img-fluid" alt="" />
-                      </div>
-                    </Link>
-                    <div className="doctor-amount">
-                      <span>$ 450</span>
-                    </div>
-                  </div>
-                  <div className="doc-content">
-                    <div className="doc-pro-info">
-                      <div className="doc-pro-name">
-                        <Link href="/patient/doctor-profile">
-                          Dr. Sofia Brient
-                        </Link>
-                        <p>Urology</p>
-                      </div>
-                      <div className="reviews-ratings">
-                        <p>
-                          <span>
-                            <i className="fas fa-star" /> 4.5
-                          </span>{" "}
-                          (30)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="doc-pro-location">
-                      <p>
-                        <i className="feather-map-pin" /> Georgia, USA
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-             
-              <div className="col-lg-3 col-md-6 d-flex">
-                <div className="doctor-profile-widget w-100">
-                  <div className="doc-pro-img">
-                    <Link href="/patient/doctor-profile">
-                      <div className="doctor-profile-img">
-                        <img src={doctor02} className="img-fluid" alt="" />
-                      </div>
-                    </Link>
-                    <div className="doctor-amount">
-                      <span>$ 570</span>
-                    </div>
-                  </div>
-                  <div className="doc-content">
-                    <div className="doc-pro-info">
-                      <div className="doc-pro-name">
-                        <Link href="/patient/doctor-profile">
-                          Dr. Paul Richard
-                        </Link>
-                        <p>Orthopedic</p>
-                      </div>
-                      <div className="reviews-ratings">
-                        <p>
-                          <span>
-                            <i className="fas fa-star" /> 4.3
-                          </span>{" "}
-                          (45)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="doc-pro-location">
-                      <p>
-                        <i className="feather-map-pin" /> Michigan, USA
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-       
-            </div>
-          </div>
-        </section> */}
-        {/* /Doctors Section */}
-        {/* Testimonial Section */}
-        {/* <Testimonial /> */}
-        {/* /Testimonial Section */}
-        {/* FAQ Section */}
-        {/* <section className="faq-section faq-section-inner">
-          <div className="container">
-            <div className="row">
-              <div className="col-md-12">
-                <div className="section-inner-header text-center">
-                  <h6>Get Your Answer</h6>
-                  <h2>Frequently Asked Questions</h2>
-                </div>
-              </div>
-            </div>
-            <div className="row align-items-center">
-              <div className="col-lg-6 col-md-12">
-                <div className="faq-img">
-                  <img src={faqimg} className="img-fluid" alt="img" />
-                  <div className="faq-patients-count">
-                    <div className="faq-smile-img">
-                      <img src={smilingicon} alt="icon" />
-                    </div>
-                    <div className="faq-patients-content">
-                      <h4>
-                        <span className="count-digit">
-                          <CountUp start={1} end={95} />
-                        </span>
-                        k+
-                      </h4>
-                      <p>Happy Patients</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-6 col-md-12">
-                <div className="faq-info">
-                  <div className="accordion" id="accordionExample">
-                    <div className="accordion-item">
-                      <h2 className="accordion-header" id="headingOne">
-                        <Link
-                          href="#"
-                          className="accordion-button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#collapseOne"
-                          aria-expanded="true"
-                          aria-controls="collapseOne"
-                        >
-                          Can i make an Appointment Online with White Plains
-                          Hospital Kendi?
-                        </Link>
-                      </h2>
-                      <div
-                        id="collapseOne"
-                        className="accordion-collapse collapse show"
-                        aria-labelledby="headingOne"
-                        data-bs-parent="#accordionExample"
-                      >
-                        <div className="accordion-body">
-                          <div className="accordion-content">
-                            <p>
-                              Lorem ipsum dolor sit amet, consectetur adipiscing
-                              elit, sed do eiusmod tempor incididunt ut labore
-                              et dolore magna aliqua. Ut enim ad minim veniam,{" "}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            <h2 className="section-title">Tehnologie de Ultimă Generație</h2>
+            <p className="section-subtitle">
+              Platforma noastră folosește cele mai avansate tehnologii pentru o experiență perfectă și sigură
+            </p>
 
-                    <div className="accordion-item">
-                      <h2 className="accordion-header" id="headingTwo">
-                        <Link
-                          href="#"
-                          className="accordion-button collapsed"
-                          type="button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#collapseTwo"
-                          aria-expanded="false"
-                          aria-controls="collapseTwo"
-                        >
-                          Can i make an Appointment Online with White Plains
-                          Hospital Kendi?
-                        </Link>
-                      </h2>
-                      <div
-                        id="collapseTwo"
-                        className="accordion-collapse collapse"
-                        aria-labelledby="headingTwo"
-                        data-bs-parent="#accordionExample"
-                      >
-                        <div className="accordion-body">
-                          <div className="accordion-content">
-                            <p>
-                              Lorem ipsum dolor sit amet, consectetur adipiscing
-                              elit, sed do eiusmod tempor incididunt ut labore
-                              et dolore magna aliqua. Ut enim ad minim veniam,{" "}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="accordion-item">
-                      <h2 className="accordion-header" id="headingThree">
-                        <Link
-                          href="#"
-                          className="accordion-button collapsed"
-                          type="button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#collapseThree"
-                          aria-expanded="false"
-                          aria-controls="collapseThree"
-                        >
-                          Can i make an Appointment Online with White Plains
-                          Hospital Kendi?
-                        </Link>
-                      </h2>
-                      <div
-                        id="collapseThree"
-                        className="accordion-collapse collapse"
-                        aria-labelledby="headingThree"
-                        data-bs-parent="#accordionExample"
-                      >
-                        <div className="accordion-body">
-                          <div className="accordion-content">
-                            <p>
-                              Lorem ipsum dolor sit amet, consectetur adipiscing
-                              elit, sed do eiusmod tempor incididunt ut labore
-                              et dolore magna aliqua. Ut enim ad minim veniam,{" "}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="accordion-item">
-                      <h2 className="accordion-header" id="headingFour">
-                        <Link
-                          href="#"
-                          className="accordion-button collapsed"
-                          type="button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#collapseFour"
-                          aria-expanded="false"
-                          aria-controls="collapseFour"
-                        >
-                          Can i make an Appointment Online with White Plains
-                          Hospital Kendi?
-                        </Link>
-                      </h2>
-                      <div
-                        id="collapseFour"
-                        className="accordion-collapse collapse"
-                        aria-labelledby="headingFour"
-                        data-bs-parent="#accordionExample"
-                      >
-                        <div className="accordion-body">
-                          <div className="accordion-content">
-                            <p>
-                              Lorem ipsum dolor sit amet, consectetur adipiscing
-                              elit, sed do eiusmod tempor incididunt ut labore
-                              et dolore magna aliqua. Ut enim ad minim veniam,{" "}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="accordion-item">
-                      <h2 className="accordion-header" id="headingFive">
-                        <Link
-                          href="#"
-                          className="accordion-button collapsed"
-                          type="button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#collapseFive"
-                          aria-expanded="false"
-                          aria-controls="collapseFive"
-                        >
-                          Can i make an Appointment Online with White Plains
-                          Hospital Kendi?
-                        </Link>
-                      </h2>
-                      <div
-                        id="collapseFive"
-                        className="accordion-collapse collapse"
-                        aria-labelledby="headingFive"
-                        data-bs-parent="#accordionExample"
-                      >
-                        <div className="accordion-body">
-                          <div className="accordion-content">
-                            <p>
-                              Lorem ipsum dolor sit amet, consectetur adipiscing
-                              elit, sed do eiusmod tempor incididunt ut labore
-                              et dolore magna aliqua. Ut enim ad minim veniam,{" "}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            <div className="row g-4">
+              <div className="col-lg-4 col-md-6">
+                <div className="tech-feature">
+                    <div className="tech-icon">
+                    <i className="fa fa-shield-alt"></i>
                   </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Securitate Maximă
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Toate sesiunile sunt criptate end-to-end folosind protocoale de securitate avansate. 
+                    Confidențialitatea ta este prioritatea noastră absolută.
+                  </p>
+                </div>
+              </div>
+
+                             <div className="col-lg-4 col-md-6">
+                 <div className="tech-feature">
+                   <div className="tech-icon">
+                     <i className="fa fa-mobile-alt"></i>
+                   </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Responsive & Mobile
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Accesează platforma de pe orice dispozitiv - desktop, tabletă sau telefon mobil. 
+                    Design optimizat pentru toate ecranele.
+                  </p>
+                </div>
+              </div>
+
+                             <div className="col-lg-4 col-md-6">
+                 <div className="tech-feature">
+                   <div className="tech-icon">
+                     <i className="fa fa-video"></i>
+                   </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Video HD Premium
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Calitate video și audio cristalină pentru o experiență de comunicare optimă. 
+                    Tehnologie Agora pentru performanță superioară.
+                  </p>
+                </div>
+              </div>
+
+              <div className="col-lg-4 col-md-6">
+                <div className="tech-feature">
+                  <div className="tech-icon">
+                    <i className="fa fa-clock"></i>
+                  </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Disponibilitate 24/7
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Platforma este disponibilă non-stop. Programează-ți sesiunile când îți convine, 
+                    cu flexibilitate maximă.
+                  </p>
+                </div>
+              </div>
+
+              <div className="col-lg-4 col-md-6">
+                <div className="tech-feature">
+                  <div className="tech-icon">
+                    <i className="fa fa-calendar-alt"></i>
+                  </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Programare Inteligentă
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Sistem avansat de programări cu sincronizare automată, notificări și 
+                    gestionare eficientă a timpului.
+                  </p>
+                </div>
+              </div>
+
+              <div className="col-lg-4 col-md-6">
+                <div className="tech-feature">
+                  <div className="tech-icon">
+                    <i className="fa fa-headset"></i>
+                  </div>
+                  <h4 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Suport Tehnic
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    Echipa noastră de suport tehnic este disponibilă pentru a te ajuta cu orice 
+                    întrebări sau probleme tehnice.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </section> */}
-      </>
+        </section>
+
+            {/* Enhanced Call to Action Section */}
+            <section className="enhanced-cta-section py-5">
+          <div className="cta-background-overlay"></div>
+          <div className="container-fluid position-relative">
+            <div className="row justify-content-center">
+              <div className="col-lg-10">
+                <div className="cta-card aos" data-aos="fade-up">
+                  <div className="row align-items-center">
+                    
+                    {/* Left Side - Content */}
+                    <div className="col-lg-7 col-md-12">
+                      <div className="cta-content">
+                    
+                        <h2 className="cta-title aos" data-aos="fade-right" data-aos-delay="200">
+                          Ești gata să-ți descoperi 
+                          <span className="highlight"> potențialul spiritual</span>?
+                        </h2>
+                        
+                        <p className="cta-description aos" data-aos="fade-right" data-aos-delay="300">
+                          Alătură-te comunității noastre și beneficiază de îndrumare spirituală 
+                          autentică. Cristina Zurba te va ghida către echilibrul interior pe care îl cauți.
+                        </p>
+                        
+                   
+                      </div>
+                    </div>
+                    
+                    {/* Right Side - Action Buttons */}
+                    <div className="col-lg-5 col-md-12">
+                      <div className="cta-actions aos" data-aos="fade-left" data-aos-delay="500">
+                        <div className="action-card">
+                          <h4 className="action-title">Alege modalitatea ta preferată:</h4>
+                          
+                          <div className="action-buttons">
+                            <Link href="/calendar" className="btn btn-cta-primary">
+                              <div className="btn-content">
+                            
+                                <div className="btn-text">
+                                  <strong>Consultație Individuală</strong>
+                                  <small>Sesiune privată one-on-one</small>
+                                </div>
+                              </div>
+                              <i className="fa fa-arrow-right btn-arrow"></i>
+                            </Link>
+                            
+                            <Link href="/calendar-conferinte-grup" className="btn btn-cta-secondary">
+                              <div className="btn-content">
+                             
+                                <div className="btn-text">
+                                  <strong>Conferință de Grup</strong>
+                                  <small>Învățare în comunitate</small>
+                                </div>
+                              </div>
+                              <i className="fa fa-arrow-right btn-arrow"></i>
+                            </Link>
+                          </div>
+                  
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Floating Elements */}
+            <div className="floating-elements">
+              <div className="floating-element element-1 aos" data-aos="fade-up" data-aos-delay="600">
+                <i className="fa fa-heart"></i>
+              </div>
+              <div className="floating-element element-2 aos" data-aos="fade-up" data-aos-delay="700">
+                <i className="fa fa-leaf"></i>
+              </div>
+              <div className="floating-element element-3 aos" data-aos="fade-up" data-aos-delay="800">
+                <i className="fa fa-sun"></i>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <Footer {...props} />
     </>
