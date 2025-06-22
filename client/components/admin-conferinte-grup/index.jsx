@@ -911,6 +911,127 @@ const AdminConferinteGrup = () => {
     return participant && (participant.uniqueAccessLink || participant.accessLink);
   };
 
+  // Funcție pentru ștergerea completă a unei conferințe
+  const handleDeleteConference = async (conferinta) => {
+    const confirmMessage = `⚠️ ATENȚIE - ȘTERGERE DEFINITIVĂ ⚠️\n\n` +
+      `Ești pe punctul de a ȘTERGE COMPLET conferința:\n` +
+      `"${conferinta.titlu}"\n\n` +
+      `Această acțiune va elimina:\n` +
+      `• Toate datele conferinței\n` +
+      `• Lista de participanți (${conferinta.participanti?.length || 0} persoane)\n` +
+      `• Imaginea asociată (dacă există)\n` +
+      `• Toate înregistrările de prezență\n\n` +
+      `⚠️ ACEASTĂ ACȚIUNE NU POATE FI ANULATĂ! ⚠️\n\n` +
+      `Ești absolut sigur că vrei să continui?`;
+
+    if (!window.confirm(confirmMessage)) {
+      console.log("🚫 [DELETE] Admin a anulat ștergerea conferinței");
+      return;
+    }
+
+    // A doua confirmare pentru siguranță
+    const finalConfirm = `ULTIMĂ CONFIRMARE\n\n` +
+      `Scrie "ȘTERGE" (cu majuscule) pentru a confirma ștergerea definitivă a conferinței "${conferinta.titlu}":`;
+    
+    const userInput = window.prompt(finalConfirm);
+    
+    if (userInput !== "ȘTERGE") {
+      console.log("🚫 [DELETE] Confirmare incorectă, ștergerea a fost anulată");
+      showAlert("info", "Ștergerea a fost anulată");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("🗑️ [DELETE] === ÎNCEPE ȘTERGEREA CONFERINȚEI ===");
+      console.log("🗑️ [DELETE] Conference ID:", conferinta.documentId);
+      console.log("🗑️ [DELETE] Conference title:", conferinta.titlu);
+      console.log("🗑️ [DELETE] Participanți de șters:", conferinta.participanti?.length || 0);
+      
+      // Import Firebase functions pentru ștergere
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      const { ref, deleteObject } = await import("firebase/storage");
+      const { db, storage } = await import("../../../firebase");
+
+      // 1. Șterge documentul principal din ConferinteGrup
+      console.log("🗑️ [DELETE] Șterg documentul principal...");
+      const conferintaRef = doc(db, "ConferinteGrup", conferinta.documentId);
+      await deleteDoc(conferintaRef);
+      console.log("✅ [DELETE] Document principal șters din ConferinteGrup");
+
+      // 2. Șterge documentul de prezență din ConferinteGrupPresence (dacă există)
+      try {
+        console.log("🗑️ [DELETE] Șterg documentul de prezență...");
+        const presenceRef = doc(db, "ConferinteGrupPresence", conferinta.documentId);
+        await deleteDoc(presenceRef);
+        console.log("✅ [DELETE] Document de prezență șters din ConferinteGrupPresence");
+      } catch (presenceError) {
+        console.log("⚠️ [DELETE] Nu există document de prezență sau a fost deja șters");
+      }
+
+      // 3. Șterge imaginea din Storage (dacă există)
+      if (conferinta.imageUrl) {
+        try {
+          console.log("🗑️ [DELETE] Șterg imaginea din Storage...");
+          console.log("🗑️ [DELETE] Image URL:", conferinta.imageUrl);
+          
+          // Extrag calea din URL-ul complet
+          const imagePathMatch = conferinta.imageUrl.match(/conferinte-grup%2F([^?]+)/);
+          if (imagePathMatch) {
+            const imagePath = decodeURIComponent(imagePathMatch[1]);
+            console.log("🗑️ [DELETE] Image path extrasa:", imagePath);
+            
+            const imageRef = ref(storage, `conferinte-grup/${imagePath}`);
+            await deleteObject(imageRef);
+            console.log("✅ [DELETE] Imaginea a fost ștearsă din Storage");
+          } else {
+            console.log("⚠️ [DELETE] Nu s-a putut extrage calea imaginii din URL");
+          }
+        } catch (imageError) {
+          console.log("⚠️ [DELETE] Imaginea nu a putut fi ștearsă sau nu există:", imageError.message);
+        }
+      }
+
+      // 4. Actualizează state-ul local
+      console.log("🗑️ [DELETE] Actualizez state-ul local...");
+      
+      // Elimină conferința din lista locală
+      setConferinte(prevConferinte => 
+        prevConferinte.filter(c => c.documentId !== conferinta.documentId)
+      );
+      
+      // Dacă conferința ștearsă era selectată, resetează selecția
+      if (selectedConferinta && selectedConferinta.documentId === conferinta.documentId) {
+        setSelectedConferinta(null);
+        setActiveTab("list");
+      }
+      
+      // Dacă conferința ștearsă era în editare, resetează formularul
+      if (editingConferinta && editingConferinta.documentId === conferinta.documentId) {
+        setEditingConferinta(null);
+        resetForm();
+        setActiveTab("list");
+      }
+
+      // 5. Recalculează statisticile
+      await calculateTotalStats();
+
+      console.log("🎉 [DELETE] === ȘTERGERE COMPLETĂ FINALIZATĂ ===");
+      showAlert("success", `Conferința "${conferinta.titlu}" a fost ștearsă complet cu succes!`);
+
+    } catch (error) {
+      console.error("💥 [DELETE] === EROARE LA ȘTERGEREA CONFERINȚEI ===");
+      console.error("💥 [DELETE] Error object:", error);
+      console.error("💥 [DELETE] Error message:", error.message);
+      console.error("💥 [DELETE] Error stack:", error.stack);
+      
+      showAlert("danger", `Eroare la ștergerea conferinței: ${error.message}`);
+    } finally {
+      setLoading(false);
+      console.log("🏁 [DELETE] Loading setat pe false");
+    }
+  };
+
   return (
     <>
       <Home1Header />
@@ -1010,13 +1131,22 @@ const AdminConferinteGrup = () => {
                       Export CSV
                     </button>
                       <button
-                        className="btn btn-success"
+                        className="btn btn-success me-2"
                         onClick={() => handleJoinAsAdmin(selectedConferinta)}
                         disabled={!isConferenceActive(selectedConferinta)}
                         title={isConferenceActive(selectedConferinta) ? "Alătură-te ca Admin/Host" : "Conferința nu este activă acum"}
                       >
                         <i className="fa fa-video me-2"></i>
                         Alătură-te ca Host
+                      </button>
+                      <button
+                        className="btn btn-outline-danger"
+                        onClick={() => handleDeleteConference(selectedConferinta)}
+                        disabled={loading}
+                        title="Șterge conferința complet"
+                      >
+                        <i className="fa fa-trash me-2"></i>
+                        Șterge Conferința
                       </button>
                     </>
                   )}
@@ -1162,7 +1292,7 @@ const AdminConferinteGrup = () => {
                       <div 
                         className="card border-0 shadow-sm h-100"
                         style={{
-                          background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+                          background: "linear-gradient(135deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 100%)",
                           borderRadius: "12px",
                           transition: "all 0.3s ease"
                         }}
@@ -1323,26 +1453,28 @@ const AdminConferinteGrup = () => {
 
                             {/* Butoane de acțiune */}
                             <div className="mt-auto">
-                              <div className="row g-2">
-                                <div className="col-4">
+                              <div className="row g-2 mb-2">
+                                <div className="col-3">
                                   <button
                                     className="btn btn-outline-primary btn-sm w-100"
                                     onClick={() => handleEdit(conferinta)}
                                     title="Editează conferința"
+                                    disabled={loading}
                                   >
                                     <i className="fa fa-edit"></i>
                                   </button>
                                 </div>
-                                <div className="col-4">
+                                <div className="col-3">
                                   <button
                                     className="btn btn-outline-info btn-sm w-100"
                                     onClick={() => handleViewParticipants(conferinta)}
                                     title="Vezi participanții"
+                                    disabled={loading}
                                   >
                                     <i className="fa fa-users"></i>
                                   </button>
                                 </div>
-                                <div className="col-4">
+                                <div className="col-3">
                                   <button
                                     className={`btn btn-sm w-100 ${
                                       isConferenceActive(conferinta) ? "btn-success" : "btn-warning"
@@ -1355,6 +1487,16 @@ const AdminConferinteGrup = () => {
                                     disabled={loading}
                                   >
                                     <i className="fa fa-video"></i>
+                                  </button>
+                                </div>
+                                <div className="col-3">
+                                  <button
+                                    className="btn btn-outline-danger btn-sm w-100"
+                                    onClick={() => handleDeleteConference(conferinta)}
+                                    title="Șterge conferința complet"
+                                    disabled={loading}
+                                  >
+                                    <i className="fa fa-trash"></i>
                                   </button>
                                 </div>
                               </div>

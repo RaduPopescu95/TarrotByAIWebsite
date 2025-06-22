@@ -356,10 +356,7 @@ const CalendarConferinteGrup = () => {
                           <i className="fa fa-envelope text-info me-2"></i>
                           Vei primi confirmarea pe email după înregistrare
                         </li>
-                        <li className="mb-2">
-                          <i className="fa fa-users text-info me-2"></i>
-                          Pentru întrebări, contactează-ne direct
-                        </li>
+                   
                       </ul>
                     </div>
                   </div>
