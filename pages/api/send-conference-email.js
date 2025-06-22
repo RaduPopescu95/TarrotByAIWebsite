@@ -50,20 +50,20 @@ export default async function handler(req, res) {
 
     // Formatează datele conferinței
     const formatConferenceData = (conferinta) => {
-      const dataIncepere = moment(conferinta.dataIncepere);
+      const dataInceput = moment(conferinta.dataInceput);
       const dataFinal = conferinta.dataFinal ? moment(conferinta.dataFinal) : null;
       
       if (conferinta.tipConferinta === "course" && dataFinal) {
         return {
           type: "Curs Multi-zi",
-          dataRange: `${dataIncepere.format("DD MMMM YYYY")} - ${dataFinal.format("DD MMMM YYYY")}`,
-          oraRange: `${conferinta.oraIncepere} - ${conferinta.oraFinal}`
+          dataRange: `${dataInceput.format("DD MMMM YYYY")} - ${dataFinal.format("DD MMMM YYYY")}`,
+          oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`
         };
       } else {
         return {
           type: "Conferință Unică",
-          dataRange: dataIncepere.format("DD MMMM YYYY"),
-          oraRange: conferinta.oraIncepere
+          dataRange: dataInceput.format("DD MMMM YYYY"),
+          oraRange: conferinta.oraInceput
         };
       }
     };

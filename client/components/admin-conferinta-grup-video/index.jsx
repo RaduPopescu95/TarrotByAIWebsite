@@ -50,6 +50,21 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [screenSharing, setScreenSharing] = useState(false);
 
+  // Logging pentru starea inițială
+  useEffect(() => {
+    console.log("🎥 [ADMIN INIT] Stare inițială video:", cameraEnabled);
+    console.log("🎵 [ADMIN INIT] Stare inițială audio:", micEnabled);
+  }, []);
+
+  // Logging pentru schimbările de stare
+  useEffect(() => {
+    console.log("🎥 [ADMIN STATE] Cameră activată:", cameraEnabled);
+  }, [cameraEnabled]);
+
+  useEffect(() => {
+    console.log("🎵 [ADMIN STATE] Microfon activat:", micEnabled);
+  }, [micEnabled]);
+
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
 
@@ -279,9 +294,29 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     };
   };
 
-  const joinConference = () => {
-    console.log("🎥 [ADMIN] Admin se alătură conferinței ca HOST");
-    setIsInCall(true);
+  const joinConference = async () => {
+    try {
+      // Verificăm și cerem permisiuni pentru cameră și microfon
+      console.log("🎥 [ADMIN PERMISSIONS] Verificare permisiuni cameră și microfon...");
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: cameraEnabled, 
+        audio: micEnabled 
+      });
+      
+      console.log("✅ [ADMIN PERMISSIONS] Permisiuni obținute cu succes");
+      console.log("🎥 [ADMIN PERMISSIONS] Video tracks:", stream.getVideoTracks().length);
+      console.log("🎵 [ADMIN PERMISSIONS] Audio tracks:", stream.getAudioTracks().length);
+      
+      // Oprim stream-ul temporar pentru că Agora va gestiona propriul stream
+      stream.getTracks().forEach(track => track.stop());
+      
+      console.log("🎥 [ADMIN] Admin se alătură conferinței ca HOST");
+      setIsInCall(true);
+    } catch (error) {
+      console.error("❌ [ADMIN PERMISSIONS] Eroare la obținerea permisiunilor:", error);
+      alert("Pentru a începe conferința, trebuie să accepți permisiunile pentru cameră și microfon. Te rugăm să reîmprospătezi pagina și să accepți permisiunile.");
+    }
   };
 
   const leaveConference = async () => {
@@ -507,7 +542,10 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              onClick={() => setCameraEnabled(!cameraEnabled)}
+              onClick={() => {
+                console.log("🎥 [ADMIN CAMERA] Schimbare stare cameră:", !cameraEnabled);
+                setCameraEnabled(!cameraEnabled);
+              }}
               title={cameraEnabled ? "Dezactivează Camera" : "Activează Camera"}
             >
               <i className={`fa ${cameraEnabled ? "fa-video" : "fa-video-slash"}`} />
@@ -527,7 +565,10 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              onClick={() => setMicEnabled(!micEnabled)}
+              onClick={() => {
+                console.log("🎵 [ADMIN MIC] Schimbare stare microfon:", !micEnabled);
+                setMicEnabled(!micEnabled);
+              }}
               title={micEnabled ? "Dezactivează Microfonul" : "Activează Microfonul"}
             >
               <i className={`fa ${micEnabled ? "fa-microphone" : "fa-microphone-slash"}`} />
@@ -646,6 +687,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 max: "cover",
                 min: "contain",
               },
+              // Configurații suplimentare pentru debugging
+              dual: false,
+              activeSpeaker: true,
             }}
             styleProps={{
               localBtnContainer: {
@@ -657,6 +701,17 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             }}
             callbacks={{
               EndCall: leaveConference,
+              'rtc-sdk': {
+                onUserJoined: (uid) => {
+                  console.log("🎥 [ADMIN AGORA] User joined:", uid);
+                },
+                onUserLeft: (uid) => {
+                  console.log("🎥 [ADMIN AGORA] User left:", uid);
+                },
+                onConnectionStateChanged: (curState, revState) => {
+                  console.log("🎥 [ADMIN AGORA] Connection state changed:", curState, revState);
+                }
+              }
             }}
           />
         </div>

@@ -74,41 +74,43 @@ const AdminConferinteGrup = () => {
   };
 
   const uploadImageToStorage = async (imageFile, conferintaId) => {
-    if (!imageFile) {
-      console.log("📷 [UPLOAD] Nu există imagine de încărcat");
-      return null;
-    }
-
     try {
-      console.log("📷 [UPLOAD] Începe upload-ul imaginii:", imageFile.name);
-      console.log("📷 [UPLOAD] Mărimea fișierului:", imageFile.size, "bytes");
-      console.log("📷 [UPLOAD] Tipul fișierului:", imageFile.type);
-
-      // Creez un nume unic pentru imagine
+      console.log("📷 [STORAGE] Încep upload-ul imaginii...");
+      console.log("📷 [STORAGE] Dimensiune fișier:", imageFile.size);
+      console.log("📷 [STORAGE] Tip fișier:", imageFile.type);
+      console.log("📷 [STORAGE] Nume fișier:", imageFile.name);
+      
+      // Validez tipul fișierului
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(imageFile.type)) {
+        throw new Error(`Tipul fișierului nu este suportat: ${imageFile.type}`);
+      }
+      
+      // Generez un nume unic pentru fișier
       const timestamp = Date.now();
-      const fileName = `conferinte-grup/${conferintaId}_${timestamp}_${imageFile.name}`;
-      console.log("📷 [UPLOAD] Calea în Storage:", fileName);
-
-      // Creez referința în Storage
-      const storageRef = ref(storage, fileName);
-      console.log("📷 [UPLOAD] Referința Storage creată");
-
-      // Încarc fișierul
-      console.log("📷 [UPLOAD] Începe încărcarea efectivă...");
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const extension = imageFile.name.split('.').pop();
+      const fileName = `${conferintaId}_${timestamp}_${randomString}.${extension}`;
+      
+      console.log("📷 [STORAGE] Nume fișier generat:", fileName);
+      
+      // Creez referința în Firebase Storage
+      const storageRef = ref(storage, `conferinte-grup/${fileName}`);
+      console.log("📷 [STORAGE] Referință storage creată");
+      
+      // Upload fișier
+      console.log("📷 [STORAGE] Încep upload-ul efectiv...");
       const snapshot = await uploadBytes(storageRef, imageFile);
-      console.log("📷 [UPLOAD] Upload finalizat. Snapshot:", snapshot);
-
+      console.log("📷 [STORAGE] Upload finalizat. Snapshot:", snapshot.metadata);
+      
       // Obțin URL-ul de download
-      console.log("📷 [UPLOAD] Obțin URL-ul de download...");
+      console.log("📷 [STORAGE] Obțin URL-ul de download...");
       const downloadURL = await getDownloadURL(storageRef);
-      console.log("📷 [UPLOAD] URL obținut:", downloadURL);
-
+      console.log("📷 [STORAGE] URL obținut cu succes:", downloadURL);
+      
       return downloadURL;
     } catch (error) {
-      console.error("💥 [UPLOAD] Eroare la upload-ul imaginii:");
-      console.error("💥 [UPLOAD] Error object:", error);
-      console.error("💥 [UPLOAD] Error message:", error.message);
-      console.error("💥 [UPLOAD] Error code:", error.code);
+      console.error("💥 [STORAGE] Eroare la upload:", error);
       throw error;
     }
   };
@@ -382,6 +384,7 @@ const AdminConferinteGrup = () => {
         pretParticipare: parseFloat(formData.pretParticipare),
         status: formData.status,
         imageUrl: imageUrl, // Salvez URL-ul imaginii, nu obiectul File
+        accessLink: editingConferinta?.accessLink || generateConferenceAccessLink(), // Generez accessLink pentru conferință
         participanti: [],
         creatDe: userData?.owner_uid || "admin",
         dataCreare: moment().format("YYYY-MM-DD HH:mm:ss")
@@ -623,20 +626,59 @@ const AdminConferinteGrup = () => {
 
   // Funcție pentru copierea link-ului de acces la conferință
   const copyConferenceLink = (conferinta) => {
-    const conferenceLink = `${window.location.origin}/conferinta-grup/${conferinta.accessLink}`;
+    if (!conferinta.participanti || conferinta.participanti.length === 0) {
+      showAlert("warning", "Nu există participanți înscrși la această conferință încă");
+      return;
+    }
+
+    // Dacă există un singur participant, copiez direct link-ul său
+    if (conferinta.participanti.length === 1) {
+      const participant = conferinta.participanti[0];
+      const accessLink = participant.uniqueAccessLink || participant.accessLink;
+      const conferenceLink = `${window.location.origin}/conferinta-grup/${accessLink}`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(conferenceLink)
+          .then(() => {
+            showAlert("success", `Link-ul pentru ${participant.nume} ${participant.prenume} a fost copiat în clipboard!`);
+          })
+          .catch(() => {
+            fallbackCopyText(conferenceLink);
+          });
+      } else {
+        fallbackCopyText(conferenceLink);
+      }
+      return;
+    }
+
+    // Dacă sunt mai mulți participanți, afișez o listă
+    let participantsList = "Există mai mulți participanți înscrși:\n\n";
+    conferinta.participanti.forEach((participant, index) => {
+      const accessLink = participant.uniqueAccessLink || participant.accessLink;
+      participantsList += `${index + 1}. ${participant.nume} ${participant.prenume} (${participant.email})\n`;
+      participantsList += `   Link: ${window.location.origin}/conferinta-grup/${accessLink}\n\n`;
+    });
+    
+    participantsList += "Notă: Fiecare participant are un link individual unic.";
+    
+    showAlert("info", "Vezi consola pentru link-urile tuturor participanților");
+    console.log("🔗 [CONFERENCE LINKS] Link-uri participanți:", participantsList);
+    
+    // Opțional: copiez link-ul primului participant
+    const firstParticipant = conferinta.participanti[0];
+    const firstAccessLink = firstParticipant.uniqueAccessLink || firstParticipant.accessLink;
+    const firstConferenceLink = `${window.location.origin}/conferinta-grup/${firstAccessLink}`;
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(conferenceLink)
+      navigator.clipboard.writeText(firstConferenceLink)
         .then(() => {
-          showAlert("success", "Link-ul a fost copiat în clipboard!");
+          showAlert("success", `Link-ul pentru primul participant (${firstParticipant.nume} ${firstParticipant.prenume}) a fost copiat în clipboard!`);
         })
         .catch(() => {
-          // Fallback pentru browsere mai vechi
-          fallbackCopyText(conferenceLink);
+          fallbackCopyText(firstConferenceLink);
         });
     } else {
-      // Fallback pentru browsere mai vechi
-      fallbackCopyText(conferenceLink);
+      fallbackCopyText(firstConferenceLink);
     }
   };
 
@@ -666,38 +708,30 @@ const AdminConferinteGrup = () => {
     try {
       setLoading(true);
       console.log("📧 [EMAIL] Trimitere email către:", participant.email);
+      console.log("📧 [EMAIL] Access link participant:", participant.uniqueAccessLink || participant.accessLink);
       
-      // Pregătim datele pentru API Next.js
-      const emailData = {
-        recipients: [participant],
-        conferenceData: conferinta,
-        emailType: 'reminder',
-        userUID: currentUser?.uid
-      };
-
-      console.log("📤 [EMAIL] Apelează API Next.js cu datele:", emailData);
-      
-      const response = await fetch('/api/send-conference-email', {
+      // Folosesc API-ul direct pentru email
+      const emailResponse = await fetch('/api/send-email-conferinta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(emailData)
+        body: JSON.stringify({
+          participantData: participant,
+          conferintaData: conferinta,
+          accessLink: participant.uniqueAccessLink || participant.accessLink,
+          isTestMode: false
+        }),
       });
 
-      const result = await response.json();
+      const emailResult = await emailResponse.json();
       
-      console.log("✅ [EMAIL] Răspuns API Next.js:", result);
+      console.log("✅ [EMAIL] Răspuns email API:", emailResult);
       
-      if (response.ok && result.success) {
-        const stats = result.stats;
-        if (stats.successful > 0) {
-          showAlert("success", `Email trimis cu succes către ${participant.nume}!`);
-        } else {
-          showAlert("warning", `Email-ul către ${participant.nume} nu a putut fi trimis. Verificați adresa de email.`);
-        }
+      if (emailResult.success) {
+        showAlert("success", `Email trimis cu succes către ${participant.nume}!`);
       } else {
-        showAlert("danger", result.error || "Eroare la trimiterea email-ului");
+        showAlert("danger", `Eroare la trimiterea email-ului: ${emailResult.error}`);
       }
       
     } catch (error) {
@@ -723,43 +757,66 @@ const AdminConferinteGrup = () => {
       setLoading(true);
       console.log("📧 [EMAIL ALL] Trimitere email către toți participanții");
       
-      // Pregătim datele pentru API Next.js
-      const emailData = {
-        recipients: conferinta.participanti,
-        conferenceData: conferinta,
-        emailType: 'reminder',
-        userUID: currentUser?.uid
-      };
+      let successful = 0;
+      let failed = 0;
 
-      console.log("📤 [EMAIL ALL] Apelează API Next.js cu datele:", emailData);
-      
-      const response = await fetch('/api/send-conference-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData)
-      });
+      // Trimit email-uri individuale pentru fiecare participant
+      for (const participant of conferinta.participanti) {
+        try {
+          console.log(`📧 [EMAIL ALL] Trimitere către: ${participant.email}`);
+          
+          const emailResponse = await fetch('/api/send-email-conferinta', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              participantData: participant,
+              conferintaData: conferinta,
+              accessLink: participant.uniqueAccessLink || participant.accessLink,
+              isTestMode: false
+            }),
+          });
 
-      const result = await response.json();
-      
-      console.log("✅ [EMAIL ALL] Răspuns API Next.js:", result);
-      
-      if (response.ok && result.success) {
-        const stats = result.stats;
-        showAlert("success", 
-          `Email-uri trimise cu succes! ✅ ${stats.successful} succese, ❌ ${stats.failed} eșecuri din ${stats.total} total`
-        );
-      } else {
-        showAlert("danger", result.error || "Eroare la trimiterea email-urilor");
+          const emailResult = await emailResponse.json();
+          
+          if (emailResult.success) {
+            successful++;
+            console.log(`✅ [EMAIL ALL] Succes către: ${participant.email}`);
+          } else {
+            failed++;
+            console.log(`❌ [EMAIL ALL] Eșec către: ${participant.email}`, emailResult.error);
+          }
+          
+        } catch (emailError) {
+          failed++;
+          console.error(`💥 [EMAIL ALL] Eroare către ${participant.email}:`, emailError);
+        }
+
+        // Pauză mică între email-uri pentru a evita rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
+      console.log(`📊 [EMAIL ALL] Rezultate finale: ${successful} succese, ${failed} eșecuri`);
+      
+      showAlert("success", 
+        `Email-uri trimise! ✅ ${successful} succese, ❌ ${failed} eșecuri din ${conferinta.participanti.length} total`
+      );
+      
     } catch (error) {
-      console.error("💥 [EMAIL ALL] Eroare la trimiterea email-urilor:", error);
+      console.error("💥 [EMAIL ALL] Eroare generală:", error);
       showAlert("danger", `Eroare la trimiterea email-urilor: ${error.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Funcție pentru generarea accessLink-ului pentru conferință
+  const generateConferenceAccessLink = () => {
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const timestamp = Date.now();
+    const conferintaPrefix = "conf";
+    return `${conferintaPrefix}_${timestamp}_${randomString}`;
   };
 
   return (

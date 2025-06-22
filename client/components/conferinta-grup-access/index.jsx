@@ -48,6 +48,21 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [screenSharing, setScreenSharing] = useState(false);
 
+  // Logging pentru starea inițială
+  useEffect(() => {
+    console.log("🎥 [INIT] Stare inițială video:", cameraEnabled);
+    console.log("🎵 [INIT] Stare inițială audio:", micEnabled);
+  }, []);
+
+  // Logging pentru schimbările de stare
+  useEffect(() => {
+    console.log("🎥 [STATE] Cameră activată:", cameraEnabled);
+  }, [cameraEnabled]);
+
+  useEffect(() => {
+    console.log("🎵 [STATE] Microfon activat:", micEnabled);
+  }, [micEnabled]);
+
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
   const [timeUntilStart, setTimeUntilStart] = useState(null);
@@ -200,8 +215,28 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     };
   };
 
-  const joinConference = () => {
-    setIsInCall(true);
+  const joinConference = async () => {
+    try {
+      // Verificăm și cerem permisiuni pentru cameră și microfon
+      console.log("🎥 [PERMISSIONS] Verificare permisiuni cameră și microfon...");
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: cameraEnabled, 
+        audio: micEnabled 
+      });
+      
+      console.log("✅ [PERMISSIONS] Permisiuni obținute cu succes");
+      console.log("🎥 [PERMISSIONS] Video tracks:", stream.getVideoTracks().length);
+      console.log("🎵 [PERMISSIONS] Audio tracks:", stream.getAudioTracks().length);
+      
+      // Oprim stream-ul temporar pentru că Agora va gestiona propriul stream
+      stream.getTracks().forEach(track => track.stop());
+      
+      setIsInCall(true);
+    } catch (error) {
+      console.error("❌ [PERMISSIONS] Eroare la obținerea permisiunilor:", error);
+      alert("Pentru a participa la conferință, trebuie să accepți permisiunile pentru cameră și microfon. Te rugăm să reîmprospătezi pagina și să accepți permisiunile.");
+    }
   };
 
   const leaveConference = async () => {
@@ -512,7 +547,10 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              onClick={() => setCameraEnabled(!cameraEnabled)}
+              onClick={() => {
+                console.log("🎥 [CAMERA] Schimbare stare cameră:", !cameraEnabled);
+                setCameraEnabled(!cameraEnabled);
+              }}
               title={cameraEnabled ? "Dezactivează Camera" : "Activează Camera"}
             >
               <i className={`fa ${cameraEnabled ? "fa-video" : "fa-video-slash"}`} />
@@ -532,7 +570,10 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              onClick={() => setMicEnabled(!micEnabled)}
+              onClick={() => {
+                console.log("🎵 [MIC] Schimbare stare microfon:", !micEnabled);
+                setMicEnabled(!micEnabled);
+              }}
               title={micEnabled ? "Dezactivează Microfonul" : "Activează Microfonul"}
             >
               <i className={`fa ${micEnabled ? "fa-microphone" : "fa-microphone-slash"}`} />
@@ -582,15 +623,18 @@ const ConferintaGrupAccess = ({ accessLink }) => {
               appId: appID,
               channel: conferinta.documentId,
               token: null,
-              role: "audience", // Toți participanții sunt audience, Cristina va fi host
+              role: "host", // Toți participanții sunt host pentru a putea publica video/audio
               layout: isPinned ? LAYOUT_TYPES.pin : LAYOUT_TYPES.grid,
-              enableScreensharing: screenSharing, // Controlat prin state
+              enableScreensharing: screenSharing,
               enableVideo: cameraEnabled,
               enableAudio: micEnabled,
               videoMode: {
                 max: "cover",
                 min: "contain",
               },
+              // Configurații suplimentare pentru debugging
+              dual: false,
+              activeSpeaker: true,
             }}
             styleProps={{
               localBtnContainer: {
@@ -602,6 +646,17 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             }}
             callbacks={{
               EndCall: leaveConference,
+              'rtc-sdk': {
+                onUserJoined: (uid) => {
+                  console.log("🎥 [AGORA] User joined:", uid);
+                },
+                onUserLeft: (uid) => {
+                  console.log("🎥 [AGORA] User left:", uid);
+                },
+                onConnectionStateChanged: (curState, revState) => {
+                  console.log("🎥 [AGORA] Connection state changed:", curState, revState);
+                }
+              }
             }}
           />
         </div>
