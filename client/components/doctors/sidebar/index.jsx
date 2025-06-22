@@ -29,7 +29,7 @@ const DoctorSidebar = () => {
     setLoading(true);
     const authenticated = authentication;
     onAuthStateChanged(authenticated, (user) => {
-      if (user && user.uid === "LQheTX2moAhKbu72gaStkZgaGz32") {
+      if (user && (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62")) {
         // User is signed in, see docs for a list of available properties
         // https://firebase.google.com/docs/reference/js/auth.user
         const uid = user.uid;
@@ -148,6 +148,12 @@ const DoctorSidebar = () => {
                 <Link href="/categorii-consultatii">
                   <i className="fa-solid fa-clock me-2" />
                   <span>Categorii Consultatii</span>
+                </Link>
+              </li>
+              <li className={false ? "active" : ""}>
+                <Link href="/admin-conferinte-grup">
+                  <i className="fa-solid fa-users me-2" />
+                  <span>Conferințe de Grup</span>
                 </Link>
               </li>
               {/* <li

@@ -1,16 +1,8 @@
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
-const Twilio = require("twilio");
-const moment = require("moment"); // Importă moment.js pentru a formata datele
+const moment = require("moment");
 
-// Configurații Twilio
-const aS = "AC6cf01717a74bbf7cc02d4a723db53232";
-const aT = "8c6b979039e8d0fb5aa878dcc2eefac6";
-const client = new Twilio(aS, aT);
-
-// Configurații pentru Nodemailer
-const transporter = nodemailer.createTransport({
+// Configurații pentru Nodemailer (aceleași ca în Firebase Functions)
+const transporter = nodemailer.createTransporter({
   service: "gmail",
   auth: {
     user: "webdynamicx@gmail.com",
@@ -18,149 +10,40 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Inițializează Firebase Admin SDK
-admin.initializeApp();
+// Lista de UIDs admin autorizate
+const adminUIDs = [
+  "zFsAwNZA5bUonVRIQzRn2HZB3y62",
+  "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", 
+  "MSBePxFVcVO3vsfM5nwHr36ROfh2"
+];
 
-// Funcție pentru a formata data slotului selectat
-const formatSelectedSlot = (selectedSlotDay, selectedyear) => {
-  // Verificăm dacă `selectedSlotDay` este valid înainte de a-l procesa
-  if (!selectedSlotDay || !selectedyear) {
-    console.warn("Date incomplete: selectedSlotDay sau selectedyear lipsesc.");
-    return null; // Sau o valoare prestabilită, ex: `""`
+export default async function handler(req, res) {
+  console.log("🚀 [CONFERENCE EMAIL API] Request primit:", req.method);
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log("selectedSlotDay....", selectedSlotDay);
-  console.log("selectedyear....", selectedyear);
-
-  // Split și conversie în numere doar dacă selectedSlotDay este definit
-  const [monthIndex, day] = selectedSlotDay.split("-").map(Number);
-  const correctMonth = monthIndex + 1; // Corectare index lună
-
-  const formattedDate = moment(
-      `${selectedyear}-${correctMonth}-${day}`,
-      "YYYY-MM-DD",
-  ).format("DD-MM-YYYY");
-
-  return formattedDate;
-};
-
-// Funcție pentru a trimite notificări la o rezervare nouă
-exports.sendNotificationOnNewReservation = functions.firestore
-    .document("RezervariConsultatii/{documentId}")
-    .onCreate((snap, context) => {
-      console.log("Funcția sendNotificationOnNewReservation a fost apelată.");
-
-      const newReservation = snap.data();
-      console.log("Datele noii rezervări:", newReservation);
-
-      // Extrage datele din documentul nou creat
-      const email = newReservation.email;
-      const telefon = newReservation.telefon;
-      const meetingCode = newReservation.meetingCode;
-      const day = newReservation.selectedSlot.day;
-      const year = newReservation.selectedSlot.currentYear;
-      const time = newReservation.selectedSlot.slot;
-      const documentId = context.params.documentId;
-
-      console.log(
-          `Email: ${email}, Telefon: ${telefon}, Meeting Code: ${meetingCode}`,
-      );
-      console.log(`Data: ${day}-${year}, Ora: ${time}, Doc: ${documentId}`);
-
-      // Construcția mesajului de e-mail
-      const emailMessage =
-      `<p>Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.</p>` +
-      `<p>Vă rugăm să accesați:</p>` +
-      `<p><a href="https://www.cristinazurba.com/meeting?meetingCode=` +
-      `${meetingCode}__${documentId}">` +
-      `www.cristinazurba.com/meeting?meetingCode=` +
-      `${meetingCode}__${documentId}</a></p>` +
-      `<p>la data de ${formatSelectedSlot(day, year)} la ora ${time}.</p>` +
-      `<p>Dacă întâmpinați dificultăți în utilizarea platformei, ` +
-      `nu ezitați să contactați echipa de dezvoltare la ` +
-      `<a href="https://www.webappdynamicx.ro/contact">www.webappdynamicx.ro/contact</a>.</p>`;
-
-      // Construcția mesajului de SMS/WhatsApp
-      const smsMessage =
-      `Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.\n` +
-      `Vă rugăm să accesați:\n` +
-      `https://www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}\n` +
-      `la data de ${formatSelectedSlot(day, year)} la ora ${time}.\n` +
-      `Dacă întâmpinați dificultăți în utilizarea platformei, ` +
-      `nu ezitați să contactați echipa de dezvoltare la ` +
-      `https://www.webappdynamicx.ro/contact`;
-
-      // Trimiterea e-mailului
-      const mailOptions = {
-        from: "webdynamicx@gmail.com",
-        to: email,
-        subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
-        html: emailMessage,
-      };
-
-      console.log("Opțiunile de email:", mailOptions);
-
-      console.log("Trimiterea email-ului, SMS-ului și WhatsApp-ului...");
-
-      // Trimiterea emailului, SMS-ului și a mesajului WhatsApp
-      return Promise.all([
-        transporter.sendMail(mailOptions).then((info) => {
-          console.log("E-mail trimis cu succes:", info);
-        }),
-        client.messages
-            .create({
-              body: smsMessage,
-              from: "+15042266134", // Număr Twilio valid
-              to: telefon,
-            })
-            .then((message) => {
-              console.log("SMS trimis cu succes:", message.sid);
-            }),
-      ])
-          .then(() => {
-            console.log("E-mail, SMS și WhatsApp trimise cu succes!");
-          })
-          .catch((error) => {
-            console.error("Eroare la trimiterea notificărilor:", error);
-          });
-    });
-
-// Funcție pentru trimiterea email-urilor pentru conferințele de grup
-exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) => {
-  console.log("🚀 [CONFERENCE EMAIL] Funcția sendConferenceGroupEmail a fost apelată");
-  console.log("📨 [CONFERENCE EMAIL] Date primite:", data);
-
   try {
-    // Verifică autentificarea
-    if (!context.auth) {
-      console.error("❌ [CONFERENCE EMAIL] Utilizator neautentificat");
-      throw new functions.https.HttpsError('unauthenticated', 'Utilizatorul trebuie să fie autentificat');
+    const { recipients, conferenceData, emailType, userUID } = req.body;
+
+    // Verifică autorizarea admin
+    if (!userUID || !adminUIDs.includes(userUID)) {
+      console.error("❌ [CONFERENCE EMAIL API] UID neautorizat:", userUID);
+      return res.status(403).json({ error: 'Acces interzis. Doar adminii pot trimite email-uri.' });
     }
 
-    // Verifică dacă utilizatorul este admin
-    const adminUIDs = [
-      "zFsAwNZA5bUonVRIQzRn2HZB3y62",
-      "BhJZdiWVQJNnbLOCGWxzjGHVjHB2",
-      "MSBePxFVcVO3vsfM5nwHr36ROfh2"
-    ];
-
-    if (!adminUIDs.includes(context.auth.uid)) {
-      console.error("❌ [CONFERENCE EMAIL] Utilizator fără permisiuni admin");
-      throw new functions.https.HttpsError('permission-denied', 'Doar adminii pot trimite email-uri');
-    }
-
-    const { recipients, conferenceData, emailType } = data;
-
+    // Validează datele de intrare
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'Lista de destinatari este invalidă');
+      return res.status(400).json({ error: 'Lista de destinatari este invalidă' });
     }
 
     if (!conferenceData) {
-      throw new functions.https.HttpsError('invalid-argument', 'Datele conferinței lipsesc');
+      return res.status(400).json({ error: 'Datele conferinței lipsesc' });
     }
 
-    console.log("📧 [CONFERENCE EMAIL] Destinatari:", recipients.length);
-    console.log("📅 [CONFERENCE EMAIL] Conferința:", conferenceData.titlu);
+    console.log("📧 [CONFERENCE EMAIL API] Destinatari:", recipients.length);
+    console.log("📅 [CONFERENCE EMAIL API] Conferința:", conferenceData.titlu);
 
     // Construiește link-ul de acces
     const conferenceLink = `https://www.cristinazurba.com/conferinta-grup/${conferenceData.accessLink}`;
@@ -196,7 +79,7 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
     // Trimite email-uri individuale pentru fiecare destinatar
     for (const recipient of recipients) {
       try {
-        console.log(`📤 [CONFERENCE EMAIL] Trimitere către: ${recipient.email}`);
+        console.log(`📤 [CONFERENCE EMAIL API] Trimitere către: ${recipient.email}`);
 
         // Construiește corpul email-ului personalizat
         const emailBody = `
@@ -277,7 +160,7 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log(`✅ [CONFERENCE EMAIL] Email trimis cu succes către ${recipient.email}:`, info.messageId);
+        console.log(`✅ [CONFERENCE EMAIL API] Email trimis cu succes către ${recipient.email}:`, info.messageId);
         
         results.push({
           email: recipient.email,
@@ -286,7 +169,7 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
         });
 
       } catch (error) {
-        console.error(`❌ [CONFERENCE EMAIL] Eroare la trimiterea către ${recipient.email}:`, error);
+        console.error(`❌ [CONFERENCE EMAIL API] Eroare la trimiterea către ${recipient.email}:`, error);
         results.push({
           email: recipient.email,
           success: false,
@@ -299,9 +182,9 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
 
-    console.log(`📊 [CONFERENCE EMAIL] Rezultate: ${successful} succese, ${failed} eșecuri`);
+    console.log(`📊 [CONFERENCE EMAIL API] Rezultate: ${successful} succese, ${failed} eșecuri`);
 
-    return {
+    res.status(200).json({
       success: true,
       message: `Email-uri trimise: ${successful} succese, ${failed} eșecuri`,
       results: results,
@@ -310,10 +193,13 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
         successful: successful,
         failed: failed
       }
-    };
+    });
 
   } catch (error) {
-    console.error("💥 [CONFERENCE EMAIL] Eroare generală:", error);
-    throw new functions.https.HttpsError('internal', `Eroare la trimiterea email-urilor: ${error.message}`);
+    console.error("💥 [CONFERENCE EMAIL API] Eroare generală:", error);
+    res.status(500).json({ 
+      error: 'Eroare internă', 
+      message: error.message 
+    });
   }
-});
+} 

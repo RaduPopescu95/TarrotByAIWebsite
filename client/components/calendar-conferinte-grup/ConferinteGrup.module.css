@@ -1,0 +1,229 @@
+/* Stiluri personalizate pentru Conferințe de Grup */
+.conferintaCard {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.conferintaCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #007bff;
+}
+
+.conferintaImage {
+  position: relative;
+  overflow: hidden;
+}
+
+.conferintaImage img {
+  transition: transform 0.3s ease;
+}
+
+.conferintaCard:hover .conferintaImage img {
+  transform: scale(1.05);
+}
+
+.conferintaBadge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 2;
+}
+
+.conferintaStatusBadge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 2;
+}
+
+.conferintaPrice {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #007bff;
+}
+
+.conferintaDetails {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.conferintaDetails i {
+  width: 16px;
+  color: #007bff;
+}
+
+.btnInscrie {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.btnInscrie:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btnInscrie:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.searchFilters {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #e9ecef;
+}
+
+.infoSection {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.infoSection .card-title {
+  color: #495057;
+  font-weight: 600;
+}
+
+.infoSection i {
+  font-size: 1.1rem;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.emptyState i {
+  font-size: 4rem;
+  color: #adb5bd;
+  margin-bottom: 20px;
+}
+
+.emptyState h4 {
+  color: #6c757d;
+  margin-bottom: 15px;
+}
+
+.emptyState p {
+  color: #adb5bd;
+  font-size: 1.1rem;
+}
+
+.loadingSpinner {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.loadingSpinner .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .conferintaCard {
+    margin-bottom: 20px;
+  }
+  
+  .searchFilters {
+    padding: 15px;
+  }
+  
+  .searchFilters .row > div {
+    margin-bottom: 15px;
+  }
+  
+  .searchFilters .row > div:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Badge personalizate pentru tipul de conferință */
+.badgeConferinta {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.badgeCurs {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.badgeWarningCustom {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+.badgeInfoCustom {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+/* Animation pentru carduri */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.conferintaCard {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Stiluri pentru header breadcrumb */
+.breadcrumbConferinte {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.breadcrumbConferinte .breadcrumb-title {
+  color: white;
+}
+
+.breadcrumbConferinte .breadcrumb {
+  background: none;
+}
+
+.breadcrumbConferinte .breadcrumb-item a {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.breadcrumbConferinte .breadcrumb-item.active {
+  color: white;
+} 

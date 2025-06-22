@@ -168,7 +168,7 @@ const BookingSuccess = (props) => {
                       </div>
                     )}
                     {currentUser?.uid &&
-                    currentUser.uid !== "LQheTX2moAhKbu72gaStkZgaGz32" ? (
+                    (currentUser.uid !== "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid !== "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
                       <>
                         <p>
                           Accesați rezervarea din cont la data rezervării pentru

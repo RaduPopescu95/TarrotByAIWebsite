@@ -1,0 +1,38 @@
+name: Conference Reminders
+on:
+  schedule:
+    # Zilnic la 9:00 AM (UTC) pentru reminders cu o zi înainte
+    - cron: '0 9 * * *'
+    # La fiecare oră pentru reminders cu o oră înainte
+    - cron: '0 */1 * * *'
+  workflow_dispatch: # Permite rularea manuală
+
+jobs:
+  send-day-reminders:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 9 * * *'
+    steps:
+      - name: Send Day Reminders
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/send-conference-reminders?type=day" \
+               -H "User-Agent: GitHub-Actions-Conference-Reminders"
+
+  send-hour-reminders:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 */1 * * *'
+    steps:
+      - name: Send Hour Reminders
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/send-conference-reminders?type=hour" \
+               -H "User-Agent: GitHub-Actions-Conference-Reminders"
+
+  manual-reminders:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Manual Day Reminders
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/send-conference-reminders?type=day"
+      - name: Manual Hour Reminders  
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/send-conference-reminders?type=hour" 

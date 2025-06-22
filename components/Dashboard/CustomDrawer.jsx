@@ -133,7 +133,7 @@ export default function CustomDrawer(props) {
         // https://firebase.google.com/docs/reference/js/auth.user
         const uid = user.uid;
         console.log("is user.......");
-        if (uid === "LQheTX2moAhKbu72gaStkZgaGz32" || uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2") {
+        if (uid === "LQheTX2moAhKbu72gaStkZgaGz32" || uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2" || uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") {
           router.push(router.asPath);
         } else {
           // setCurrentUser(null);

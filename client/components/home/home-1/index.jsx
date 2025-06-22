@@ -78,9 +78,15 @@ const Home1 = () => {
                   armonioasă
                 </p>
                 {/* Daca nu este autentificat functioneaza si fara */}
-                <Link href="/calendar" className="btn btn-consult-start">
-                  începe sedinta
-                </Link>
+                <div className="banner-buttons">
+                  <Link href="/calendar" className="btn btn-consult-start me-3">
+                    Consultații Individuale
+                  </Link>
+                  <Link href="/calendar-conferinte-grup" className="btn btn-outline-light">
+                    <i className="fa fa-users me-2"></i>
+                    Conferințe de Grup
+                  </Link>
+                </div>
                 {/* <div className="banner-arrow-img mt10">
                   <ImageWithBasePath
                     src="assets/img/down-arrow-img.png"

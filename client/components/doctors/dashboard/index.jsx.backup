@@ -631,6 +631,8 @@ const DoctorDashboard = (props) => {
                   </div>
                 )}
 
+                  </div>
+
                 {/* Secțiunile mari cu tabelele - după statistici */}
                 <div className="col-xl-6 d-flex">
                   <div className="dashboard-card w-100">
