@@ -250,6 +250,11 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
     console.log("📧 [STRIPE WEBHOOK] Începe trimiterea emailului de confirmare...");
     console.log("📧 [STRIPE WEBHOOK] Participant:", participantName, "Email:", participantEmail);
 
+    // Separare nume și prenume din participantName
+    const nameParts = participantName.split(' ');
+    const prenume = nameParts.slice(0, -1).join(' ') || participantName;
+    const nume = nameParts.slice(-1)[0] || participantName;
+
     // Formatez datele participant pentru noul API (identic cu test)
     const participantData = {
       nume: nume,
@@ -277,6 +282,7 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
     };
 
     console.log("📧 [STRIPE WEBHOOK] Date formatate pentru API:", emailPayload);
+    console.log("📧 [STRIPE WEBHOOK] URL API email:", `${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email-conferinta`);
 
     // Trimite email-ul prin noul nostru API
     const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email-conferinta`, {
@@ -287,7 +293,10 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
       body: JSON.stringify(emailPayload),
     });
 
+    console.log("📧 [STRIPE WEBHOOK] Status răspuns API email:", response.status);
+    
     const result = await response.json();
+    console.log("📧 [STRIPE WEBHOOK] Răspuns API email:", result);
 
     if (!response.ok) {
       throw new Error(`Failed to send email: ${result.error}`);
