@@ -4,15 +4,6 @@ import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestore
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
 
-// Funcție helper pentru a citi raw body
-async function getRawBody(req) {
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -22,9 +13,7 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    // Preiau raw body pentru verificarea semnăturii Stripe
-    const rawBody = await getRawBody(req);
-    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -237,6 +226,8 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
 // Configurare pentru raw body parsing (necesar pentru Stripe webhook)
 export const config = {
   api: {
-    bodyParser: false, // Dezactivez body parser pentru a avea acces la raw data
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
   },
 } 
