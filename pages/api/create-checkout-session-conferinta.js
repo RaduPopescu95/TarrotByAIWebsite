@@ -28,7 +28,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Date lipsă pentru procesarea plății' });
     }
 
-    // Creează Stripe checkout session
+    // Creez mai întâi un customer Stripe cu adresa pre-populată
+    const customer = await stripe.customers.create({
+      email: participantData.email,
+      name: `${participantData.prenume} ${participantData.nume}`,
+      phone: participantData.telefon,
+      address: {
+        line1: participantData.adresa,
+        city: participantData.oras,
+        state: participantData.judet,
+        postal_code: participantData.codPostal,
+        country: 'RO' // România
+      }
+    });
+
+    // Creează Stripe checkout session cu customer-ul pre-configurat
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -48,19 +62,9 @@ export default async function handler(req, res) {
       mode: 'payment',
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
-      customer_email: participantData.email,
+      customer: customer.id,
       // Configurez colectarea adresei de facturare
       billing_address_collection: 'required',
-      // Pre-populez adresa de facturare cu datele colectate
-      customer_details: {
-        address: {
-          line1: participantData.adresa,
-          city: participantData.oras,
-          state: participantData.judet,
-          postal_code: participantData.codPostal,
-          country: 'RO' // România
-        }
-      },
       metadata: {
         conferintaId: conferintaId,
         userId: userId,
@@ -70,7 +74,8 @@ export default async function handler(req, res) {
         participantPhone: participantData.telefon,
         observatii: participantData.observatii || '',
         tipConferinta: tipConferinta,
-        // Adresa de facturare
+        stripeCustomerId: customer.id,
+        // Adresa de facturare (backup)
         adresa: participantData.adresa || '',
         oras: participantData.oras || '',
         judet: participantData.judet || '',

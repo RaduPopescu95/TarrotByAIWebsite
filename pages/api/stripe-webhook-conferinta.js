@@ -50,7 +50,8 @@ async function handleSuccessfulPayment(session) {
       participantPhone,
       observatii,
       tipConferinta,
-      // Adresa de facturare
+      stripeCustomerId,
+      // Adresa de facturare (backup)
       adresa,
       oras,
       judet,
@@ -100,8 +101,26 @@ async function handleSuccessfulPayment(session) {
       const prenume = nameParts.slice(0, -1).join(' ') || participantName;
       const nume = nameParts.slice(-1)[0] || participantName;
 
-      // Preiau adresa de facturare din datele Stripe (mai sigură decât metadata)
-      const billingAddress = session.customer_details?.address || {};
+      // Preiau adresa de facturare din customer-ul Stripe sau din session
+      let billingAddress = {};
+      
+      try {
+        // Încerc să preiau customer-ul Stripe pentru adresa completă
+        if (stripeCustomerId) {
+          const customer = await stripe.customers.retrieve(stripeCustomerId);
+          billingAddress = customer.address || {};
+          console.log("💳 [STRIPE WEBHOOK] Adresa din customer:", billingAddress);
+        }
+        
+        // Fallback pe adresa din session.customer_details
+        if (!billingAddress.line1 && session.customer_details?.address) {
+          billingAddress = session.customer_details.address;
+          console.log("💳 [STRIPE WEBHOOK] Adresa din session:", billingAddress);
+        }
+      } catch (error) {
+        console.log("⚠️ [STRIPE WEBHOOK] Eroare la preluarea customer-ului:", error.message);
+        billingAddress = {};
+      }
       
       const newParticipant = {
         userId: userId,
@@ -114,6 +133,7 @@ async function handleSuccessfulPayment(session) {
         dataInscrierii: new Date().toISOString(),
         stripeSessionId: session.id,
         stripePaymentId: session.payment_intent,
+        stripeCustomerId: stripeCustomerId,
         status: 'confirmed',
         // Adresa de facturare din Stripe (fallback pe metadata)
         adresa: billingAddress.line1 || adresa,
