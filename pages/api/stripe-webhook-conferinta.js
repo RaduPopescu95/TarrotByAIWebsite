@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestoreUtils';
+import nodemailer from 'nodemailer';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
@@ -245,6 +246,175 @@ async function handleSuccessfulPayment(session) {
   }
 }
 
+// Configurația Gmail pentru trimiterea email-urilor
+const transporter = nodemailer.createTransporter({
+  service: "gmail",
+  auth: {
+    user: "webdynamicx@gmail.com",
+    pass: "ypeb yvmi ygat lahn",
+  },
+});
+
+// Template HTML pentru emailul de confirmare
+const createEmailTemplate = (participantData, conferintaData, accessLink, isTestMode = false) => {
+  const { nume, prenume, email } = participantData;
+  const { titlu, descriere, tipConferinta, dataInceput, dataFinal, oraInceput, oraFinal, pretParticipare } = conferintaData;
+  
+  // Format data display
+  let dataDisplay = '';
+  if (tipConferinta === 'course') {
+    const startDate = new Date(dataInceput).toLocaleDateString('ro-RO', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const endDate = new Date(dataFinal).toLocaleDateString('ro-RO', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    dataDisplay = `${startDate} - ${endDate}`;
+  } else {
+    dataDisplay = new Date(dataInceput).toLocaleDateString('ro-RO', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
+  const testModeAlert = isTestMode ? `
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
+      <h3 style="color: #856404; margin: 0; font-size: 18px;">🧪 MOD TEST ACTIV</h3>
+      <p style="color: #856404; margin: 5px 0 0 0; font-size: 14px;">
+        Aceasta este o simulare. Nu s-a efectuat nicio plată reală.
+      </p>
+    </div>
+  ` : '';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="ro">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Confirmare Înscriere - ${titlu}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+      <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        
+        ${testModeAlert}
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #007bff; margin: 0; font-size: 28px;">✅ Confirmare Înscriere</h1>
+          <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px;">
+            ${isTestMode ? 'Simularea ta a fost completată cu succes!' : 'Plata ta a fost procesată cu succes!'}
+          </p>
+        </div>
+
+        <!-- Salut personal -->
+        <div style="margin-bottom: 25px;">
+          <h2 style="color: #333; font-size: 22px;">Bună ${prenume}!</h2>
+          <p style="font-size: 16px; margin: 10px 0;">
+            Înregistrarea ta pentru <strong>${titlu}</strong> a fost confirmată cu succes.
+          </p>
+        </div>
+
+        <!-- Detalii conferință -->
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #007bff; margin: 0 0 15px 0; font-size: 20px;">📅 Detalii ${tipConferinta === 'course' ? 'Curs' : 'Conferință'}</h3>
+          
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Titlu:</strong> ${titlu}
+          </div>
+            
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Tip:</strong> 
+            <span style="background-color: ${tipConferinta === 'course' ? '#17a2b8' : '#007bff'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+              ${tipConferinta === 'course' ? 'CURS' : 'CONFERINȚĂ'}
+            </span>
+          </div>
+                
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Data:</strong> ${dataDisplay}
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Ora:</strong> ${oraInceput}${tipConferinta === 'course' ? ` - ${oraFinal}` : ''}
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Participant:</strong> ${nume} ${prenume}
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #495057;">Email:</strong> ${email}
+          </div>
+
+          <div>
+            <strong style="color: #495057;">Preț:</strong> 
+            <span style="color: #28a745; font-weight: bold; font-size: 18px;">${pretParticipare} RON</span>
+            ${isTestMode ? ' <span style="color: #856404; font-size: 14px;">(SIMULAT)</span>' : ''}
+          </div>
+        </div>
+            
+        <!-- Link de acces -->
+        <div style="background-color: #e7f3ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #007bff; margin: 0 0 15px 0; font-size: 18px;">🔗 Link de Acces</h3>
+          <p style="margin-bottom: 15px; font-size: 16px; color: #333; font-weight: bold;">
+            Accesează ${tipConferinta === 'course' ? 'cursul' : 'conferința'}:
+          </p>
+          <p style="margin-bottom: 15px; font-size: 16px; color: #007bff; word-break: break-all; line-height: 1.4;">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}" 
+               style="color: #007bff; text-decoration: underline; font-weight: bold;">
+              ${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}
+            </a>
+          </p>
+          <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+            ${tipConferinta === 'course' ? 'Link-ul este valabil pentru toată perioada cursului' : 'Salvează acest link într-un loc sigur'}
+          </p>
+          <p style="margin-top: 10px; font-size: 14px; color: #28a745; font-weight: bold;">
+            💡 Copiază și salvează acest link pentru acces rapid!
+          </p>
+        </div>
+
+        <!-- Instrucțiuni -->
+        <div style="margin-bottom: 25px;">
+          <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">📋 Instrucțiuni Importante</h3>
+          <ul style="padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">Conferința se desfășoară online prin video call</li>
+            <li style="margin-bottom: 8px;">Accesați link-ul la data si ora de începere a conferinței</li>
+            <li style="margin-bottom: 8px;">Asigură-te că ai o conexiune stabilă la internet</li>
+            <li style="margin-bottom: 8px;">Recomandăm folosirea unui laptop sau computer pentru o experiență optimă</li>
+            ${tipConferinta === 'course' ? '<li style="margin-bottom: 8px;">Link-ul de acces este același pentru toate sesiunile cursului</li>' : ''}
+          </ul>
+        </div>
+
+        <!-- Contact -->
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 16px;">📞 Ai întrebări?</h4>
+          <p style="margin: 0; font-size: 14px; color: #6c757d;">
+            Pentru orice întrebări sau probleme tehnice, nu ezita să ne contactezi.
+            Suntem aici să te ajutăm!
+            webdynamicx@gmail.com
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
+          <p style="color: #6c757d; font-size: 12px; margin: 10px 0 0 0;">
+            Acest email a fost trimis automat.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 async function sendConfirmationEmail({ participantEmail, participantName, conferinta, uniqueAccessLink, tipConferinta }) {
   try {
     console.log("📧 [STRIPE WEBHOOK] Începe trimiterea emailului de confirmare...");
@@ -255,14 +425,14 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
     const prenume = nameParts.slice(0, -1).join(' ') || participantName;
     const nume = nameParts.slice(-1)[0] || participantName;
 
-    // Formatez datele participant pentru noul API (identic cu test)
+    // Formatez datele participant pentru template
     const participantData = {
       nume: nume,
       prenume: prenume,
       email: participantEmail
     };
 
-    // Formatez datele conferință pentru noul API
+    // Formatez datele conferință pentru template
     const conferintaData = {
       titlu: conferinta.titlu,
       descriere: conferinta.descriere,
@@ -274,33 +444,26 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
       pretParticipare: conferinta.pretParticipare
     };
 
-    const emailPayload = {
-      participantData: participantData,
-      conferintaData: conferintaData,
-      accessLink: uniqueAccessLink,
-      isTestMode: false // Plata reală prin Stripe
-    };
-
-    console.log("📧 [STRIPE WEBHOOK] Date formatate pentru API:", emailPayload);
-    console.log("📧 [STRIPE WEBHOOK] URL API email:", `${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email-conferinta`);
-
-    // Trimite email-ul prin noul nostru API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email-conferinta`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailPayload),
+    console.log("📧 [STRIPE WEBHOOK] Date formatate pentru email:", {
+      participant: `${nume} ${prenume}`,
+      email: participantEmail,
+      conferinta: conferinta.titlu,
+      accessLink: uniqueAccessLink
     });
 
-    console.log("📧 [STRIPE WEBHOOK] Status răspuns API email:", response.status);
-    
-    const result = await response.json();
-    console.log("📧 [STRIPE WEBHOOK] Răspuns API email:", result);
+    // Creez template-ul HTML
+    const htmlContent = createEmailTemplate(participantData, conferintaData, uniqueAccessLink, false);
 
-    if (!response.ok) {
-      throw new Error(`Failed to send email: ${result.error}`);
-    }
+    // Configurez și trimit email-ul
+    const mailOptions = {
+      from: '"Cristina Zurba - Tarot" <webdynamicx@gmail.com>',
+      to: participantEmail,
+      subject: `✅ Confirmare Înscriere - ${conferinta.titlu}`,
+      html: htmlContent,
+    };
+
+    console.log("📧 [STRIPE WEBHOOK] Trimite email-ul direct prin NodeMailer...");
+    const result = await transporter.sendMail(mailOptions);
 
     console.log("✅ [STRIPE WEBHOOK] Email trimis cu succes!");
     console.log("✅ [STRIPE WEBHOOK] Message ID:", result.messageId);

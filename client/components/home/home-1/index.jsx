@@ -204,7 +204,7 @@ const Home1 = () => {
                       aceleași căutări spirituale. Învață prin experiențe comune.
                     </p>
                     <ul className="feature-list">
-                      <li><i className="fa fa-check"></i> Interacțiune în timp real</li>±
+                      <li><i className="fa fa-check"></i> Interacțiune în timp real</li>
                       <li><i className="fa fa-check"></i> Grupuri tematice</li>
                       <li><i className="fa fa-check"></i> Moderare profesională</li>
                     </ul>
