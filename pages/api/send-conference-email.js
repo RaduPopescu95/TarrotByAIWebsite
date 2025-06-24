@@ -14,7 +14,8 @@ const transporter = nodemailer.createTransporter({
 const adminUIDs = [
   "zFsAwNZA5bUonVRIQzRn2HZB3y62",
   "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", 
-  "MSBePxFVcVO3vsfM5nwHr36ROfh2"
+  "MSBePxFVcVO3vsfM5nwHr36ROfh2",
+  "AW8kjQIhAiaJM5q0QgGlOKpGF2j1"
 ];
 
 export default async function handler(req, res) {

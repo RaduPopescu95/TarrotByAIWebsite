@@ -99,6 +99,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     const adminUIDs = [
       "zFsAwNZA5bUonVRIQzRn2HZB3y62", // UID-ul tău de admin
       "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", // Alt UID admin dacă există
+      "AW8kjQIhAiaJM5q0QgGlOKpGF2j1"
     ];
 
     console.log("🔐 [ADMIN VIDEO] Verifică UID admin:", currentUser.uid);

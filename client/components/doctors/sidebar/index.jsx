@@ -29,7 +29,7 @@ const DoctorSidebar = () => {
     setLoading(true);
     const authenticated = authentication;
     onAuthStateChanged(authenticated, (user) => {
-      if (user && (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62")) {
+      if (user && (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62" || user.uid === "AW8kjQIhAiaJM5q0QgGlOKpGF2j1")) {
         // User is signed in, see docs for a list of available properties
         // https://firebase.google.com/docs/reference/js/auth.user
         const uid = user.uid;

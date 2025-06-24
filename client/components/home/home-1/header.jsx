@@ -707,7 +707,7 @@ const Home1Header = () => {
                   </div>
                 </li> */}
                 {currentUser &&
-                (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+                (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62" && currentUser.uid != "AW8kjQIhAiaJM5q0QgGlOKpGF2j1") ? (
                   <li className="login-link">
                     <Link
                       onClick={() => onhandleCloseMenu()}
@@ -739,7 +739,7 @@ const Home1Header = () => {
               </ul>
             </div>
             {currentUser &&
-            (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+            (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62" && currentUser.uid != "AW8kjQIhAiaJM5q0QgGlOKpGF2j1") ? (
               <ul className="nav header-navbar-rht">
                 <li className="register-btn">
                   <Link href="/cont-client" className="btn btn-primary log-btn">
@@ -749,7 +749,7 @@ const Home1Header = () => {
                 </li>
               </ul>
             ) : currentUser &&
-              (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+              (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62" && currentUser.uid != "AW8kjQIhAiaJM5q0QgGlOKpGF2j1") ? (
               <ul className="nav header-navbar-rht">
                 <li className="register-btn">
                   <Link
