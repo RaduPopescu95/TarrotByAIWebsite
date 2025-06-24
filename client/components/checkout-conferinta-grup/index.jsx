@@ -26,19 +26,13 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
   const [processing, setProcessing] = useState(false);
   const [alert, setAlert] = useState({ type: "", message: "", visible: false });
 
-  // Form data pentru participare și adresă
+  // Form data pentru participare
   const [formData, setFormData] = useState({
     nume: "",
     prenume: "",
     email: "",
     telefon: "",
-    observatii: "",
-    // Adresa de facturare
-    adresa: "",
-    oras: "",
-    judet: "",
-    codPostal: "",
-    tara: "România"
+    observatii: ""
   });
 
   // Test mode pentru simulare fără Stripe
@@ -141,24 +135,6 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       return false;
     }
 
-    // Validare adresă
-    if (!formData.adresa.trim()) {
-      showAlert("danger", "Adresa este obligatorie");
-      return false;
-    }
-    if (!formData.oras.trim()) {
-      showAlert("danger", "Orașul este obligatoriu");
-      return false;
-    }
-    if (!formData.judet.trim()) {
-      showAlert("danger", "Județul este obligatoriu");
-      return false;
-    }
-    if (!formData.codPostal.trim()) {
-      showAlert("danger", "Codul poștal este obligatoriu");
-      return false;
-    }
-
     return true;
   };
 
@@ -197,7 +173,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       // Simulez delay pentru procesare
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Creez datele participantului cu adresa
+      // Creez datele participantului
       const participantData = {
         userId: currentUser?.uid || uniqueAccessLink, // Pentru guest users folosim access link-ul ca ID unic
         nume: formData.nume,
@@ -210,13 +186,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         accessLink: uniqueAccessLink,
         metodaPlata: "TEST_MODE",
         pretPlatit: conferinta.pretParticipare,
-        isGuestUser: !currentUser, // Marcăm dacă este guest user
-        // Adresa participantului
-        adresa: formData.adresa,
-        oras: formData.oras,
-        judet: formData.judet,
-        codPostal: formData.codPostal,
-        tara: formData.tara
+        isGuestUser: !currentUser // Marcăm dacă este guest user
       };
 
       console.log("🧪 [TEST MODE] Date participant:", participantData);
@@ -317,7 +287,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       // Generez link-ul unic de acces
       const uniqueAccessLink = generateUniqueAccessLink();
 
-      // Datele pentru Stripe checkout cu adresa
+      // Datele pentru Stripe checkout
       const checkoutData = {
         conferintaId: conferinta.documentId,
         conferintaTitlu: conferinta.titlu,
@@ -647,95 +617,6 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                         onChange={handleInputChange}
                         rows="3"
                         placeholder="Întrebări sau observații speciale..."
-                      />
-                    </div>
-
-                    {/* Separare pentru adresă */}
-                    <hr className="my-4" />
-                    
-                    <h5 className="mb-3">
-                      <i className="fa fa-map-marker-alt me-2"></i>
-                      Adresa de Facturare
-                    </h5>
-
-                    <div className="form-group mb-3">
-                      <label className="form-label">
-                        Adresa completă <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="adresa"
-                        value={formData.adresa}
-                        onChange={handleInputChange}
-                        placeholder="Strada, numărul, bloc, scară, apartament"
-                        required
-                      />
-                    </div>
-
-                    <div className="row">
-                      <div className="col-md-4">
-                        <div className="form-group mb-3">
-                          <label className="form-label">
-                            Orașul <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="oras"
-                            value={formData.oras}
-                            onChange={handleInputChange}
-                            placeholder="București"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="col-md-4">
-                        <div className="form-group mb-3">
-                          <label className="form-label">
-                            Județul <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="judet"
-                            value={formData.judet}
-                            onChange={handleInputChange}
-                            placeholder="București"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="col-md-4">
-                        <div className="form-group mb-3">
-                          <label className="form-label">
-                            Codul poștal <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="codPostal"
-                            value={formData.codPostal}
-                            onChange={handleInputChange}
-                            placeholder="010101"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="form-group mb-4">
-                      <label className="form-label">
-                        Țara <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="tara"
-                        value={formData.tara}
-                        onChange={handleInputChange}
-                        placeholder="România"
-                        required
                       />
                     </div>
 

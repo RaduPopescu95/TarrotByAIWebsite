@@ -50,13 +50,7 @@ async function handleSuccessfulPayment(session) {
       participantPhone,
       observatii,
       tipConferinta,
-      stripeCustomerId,
-      // Adresa de facturare (backup)
-      adresa,
-      oras,
-      judet,
-      codPostal,
-      tara
+      stripeCustomerId
     } = session.metadata;
 
     console.log("💳 [STRIPE WEBHOOK] Metadata:", {
@@ -101,24 +95,19 @@ async function handleSuccessfulPayment(session) {
       const prenume = nameParts.slice(0, -1).join(' ') || participantName;
       const nume = nameParts.slice(-1)[0] || participantName;
 
-      // Preiau adresa de facturare din customer-ul Stripe sau din session
+      // Preiau adresa de facturare din checkout-ul Stripe
       let billingAddress = {};
       
       try {
-        // Încerc să preiau customer-ul Stripe pentru adresa completă
-        if (stripeCustomerId) {
-          const customer = await stripe.customers.retrieve(stripeCustomerId);
-          billingAddress = customer.address || {};
-          console.log("💳 [STRIPE WEBHOOK] Adresa din customer:", billingAddress);
-        }
-        
-        // Fallback pe adresa din session.customer_details
-        if (!billingAddress.line1 && session.customer_details?.address) {
+        // Adresa din session.customer_details (completată în checkout)
+        if (session.customer_details?.address) {
           billingAddress = session.customer_details.address;
-          console.log("💳 [STRIPE WEBHOOK] Adresa din session:", billingAddress);
+          console.log("💳 [STRIPE WEBHOOK] Adresa din checkout Stripe:", billingAddress);
+        } else {
+          console.log("⚠️ [STRIPE WEBHOOK] Nu s-a găsit adresa în checkout");
         }
       } catch (error) {
-        console.log("⚠️ [STRIPE WEBHOOK] Eroare la preluarea customer-ului:", error.message);
+        console.log("⚠️ [STRIPE WEBHOOK] Eroare la preluarea adresei:", error.message);
         billingAddress = {};
       }
       
@@ -135,14 +124,14 @@ async function handleSuccessfulPayment(session) {
         stripePaymentId: session.payment_intent,
         stripeCustomerId: stripeCustomerId,
         status: 'confirmed',
-        // Adresa de facturare din Stripe (fallback pe metadata)
-        adresa: billingAddress.line1 || adresa,
-        oras: billingAddress.city || oras,
-        judet: billingAddress.state || judet,
-        codPostal: billingAddress.postal_code || codPostal,
-        tara: billingAddress.country === 'RO' ? 'România' : (tara || 'România'),
-        // Adresa validată de Stripe
-        stripeValidatedAddress: billingAddress
+        // Adresa de facturare din checkout-ul Stripe
+        adresa: billingAddress.line1 || '',
+        oras: billingAddress.city || '',
+        judet: billingAddress.state || '',
+        codPostal: billingAddress.postal_code || '',
+        tara: billingAddress.country === 'RO' ? 'România' : 'România',
+        // Adresa completă din checkout-ul Stripe
+        stripeCheckoutAddress: billingAddress
       };
 
       console.log("💳 [STRIPE WEBHOOK] Date participant nou:", newParticipant);

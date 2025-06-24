@@ -28,18 +28,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Date lipsă pentru procesarea plății' });
     }
 
-    // Creez mai întâi un customer Stripe cu adresa pre-populată
+    // Creez customer Stripe fără adresă (se va colecta în checkout)
     const customer = await stripe.customers.create({
       email: participantData.email,
       name: `${participantData.prenume} ${participantData.nume}`,
-      phone: participantData.telefon,
-      address: {
-        line1: participantData.adresa,
-        city: participantData.oras,
-        state: participantData.judet,
-        postal_code: participantData.codPostal,
-        country: 'RO' // România
-      }
+      phone: participantData.telefon
     });
 
     // Creează Stripe checkout session cu customer-ul pre-configurat
@@ -63,8 +56,13 @@ export default async function handler(req, res) {
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer: customer.id,
-      // Configurez colectarea adresei de facturare
+      // Configurez colectarea adresei de facturare - va fi pre-populată din customer
       billing_address_collection: 'required',
+      // Permite actualizarea informațiilor customer-ului din checkout
+      customer_update: {
+        address: 'auto', // Permite editarea adresei
+        name: 'auto',    // Permite editarea numelui
+      },
       metadata: {
         conferintaId: conferintaId,
         userId: userId,
@@ -74,13 +72,7 @@ export default async function handler(req, res) {
         participantPhone: participantData.telefon,
         observatii: participantData.observatii || '',
         tipConferinta: tipConferinta,
-        stripeCustomerId: customer.id,
-        // Adresa de facturare (backup)
-        adresa: participantData.adresa || '',
-        oras: participantData.oras || '',
-        judet: participantData.judet || '',
-        codPostal: participantData.codPostal || '',
-        tara: participantData.tara || 'România'
+        stripeCustomerId: customer.id
       },
     });
 
