@@ -131,7 +131,7 @@ const Home1 = () => {
                       <div className="col-md-6 col-12">
                         <Link href="/calendar-conferinte-grup" className="btn btn-secondary-custom w-100">
                           <i className="fa fa-users me-2"></i>
-                          Conferințe de Grup
+                          Conferințe/Cursuri
                         </Link>
                       </div>
                     </div>

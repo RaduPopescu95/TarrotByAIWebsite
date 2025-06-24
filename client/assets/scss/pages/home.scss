@@ -2278,7 +2278,7 @@
   }
 }
 
-/* Improved Banner Buttons */
+/* Improved Banner Buttons - Fully Responsive */
 .banner-buttons-container {
   margin-top: 2rem;
   
@@ -2292,12 +2292,24 @@
     font-size: 16px;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
     
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
       color: white;
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      text-decoration: none;
+    }
+    
+    &:focus {
+      color: white;
+      text-decoration: none;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
     }
   }
   
@@ -2310,15 +2322,41 @@
     font-weight: 600;
     font-size: 16px;
     transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
     
     &:hover {
       background: #667eea;
       color: white;
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      text-decoration: none;
+    }
+    
+    &:focus {
+      color: white;
+      background: #667eea;
+      text-decoration: none;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
     }
   }
   
+  // Responsive pentru tablete
+  @media (max-width: 991px) {
+    margin-top: 1.5rem;
+    
+    .btn-primary-custom,
+    .btn-secondary-custom {
+      padding: 14px 22px;
+      font-size: 15px;
+      min-height: 48px;
+    }
+  }
+  
+  // Responsive pentru mobile
   @media (max-width: 768px) {
     margin-top: 1.5rem;
     
@@ -2327,6 +2365,33 @@
       padding: 12px 20px;
       font-size: 14px;
       margin-bottom: 10px;
+      min-height: 46px;
+      border-radius: 25px;
+    }
+    
+    .row {
+      margin: 0 -5px;
+      
+      .col-md-6 {
+        padding: 0 5px;
+        margin-bottom: 10px;
+      }
+    }
+  }
+  
+  // Responsive pentru ecrane foarte mici
+  @media (max-width: 480px) {
+    .btn-primary-custom,
+    .btn-secondary-custom {
+      padding: 10px 15px;
+      font-size: 13px;
+      min-height: 44px;
+      border-radius: 22px;
+      
+      i {
+        margin-right: 8px;
+        font-size: 12px;
+      }
     }
   }
 }
@@ -2828,5 +2893,138 @@
     // Remove the positioning override
     // left: 0px;
     // top: 10px;
+  }
+}
+
+/* Admin Conference Buttons - Responsive */
+.admin-conference-buttons {
+  .row.g-2 {
+    @media (max-width: 576px) {
+      margin: 0 -2px;
+      
+      .col-3 {
+        padding: 0 2px;
+        margin-bottom: 5px;
+        
+        .btn {
+          padding: 8px 4px;
+          font-size: 12px;
+          min-height: 36px;
+          border-radius: 4px;
+          
+          i {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .col-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        
+        &:nth-child(1), &:nth-child(2) {
+          margin-bottom: 8px;
+        }
+        
+        .btn {
+          padding: 10px 8px;
+          font-size: 13px;
+          min-height: 38px;
+          
+          i {
+            font-size: 15px;
+          }
+        }
+      }
+    }
+    
+    @media (max-width: 380px) {
+      .col-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 5px;
+        
+        .btn {
+          padding: 12px 15px;
+          font-size: 14px;
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          i {
+            margin-right: 8px;
+            font-size: 16px;
+          }
+          
+          &:after {
+            content: attr(title);
+            font-size: 13px;
+          }
+        }
+        
+        .btn[title="Editează conferința"]:after {
+          content: "Editează";
+        }
+        
+        .btn[title="Vezi participanții"]:after {
+          content: "Participanți";
+        }
+        
+        .btn[title*="Alătură-te"]:after {
+          content: "Intră Live";
+        }
+        
+        .btn[title="Șterge conferința complet"]:after {
+          content: "Șterge";
+        }
+      }
+    }
+  }
+}
+
+/* Conference Cards Responsive */
+.conference-card {
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 1rem 0.75rem;
+    }
+    
+    .card-title {
+      font-size: 1.1rem;
+    }
+    
+    .card-text {
+      font-size: 0.85rem;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .card-body {
+      padding: 0.75rem 0.5rem;
+    }
+    
+    .d-flex.align-items-center.justify-content-between {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+  }
+}
+
+/* Responsive pentru alte butoane din admin */
+.btn-outline-primary.btn-lg,
+.btn-primary.btn-lg {
+  @media (max-width: 768px) {
+    padding: 10px 25px;
+    font-size: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 20px;
+    font-size: 14px;
+    border-radius: 20px;
   }
 }

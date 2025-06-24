@@ -1349,7 +1349,7 @@ const AdminConferinteGrup = () => {
                     {conferinte.map((conferinta) => (
                       <div key={conferinta.documentId} className="col-lg-6 col-xl-4 mb-4">
                         <div 
-                          className="card h-100 shadow-sm border-0" 
+                          className="card h-100 shadow-sm border-0 conference-card" 
                           style={{ 
                             borderRadius: "15px",
                             overflow: "hidden",
@@ -1452,7 +1452,7 @@ const AdminConferinteGrup = () => {
                             </div>
 
                             {/* Butoane de acțiune */}
-                            <div className="mt-auto">
+                            <div className="mt-auto admin-conference-buttons">
                               <div className="row g-2 mb-2">
                                 <div className="col-3">
                                   <button
