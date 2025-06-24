@@ -338,6 +338,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           channel: conferinta.documentId,
           token: null,
           role: "host",
+          enableScreensharing: true,
         }}
         styleProps={{
           UIKitContainer: {

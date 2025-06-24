@@ -89,9 +89,15 @@ async function handleSuccessfulPayment(session) {
     if (conferinta) {
       console.log("✅ [STRIPE WEBHOOK] Conferința găsită:", conferinta.titlu);
       
+      // Separare nume și prenume din participantName
+      const nameParts = participantName.split(' ');
+      const prenume = nameParts.slice(0, -1).join(' ') || participantName;
+      const nume = nameParts.slice(-1)[0] || participantName;
+
       const newParticipant = {
         userId: userId,
-        nume: participantName,
+        nume: nume,
+        prenume: prenume,
         email: participantEmail,
         telefon: participantPhone,
         observatii: observatii,
@@ -147,10 +153,10 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
     console.log("📧 [STRIPE WEBHOOK] Începe trimiterea emailului de confirmare...");
     console.log("📧 [STRIPE WEBHOOK] Participant:", participantName, "Email:", participantEmail);
 
-    // Formatez datele participant pentru noul API
+    // Formatez datele participant pentru noul API (identic cu test)
     const participantData = {
-      nume: participantName.split(' ').slice(-1)[0] || participantName, // Ultimul cuvânt ca nume
-      prenume: participantName.split(' ').slice(0, -1).join(' ') || participantName, // Restul ca prenume
+      nume: nume,
+      prenume: prenume,
       email: participantEmail
     };
 

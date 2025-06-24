@@ -30,6 +30,12 @@ const AdminConferinteGrup = () => {
   const [selectedConferinta, setSelectedConferinta] = useState(null);
   const [participantsOnline, setParticipantsOnline] = useState({});
   
+  // State pentru dialog-ul de ștergere
+  const [deleteConferenceDialog, setDeleteConferenceDialog] = useState({
+    isOpen: false,
+    conferinta: null
+  });
+  
   // State-uri pentru paginație
   const [lastVisible, setLastVisible] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -71,6 +77,149 @@ const AdminConferinteGrup = () => {
       setAlert({ type: "", message: "", visible: false });
       console.log("⏰ [ALERT] Alert-ul a fost ascuns automat");
     }, 5000);
+  };
+
+  // Funcție pentru incrementarea/decrementarea timpului cu săgeți
+  const handleTimeIncrement = (type, isStartTime, increment) => {
+    const currentTime = isStartTime ? formData.oraInceput : formData.oraFinal;
+    const [currentHour, currentMinute] = currentTime ? currentTime.split(':') : ['00', '00'];
+    
+    let newHour = parseInt(currentHour) || 0;
+    let newMinute = parseInt(currentMinute) || 0;
+    
+    if (type === 'hour') {
+      // Incrementare/decrementare ore cu 1
+      newHour += increment;
+      
+      // Wrap around pentru ore (0-23)
+      if (newHour > 23) newHour = 0;
+      if (newHour < 0) newHour = 23;
+    } else if (type === 'minute') {
+      // Incrementare/decrementare minute cu 5
+      newMinute += increment;
+      
+      // Wrap around pentru minute (0-55, cu pași de 5)
+      if (newMinute >= 60) newMinute = 0;
+      if (newMinute < 0) newMinute = 55;
+    }
+    
+    // Formatează timpul
+    const formattedTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
+    
+    // Actualizează formData
+    if (isStartTime) {
+      setFormData(prev => ({ ...prev, oraInceput: formattedTime }));
+    } else {
+      setFormData(prev => ({ ...prev, oraFinal: formattedTime }));
+    }
+  };
+
+  // State pentru a ține valorile temporare ale inputurilor (fără formatare)
+  const [tempTimeValues, setTempTimeValues] = useState({
+    hourStart: '',
+    minuteStart: '',
+    hourEnd: '',
+    minuteEnd: ''
+  });
+
+  // Sistem robust pentru gestionarea inputului manual de timp
+  const handleManualTimeInput = (e, type, isStartTime) => {
+    let value = e.target.value;
+    
+    // Permite doar cifre și limitează la maxim 2 caractere
+    value = value.replace(/[^0-9]/g, '').substring(0, 2);
+    
+    // Validare robustă cu limitele corecte
+    if (value !== '') {
+      const numValue = parseInt(value);
+      
+      if (type === 'hour') {
+        // Pentru ore: maxim 23
+        if (numValue > 23) {
+          value = '23';
+        }
+      } else if (type === 'minute') {
+        // Pentru minute: maxim 59
+        if (numValue > 59) {
+          value = '59';
+        }
+      }
+    }
+    
+    // Actualizează valoarea temporară
+    const tempKey = `${type}${isStartTime ? 'Start' : 'End'}`;
+    setTempTimeValues(prev => ({
+      ...prev,
+      [tempKey]: value
+    }));
+    
+    // Obține timpul curent
+    const currentTime = isStartTime ? formData.oraInceput : formData.oraFinal;
+    const [currentHour, currentMinute] = currentTime ? currentTime.split(':') : ['00', '00'];
+    
+    // Pentru stocare în baza de date, formatăm cu zero doar dacă valoarea nu este în curs de editare
+    const storageValue = value === '' ? '00' : value.padStart(2, '0');
+    
+    // Construiește noul timp pentru stocare (format HH:MM pentru Firebase)
+    let newTime;
+    if (type === 'hour') {
+      newTime = `${storageValue}:${currentMinute}`;
+    } else {
+      newTime = `${currentHour}:${storageValue}`;
+    }
+    
+    // Actualizează formData cu formatul corect pentru baza de date
+    if (isStartTime) {
+      setFormData(prev => ({ ...prev, oraInceput: newTime }));
+    } else {
+      setFormData(prev => ({ ...prev, oraFinal: newTime }));
+    }
+  };
+
+  // Funcție pentru formatarea finală când utilizatorul iese din input
+  const handleTimeBlur = (type, isStartTime) => {
+    const tempKey = `${type}${isStartTime ? 'Start' : 'End'}`;
+    const tempValue = tempTimeValues[tempKey];
+    
+    if (tempValue === '') {
+      // Reset la 00 dacă e gol
+      setTempTimeValues(prev => ({
+        ...prev,
+        [tempKey]: '00'
+      }));
+      
+      const currentTime = isStartTime ? formData.oraInceput : formData.oraFinal;
+      const [currentHour, currentMinute] = currentTime ? currentTime.split(':') : ['00', '00'];
+      
+      let newTime;
+      if (type === 'hour') {
+        newTime = `00:${currentMinute}`;
+      } else {
+        newTime = `${currentHour}:00`;
+      }
+      
+      if (isStartTime) {
+        setFormData(prev => ({ ...prev, oraInceput: newTime }));
+      } else {
+        setFormData(prev => ({ ...prev, oraFinal: newTime }));
+      }
+    }
+  };
+
+  // Funcție pentru a obține valoarea de afișat în input
+  const getInputDisplayValue = (type, isStartTime) => {
+    const tempKey = `${type}${isStartTime ? 'Start' : 'End'}`;
+    const tempValue = tempTimeValues[tempKey];
+    
+    // Dacă avem o valoare temporară, o afișăm
+    if (tempValue !== undefined && tempValue !== '') {
+      return tempValue;
+    }
+    
+    // Altfel, afișăm valoarea din formData
+    const timeValue = isStartTime ? formData.oraInceput : formData.oraFinal;
+    const [hour, minute] = timeValue ? timeValue.split(':') : ['00', '00'];
+    return type === 'hour' ? hour : minute;
   };
 
   const uploadImageToStorage = async (imageFile, conferintaId) => {
@@ -296,9 +445,15 @@ const AdminConferinteGrup = () => {
     }
     console.log("✅ [VALIDARE] Data de început validă");
 
-    if (!formData.oraInceput) {
-      console.log("❌ [VALIDARE] Ora de început lipsește");
-      showAlert("danger", "Ora de început este obligatorie");
+    if (!formData.oraInceput || !formData.oraInceput.includes(':') || formData.oraInceput.split(':').length !== 2) {
+      console.log("❌ [VALIDARE] Ora de început incompletă sau invalidă");
+      showAlert("danger", "Selectează ora și minutele pentru începutul conferinței");
+      return false;
+    }
+    const [startHour, startMinute] = formData.oraInceput.split(':');
+    if (!startHour || !startMinute) {
+      console.log("❌ [VALIDARE] Ora de început incompletă");
+      showAlert("danger", "Selectează ora și minutele pentru începutul conferinței");
       return false;
     }
     console.log("✅ [VALIDARE] Ora de început validă");
@@ -312,12 +467,18 @@ const AdminConferinteGrup = () => {
       console.log("✅ [VALIDARE] Data finală pentru curs validă");
     }
 
-    if (formData.tipConferinta === "course" && !formData.oraFinal) {
-      console.log("❌ [VALIDARE] Pentru curs, ora finală lipsește");
-      showAlert("danger", "Pentru cursuri, ora finală este obligatorie");
+    if (formData.tipConferinta === "course" && (!formData.oraFinal || !formData.oraFinal.includes(':') || formData.oraFinal.split(':').length !== 2)) {
+      console.log("❌ [VALIDARE] Pentru curs, ora finală incompletă sau invalidă");
+      showAlert("danger", "Pentru cursuri, selectează ora și minutele pentru sfârșitul conferinței");
       return false;
     }
     if (formData.tipConferinta === "course") {
+      const [endHour, endMinute] = formData.oraFinal.split(':');
+      if (!endHour || !endMinute) {
+        console.log("❌ [VALIDARE] Ora finală pentru curs incompletă");
+        showAlert("danger", "Pentru cursuri, selectează ora și minutele pentru sfârșitul conferinței");
+        return false;
+      }
       console.log("✅ [VALIDARE] Ora finală pentru curs validă");
     }
 
@@ -911,35 +1072,21 @@ const AdminConferinteGrup = () => {
     return participant && (participant.uniqueAccessLink || participant.accessLink);
   };
 
-  // Funcție pentru ștergerea completă a unei conferințe
-  const handleDeleteConference = async (conferinta) => {
-    const confirmMessage = `⚠️ ATENȚIE - ȘTERGERE DEFINITIVĂ ⚠️\n\n` +
-      `Ești pe punctul de a ȘTERGE COMPLET conferința:\n` +
-      `"${conferinta.titlu}"\n\n` +
-      `Această acțiune va elimina:\n` +
-      `• Toate datele conferinței\n` +
-      `• Lista de participanți (${conferinta.participanti?.length || 0} persoane)\n` +
-      `• Imaginea asociată (dacă există)\n` +
-      `• Toate înregistrările de prezență\n\n` +
-      `⚠️ ACEASTĂ ACȚIUNE NU POATE FI ANULATĂ! ⚠️\n\n` +
-      `Ești absolut sigur că vrei să continui?`;
+  // Funcție pentru deschiderea dialog-ului de ștergere
+  const handleDeleteConference = (conferinta) => {
+    setDeleteConferenceDialog({
+      isOpen: true,
+      conferinta: conferinta
+    });
+  };
 
-    if (!window.confirm(confirmMessage)) {
-      console.log("🚫 [DELETE] Admin a anulat ștergerea conferinței");
-      return;
-    }
+  // Funcție pentru confirmarea ștergerii din dialog
+  const confirmDeleteConference = async () => {
+    const conferinta = deleteConferenceDialog.conferinta;
+    if (!conferinta) return;
 
-    // A doua confirmare pentru siguranță
-    const finalConfirm = `ULTIMĂ CONFIRMARE\n\n` +
-      `Scrie "ȘTERGE" (cu majuscule) pentru a confirma ștergerea definitivă a conferinței "${conferinta.titlu}":`;
-    
-    const userInput = window.prompt(finalConfirm);
-    
-    if (userInput !== "ȘTERGE") {
-      console.log("🚫 [DELETE] Confirmare incorectă, ștergerea a fost anulată");
-      showAlert("info", "Ștergerea a fost anulată");
-      return;
-    }
+    // Închide dialog-ul
+    setDeleteConferenceDialog({ isOpen: false, conferinta: null });
 
     try {
       setLoading(true);
@@ -1066,6 +1213,49 @@ const AdminConferinteGrup = () => {
             </div>
 
             <div className="col-lg-8 col-xl-9">
+              {/* CSS pentru time spinner */}
+              <style jsx>{`
+                .time-spinner {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                }
+                
+                .time-spinner-btn {
+                  width: 50px;
+                  height: 30px;
+                  padding: 2px;
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: all 0.2s ease;
+                }
+                
+                .time-spinner-btn:hover {
+                  background-color: #0d6efd;
+                  color: white;
+                  transform: scale(1.05);
+                }
+                
+                .time-spinner-btn:active {
+                  transform: scale(0.95);
+                }
+                
+                .time-input {
+                  border: 2px solid #dee2e6;
+                  border-radius: 4px;
+                  margin: 2px 0;
+                  background-color: #f8f9fa;
+                  color: #495057;
+                }
+                
+                .time-input:focus {
+                  border-color: #0d6efd;
+                  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+                }
+              `}</style>
+
               {alert.visible && (
                 <AlertMessage type={alert.type} message={alert.message} />
               )}
@@ -1292,7 +1482,7 @@ const AdminConferinteGrup = () => {
                       <div 
                         className="card border-0 shadow-sm h-100"
                         style={{
-                          background: "linear-gradient(135deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 100%)",
+                          background: "linear-gradient(135deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 100%)",
                           borderRadius: "12px",
                           transition: "all 0.3s ease"
                         }}
@@ -1302,7 +1492,7 @@ const AdminConferinteGrup = () => {
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+                          e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,1)";
                         }}
                       >
                         <div className="card-body text-center py-4">
@@ -1311,7 +1501,7 @@ const AdminConferinteGrup = () => {
                             style={{
                               width: "60px",
                               height: "60px",
-                              background: "rgba(255,255,255,0.2)",
+                              background: "rgba(0,0,0,1)",
                               borderRadius: "50%",
                               backdropFilter: "blur(10px)"
                             }}
@@ -2074,12 +2264,12 @@ const AdminConferinteGrup = () => {
                         />
                       </div>
 
-                      <div className="row">
-                        <div className="col-md-6">
-                          <div className="form-group mb-3">
-                            <label className="form-label">
-                              Data de Început <span className="text-danger">*</span>
-                            </label>
+                      <div className="form-group mb-3">
+                        <label className="form-label">
+                          Data și ora de început <span className="text-danger">*</span>
+                        </label>
+                        <div className="row align-items-end">
+                          <div className="col-md-6">
                             <input
                               type="date"
                               className="form-control"
@@ -2087,34 +2277,83 @@ const AdminConferinteGrup = () => {
                               value={formData.dataInceput}
                               onChange={handleInputChange}
                               required
+                              style={{ height: '76px' }}
                             />
                           </div>
-                        </div>
-                        
-                        <div className="col-md-6">
-                          <div className="form-group mb-3">
-                            <label className="form-label">
-                              Ora de Început <span className="text-danger">*</span>
-                            </label>
-                            <input
-                              type="time"
-                              className="form-control"
-                              name="oraInceput"
-                              value={formData.oraInceput}
-                              onChange={handleInputChange}
-                              required
-                            />
+                          
+                          <div className="col-md-6">
+                            <div className="d-flex align-items-center gap-2" style={{ height: '76px' }}>
+                              {/* Ore */}
+                              <div className="time-spinner">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                  onClick={() => handleTimeIncrement('hour', true, 1)}
+                                >
+                                  <i className="fa fa-chevron-up"></i>
+                                </button>
+                                <input
+                                  type="text"
+                                  className="form-control text-center time-input"
+                                  value={getInputDisplayValue('hour', true)}
+                                  onChange={(e) => handleManualTimeInput(e, 'hour', true)}
+                                  onBlur={() => handleTimeBlur('hour', true)}
+                                  onFocus={(e) => e.target.select()}
+                                  maxLength="2"
+                                  placeholder="00"
+                                  style={{ width: '60px', fontSize: '16px', fontWeight: 'bold' }}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                  onClick={() => handleTimeIncrement('hour', true, -1)}
+                                >
+                                  <i className="fa fa-chevron-down"></i>
+                                </button>
+                              </div>
+                              
+                              <span style={{ fontSize: '20px', fontWeight: 'bold' }}>:</span>
+                              
+                              {/* minute */}
+                              <div className="time-spinner">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                  onClick={() => handleTimeIncrement('minute', true, 5)}
+                                >
+                                  <i className="fa fa-chevron-up"></i>
+                                </button>
+                                <input
+                                  type="text"
+                                  className="form-control text-center time-input"
+                                  value={getInputDisplayValue('minute', true)}
+                                  onChange={(e) => handleManualTimeInput(e, 'minute', true)}
+                                  onBlur={() => handleTimeBlur('minute', true)}
+                                  onFocus={(e) => e.target.select()}
+                                  maxLength="2"
+                                  placeholder="00"
+                                  style={{ width: '60px', fontSize: '16px', fontWeight: 'bold' }}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                  onClick={() => handleTimeIncrement('minute', true, -5)}
+                                >
+                                  <i className="fa fa-chevron-down"></i>
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {formData.tipConferinta === "course" && (
-                        <div className="row">
-                          <div className="col-md-6">
-                            <div className="form-group mb-3">
-                              <label className="form-label">
-                                Data Finală <span className="text-danger">*</span>
-                              </label>
+                        <div className="form-group mb-3">
+                          <label className="form-label">
+                            Data și ora finală <span className="text-danger">*</span>
+                          </label>
+                          <div className="row align-items-end">
+                            <div className="col-md-6">
                               <input
                                 type="date"
                                 className="form-control"
@@ -2123,23 +2362,72 @@ const AdminConferinteGrup = () => {
                                 onChange={handleInputChange}
                                 min={formData.dataInceput}
                                 required
+                                style={{ height: '76px' }}
                               />
                             </div>
-                          </div>
-                          
-                          <div className="col-md-6">
-                            <div className="form-group mb-3">
-                              <label className="form-label">
-                                Ora Finală <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="time"
-                                className="form-control"
-                                name="oraFinal"
-                                value={formData.oraFinal}
-                                onChange={handleInputChange}
-                                required
-                              />
+                            
+                            <div className="col-md-6">
+                              <div className="d-flex align-items-center gap-2" style={{ height: '76px' }}>
+                                {/* Ore */}
+                                <div className="time-spinner">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                    onClick={() => handleTimeIncrement('hour', false, 1)}
+                                  >
+                                    <i className="fa fa-chevron-up"></i>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    className="form-control text-center time-input"
+                                    value={getInputDisplayValue('hour', false)}
+                                    onChange={(e) => handleManualTimeInput(e, 'hour', false)}
+                                    onBlur={() => handleTimeBlur('hour', false)}
+                                    onFocus={(e) => e.target.select()}
+                                    maxLength="2"
+                                    placeholder="00"
+                                    style={{ width: '60px', fontSize: '16px', fontWeight: 'bold' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                    onClick={() => handleTimeIncrement('hour', false, -1)}
+                                  >
+                                    <i className="fa fa-chevron-down"></i>
+                                  </button>
+                                </div>
+                                
+                                <span style={{ fontSize: '20px', fontWeight: 'bold' }}>:</span>
+                                
+                                {/* Minute */}
+                                <div className="time-spinner">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                    onClick={() => handleTimeIncrement('minute', false, 5)}
+                                  >
+                                    <i className="fa fa-chevron-up"></i>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    className="form-control text-center time-input"
+                                    value={getInputDisplayValue('minute', false)}
+                                    onChange={(e) => handleManualTimeInput(e, 'minute', false)}
+                                    onBlur={() => handleTimeBlur('minute', false)}
+                                    onFocus={(e) => e.target.select()}
+                                    maxLength="2"
+                                    placeholder="00"
+                                    style={{ width: '60px', fontSize: '16px', fontWeight: 'bold' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary time-spinner-btn"
+                                    onClick={() => handleTimeIncrement('minute', false, -5)}
+                                  >
+                                    <i className="fa fa-chevron-down"></i>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2274,6 +2562,131 @@ const AdminConferinteGrup = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog custom pentru ștergerea conferințelor */}
+      {deleteConferenceDialog.isOpen && (
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '600px' }}>
+            <div className="modal-content" style={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+              <div className="modal-header" style={{ backgroundColor: 'white', borderBottom: '1px solid #f0f0f0', borderRadius: '12px 12px 0 0' }}>
+                <h5 className="modal-title" style={{ color: '#0e82fd', fontWeight: '600' }}>
+                  <i className="fa fa-trash mr-2" style={{ color: '#0e82fd' }}></i>
+                  Confirmare Ștergere
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close"
+                  onClick={() => setDeleteConferenceDialog({ isOpen: false, conferinta: null })}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    fontSize: '20px', 
+                    color: '#6c757d',
+                    cursor: 'pointer',
+                    padding: '8px'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="modal-body" style={{ backgroundColor: 'white', padding: '25px' }}>
+                <div className="text-center mb-3">
+                  <div style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '50%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    margin: '0 auto',
+                    border: '3px solid #0e82fd'
+                  }}>
+                    <i className="fa fa-exclamation-triangle" style={{ fontSize: '28px', color: '#0e82fd' }}></i>
+                  </div>
+                </div>
+          
+                
+                <p className="text-center mb-3" style={{ color: '#666', fontSize: '14px' }}>
+                  Ești pe punctul de a <strong style={{ color: '#0e82fd' }}>ȘTERGE COMPLET</strong> conferința:
+                </p>
+                
+                <div style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  border: '2px solid #0e82fd', 
+                  borderRadius: '8px', 
+                  padding: '12px',
+                  textAlign: 'center',
+                  marginBottom: '15px'
+                }}>
+                  <h6 className="mb-0" style={{ color: '#0e82fd', fontWeight: '600', fontSize: '15px' }}>
+                    "{deleteConferenceDialog.conferinta?.titlu}"
+                  </h6>
+                </div>
+                
+           
+                
+                <div style={{ 
+                  backgroundColor: 'transparent', 
+                  border: '1px solid #0e82fd', 
+                  borderRadius: '8px', 
+                  padding: '12px',
+                  textAlign: 'center',
+                  marginTop: '15px'
+                }}>
+                  <strong style={{ color: '#0e82fd', fontSize: '13px' }}>⚠️ ACEASTĂ ACȚIUNE NU POATE FI ANULATĂ!</strong>
+                </div>
+              </div>
+              
+              <div className="modal-footer" style={{ 
+                backgroundColor: 'white', 
+                borderTop: '1px solid #f0f0f0', 
+                borderRadius: '0 0 12px 12px',
+                padding: '15px 25px'
+              }}>
+                <button 
+                  type="button" 
+                  className="btn"
+                  onClick={() => setDeleteConferenceDialog({ isOpen: false, conferinta: null })}
+                  style={{
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    marginRight: '10px'
+                  }}
+                >
+                  <i className="fa fa-times mr-2"></i>
+                  Anulează
+                </button>
+                <button 
+                  type="button" 
+                  className="btn"
+                  onClick={confirmDeleteConference}
+                  disabled={loading}
+                  style={{
+                    backgroundColor: '#0e82fd',
+                    border: '1px solid #0e82fd',
+                    color: 'white',
+                    fontWeight: '500',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    opacity: loading ? '0.7' : '1',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <i className="fa fa-trash mr-2"></i>
+                  {loading ? 'Se șterge...' : 'Șterge Definitiv'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

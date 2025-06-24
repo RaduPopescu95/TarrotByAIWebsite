@@ -420,6 +420,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           channel: conferinta.documentId,
           token: null,
           role: "host",
+          enableScreensharing: true,
         }}
         styleProps={{
           UIKitContainer: {
