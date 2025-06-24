@@ -181,7 +181,7 @@ const SuccessConferintaGrup = () => {
       <div className="content">
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-8">
+            <div className="col-lg-8 pt-5">
               {/* Test Mode Alert */}
               {isTestMode && (
                 <div className="alert alert-warning text-center mb-4">
@@ -205,7 +205,7 @@ const SuccessConferintaGrup = () => {
               )}
 
               {/* Success Header */}
-              <div className="text-center mb-5">
+              <div className="text-center mb-5 pt-5">
                 <div className="success-icon mb-4">
                   <i className="fa fa-check-circle fa-5x text-success"></i>
                 </div>

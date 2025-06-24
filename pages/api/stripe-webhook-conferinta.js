@@ -247,7 +247,7 @@ async function handleSuccessfulPayment(session) {
 }
 
 // Configurația Gmail pentru trimiterea email-urilor
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "webdynamicx@gmail.com",
