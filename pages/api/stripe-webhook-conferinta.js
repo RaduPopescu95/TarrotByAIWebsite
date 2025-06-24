@@ -4,6 +4,15 @@ import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestore
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
 
+// Funcție helper pentru a citi raw body
+async function getRawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,7 +22,9 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    // Preiau raw body pentru verificarea semnăturii Stripe
+    const rawBody = await getRawBody(req);
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -49,7 +60,13 @@ async function handleSuccessfulPayment(session) {
       participantEmail,
       participantPhone,
       observatii,
-      tipConferinta
+      tipConferinta,
+      // Adresa de facturare
+      adresa,
+      oras,
+      judet,
+      codPostal,
+      tara
     } = session.metadata;
 
     console.log("💳 [STRIPE WEBHOOK] Metadata:", {
@@ -94,6 +111,9 @@ async function handleSuccessfulPayment(session) {
       const prenume = nameParts.slice(0, -1).join(' ') || participantName;
       const nume = nameParts.slice(-1)[0] || participantName;
 
+      // Preiau adresa de facturare din datele Stripe (mai sigură decât metadata)
+      const billingAddress = session.customer_details?.address || {};
+      
       const newParticipant = {
         userId: userId,
         nume: nume,
@@ -105,7 +125,15 @@ async function handleSuccessfulPayment(session) {
         dataInscrierii: new Date().toISOString(),
         stripeSessionId: session.id,
         stripePaymentId: session.payment_intent,
-        status: 'confirmed'
+        status: 'confirmed',
+        // Adresa de facturare din Stripe (fallback pe metadata)
+        adresa: billingAddress.line1 || adresa,
+        oras: billingAddress.city || oras,
+        judet: billingAddress.state || judet,
+        codPostal: billingAddress.postal_code || codPostal,
+        tara: billingAddress.country === 'RO' ? 'România' : (tara || 'România'),
+        // Adresa validată de Stripe
+        stripeValidatedAddress: billingAddress
       };
 
       console.log("💳 [STRIPE WEBHOOK] Date participant nou:", newParticipant);
@@ -209,8 +237,6 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
 // Configurare pentru raw body parsing (necesar pentru Stripe webhook)
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
+    bodyParser: false, // Dezactivez body parser pentru a avea acces la raw data
   },
 } 

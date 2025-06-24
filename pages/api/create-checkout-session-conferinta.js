@@ -49,6 +49,18 @@ export default async function handler(req, res) {
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer_email: participantData.email,
+      // Configurez colectarea adresei de facturare
+      billing_address_collection: 'required',
+      // Pre-populez adresa de facturare cu datele colectate
+      customer_details: {
+        address: {
+          line1: participantData.adresa,
+          city: participantData.oras,
+          state: participantData.judet,
+          postal_code: participantData.codPostal,
+          country: 'RO' // România
+        }
+      },
       metadata: {
         conferintaId: conferintaId,
         userId: userId,
@@ -57,7 +69,13 @@ export default async function handler(req, res) {
         participantEmail: participantData.email,
         participantPhone: participantData.telefon,
         observatii: participantData.observatii || '',
-        tipConferinta: tipConferinta
+        tipConferinta: tipConferinta,
+        // Adresa de facturare
+        adresa: participantData.adresa || '',
+        oras: participantData.oras || '',
+        judet: participantData.judet || '',
+        codPostal: participantData.codPostal || '',
+        tara: participantData.tara || 'România'
       },
     });
 
