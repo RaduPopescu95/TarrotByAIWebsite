@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     // Creează Stripe checkout session cu customer-ul pre-configurat
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      locale: 'ro', // Setează limba română pentru interfața de checkout
       line_items: [
         {
           price_data: {
@@ -56,12 +57,17 @@ export default async function handler(req, res) {
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer: customer.id,
-      // Configurez colectarea adresei de facturare - va fi pre-populată din customer
+      // Configurez colectarea adresei de facturare și numărului de telefon
       billing_address_collection: 'required',
+      phone_number_collection: { enabled: true },
       // Permite actualizarea informațiilor customer-ului din checkout
       customer_update: {
         address: 'auto', // Permite editarea adresei
         name: 'auto',    // Permite editarea numelui
+      },
+      // Activez generarea automată de facturi în Stripe
+      invoice_creation: {
+        enabled: true,
       },
       metadata: {
         conferintaId: conferintaId,

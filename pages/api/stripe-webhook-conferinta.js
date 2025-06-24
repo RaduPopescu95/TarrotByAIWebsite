@@ -4,6 +4,15 @@ import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestore
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
 
+// Funcție helper pentru a citi raw body din stream
+const buffer = async (readable) => {
+  const chunks = [];
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,9 +22,12 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    // Preiau raw body-ul pentru verificarea signaturii
+    const rawBody = await buffer(req);
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+    console.log("✅ [STRIPE WEBHOOK] Signatura verificată cu succes");
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
+    console.error('❌ [STRIPE WEBHOOK] Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -25,6 +37,10 @@ export default async function handler(req, res) {
       const session = event.data.object;
       await handleSuccessfulPayment(session);
       break;
+    case 'invoice.created':
+      const invoice = event.data.object;
+      await handleInvoiceCreated(invoice);
+      break;
     case 'payment_intent.succeeded':
       // Handle successful payment if needed
       break;
@@ -33,6 +49,61 @@ export default async function handler(req, res) {
   }
 
   res.status(200).json({ received: true });
+}
+
+async function handleInvoiceCreated(invoice) {
+  try {
+    console.log("🧾 [STRIPE WEBHOOK] Procesez factura creată...");
+    console.log("🧾 [STRIPE WEBHOOK] Invoice ID:", invoice.id);
+    console.log("🧾 [STRIPE WEBHOOK] Payment Intent:", invoice.payment_intent);
+
+    // Încerc să găsesc sesiunea de checkout pe baza payment intent-ului
+    if (invoice.payment_intent) {
+      try {
+        // Caut în toate sesiunile de checkout recente pentru acest payment intent
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: invoice.payment_intent,
+          limit: 1
+        });
+        
+        if (sessions.data.length > 0) {
+          const session = sessions.data[0];
+          
+          // Verific dacă este o sesiune pentru conferințe
+          if (session.metadata && session.metadata.conferintaId) {
+            console.log("🧾 [STRIPE WEBHOOK] Factura pentru conferință găsită");
+            console.log("🧾 [STRIPE WEBHOOK] Session metadata:", session.metadata);
+            
+            // Actualizez metadata facturii cu informațiile conferinței
+            await stripe.invoices.update(invoice.id, {
+              metadata: {
+                conferintaId: session.metadata.conferintaId || '',
+                participantName: session.metadata.participantName || '',
+                participantEmail: session.metadata.participantEmail || '',
+                participantPhone: session.metadata.participantPhone || '',
+                tipConferinta: session.metadata.tipConferinta || '',
+                observatii: session.metadata.observatii || '',
+                uniqueAccessLink: session.metadata.uniqueAccessLink || '',
+                stripeCustomerId: session.metadata.stripeCustomerId || ''
+              },
+            });
+            
+            console.log("✅ [STRIPE WEBHOOK] Metadata factură actualizată pentru conferință");
+          } else {
+            console.log("🧾 [STRIPE WEBHOOK] Factura nu este pentru conferințe");
+          }
+        } else {
+          console.log("⚠️ [STRIPE WEBHOOK] Nu s-a găsit sesiunea pentru payment intent:", invoice.payment_intent);
+        }
+      } catch (error) {
+        console.log("⚠️ [STRIPE WEBHOOK] Eroare la căutarea sesiunii:", error.message);
+      }
+    } else {
+      console.log("⚠️ [STRIPE WEBHOOK] Factura nu are payment intent asociat");
+    }
+  } catch (error) {
+    console.error('💥 [STRIPE WEBHOOK] Eroare la procesarea facturii:', error);
+  }
 }
 
 async function handleSuccessfulPayment(session) {
@@ -235,8 +306,6 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
 // Configurare pentru raw body parsing (necesar pentru Stripe webhook)
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
+    bodyParser: false, // Dezactivez body parser-ul pentru a primi raw body
   },
 } 
