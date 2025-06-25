@@ -13,9 +13,9 @@ const AgoraUIKit = dynamic(() => import("agora-react-uikit"), {
   loading: () => <div>Loading video...</div>
 });
 
-// Import chat components
-import ChatPanel from "../../../components/Chat/ChatPanel";
-import useAgoraRTM from "../../../utils/useAgoraRTM";
+// Import chat components - TEMPORAR DEZACTIVAT
+// import ChatPanel from "../../../components/Chat/ChatPanel";
+// import useAgoraRTM from "../../../utils/useAgoraRTM";
 
 // Definim layout-ul în mod safe
 const LAYOUT_TYPES = {
@@ -48,11 +48,12 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
-  // Chat state
-  const [chatVisible, setChatVisible] = useState(true);
-  const [username, setUsername] = useState('');
+  // Chat state - TEMPORAR DEZACTIVAT
+  // const [chatVisible, setChatVisible] = useState(true);
+  // const [username, setUsername] = useState('');
 
-  // RTM Chat hook
+  // RTM Chat hook - TEMPORAR DEZACTIVAT
+  /*
   const {
     messages,
     isConnected: chatConnected,
@@ -70,6 +71,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.log("📧 [ADMIN CHAT] Mesaj nou primit:", message);
     }
   });
+  */
 
   // Minimal state pentru Agora UIKit
 
@@ -78,7 +80,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
 
-  // Set admin username for chat
+  // Set admin username for chat - TEMPORAR DEZACTIVAT
+  /*
   useEffect(() => {
     if (userData && userData.nume && userData.prenume) {
       const adminName = `${userData.nume} ${userData.prenume} (Admin)`;
@@ -86,6 +89,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.log("👤 [ADMIN CHAT] Username admin setat pentru chat:", adminName);
     }
   }, [userData]);
+  */
 
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
@@ -343,7 +347,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       await updateAdminPresence(conferinta.documentId, true);
     }
     
-    // Conectează chat-ul RTM pentru admin
+    // Conectează chat-ul RTM pentru admin - TEMPORAR DEZACTIVAT
+    /*
     if (username && conferinta?.documentId) {
       console.log("📧 [ADMIN JOIN] Conectare chat RTM pentru admin...");
       try {
@@ -352,6 +357,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         console.error("💥 [ADMIN JOIN] Eroare la conectarea chat-ului:", error);
       }
     }
+    */
     
     setIsInCall(true);
   };
@@ -360,13 +366,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     console.log("🚪 [ADMIN] Admin părăsește conferința");
     setIsInCall(false);
     
-    // Deconectează chat-ul RTM
+    // Deconectează chat-ul RTM - TEMPORAR DEZACTIVAT
+    /*
     console.log("📧 [ADMIN LEAVE] Deconectare chat RTM...");
     try {
       await disconnectChat();
     } catch (error) {
       console.error("💥 [ADMIN LEAVE] Eroare la deconectarea chat-ului:", error);
     }
+    */
     
     if (conferinta) {
       await updateAdminPresence(conferinta.documentId, false);
@@ -489,7 +497,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           }}
         />
         
-        {/* Chat Panel integrat pentru admin */}
+        {/* Chat Panel integrat pentru admin - TEMPORAR DEZACTIVAT */}
+        {/*
         <ChatPanel
           messages={messages}
           onSendMessage={sendMessage}
@@ -500,6 +509,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           isVisible={chatVisible}
           onToggleVisibility={() => setChatVisible(!chatVisible)}
         />
+        */}
       </>
     );
   }
@@ -572,14 +582,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                         )}
                       </p>
                       
-                      {participantsOnline.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-success">
-                            <i className="fa fa-users me-2"></i>
-                            {participantsOnline.length} participanți te așteaptă deja!
-                          </p>
-                        </div>
-                      )}
+             
 
                       <button
                         className="btn btn-success btn-lg"

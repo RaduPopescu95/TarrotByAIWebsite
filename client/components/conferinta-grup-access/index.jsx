@@ -14,9 +14,9 @@ const AgoraUIKit = dynamic(() => import("agora-react-uikit"), {
   loading: () => <div>Loading video...</div>
 });
 
-// Import chat components
-import ChatPanel from "../../../components/Chat/ChatPanel";
-import useAgoraRTM from "../../../utils/useAgoraRTM";
+// Import chat components - TEMPORAR DEZACTIVAT
+// import ChatPanel from "../../../components/Chat/ChatPanel";
+// import useAgoraRTM from "../../../utils/useAgoraRTM";
 
 // Definim layout-ul în mod safe
 const LAYOUT_TYPES = {
@@ -46,11 +46,12 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
-  // Chat state
-  const [chatVisible, setChatVisible] = useState(true);
-  const [username, setUsername] = useState('');
+  // Chat state - TEMPORAR DEZACTIVAT
+  // const [chatVisible, setChatVisible] = useState(true);
+  // const [username, setUsername] = useState('');
 
-  // RTM Chat hook
+  // RTM Chat hook - TEMPORAR DEZACTIVAT
+  /*
   const {
     messages,
     isConnected: chatConnected,
@@ -68,6 +69,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       console.log("📧 [CHAT] Mesaj nou primit:", message);
     }
   });
+  */
 
   // Clean Agora UIKit implementation
 
@@ -76,7 +78,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [timeUntilStart, setTimeUntilStart] = useState(null);
   const [adminIsPresent, setAdminIsPresent] = useState(false);
 
-  // Set username based on participant data
+  // Set username based on participant data - TEMPORAR DEZACTIVAT
+  /*
   useEffect(() => {
     if (participant && participant.nume && participant.prenume) {
       const fullName = `${participant.nume} ${participant.prenume}`;
@@ -84,6 +87,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       console.log("👤 [CHAT] Username setat pentru chat:", fullName);
     }
   }, [participant]);
+  */
 
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
@@ -272,7 +276,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     console.log("🎥 [PARTICIPANT] Se alătură conferinței - Agora va gestiona permisiunile");
     setIsInCall(true);
     
-    // Conectează chat-ul RTM
+    // Conectează chat-ul RTM - TEMPORAR DEZACTIVAT
+    /*
     if (username && conferinta?.documentId) {
       console.log("📧 [JOIN] Conectare chat RTM...");
       try {
@@ -281,18 +286,21 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         console.error("💥 [JOIN] Eroare la conectarea chat-ului:", error);
       }
     }
+    */
   };
 
   const leaveConference = async () => {
     setIsInCall(false);
     
-    // Deconectează chat-ul RTM
+    // Deconectează chat-ul RTM - TEMPORAR DEZACTIVAT
+    /*
     console.log("📧 [LEAVE] Deconectare chat RTM...");
     try {
       await disconnectChat();
     } catch (error) {
       console.error("💥 [LEAVE] Eroare la deconectarea chat-ului:", error);
     }
+    */
     
     if (conferinta && participant) {
       const accessLinkToUse = participant.uniqueAccessLink || participant.accessLink;
@@ -407,7 +415,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           }}
         />
         
-        {/* Chat Panel integrat */}
+        {/* Chat Panel integrat - TEMPORAR DEZACTIVAT */}
+        {/*
         <ChatPanel
           messages={messages}
           onSendMessage={sendMessage}
@@ -418,6 +427,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           isVisible={chatVisible}
           onToggleVisibility={() => setChatVisible(!chatVisible)}
         />
+        */}
       </>
     );
   }
@@ -483,14 +493,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                         Organizatorul a început conferința. Ești gata să participi la {conferinta.titlu}?
                       </p>
                       
-                      {participantsOnline.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-success">
-                            <i className="fa fa-users me-2"></i>
-                            {participantsOnline.length} participanți sunt deja online
-                          </p>
-                        </div>
-                      )}
+                
 
                       <button
                         className="btn btn-success btn-lg"
