@@ -670,7 +670,7 @@ const AdminConferinteGrup = () => {
 
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
-      return `${moment(conferinta.dataInceput).format("DD MMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMM YYYY")}, ${conferinta.oraInceput} - ${conferinta.oraFinal}`;
+      return `${moment(conferinta.dataInceput).format("DD MMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMM YYYY")}, ${conferinta.oraFinal}`;
     } else {
       return `${moment(conferinta.dataInceput).format("DD MMM YYYY")}, ${conferinta.oraInceput}`;
     }

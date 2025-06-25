@@ -103,13 +103,13 @@ const SuccessConferintaGrup = () => {
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
       return {
-        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}`,
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}, ${conferinta.oraFinal}`,
         oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`,
         type: "Curs"
       };
     } else {
       return {
-        dataRange: moment(conferinta.dataInceput).format("DD MMMM YYYY"),
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput}`,
         oraRange: conferinta.oraInceput,
         type: "Conferință"
       };
@@ -237,12 +237,7 @@ const SuccessConferintaGrup = () => {
                       
                       <div className="detail-item mb-2">
                         <i className="fa fa-calendar text-primary me-2"></i>
-                        <strong>Data:</strong> {displayInfo.dataRange}
-                      </div>
-                      
-                      <div className="detail-item mb-2">
-                        <i className="fa fa-clock text-primary me-2"></i>
-                        <strong>Ora:</strong> {displayInfo.oraRange}
+                        <strong>{displayInfo.type === "Curs" ? "Interval:" : "Data & Ora:"}</strong> {displayInfo.dataRange}
                       </div>
 
                       <div className="detail-item mb-2">

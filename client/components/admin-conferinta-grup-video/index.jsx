@@ -13,6 +13,10 @@ const AgoraUIKit = dynamic(() => import("agora-react-uikit"), {
   loading: () => <div>Loading video...</div>
 });
 
+// Import chat components
+import ChatPanel from "../../../components/Chat/ChatPanel";
+import useAgoraRTM from "../../../utils/useAgoraRTM";
+
 // Definim layout-ul în mod safe
 const LAYOUT_TYPES = {
   grid: 0,
@@ -44,12 +48,44 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
+  // Chat state
+  const [chatVisible, setChatVisible] = useState(true);
+  const [username, setUsername] = useState('');
+
+  // RTM Chat hook
+  const {
+    messages,
+    isConnected: chatConnected,
+    loading: chatLoading,
+    error: chatError,
+    connect: connectChat,
+    disconnect: disconnectChat,
+    sendMessage,
+    isReady: chatReady
+  } = useAgoraRTM({
+    appId: appID,
+    channelName: conferinta?.documentId || '',
+    username: username,
+    onMessage: (message) => {
+      console.log("📧 [ADMIN CHAT] Mesaj nou primit:", message);
+    }
+  });
+
   // Minimal state pentru Agora UIKit
 
   // Clean Agora UIKit implementation
 
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
+
+  // Set admin username for chat
+  useEffect(() => {
+    if (userData && userData.nume && userData.prenume) {
+      const adminName = `${userData.nume} ${userData.prenume} (Admin)`;
+      setUsername(adminName);
+      console.log("👤 [ADMIN CHAT] Username admin setat pentru chat:", adminName);
+    }
+  }, [userData]);
 
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
@@ -307,12 +343,31 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       await updateAdminPresence(conferinta.documentId, true);
     }
     
+    // Conectează chat-ul RTM pentru admin
+    if (username && conferinta?.documentId) {
+      console.log("📧 [ADMIN JOIN] Conectare chat RTM pentru admin...");
+      try {
+        await connectChat();
+      } catch (error) {
+        console.error("💥 [ADMIN JOIN] Eroare la conectarea chat-ului:", error);
+      }
+    }
+    
     setIsInCall(true);
   };
 
   const leaveConference = async () => {
     console.log("🚪 [ADMIN] Admin părăsește conferința");
     setIsInCall(false);
+    
+    // Deconectează chat-ul RTM
+    console.log("📧 [ADMIN LEAVE] Deconectare chat RTM...");
+    try {
+      await disconnectChat();
+    } catch (error) {
+      console.error("💥 [ADMIN LEAVE] Eroare la deconectarea chat-ului:", error);
+    }
+    
     if (conferinta) {
       await updateAdminPresence(conferinta.documentId, false);
     }
@@ -348,13 +403,13 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
       return {
-        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}`,
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}, ${conferinta.oraFinal}`,
         oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`,
         type: "Curs"
       };
     } else {
       return {
-        dataRange: moment(conferinta.dataInceput).format("DD MMMM YYYY"),
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput}`,
         oraRange: conferinta.oraInceput,
         type: "Conferință"
       };
@@ -411,27 +466,41 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
   const displayInfo = formatDataDisplay(conferinta);
 
-  // Admin in video call - show pure Agora UIKit interface
+  // Admin in video call - show video interface with integrated chat
   if (isInCall && conferenceStarted) {
     return (
-      <AgoraUIKit
-        rtcProps={{
-          appId: appID,
-          channel: conferinta.documentId,
-          token: null,
-          role: "host",
-          enableScreensharing: true,
-        }}
-        styleProps={{
-          UIKitContainer: {
-            width: '100vw',
-            height: '100vh',
-          },
-        }}
-        callbacks={{
-          EndCall: leaveConference,
-        }}
-      />
+      <>
+        <AgoraUIKit
+          rtcProps={{
+            appId: appID,
+            channel: conferinta.documentId,
+            token: null,
+            role: "host",
+            enableScreensharing: true,
+          }}
+          styleProps={{
+            UIKitContainer: {
+              width: '100vw',
+              height: '100vh',
+            },
+          }}
+          callbacks={{
+            EndCall: leaveConference,
+          }}
+        />
+        
+        {/* Chat Panel integrat pentru admin */}
+        <ChatPanel
+          messages={messages}
+          onSendMessage={sendMessage}
+          isConnected={chatConnected}
+          loading={chatLoading}
+          error={chatError}
+          username={username}
+          isVisible={chatVisible}
+          onToggleVisibility={() => setChatVisible(!chatVisible)}
+        />
+      </>
     );
   }
 
@@ -469,9 +538,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                       <div className="card bg-light">
                         <div className="card-body">
                           <i className="fa fa-calendar fa-2x text-primary mb-2"></i>
-                          <h6>Data & Ora</h6>
+                          <h6>{displayInfo.type === "Curs" ? "Interval" : "Data & Ora"}</h6>
                           <p className="mb-0">{displayInfo.dataRange}</p>
-                          <p className="mb-0">{displayInfo.oraRange}</p>
                         </div>
                       </div>
                     </div>

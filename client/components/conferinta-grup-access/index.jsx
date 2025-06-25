@@ -14,6 +14,10 @@ const AgoraUIKit = dynamic(() => import("agora-react-uikit"), {
   loading: () => <div>Loading video...</div>
 });
 
+// Import chat components
+import ChatPanel from "../../../components/Chat/ChatPanel";
+import useAgoraRTM from "../../../utils/useAgoraRTM";
+
 // Definim layout-ul în mod safe
 const LAYOUT_TYPES = {
   grid: 0,
@@ -42,12 +46,44 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
+  // Chat state
+  const [chatVisible, setChatVisible] = useState(true);
+  const [username, setUsername] = useState('');
+
+  // RTM Chat hook
+  const {
+    messages,
+    isConnected: chatConnected,
+    loading: chatLoading,
+    error: chatError,
+    connect: connectChat,
+    disconnect: disconnectChat,
+    sendMessage,
+    isReady: chatReady
+  } = useAgoraRTM({
+    appId: appID,
+    channelName: conferinta?.documentId || '',
+    username: username,
+    onMessage: (message) => {
+      console.log("📧 [CHAT] Mesaj nou primit:", message);
+    }
+  });
+
   // Clean Agora UIKit implementation
 
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
   const [timeUntilStart, setTimeUntilStart] = useState(null);
   const [adminIsPresent, setAdminIsPresent] = useState(false);
+
+  // Set username based on participant data
+  useEffect(() => {
+    if (participant && participant.nume && participant.prenume) {
+      const fullName = `${participant.nume} ${participant.prenume}`;
+      setUsername(fullName);
+      console.log("👤 [CHAT] Username setat pentru chat:", fullName);
+    }
+  }, [participant]);
 
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
@@ -232,13 +268,32 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     };
   };
 
-  const joinConference = () => {
+  const joinConference = async () => {
     console.log("🎥 [PARTICIPANT] Se alătură conferinței - Agora va gestiona permisiunile");
     setIsInCall(true);
+    
+    // Conectează chat-ul RTM
+    if (username && conferinta?.documentId) {
+      console.log("📧 [JOIN] Conectare chat RTM...");
+      try {
+        await connectChat();
+      } catch (error) {
+        console.error("💥 [JOIN] Eroare la conectarea chat-ului:", error);
+      }
+    }
   };
 
   const leaveConference = async () => {
     setIsInCall(false);
+    
+    // Deconectează chat-ul RTM
+    console.log("📧 [LEAVE] Deconectare chat RTM...");
+    try {
+      await disconnectChat();
+    } catch (error) {
+      console.error("💥 [LEAVE] Eroare la deconectarea chat-ului:", error);
+    }
+    
     if (conferinta && participant) {
       const accessLinkToUse = participant.uniqueAccessLink || participant.accessLink;
       if (accessLinkToUse) {
@@ -270,13 +325,13 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
       return {
-        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}`,
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}, ${conferinta.oraFinal}`,
         oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`,
         type: "Curs"
       };
     } else {
       return {
-        dataRange: moment(conferinta.dataInceput).format("DD MMMM YYYY"),
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput}`,
         oraRange: conferinta.oraInceput,
         type: "Conferință"
       };
@@ -329,27 +384,41 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
   const displayInfo = formatDataDisplay(conferinta);
 
-  // Conference in progress - show pure Agora UIKit interface
+  // Conference in progress - show video interface with integrated chat
   if (isInCall && conferenceStarted) {
     return (
-      <AgoraUIKit
-        rtcProps={{
-          appId: appID,
-          channel: conferinta.documentId,
-          token: null,
-          role: "host",
-          enableScreensharing: true,
-        }}
-        styleProps={{
-          UIKitContainer: {
-            width: '100vw',
-            height: '100vh',
-          },
-        }}
-        callbacks={{
-          EndCall: leaveConference,
-        }}
-      />
+      <>
+        <AgoraUIKit
+          rtcProps={{
+            appId: appID,
+            channel: conferinta.documentId,
+            token: null,
+            role: "host",
+            enableScreensharing: true,
+          }}
+          styleProps={{
+            UIKitContainer: {
+              width: '100vw',
+              height: '100vh',
+            },
+          }}
+          callbacks={{
+            EndCall: leaveConference,
+          }}
+        />
+        
+        {/* Chat Panel integrat */}
+        <ChatPanel
+          messages={messages}
+          onSendMessage={sendMessage}
+          isConnected={chatConnected}
+          loading={chatLoading}
+          error={chatError}
+          username={username}
+          isVisible={chatVisible}
+          onToggleVisibility={() => setChatVisible(!chatVisible)}
+        />
+      </>
     );
   }
 
@@ -360,7 +429,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       <div className="content">
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-8">
+            <div className="col-lg-8 pt-5">
               <div className="text-center mb-4">
                 <h2 className="text-primary">{conferinta.titlu}</h2>
                 <span className={`badge ${
@@ -380,8 +449,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                         Conferința nu a fost încă activată de către organizator.
                       </p>
                       <div className="mt-4">
-                        <p><strong>Data:</strong> {displayInfo.dataRange}</p>
-                        <p><strong>Ora:</strong> {displayInfo.oraRange}</p>
+                        <p><strong>{displayInfo.type === "Curs" ? "Interval:" : "Data & Ora:"}</strong> {displayInfo.dataRange}</p>
                       </div>
                     </>
                   ) : !adminIsPresent ? (

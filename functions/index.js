@@ -174,7 +174,7 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
       if (conferinta.tipConferinta === "course" && dataFinal) {
         return {
           type: "Curs Multi-zi",
-          dataRange: `${dataIncepere.format("DD MMMM YYYY")} - ${dataFinal.format("DD MMMM YYYY")}`,
+          dataRange: `${dataIncepere.format("DD MMMM YYYY")}, ${conferinta.oraIncepere} - ${dataFinal.format("DD MMMM YYYY")}, ${conferinta.oraFinal}`,
           oraRange: `${conferinta.oraIncepere} - ${conferinta.oraFinal}`
         };
       } else {
@@ -225,8 +225,7 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
                 <ul style="list-style: none; padding: 0; margin: 0;">
                   <li style="margin-bottom: 8px; color: #34495e;"><strong>• Titlu:</strong> ${conferenceData.titlu}</li>
                   <li style="margin-bottom: 8px; color: #34495e;"><strong>• Tip:</strong> ${displayInfo.type}</li>
-                  <li style="margin-bottom: 8px; color: #34495e;"><strong>• Data:</strong> ${displayInfo.dataRange}</li>
-                  <li style="margin-bottom: 8px; color: #34495e;"><strong>• Ora:</strong> ${displayInfo.oraRange}</li>
+                  <li style="margin-bottom: 8px; color: #34495e;"><strong>• ${conferenceData.tipConferinta === 'course' ? 'Interval' : 'Data & Ora'}:</strong> ${displayInfo.dataRange}</li>
                 </ul>
               </div>
 

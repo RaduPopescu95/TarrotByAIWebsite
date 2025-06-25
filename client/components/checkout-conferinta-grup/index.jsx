@@ -341,13 +341,13 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
       return {
-        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}`,
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}, ${conferinta.oraFinal}`,
         oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`,
         type: "Curs"
       };
     } else {
       return {
-        dataRange: moment(conferinta.dataInceput).format("DD MMMM YYYY"),
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")}, ${conferinta.oraInceput}`,
         oraRange: conferinta.oraInceput,
         type: "Conferință"
       };
@@ -458,12 +458,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
                   <div className="detail-item mb-2">
                     <i className="fa fa-calendar text-primary me-2"></i>
-                    <strong>Data:</strong> {displayInfo.dataRange}
-                  </div>
-                  
-                  <div className="detail-item mb-2">
-                    <i className="fa fa-clock text-primary me-2"></i>
-                    <strong>Ora:</strong> {displayInfo.oraRange}
+                    <strong>{displayInfo.type === "Curs" ? "Interval:" : "Data & Ora:"}</strong> {displayInfo.dataRange}
                   </div>
 
                   {conferinta.numarMaxParticipanti && (
@@ -643,22 +638,6 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <span><strong>Total de plată:</strong></span>
                             <span className="h4 text-primary">{conferinta.pretParticipare} RON</span>
-                          </div>
-
-                          {/* Test Mode Checkbox */}
-                          <div className="form-check mb-4 p-4 bg-warning bg-opacity-10 border border-warning rounded">
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              id="testMode"
-                              checked={testMode}
-                              onChange={(e) => setTestMode(e.target.checked)}
-                            />
-                            <label className="form-check-label" htmlFor="testMode">
-                              <i className="fa fa-flask text-warning me-2"></i>
-                              <strong>Mod Test - Simulează fara plata</strong>
-                            </label>
-                          
                           </div>
 
                           {testMode ? (

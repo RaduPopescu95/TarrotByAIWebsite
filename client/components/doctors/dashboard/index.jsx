@@ -597,11 +597,13 @@ const DoctorDashboard = (props) => {
                             </div>
                             <div className="date-details">
                               <span>
-                                Tip: {nextConferenceGrup?.tipConferinta}
+                                Tip: {nextConferenceGrup?.tipConferinta === "course" ? "Curs" : "Conferință"}
                               </span>
                               <h6>
-                                {moment(nextConferenceGrup?.dataIncepere).format('DD MMMM YYYY')}
-                                , ora {nextConferenceGrup?.oraIncepere}
+                                {nextConferenceGrup?.tipConferinta === "course" && nextConferenceGrup?.dataFinal ? 
+                                  `${moment(nextConferenceGrup?.dataIncepere).format('DD MMM YYYY')}, ${nextConferenceGrup?.oraIncepere} - ${moment(nextConferenceGrup?.dataFinal).format('DD MMM YYYY')}, ${nextConferenceGrup?.oraFinal}` :
+                                  `${moment(nextConferenceGrup?.dataIncepere).format('DD MMMM YYYY')}, ${nextConferenceGrup?.oraIncepere}`
+                                }
                               </h6>
                             </div>
                           </div>
@@ -742,7 +744,7 @@ const DoctorDashboard = (props) => {
                                           <h5>
                                             <Link href="#">{conference.titlu}</Link>
                                           </h5>
-                                          <span>Tip: {conference.tipConferinta}</span>
+                                          <span>Tip: {conference.tipConferinta === "course" ? "Curs" : "Conferință"}</span>
                                         </div>
                                       </div>
                                     </td>

@@ -55,7 +55,7 @@ const CalendarConferinteGrup = () => {
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
       return {
-        dataRange: `${moment(conferinta.dataInceput).format("DD MMM")} - ${moment(conferinta.dataFinal).format("DD MMM YYYY")}`,
+        dataRange: `${moment(conferinta.dataInceput).format("DD MMM YYYY")}, ${conferinta.oraInceput} - ${moment(conferinta.dataFinal).format("DD MMM YYYY")}, ${conferinta.oraFinal}`,
         oraRange: `${conferinta.oraInceput} - ${conferinta.oraFinal}`,
         type: "Curs"
       };
@@ -276,10 +276,6 @@ const CalendarConferinteGrup = () => {
                           <div className="d-flex align-items-center mb-2">
                             <i className="fa fa-calendar text-primary me-2"></i>
                             <span>{displayInfo.dataRange}</span>
-                          </div>
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fa fa-clock text-primary me-2"></i>
-                            <span>{displayInfo.oraRange}</span>
                           </div>
                           {conferinta.numarMaxParticipanti && (
                             <div className="d-flex align-items-center mb-2">

@@ -180,6 +180,12 @@ const DoctorSidebar = () => {
                   <span>Facturi</span>
                 </Link>
               </li>
+              {/* <li className={false ? "active" : ""}>
+                <Link href="/test-chat">
+                  <i className="fa-solid fa-flask me-2" />
+                  <span>Test Chat Conferințe</span>
+                </Link>
+              </li> */}
               {/* <li
                 className={
                   pathnames.includes("/doctor/doctor-payment") ? "active" : ""

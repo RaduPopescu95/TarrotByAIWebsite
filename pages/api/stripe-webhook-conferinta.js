@@ -275,14 +275,15 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
       month: 'long', 
       day: 'numeric' 
     });
-    dataDisplay = `${startDate} - ${endDate}`;
+    dataDisplay = `${startDate}, ${oraInceput} - ${endDate}, ${oraFinal}`;
   } else {
-    dataDisplay = new Date(dataInceput).toLocaleDateString('ro-RO', { 
+    const singleDate = new Date(dataInceput).toLocaleDateString('ro-RO', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
     });
+    dataDisplay = `${singleDate}, ${oraInceput}`;
   }
 
   const testModeAlert = isTestMode ? `
@@ -339,11 +340,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           </div>
                 
           <div style="margin-bottom: 12px;">
-            <strong style="color: #495057;">Data:</strong> ${dataDisplay}
-          </div>
-
-          <div style="margin-bottom: 12px;">
-            <strong style="color: #495057;">Ora:</strong> ${oraInceput}${tipConferinta === 'course' ? ` - ${oraFinal}` : ''}
+            <strong style="color: #495057;">${tipConferinta === 'course' ? 'Interval' : 'Data & Ora'}:</strong> ${dataDisplay}
           </div>
 
           <div style="margin-bottom: 12px;">
@@ -393,15 +390,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           </ul>
         </div>
 
-        <!-- Contact -->
-        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 16px;">📞 Ai întrebări?</h4>
-          <p style="margin: 0; font-size: 14px; color: #6c757d;">
-            Pentru orice întrebări sau probleme tehnice, nu ezita să ne contactezi.
-            Suntem aici să te ajutăm!
-            webdynamicx@gmail.com
-          </p>
-        </div>
+
 
         <!-- Footer -->
         <div style="text-align: center; border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
