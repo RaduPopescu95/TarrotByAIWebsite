@@ -6,8 +6,13 @@ const accountSid = "AC6cf01717a74bbf7cc02d4a723db53232";
 const authToken = "8c6b979039e8d0fb5aa878dcc2eefac6";
 const twilioPhoneNumber = "+15042266134";
 
+console.log("🔧 [TWILIO CONFIG] Account SID:", accountSid);
+console.log("🔧 [TWILIO CONFIG] Auth Token:", authToken ? `${authToken.substring(0, 8)}...` : 'MISSING');
+console.log("🔧 [TWILIO CONFIG] Phone Number:", twilioPhoneNumber);
+
 // Inițializare client Twilio
 const client = new Twilio(accountSid, authToken);
+console.log("✅ [TWILIO CONFIG] Client inițializat cu succes");
 
 // Lista de UIDs autorizate (eliminat restricțiile)
 const authorizedUIDs = [
@@ -125,19 +130,67 @@ export default async function handler(req, res) {
         }
 
         const phoneNumber = recipient.telefon || recipient.phone;
-        console.log(`📤 [SMS SEND] Trimitere către: ${recipient.nume} ${recipient.prenume} (${phoneNumber})`);
+        console.log(`📤 [SMS VALIDATION] Verificare număr pentru: ${recipient.nume} ${recipient.prenume}`);
+        console.log(`📞 [SMS VALIDATION] Numărul primit: "${phoneNumber}"`);
+        console.log(`📞 [SMS VALIDATION] Tip: ${typeof phoneNumber}`);
+        console.log(`📞 [SMS VALIDATION] Lungime: ${phoneNumber?.length || 0}`);
+
+        // Validare format E.164 pentru Twilio
+        if (!phoneNumber.startsWith('+')) {
+          console.error(`❌ [SMS FORMAT] Număr invalid pentru ${recipient.nume}: "${phoneNumber}" - nu începe cu +`);
+          results.push({
+            recipient: `${recipient.nume} ${recipient.prenume}`,
+            email: recipient.email,
+            phone: phoneNumber,
+            status: "error",
+            error: "Format invalid - numărul trebuie să înceapă cu + (format E.164)",
+            failedAt: new Date().toISOString()
+          });
+          continue;
+        }
+
+        // Verificare format E.164 complet
+        const phoneRegex = /^\+[1-9]\d{1,14}$/;
+        if (!phoneRegex.test(phoneNumber)) {
+          console.error(`❌ [SMS FORMAT] Format E.164 invalid pentru ${recipient.nume}: "${phoneNumber}"`);
+          results.push({
+            recipient: `${recipient.nume} ${recipient.prenume}`,
+            email: recipient.email,
+            phone: phoneNumber,
+            status: "error",
+            error: "Format E.164 invalid (ex: +40712345678)",
+            failedAt: new Date().toISOString()
+          });
+          continue;
+        }
+
+        console.log(`✅ [SMS VALIDATION] Număr valid în format E.164: "${phoneNumber}"`);
+        console.log(`📤 [SMS SEND] Încep trimiterea către: ${recipient.nume} ${recipient.prenume}`);
 
         // Construiește mesajul personalizat
         const smsMessage = buildSMSMessage(recipient, conferenceData, smsType, displayInfo);
 
-        // Trimite SMS-ul prin Twilio
-        const message = await client.messages.create({
+        // Pregătire date pentru Twilio
+        const twilioData = {
           body: smsMessage,
           from: twilioPhoneNumber,
           to: phoneNumber,
-        });
+        };
 
-        console.log(`✅ [SMS SUCCESS] SMS trimis cu succes către ${recipient.nume} - SID: ${message.sid}`);
+        console.log(`🔄 [TWILIO REQUEST] Pregătire trimitere...`);
+        console.log(`📋 [TWILIO REQUEST] From: "${twilioPhoneNumber}"`);
+        console.log(`📋 [TWILIO REQUEST] To: "${phoneNumber}"`);
+        console.log(`📋 [TWILIO REQUEST] Body length: ${smsMessage.length} caractere`);
+
+        // Trimite SMS-ul prin Twilio
+        const message = await client.messages.create(twilioData);
+
+        console.log(`✅ [SMS SUCCESS] SMS trimis cu succes către ${recipient.nume}`);
+        console.log(`📧 [SMS SUCCESS] SID: ${message.sid}`);
+        console.log(`📊 [SMS SUCCESS] Status: ${message.status}`);
+        console.log(`💰 [SMS SUCCESS] Price: ${message.price || 'N/A'} ${message.priceUnit || ''}`);
+        console.log(`📡 [SMS SUCCESS] Direction: ${message.direction}`);
+        console.log(`📅 [SMS SUCCESS] Created: ${message.dateCreated}`);
         
         results.push({
           recipient: `${recipient.nume} ${recipient.prenume}`,
@@ -151,36 +204,63 @@ export default async function handler(req, res) {
         successCount++;
 
       } catch (twilioError) {
-        console.error(`💥 [SMS ERROR] Eroare Twilio pentru ${recipient.nume}:`, twilioError.message);
+        console.error(`💥 [SMS ERROR] ===== EROARE TWILIO PENTRU ${recipient.nume} =====`);
+        console.error(`📞 [SMS ERROR] Număr destinatar: "${phoneNumber}"`);
+        console.error(`🔢 [SMS ERROR] Cod eroare: ${twilioError.code || 'N/A'}`);
+        console.error(`📝 [SMS ERROR] Mesaj eroare: ${twilioError.message}`);
+        console.error(`📊 [SMS ERROR] Status HTTP: ${twilioError.status || 'N/A'}`);
+        console.error(`🔍 [SMS ERROR] More info: ${twilioError.moreInfo || 'N/A'}`);
+        console.error(`📄 [SMS ERROR] Full error:`, JSON.stringify(twilioError, null, 2));
+        
         twilioErrorsCount++;
         errorCount++;
 
-        // Determină tipul erorii Twilio
+        // Determină tipul erorii Twilio cu detalii suplimentare
         let errorReason = "Eroare necunoscută";
+        let technicalDetails = "";
+        
         if (twilioError.code) {
           switch (twilioError.code) {
             case 21211:
               errorReason = "Număr de telefon invalid";
+              technicalDetails = "Numărul nu respectă formatul E.164 sau nu este un număr de telefon valid";
               break;
             case 21610:
               errorReason = "Numărul este în blacklist";
+              technicalDetails = "Numărul a fost marcat ca spam sau este blocat";
               break;
             case 21614:
               errorReason = "Numărul nu poate primi SMS-uri";
+              technicalDetails = "Numărul este fix sau nu suportă SMS-uri";
               break;
             case 20003:
               errorReason = "Permisiuni autentificare insuficiente";
+              technicalDetails = "Verificați Account SID și Auth Token Twilio";
               break;
             case 20429:
               errorReason = "Rate limit depășit";
+              technicalDetails = "Prea multe requesturi într-un timp scurt";
               break;
             case 21408:
               errorReason = "Permisiuni insuficiente pentru destinatar";
+              technicalDetails = "Contul Twilio nu poate trimite către acest număr";
+              break;
+            case 20009:
+              errorReason = "Credit insuficient în contul Twilio";
+              technicalDetails = "Adăugați credit în contul Twilio pentru a continua";
+              break;
+            case 21612:
+              errorReason = "Numărul nu poate primi SMS-uri";
+              technicalDetails = "Numărul de telefon nu poate primi mesaje text";
               break;
             default:
-              errorReason = `Eroare Twilio: ${twilioError.message}`;
+              errorReason = `Eroare Twilio (${twilioError.code})`;
+              technicalDetails = twilioError.message;
           }
         }
+
+        console.error(`🎯 [SMS ERROR] Reason: ${errorReason}`);
+        console.error(`🔧 [SMS ERROR] Technical: ${technicalDetails}`);
 
         results.push({
           recipient: `${recipient.nume} ${recipient.prenume}`,
@@ -188,7 +268,11 @@ export default async function handler(req, res) {
           phone: recipient.telefon || recipient.phone || "N/A",
           status: "error",
           error: errorReason,
+          technicalDetails: technicalDetails,
           twilioCode: twilioError.code || null,
+          twilioStatus: twilioError.status || null,
+          twilioMoreInfo: twilioError.moreInfo || null,
+          fullErrorMessage: twilioError.message,
           failedAt: new Date().toISOString()
         });
 

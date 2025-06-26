@@ -12,6 +12,9 @@ import AlertMessage from "../AlertMessage";
 import moment from "moment";
 import "moment/locale/ro";
 import { loadStripe } from "@stripe/stripe-js";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 moment.locale("ro");
 
@@ -132,6 +135,12 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       showAlert("danger", "Format email invalid");
+      return false;
+    }
+
+    // Validare număr de telefon în format E.164
+    if (!formData.telefon || !isValidPhoneNumber(formData.telefon)) {
+      showAlert("danger", "Numărul de telefon nu este valid. Te rugăm să folosești formatul internațional (ex: +40 xxx xxx xxx)");
       return false;
     }
 
@@ -590,15 +599,26 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                           <label className="form-label">
                             Telefon <span className="text-danger">*</span>
                           </label>
-                          <input
-                            type="tel"
-                            className="form-control"
-                            name="telefon"
+                          <PhoneInput
+                            international
+                            defaultCountry="RO"
                             value={formData.telefon}
-                            onChange={handleInputChange}
-                            placeholder="+40 xxx xxx xxx"
-                            required
+                            onChange={(value) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                telefon: value || ""
+                              }));
+                            }}
+                            className="form-control"
+                            placeholder="Selectează țara și introdu numărul"
+                            style={{
+                              '--PhoneInputCountrySelectArrow-color': '#6c757d',
+                              '--PhoneInput-color': '#495057'
+                            }}
                           />
+                          <small className="text-muted">
+                            Format internațional (ex: +40 xxx xxx xxx)
+                          </small>
                         </div>
                       </div>
                     </div>
