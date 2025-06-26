@@ -16,6 +16,7 @@ const SuccessConferintaGrup = () => {
   const [conferinta, setConferinta] = useState(null);
   const [participant, setParticipant] = useState(null);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [showSaveOptions, setShowSaveOptions] = useState(false);
   const { session_id, conferinta_id, access_link } = router.query;
 
   useEffect(() => {
@@ -30,6 +31,34 @@ const SuccessConferintaGrup = () => {
       }
     }
   }, [session_id, conferinta_id, access_link, currentUser]);
+
+  // Salvare link în localStorage pentru guest users
+  useEffect(() => {
+    const accessLinkValue = getAccessLink();
+    if (accessLinkValue && participant?.isGuestUser && !currentUser) {
+      const guestConferenceData = {
+        accessLink: accessLinkValue,
+        conferenceTitle: conferinta?.titlu,
+        participantName: `${participant.nume} ${participant.prenume}`,
+        participantEmail: participant.email,
+        conferenceDate: conferinta?.dataInceput,
+        conferenceTime: conferinta?.oraInceput,
+        savedAt: new Date().toISOString(),
+        sessionId: session_id
+      };
+      
+      // Salvez în localStorage
+      const existingGuestLinks = JSON.parse(localStorage.getItem('guestConferenceLinks') || '[]');
+      const filteredLinks = existingGuestLinks.filter(link => link.sessionId !== session_id);
+      filteredLinks.push(guestConferenceData);
+      
+      // Păstrez doar ultimele 10 linkuri
+      const limitedLinks = filteredLinks.slice(-10);
+      localStorage.setItem('guestConferenceLinks', JSON.stringify(limitedLinks));
+      
+      console.log("💾 [GUEST STORAGE] Link salvat în localStorage pentru guest user");
+    }
+  }, [conferinta, participant, session_id, currentUser]);
 
   const fetchPaymentDetails = async () => {
     try {
@@ -130,6 +159,97 @@ const SuccessConferintaGrup = () => {
       return `/conferinta-grup/${participant.accessLink}`;
     }
     return null;
+  };
+
+  // Funcții pentru opțiuni îmbunătățite de salvare
+  const generateQRCode = (text) => {
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+    return qrCodeUrl;
+  };
+
+  const downloadBookmarkFile = () => {
+    const accessLinkValue = getAccessLink();
+    if (!accessLinkValue) return;
+    
+    const fullLink = `${window.location.origin}${accessLinkValue}`;
+    const bookmarkContent = `[InternetShortcut]
+URL=${fullLink}
+IconFile=${window.location.origin}/favicon.ico
+IconIndex=0`;
+
+    const blob = new Blob([bookmarkContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Conferinta_${conferinta?.titlu?.replace(/[^a-zA-Z0-9]/g, '_')}.url`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('Fișier bookmark descărcat! Poți să-l salvezi pe desktop pentru acces rapid.');
+  };
+
+  const saveToCalendar = () => {
+    if (!conferinta) return;
+    
+    const startDate = moment(`${conferinta.dataInceput} ${conferinta.oraInceput}`, "YYYY-MM-DD HH:mm");
+    const endDate = conferinta.tipConferinta === "course" ? 
+      moment(`${conferinta.dataFinal} ${conferinta.oraFinal}`, "YYYY-MM-DD HH:mm") :
+      startDate.clone().add(2, 'hours'); // Default 2 ore pentru conferințe
+    
+    const accessLinkValue = getAccessLink();
+    const fullLink = `${window.location.origin}${accessLinkValue}`;
+    
+    const calendarEvent = {
+      title: conferinta.titlu,
+      start: startDate.format('YYYYMMDDTHHmmss'),
+      end: endDate.format('YYYYMMDDTHHmmss'),
+      description: `${conferinta.descriere}\\n\\nLink de acces: ${fullLink}\\n\\nParticipant: ${participant?.nume} ${participant?.prenume}`,
+      location: 'Online - Link în descriere'
+    };
+    
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Cristina Zurba//Conference Reminder//EN
+BEGIN:VEVENT
+UID:${session_id}@cristinazurba.com
+DTSTAMP:${moment().format('YYYYMMDDTHHmmss')}Z
+DTSTART:${calendarEvent.start}Z
+DTEND:${calendarEvent.end}Z
+SUMMARY:${calendarEvent.title}
+DESCRIPTION:${calendarEvent.description}
+LOCATION:${calendarEvent.location}
+END:VEVENT
+END:VCALENDAR`;
+    
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Conferinta_${conferinta.titlu.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('Eveniment calendar descărcat! Poți să-l adaugi în aplicația ta de calendar.');
+  };
+
+  const sendSMSReminder = () => {
+    if (!participant?.telefon) {
+      alert('Nu există număr de telefon pentru trimiterea SMS-ului');
+      return;
+    }
+    
+    const accessLinkValue = getAccessLink();
+    const fullLink = `${window.location.origin}${accessLinkValue}`;
+    const message = `Conferinta: ${conferinta?.titlu}
+Data: ${moment(conferinta?.dataInceput).format("DD MMMM YYYY")}, ${conferinta?.oraInceput}
+Link acces: ${fullLink}`;
+    
+    const smsUrl = `sms:${participant.telefon}?body=${encodeURIComponent(message)}`;
+    window.location.href = smsUrl;
   };
 
   if (loading) {
@@ -281,28 +401,154 @@ const SuccessConferintaGrup = () => {
                       Folosește acest link pentru a accesa conferința:
                     </p>
                     
-                    <div className="access-link-container p-3 bg-light rounded mb-3">
+                    <div className="access-link-container p-3 bg-light rounded mb-4">
                       <code className="text-primary">{window.location.origin}{accessLink}</code>
                     </div>
                     
-                    <Link 
-                      href={accessLink}
-                      className="btn btn-primary btn-lg me-3"
-                    >
-                      <i className="fa fa-video me-2"></i>
-                      Acces Direct la Conferință
-                    </Link>
-                    
-                    <button 
-                      className="btn btn-outline-primary btn-lg"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}${accessLink}`);
-                        alert('Link copiat în clipboard!');
-                      }}
-                    >
-                      <i className="fa fa-copy me-2"></i>
-                      Copiază Link
-                    </button>
+                    {/* Butoane principale */}
+                    <div className="d-flex justify-content-center gap-3 mb-4">
+                      <Link 
+                        href={accessLink}
+                        className="btn btn-primary btn-lg"
+                      >
+                        <i className="fa fa-video me-2"></i>
+                        Acces Direct
+                      </Link>
+                      
+                      <button 
+                        className="btn btn-outline-primary btn-lg"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}${accessLink}`);
+                          alert('Link copiat în clipboard!');
+                        }}
+                      >
+                        <i className="fa fa-copy me-2"></i>
+                        Copiază Link
+                      </button>
+                    </div>
+
+                    {/* Opțiuni avansate de salvare pentru guest users */}
+                    {!currentUser && participant?.isGuestUser && (
+                      <>
+                        <div className="alert alert-info">
+                          <i className="fa fa-lightbulb me-2"></i>
+                          <strong>Pentru că nu ai cont,</strong> îți recomandăm să salvezi link-ul în mai multe moduri pentru siguranță:
+                        </div>
+
+                        <div className="d-flex justify-content-center">
+                          <button 
+                            className="btn btn-outline-info"
+                            onClick={() => setShowSaveOptions(!showSaveOptions)}
+                          >
+                            <i className="fa fa-chevron-down me-2"></i>
+                            {showSaveOptions ? 'Ascunde' : 'Vezi'} Opțiuni de Salvare
+                          </button>
+                        </div>
+
+                        {showSaveOptions && (
+                          <div className="row mt-4">
+                            <div className="col-12">
+                              <h6 className="text-primary mb-3">Salvează link-ul în mai multe moduri:</h6>
+                            </div>
+
+                            {/* QR Code */}
+                            <div className="col-md-6 mb-3">
+                              <div className="card h-100">
+                                <div className="card-body text-center">
+                                  <i className="fa fa-qrcode fa-2x text-primary mb-2"></i>
+                                  <h6>QR Code</h6>
+                                  <p className="small text-muted">Scanează cu telefonul pentru acces rapid</p>
+                                  <img 
+                                    src={generateQRCode(`${window.location.origin}${accessLink}`)}
+                                    alt="QR Code pentru conferință"
+                                    className="img-fluid mb-2"
+                                    style={{ maxWidth: '120px' }}
+                                  />
+                                  <br />
+                                  <button 
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => {
+                                      const qrImg = generateQRCode(`${window.location.origin}${accessLink}`);
+                                      const newWindow = window.open();
+                                      newWindow.document.write(`<img src="${qrImg}" />`);
+                                    }}
+                                  >
+                                    Mărește QR
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Calendar Event */}
+                            <div className="col-md-6 mb-3">
+                              <div className="card h-100">
+                                <div className="card-body text-center">
+                                  <i className="fa fa-calendar fa-2x text-success mb-2"></i>
+                                  <h6>Adaugă în Calendar</h6>
+                                  <p className="small text-muted">Descarcă eveniment pentru calendar</p>
+                                  <button 
+                                    className="btn btn-outline-success"
+                                    onClick={saveToCalendar}
+                                  >
+                                    <i className="fa fa-download me-1"></i>
+                                    Descarcă .ics
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bookmark File */}
+                            <div className="col-md-6 mb-3">
+                              <div className="card h-100">
+                                <div className="card-body text-center">
+                                  <i className="fa fa-bookmark fa-2x text-warning mb-2"></i>
+                                  <h6>Fișier Bookmark</h6>
+                                  <p className="small text-muted">Salvează pe desktop pentru acces rapid</p>
+                                  <button 
+                                    className="btn btn-outline-warning"
+                                    onClick={downloadBookmarkFile}
+                                  >
+                                    <i className="fa fa-download me-1"></i>
+                                    Descarcă .url
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* SMS Reminder */}
+                            {participant?.telefon && (
+                              <div className="col-md-6 mb-3">
+                                <div className="card h-100">
+                                  <div className="card-body text-center">
+                                    <i className="fa fa-mobile fa-2x text-info mb-2"></i>
+                                    <h6>SMS Personal</h6>
+                                    <p className="small text-muted">Trimite-ți link-ul prin SMS</p>
+                                    <button 
+                                      className="btn btn-outline-info"
+                                      onClick={sendSMSReminder}
+                                    >
+                                      <i className="fa fa-sms me-1"></i>
+                                      Trimite SMS
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                                                         {/* Browser Storage Info */}
+                             <div className="col-12 mt-3">
+                               <div className="alert alert-success">
+                                 <i className="fa fa-check-circle me-2"></i>
+                                 <strong>Salvat automat!</strong> Link-ul a fost salvat în browser-ul tău. 
+                                 <Link href="/linkurile-mele-guest" className="alert-link">
+                                   Vezi toate linkurile salvate
+                                 </Link> chiar dacă închidem pagina.
+                               </div>
+                             </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               )}

@@ -132,6 +132,43 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           </p>
         </div>
 
+        ${participantData.isGuestUser ? `
+        <!-- Informații speciale pentru Guest Users -->
+        <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">👤 Participare ca Vizitator</h3>
+          <p style="margin-bottom: 15px; font-size: 16px; color: #333;">
+            Pentru că participi fără cont, îți oferim opțiuni suplimentare de salvare a link-ului:
+          </p>
+          
+          <div style="background-color: #fff; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+            <h4 style="color: #007bff; margin: 0 0 10px 0; font-size: 16px;">📱 Pagina Ta de Linkuri</h4>
+            <p style="margin: 0 0 10px 0; font-size: 14px;">
+              Link-ul tău a fost salvat automat într-o pagină specială:
+            </p>
+            <p style="margin: 0 0 10px 0;">
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL}/linkurile-mele-guest" 
+                 style="color: #007bff; text-decoration: underline; font-weight: bold; font-size: 16px;">
+                🔗 Vezi Toate Linkurile Mele Salvate
+              </a>
+            </p>
+            <p style="margin: 0; font-size: 12px; color: #6c757d;">
+              Această pagină funcționează doar pe dispozitivul pe care ai făcut rezervarea.
+            </p>
+          </div>
+
+          <div style="background-color: #e7f3ff; border-radius: 6px; padding: 15px;">
+            <h4 style="color: #007bff; margin: 0 0 10px 0; font-size: 16px;">💾 Metode de Salvare</h4>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+              <li style="margin-bottom: 5px;">✅ <strong>Email-ul acesta</strong> - Păstrează-l în inbox</li>
+              <li style="margin-bottom: 5px;">📱 <strong>QR Code</strong> - Disponibil pe pagina de confirmare</li>
+              <li style="margin-bottom: 5px;">📅 <strong>Calendar</strong> - Descarcă evenimentul .ics</li>
+              <li style="margin-bottom: 5px;">🔖 <strong>Bookmark</strong> - Fișier .url pentru desktop</li>
+              <li style="margin-bottom: 5px;">💾 <strong>Browser local</strong> - Salvat automat pe dispozitiv</li>
+            </ul>
+          </div>
+        </div>
+        ` : ''}
+
         <!-- Instrucțiuni -->
         <div style="margin-bottom: 25px;">
           <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">📋 Instrucțiuni Importante</h3>
@@ -141,6 +178,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
             <li style="margin-bottom: 8px;">Asigură-te că ai o conexiune stabilă la internet</li>
             <li style="margin-bottom: 8px;">Recomandăm folosirea unui laptop sau computer pentru o experiență optimă</li>
             ${tipConferinta === 'course' ? '<li style="margin-bottom: 8px;">Link-ul de acces este același pentru toate sesiunile cursului</li>' : ''}
+            ${participantData.isGuestUser ? '<li style="margin-bottom: 8px; color: #856404;"><strong>IMPORTANT:</strong> Salvează link-ul în mai multe locuri - vezi secțiunea de mai sus pentru opțiuni</li>' : ''}
                     </ul>
                 </div>
 
@@ -223,6 +261,21 @@ export default async function handler(req, res) {
         - Preț: ${conferintaData.pretParticipare} RON ${isTestMode ? '(SIMULAT)' : ''}
         
         Link de acces: ${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}
+        
+        ${participantData.isGuestUser ? `
+        PARTICIPARE CA VIZITATOR:
+        Pentru că participi fără cont, îți oferim opțiuni suplimentare de salvare:
+        
+        📱 Pagina ta de linkuri salvate:
+        ${process.env.NEXT_PUBLIC_SITE_URL}/linkurile-mele-guest
+        
+        💾 Metode de salvare disponibile:
+        - Email-ul acesta (păstrează-l în inbox)
+        - QR Code (pe pagina de confirmare)
+        - Fișier calendar .ics
+        - Fișier bookmark .url
+        - Salvare automată în browser
+        ` : ''}
         
         Mulțumim!
       `
