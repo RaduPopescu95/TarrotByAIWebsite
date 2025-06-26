@@ -28,11 +28,12 @@ export default async function handler(req, res) {
   try {
     const { recipients, conferenceData, emailType, userUID } = req.body;
 
-    // Verifică autorizarea admin
-    if (!userUID || !adminUIDs.includes(userUID)) {
-      console.error("❌ [CONFERENCE EMAIL API] UID neautorizat:", userUID);
-      return res.status(403).json({ error: 'Acces interzis. Doar adminii pot trimite email-uri.' });
+    // Eliminat verificarea restricțiilor admin - orice utilizator autentificat poate trimite email-uri
+    if (!userUID) {
+      console.error("❌ [CONFERENCE EMAIL API] UID lipsă:", userUID);
+      return res.status(403).json({ error: 'UID utilizator necesar pentru trimiterea email-urilor.' });
     }
+    console.log("✅ [CONFERENCE EMAIL API] Utilizator autentificat:", userUID);
 
     // Validează datele de intrare
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {

@@ -56,9 +56,14 @@ export default async (req, res) => {
           owner_uid,
           adresaClient,
         },
-        // Adaugă opțiunea pentru crearea unei facturi
+        // Generez factura în Stripe (pentru Oblio) dar nu o trimit prin email
         invoice_creation: {
           enabled: true,
+          invoice_data: {
+            description: `Plată consultație pentru ${nume}`,
+            footer: "Mulțumim pentru plată!",
+            // Nu setez custom_fields sau rendering_options pentru a evita trimiterea automată
+          },
         },
         success_url: `${req.headers.origin}/rezervare-finalizata?session_id={CHECKOUT_SESSION_ID}`, // Transmite session_id ca parametru de query
         cancel_url: `${req.headers.origin}/calendar`,

@@ -57,6 +57,12 @@ async function handleInvoiceCreated(invoice) {
     console.log("🧾 [STRIPE WEBHOOK] Procesez factura creată...");
     console.log("🧾 [STRIPE WEBHOOK] Invoice ID:", invoice.id);
     console.log("🧾 [STRIPE WEBHOOK] Payment Intent:", invoice.payment_intent);
+    
+    // Dezactivez trimiterea automată prin email pentru această factură
+    await stripe.invoices.update(invoice.id, {
+      auto_advance: false, // Oprește auto-finalizarea și trimiterea
+    });
+    console.log("🧾 [STRIPE WEBHOOK] Dezactivat trimiterea automată pentru factura:", invoice.id);
 
     // Încerc să găsesc sesiunea de checkout pe baza payment intent-ului
     if (invoice.payment_intent) {

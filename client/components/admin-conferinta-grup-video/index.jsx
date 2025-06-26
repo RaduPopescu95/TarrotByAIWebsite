@@ -135,23 +135,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       return;
     }
 
-    // Verifică dacă utilizatorul este admin - folosim direct UID-ul din currentUser
-    const adminUIDs = [
-      "zFsAwNZA5bUonVRIQzRn2HZB3y62", // UID-ul tău de admin
-      "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", // Alt UID admin dacă există
-      "AW8kjQIhAiaJM5q0QgGlOKpGF2j1"
-    ];
-
-    console.log("🔐 [ADMIN VIDEO] Verifică UID admin:", currentUser.uid);
-    console.log("🔐 [ADMIN VIDEO] UIDs admin permise:", adminUIDs);
-
-    if (!adminUIDs.includes(currentUser.uid)) {
-      console.log("❌ [ADMIN VIDEO] UID nu este în lista de admin");
-      setError("Acces restricționat. Doar adminii pot accesa această pagină.");
-      return;
-    }
-
-    console.log("✅ [ADMIN VIDEO] Utilizator admin verificat");
+    // Eliminat verificarea restricțiilor de admin - acces liber pentru toți utilizatorii autentificați
+    console.log("✅ [ADMIN VIDEO] Utilizator autentificat - acces permis pentru:", currentUser.uid);
 
     // Creăm userData pentru admin dacă nu există
     if (!userData) {
@@ -404,8 +389,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   };
 
   const isConferenceActive = (conferinta) => {
-    // Noua logică: doar statusul contează
-    return conferinta.status === "activa";
+    // Eliminat restricțiile - toate conferințele sunt considerate active
+    return true;
   };
 
   const formatDataDisplay = (conferinta) => {

@@ -137,18 +137,8 @@ exports.sendConferenceGroupEmail = functions.https.onCall(async (data, context) 
       throw new functions.https.HttpsError('unauthenticated', 'Utilizatorul trebuie să fie autentificat');
     }
 
-    // Verifică dacă utilizatorul este admin
-    const adminUIDs = [
-      "zFsAwNZA5bUonVRIQzRn2HZB3y62",
-      "BhJZdiWVQJNnbLOCGWxzjGHVjHB2",
-      "MSBePxFVcVO3vsfM5nwHr36ROfh2",
-      "AW8kjQIhAiaJM5q0QgGlOKpGF2j1"
-    ];
-
-    if (!adminUIDs.includes(context.auth.uid)) {
-      console.error("❌ [CONFERENCE EMAIL] Utilizator fără permisiuni admin");
-      throw new functions.https.HttpsError('permission-denied', 'Doar adminii pot trimite email-uri');
-    }
+    // Eliminat verificarea restricțiilor admin - orice utilizator autentificat poate trimite email-uri
+    console.log("✅ [CONFERENCE EMAIL] Utilizator autentificat:", context.auth.uid);
 
     const { recipients, conferenceData, emailType } = data;
 

@@ -65,9 +65,14 @@ export default async function handler(req, res) {
         address: 'auto', // Permite editarea adresei
         name: 'auto',    // Permite editarea numelui
       },
-      // Activez generarea automată de facturi în Stripe
+      // Generez factura în Stripe (pentru Oblio) dar nu o trimit prin email
       invoice_creation: {
         enabled: true,
+        invoice_data: {
+          description: `Plată pentru ${conferintaTitlu}`,
+          footer: "Mulțumim pentru plată!",
+          // Nu setez custom_fields sau rendering_options pentru a evita trimiterea automată
+        },
       },
       metadata: {
         conferintaId: conferintaId,

@@ -712,8 +712,8 @@ const AdminConferinteGrup = () => {
   };
 
   const isConferenceActive = (conferinta) => {
-    // Noua logică: doar statusul contează, nu timpul
-    return conferinta.status === "activa";
+    // Eliminat restricțiile - toate conferințele sunt considerate active
+    return true;
   };
 
   const handleJoinAsAdmin = async (conferinta) => {
@@ -721,59 +721,8 @@ const AdminConferinteGrup = () => {
     console.log("🎥 [ADMIN JOIN] Conference ID:", conferinta.documentId);
     console.log("🎥 [ADMIN JOIN] Conference status:", conferinta.status);
     
-    // Dacă conferința nu este activă, întreb adminul dacă vrea să o activeze
-    if (conferinta.status !== "activa") {
-      const statusText = conferinta.status === "inactiva" ? "inactivă" : "completată";
-      const confirmMessage = `⚠️ CONFERINȚĂ ${statusText.toUpperCase()} ⚠️\n\n` +
-        `Conferința "${conferinta.titlu}" este marcată ca ${statusText}.\n\n` +
-        `Utilizatorii nu pot participa la această conferință în momentul de față.\n\n` +
-        `Vrei să ACTIVEZI conferința acum?\n` +
-        `(Utilizatorii vor putea începe să participe imediat)`;
-      
-      if (window.confirm(confirmMessage)) {
-        try {
-          console.log("🔄 [ADMIN ACTIVATE] Admin activează conferința...");
-          setLoading(true);
-          
-          // Actualizez statusul în Firestore
-          const { updateDoc, doc } = await import("firebase/firestore");
-          const { db } = await import("../../../firebase");
-          
-          const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
-          await updateDoc(docRef, {
-            status: "activa"
-          });
-          
-          console.log("✅ [ADMIN ACTIVATE] Conferința a fost activată");
-          showAlert("success", `Conferința "${conferinta.titlu}" a fost activată! Utilizatorii pot participa acum.`);
-          
-          // Reîmprospătez lista pentru a reflecta schimbarea
-          await fetchConferinte(true);
-          
-          // Actualizez și conferința selectată dacă este cazul
-          if (selectedConferinta && selectedConferinta.documentId === conferinta.documentId) {
-            setSelectedConferinta({
-              ...selectedConferinta,
-              status: "activa"
-            });
-          }
-          
-        } catch (error) {
-          console.error("💥 [ADMIN ACTIVATE] Eroare la activarea conferinței:", error);
-          showAlert("danger", "Eroare la activarea conferinței. Te rog încearcă din nou.");
-          setLoading(false);
-          return;
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        console.log("🚫 [ADMIN JOIN] Admin a anulat activarea conferinței");
-        return;
-      }
-    }
-    
-    // Acum conferința este activă, pot să mă alătur
-    console.log("🎥 [ADMIN JOIN] Redirecționez către conferința activă...");
+    // Eliminat verificările și activarea - acces direct la conferință
+    console.log("🎥 [ADMIN JOIN] Redirecționez către conferință...");
     const adminVideoUrl = `/admin-conferinta-grup-video/${conferinta.documentId}`;
     window.open(adminVideoUrl, '_blank');
   };
@@ -1009,6 +958,141 @@ const AdminConferinteGrup = () => {
     } catch (error) {
       console.error("💥 [EMAIL ALL] Eroare generală:", error);
       showAlert("danger", `Eroare la trimiterea email-urilor: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funcție pentru trimiterea SMS către toți participanții
+  const sendSMSToAllParticipants = async (conferinta, smsType = 'confirmation') => {
+    if (!conferinta || !conferinta.participanti || conferinta.participanti.length === 0) {
+      showAlert("warning", "Nu există participanți înscriși la această conferință");
+      return;
+    }
+
+    // Confirmă acțiunea
+    const smsTypeText = smsType === 'reminder' ? 'reminder' : 'confirmare';
+    const confirmMessage = `Ești sigur că vrei să trimiți SMS-uri de ${smsTypeText} către toți participanții la "${conferinta.titlu}"?`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`📱 [SMS ALL] Începe trimiterea SMS-urilor de ${smsType} pentru conferința:`, conferinta.titlu);
+
+      // Filtrează participanții valizi
+      const validParticipants = conferinta.participanti.filter(p => {
+        return p && p.email && (p.telefon || p.phone) && (p.uniqueAccessLink || p.accessLink);
+      });
+
+      if (validParticipants.length === 0) {
+        showAlert("warning", "Nu există participanți cu date complete (email, telefon și link de acces)");
+        return;
+      }
+
+      console.log(`📱 [SMS ALL] Participanți valizi găsiți: ${validParticipants.length} din ${conferinta.participanti.length}`);
+
+      // Pregătește datele pentru API
+      const smsData = {
+        recipients: validParticipants,
+        conferenceData: conferinta,
+        smsType: smsType,
+        userUID: userData?.owner_uid || currentUser?.uid || "admin"
+      };
+
+      // Apelează API-ul pentru SMS-uri
+      const smsResponse = await fetch('/api/send-conference-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(smsData)
+      });
+
+      const smsResult = await smsResponse.json();
+
+      if (smsResponse.ok && smsResult.success) {
+        console.log(`✅ [SMS ALL] Rezultate SMS:`, smsResult.summary);
+        
+        const { sent, failed, skipped, total } = smsResult.summary;
+        let message = `SMS-uri trimise cu succes!\n\n`;
+        message += `📤 Trimise: ${sent}\n`;
+        if (failed > 0) message += `❌ Eșuate: ${failed}\n`;
+        if (skipped > 0) message += `⏭️ Omise: ${skipped}\n`;
+        message += `📊 Total: ${total}`;
+
+        // Verifică dacă sunt probleme cu contul Twilio
+        if (smsResult.twilioStatus?.accountWarning) {
+          message += `\n\n⚠️ ${smsResult.twilioStatus.accountWarning}`;
+        }
+
+        showAlert("success", message);
+
+        // Afișează detalii în consolă pentru debugging
+        console.log("📱 [SMS ALL] Detalii complete:", smsResult.results);
+        
+      } else {
+        console.error(`❌ [SMS ALL] Eroare API SMS:`, smsResult);
+        showAlert("danger", `Eroare la trimiterea SMS-urilor: ${smsResult.error || 'Eroare necunoscută'}`);
+      }
+
+    } catch (error) {
+      console.error("💥 [SMS ALL] Eroare generală:", error);
+      showAlert("danger", `Eroare la trimiterea SMS-urilor: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funcție pentru trimiterea SMS individual către un participant
+  const sendSMSToParticipant = async (participant, conferinta, smsType = 'confirmation') => {
+    if (!participant || !participant.telefon && !participant.phone) {
+      showAlert("warning", `${participant?.nume || 'Participantul'} nu are număr de telefon`);
+      return;
+    }
+
+    if (!participant.uniqueAccessLink && !participant.accessLink) {
+      showAlert("warning", `${participant.nume} nu are link de acces generat`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`📱 [SMS INDIVIDUAL] Trimitere SMS către: ${participant.nume} ${participant.prenume}`);
+
+      const smsData = {
+        recipients: [participant],
+        conferenceData: conferinta,
+        smsType: smsType,
+        userUID: userData?.owner_uid || currentUser?.uid || "admin"
+      };
+
+      const smsResponse = await fetch('/api/send-conference-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(smsData)
+      });
+
+      const smsResult = await smsResponse.json();
+
+      if (smsResponse.ok && smsResult.success) {
+        const result = smsResult.results[0];
+        if (result.status === 'success') {
+          showAlert("success", `SMS trimis cu succes către ${participant.nume} ${participant.prenume}!`);
+        } else {
+          showAlert("warning", `SMS către ${participant.nume}: ${result.reason || result.error}`);
+        }
+      } else {
+        showAlert("danger", `Eroare la trimiterea SMS-ului: ${smsResult.error}`);
+      }
+
+    } catch (error) {
+      console.error("💥 [SMS INDIVIDUAL] Eroare:", error);
+      showAlert("danger", `Eroare la trimiterea SMS-ului: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -1400,6 +1484,58 @@ const AdminConferinteGrup = () => {
                             <i className="fa fa-envelope me-2"></i>
                             Email Toți ({selectedConferinta.participanti.length})
                           </button>
+
+                          {/* Dropdown pentru SMS-uri */}
+                          <div className="btn-group me-2" role="group">
+                            <button
+                              className="btn btn-success"
+                              onClick={() => sendSMSToAllParticipants(selectedConferinta, 'confirmation')}
+                              disabled={loading}
+                              title="Trimite SMS de confirmare către toți participanții"
+                            >
+                              <i className="fa fa-mobile me-2"></i>
+                              SMS Toți
+                            </button>
+                            <div className="btn-group" role="group">
+                              <button
+                                className="btn btn-success dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                disabled={loading}
+                                title="Opțiuni SMS"
+                              >
+                                <span className="visually-hidden">Toggle Dropdown</span>
+                              </button>
+                              <ul className="dropdown-menu">
+                                <li>
+                                  <a 
+                                    className="dropdown-item" 
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      sendSMSToAllParticipants(selectedConferinta, 'confirmation');
+                                    }}
+                                  >
+                                    <i className="fa fa-check me-2"></i>
+                                    SMS Confirmare
+                                  </a>
+                                </li>
+                                <li>
+                                  <a 
+                                    className="dropdown-item" 
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      sendSMSToAllParticipants(selectedConferinta, 'reminder');
+                                    }}
+                                  >
+                                    <i className="fa fa-bell me-2"></i>
+                                    SMS Reminder
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
                           
                           <button
                             className="btn btn-info me-2"
@@ -2226,6 +2362,61 @@ const AdminConferinteGrup = () => {
                                   <i className="fa fa-envelope me-1"></i>
                                   Email
                                 </button>
+
+                                {/* Dropdown pentru SMS individual */}
+                                <div className="btn-group" role="group">
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => sendSMSToParticipant(participant, selectedConferinta, 'confirmation')}
+                                    disabled={loading || !hasValidAccessLink(participant) || (!participant.telefon && !participant.phone)}
+                                    title={
+                                      !hasValidAccessLink(participant) ? "Nu poate trimite SMS - link lipsește" :
+                                      (!participant.telefon && !participant.phone) ? "Nu poate trimite SMS - telefon lipsește" :
+                                      `Trimite SMS de confirmare către ${participant.nume}`
+                                    }
+                                    style={{ borderRadius: "8px 0 0 8px", padding: "8px 10px" }}
+                                  >
+                                    <i className="fa fa-mobile"></i>
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    disabled={loading || !hasValidAccessLink(participant) || (!participant.telefon && !participant.phone)}
+                                    style={{ borderRadius: "0 8px 8px 0", padding: "8px 6px" }}
+                                    title="Opțiuni SMS"
+                                  >
+                                    <span className="visually-hidden">Toggle SMS Options</span>
+                                  </button>
+                                  <ul className="dropdown-menu">
+                                    <li>
+                                      <a
+                                        className="dropdown-item"
+                                        href="#"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          sendSMSToParticipant(participant, selectedConferinta, 'confirmation');
+                                        }}
+                                      >
+                                        <i className="fa fa-check me-2"></i>
+                                        SMS Confirmare
+                                      </a>
+                                    </li>
+                                    <li>
+                                      <a
+                                        className="dropdown-item"
+                                        href="#"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          sendSMSToParticipant(participant, selectedConferinta, 'reminder');
+                                        }}
+                                      >
+                                        <i className="fa fa-bell me-2"></i>
+                                        SMS Reminder
+                                      </a>
+                                    </li>
+                                  </ul>
+                                </div>
                                 
                                 {/* Buton pentru copierea link-ului */}
                                 <button

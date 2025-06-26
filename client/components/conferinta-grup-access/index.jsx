@@ -160,26 +160,14 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         return;
       }
 
-      // Verifică dacă participantul este autentificat cu contul corect (doar pentru utilizatori cu cont)
-      if (currentUser && participantFound.userId && !participantFound.isGuestUser && participantFound.userId !== currentUser.uid) {
-        setError("Acest link nu poate fi accesat cu contul curent");
-        return;
-      }
-      
-      // Pentru guest users sau utilizatori neautentificați, permitem accesul direct prin link
-      if (!currentUser && participantFound.isGuestUser) {
-        console.log("✅ [ACCESS] Guest user acces permis prin link");
-      } else if (!currentUser && !participantFound.isGuestUser) {
-        console.log("⚠️ [ACCESS] Utilizator neautentificat încearcă să acceseze link-ul unui utilizator cu cont");
-        // Permitem accesul oricum, dar logăm pentru monitoring
-      }
+      // Eliminat verificarea restricțiilor de acces - oricine poate accesa orice link valid
+      console.log("✅ [ACCESS] Link valid - acces permis pentru orice utilizator");
+      console.log("👤 [ACCESS] Current user:", currentUser ? currentUser.uid : "Neautentificat");
+      console.log("🎫 [ACCESS] Participant:", participantFound.nume, participantFound.prenume);
 
-      // Verifică dacă conferința este activă
-      if (conferintaFound.status !== "activa") {
-        const statusText = conferintaFound.status === "inactiva" ? "inactivă" : "completată";
-        setError(`Această conferință este ${statusText} și nu este disponibilă pentru participare în acest moment.`);
-        return;
-      }
+      // Eliminat verificarea statusului conferinței - acces permis indiferent de status
+      console.log("📊 [ACCESS] Status conferință:", conferintaFound.status);
+      console.log("✅ [ACCESS] Acces permis indiferent de status");
 
       setConferinta(conferintaFound);
       setParticipant(participantFound);
@@ -206,23 +194,14 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   };
 
   const checkConferenceTiming = (conferinta) => {
-    // Verificăm dacă conferința este activă ȘI dacă adminul este prezent
+    // Eliminat restricțiile - conferința poate fi accesată oricând
     console.log("🔍 [PARTICIPANT] === VERIFICARE STATUS CONFERINȚĂ ===");
     console.log("🔍 [PARTICIPANT] Conference ID:", conferinta.documentId);
     console.log("🔍 [PARTICIPANT] Conference status:", conferinta.status);
-    console.log("🔍 [PARTICIPANT] Admin present (state):", adminIsPresent);
-    console.log("🔍 [PARTICIPANT] Conference started (state):", conferenceStarted);
+    console.log("✅ [PARTICIPANT] Acces permis indiferent de status și prezența admin");
     
-    if (conferinta.status === "activa" && adminIsPresent) {
-      console.log("✅ [PARTICIPANT] Conferința este LIVE - adminul este prezent");
-      setConferenceStarted(true);
-    } else if (conferinta.status === "activa" && !adminIsPresent) {
-      console.log("⏳ [PARTICIPANT] Conferința este activă dar adminul nu a intrat încă");
-      setConferenceStarted(false);
-    } else {
-      console.log("❌ [PARTICIPANT] Conferința nu este activă");
-      setConferenceStarted(false);
-    }
+    // Setăm întotdeauna conferința ca accesibilă
+    setConferenceStarted(true);
     
     console.log("🔍 [PARTICIPANT] === SFÂRȘIT VERIFICARE ===");
   };
