@@ -81,36 +81,48 @@ const AdminConferinteGrup = () => {
 
   // Funcție pentru incrementarea/decrementarea timpului cu săgeți
   const handleTimeIncrement = (type, isStartTime, increment) => {
-    const currentTime = isStartTime ? formData.oraInceput : formData.oraFinal;
-    const [currentHour, currentMinute] = currentTime ? currentTime.split(':') : ['00', '00'];
-    
-    let newHour = parseInt(currentHour) || 0;
-    let newMinute = parseInt(currentMinute) || 0;
-    
-    if (type === 'hour') {
-      // Incrementare/decrementare ore cu 1
-      newHour += increment;
+    try {
+      console.log(`[TIME INCREMENT] Type: ${type}, isStartTime: ${isStartTime}, increment: ${increment}`);
       
-      // Wrap around pentru ore (0-23)
-      if (newHour > 23) newHour = 0;
-      if (newHour < 0) newHour = 23;
-    } else if (type === 'minute') {
-      // Incrementare/decrementare minute cu 5
-      newMinute += increment;
+      const currentTime = isStartTime ? formData.oraInceput : formData.oraFinal;
+      const [currentHour, currentMinute] = currentTime ? currentTime.split(':') : ['00', '00'];
       
-      // Wrap around pentru minute (0-55, cu pași de 5)
-      if (newMinute >= 60) newMinute = 0;
-      if (newMinute < 0) newMinute = 55;
-    }
-    
-    // Formatează timpul
-    const formattedTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
-    
-    // Actualizează formData
-    if (isStartTime) {
-      setFormData(prev => ({ ...prev, oraInceput: formattedTime }));
-    } else {
-      setFormData(prev => ({ ...prev, oraFinal: formattedTime }));
+      let newHour = parseInt(currentHour) || 0;
+      let newMinute = parseInt(currentMinute) || 0;
+      
+      if (type === 'hour') {
+        // Incrementare/decrementare ore cu 1
+        newHour += increment;
+        
+        // Wrap around pentru ore (0-23)
+        if (newHour > 23) newHour = 0;
+        if (newHour < 0) newHour = 23;
+      } else if (type === 'minute') {
+        // Incrementare/decrementare minute cu 5
+        newMinute += increment;
+        
+        // Wrap around pentru minute (0-55, cu pași de 5)
+        if (newMinute >= 60) newMinute = 0;
+        if (newMinute < 0) newMinute = 55;
+      }
+      
+      // Formatează timpul
+      const formattedTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
+      console.log(`[TIME INCREMENT] New time: ${formattedTime}`);
+      
+      // Actualizează formData
+      if (isStartTime) {
+        setFormData(prev => ({ ...prev, oraInceput: formattedTime }));
+      } else {
+        setFormData(prev => ({ ...prev, oraFinal: formattedTime }));
+      }
+      
+      // Feedback vizual pentru utilizator
+      showAlert('success', `Timp actualizat: ${formattedTime}`);
+      
+    } catch (error) {
+      console.error('[TIME INCREMENT] Error:', error);
+      showAlert('error', 'Eroare la actualizarea timpului. Vă rugăm să introduceți manual.');
     }
   };
 
@@ -1230,16 +1242,58 @@ const AdminConferinteGrup = () => {
                   align-items: center;
                   justify-content: center;
                   transition: all 0.2s ease;
+                  cursor: pointer;
+                  border: 2px solid #0d6efd;
+                  background-color: white;
+                  color: #0d6efd;
+                  user-select: none;
+                  -webkit-user-select: none;
+                  -moz-user-select: none;
+                  -ms-user-select: none;
                 }
                 
                 .time-spinner-btn:hover {
                   background-color: #0d6efd;
                   color: white;
                   transform: scale(1.05);
+                  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
                 }
                 
                 .time-spinner-btn:active {
                   transform: scale(0.95);
+                  background-color: #0b5ed7;
+                }
+                
+                .time-spinner-btn:focus {
+                  outline: 2px solid #86b7fe;
+                  outline-offset: 2px;
+                }
+                
+                .time-spinner-btn .sr-only {
+                  position: absolute;
+                  width: 1px;
+                  height: 1px;
+                  padding: 0;
+                  margin: -1px;
+                  overflow: hidden;
+                  clip: rect(0, 0, 0, 0);
+                  white-space: nowrap;
+                  border: 0;
+                }
+                
+                /* Fallback pentru cazul în care FontAwesome nu se încarcă */
+                .time-spinner-btn .fa:before {
+                  font-size: 14px;
+                }
+                
+                .time-spinner-btn .fa-chevron-up:before {
+                  content: "▲";
+                  font-family: inherit;
+                }
+                
+                .time-spinner-btn .fa-chevron-down:before {
+                  content: "▼";
+                  font-family: inherit;
                 }
                 
                 .time-input {
@@ -2289,8 +2343,11 @@ const AdminConferinteGrup = () => {
                                   type="button"
                                   className="btn btn-sm btn-outline-primary time-spinner-btn"
                                   onClick={() => handleTimeIncrement('hour', true, 1)}
+                                  title="Crește ora cu 1"
+                                  onMouseDown={(e) => e.preventDefault()}
                                 >
-                                  <i className="fa fa-chevron-up"></i>
+                                  <i className="fa fa-chevron-up" aria-hidden="true"></i>
+                                  <span className="sr-only">▲</span>
                                 </button>
                                 <input
                                   type="text"
@@ -2307,8 +2364,11 @@ const AdminConferinteGrup = () => {
                                   type="button"
                                   className="btn btn-sm btn-outline-primary time-spinner-btn"
                                   onClick={() => handleTimeIncrement('hour', true, -1)}
+                                  title="Scade ora cu 1"
+                                  onMouseDown={(e) => e.preventDefault()}
                                 >
-                                  <i className="fa fa-chevron-down"></i>
+                                  <i className="fa fa-chevron-down" aria-hidden="true"></i>
+                                  <span className="sr-only">▼</span>
                                 </button>
                               </div>
                               
@@ -2320,8 +2380,11 @@ const AdminConferinteGrup = () => {
                                   type="button"
                                   className="btn btn-sm btn-outline-primary time-spinner-btn"
                                   onClick={() => handleTimeIncrement('minute', true, 5)}
+                                  title="Crește minutele cu 5"
+                                  onMouseDown={(e) => e.preventDefault()}
                                 >
-                                  <i className="fa fa-chevron-up"></i>
+                                  <i className="fa fa-chevron-up" aria-hidden="true"></i>
+                                  <span className="sr-only">▲</span>
                                 </button>
                                 <input
                                   type="text"
@@ -2338,11 +2401,17 @@ const AdminConferinteGrup = () => {
                                   type="button"
                                   className="btn btn-sm btn-outline-primary time-spinner-btn"
                                   onClick={() => handleTimeIncrement('minute', true, -5)}
+                                  title="Scade minutele cu 5"
+                                  onMouseDown={(e) => e.preventDefault()}
                                 >
-                                  <i className="fa fa-chevron-down"></i>
+                                  <i className="fa fa-chevron-down" aria-hidden="true"></i>
+                                  <span className="sr-only">▼</span>
                                 </button>
                               </div>
                             </div>
+                            
+                            {/* Mesaj de ajutor pentru probleme cu săgețile */}
+                   
                           </div>
                         </div>
                       </div>
@@ -2374,8 +2443,11 @@ const AdminConferinteGrup = () => {
                                     type="button"
                                     className="btn btn-sm btn-outline-primary time-spinner-btn"
                                     onClick={() => handleTimeIncrement('hour', false, 1)}
+                                    title="Crește ora finală cu 1"
+                                    onMouseDown={(e) => e.preventDefault()}
                                   >
-                                    <i className="fa fa-chevron-up"></i>
+                                    <i className="fa fa-chevron-up" aria-hidden="true"></i>
+                                    <span className="sr-only">▲</span>
                                   </button>
                                   <input
                                     type="text"
@@ -2392,8 +2464,11 @@ const AdminConferinteGrup = () => {
                                     type="button"
                                     className="btn btn-sm btn-outline-primary time-spinner-btn"
                                     onClick={() => handleTimeIncrement('hour', false, -1)}
+                                    title="Scade ora finală cu 1"
+                                    onMouseDown={(e) => e.preventDefault()}
                                   >
-                                    <i className="fa fa-chevron-down"></i>
+                                    <i className="fa fa-chevron-down" aria-hidden="true"></i>
+                                    <span className="sr-only">▼</span>
                                   </button>
                                 </div>
                                 
@@ -2405,8 +2480,11 @@ const AdminConferinteGrup = () => {
                                     type="button"
                                     className="btn btn-sm btn-outline-primary time-spinner-btn"
                                     onClick={() => handleTimeIncrement('minute', false, 5)}
+                                    title="Crește minutele finale cu 5"
+                                    onMouseDown={(e) => e.preventDefault()}
                                   >
-                                    <i className="fa fa-chevron-up"></i>
+                                    <i className="fa fa-chevron-up" aria-hidden="true"></i>
+                                    <span className="sr-only">▲</span>
                                   </button>
                                   <input
                                     type="text"
@@ -2423,8 +2501,11 @@ const AdminConferinteGrup = () => {
                                     type="button"
                                     className="btn btn-sm btn-outline-primary time-spinner-btn"
                                     onClick={() => handleTimeIncrement('minute', false, -5)}
+                                    title="Scade minutele finale cu 5"
+                                    onMouseDown={(e) => e.preventDefault()}
                                   >
-                                    <i className="fa fa-chevron-down"></i>
+                                    <i className="fa fa-chevron-down" aria-hidden="true"></i>
+                                    <span className="sr-only">▼</span>
                                   </button>
                                 </div>
                               </div>
