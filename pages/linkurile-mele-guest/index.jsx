@@ -288,26 +288,7 @@ const GuestLinks = () => {
           <div className="row justify-content-center">
             <div className="col-lg-10 pt-5">
               
-              {/* Header Info */}
-              <div className="card shadow-sm mb-4">
-                <div className="card-header bg-info text-white">
-                  <h4 className="mb-0">
-                    <i className="fa fa-info-circle me-2"></i>
-                    Despre Această Pagină
-                  </h4>
-                </div>
-                <div className="card-body">
-                  <p className="mb-2">
-                    <strong>Această pagină afișează linkurile de conferință salvate local în browser-ul tău.</strong>
-                  </p>
-                  <ul className="list-unstyled mb-0">
-                    <li><i className="fa fa-check text-success me-2"></i>Linkurile sunt salvate doar pe acest dispozitiv</li>
-                    <li><i className="fa fa-check text-success me-2"></i>Nu sunt sincronizate pe alte dispozitive</li>
-                    <li><i className="fa fa-check text-success me-2"></i>Se pot pierde la ștergerea datelor browser-ului</li>
-                  </ul>
-                </div>
-              </div>
-
+       
               {/* Secțiune căutare în Firestore */}
               <div className="card mb-4">
                 <div className="card-header">
@@ -365,9 +346,7 @@ const GuestLinks = () => {
                           <i className="fas fa-search fa-3x text-muted"></i>
                         </div>
                         <h5 className="text-muted">Nu s-au găsit conferințe</h5>
-                        <p className="text-muted">
-                          Nu există conferințe înregistrate pentru email-ul: <strong>{email}</strong>
-                        </p>
+                      
                       </div>
                     ) : (
                       <div className="row">
@@ -567,196 +546,7 @@ const GuestLinks = () => {
                 </div>
               )}
 
-              {/* Linkuri din localStorage */}
-              <div className="card">
-                <div className="card-header">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h5 className="card-title mb-0">
-                      💾 Linkuri salvate în browser ({localStorageLinks.length})
-                    </h5>
-                    {localStorageLinks.length > 0 && (
-                      <button 
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={clearLocalStorage}
-                      >
-                        <i className="fas fa-trash me-1"></i>
-                        Șterge toate
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="card-body">
-                  {localStorageLinks.length === 0 ? (
-                    <div className="text-center py-4">
-                      <div className="mb-3">
-                        <i className="fas fa-bookmark fa-3x text-muted"></i>
-                      </div>
-                      <h5 className="text-muted">Niciun link salvat</h5>
-                      <p className="text-muted">
-                        Linkurile pentru conferințe se vor salva automat aici după finalizarea înscrierii
-                      </p>
-                    </div>
-                  ) : (
-                                          <div className="row">
-                        {localStorageLinks.map((link, index) => {
-                          const isExpired = isConferenceExpired(link.conferenceDate, link.conferenceTime);
-                          const status = getStatusBadge(link.conferenceDate, link.conferenceTime);
-                          const timeInfo = getTimeUntilConference(link.conferenceDate, link.conferenceTime);
-                          const cardId = `local-${index}`;
-                          const isExpanded = expandedCards[cardId];
-                          
-                          return (
-                            <div key={index} className="col-12 mb-4">
-                              <div className={`card h-100 border-2 ${isExpired ? 'border-secondary' : 'border-success'}`}>
-                                {/* Header cu titlu și status */}
-                                <div className={`card-header ${isExpired ? 'bg-light' : 'bg-success text-white'}`}>
-                                  <div className="d-flex justify-content-between align-items-start">
-                                    <div className="flex-grow-1">
-                                      <h5 className="card-title mb-1">
-                                        {getConferenceTypeIcon(link.tipConferinta)} {link.conferenceTitle}
-                                      </h5>
-                                      <div className="d-flex align-items-center gap-3">
-                                        <span className={`badge ${status.class}`}>
-                                          {status.icon} {status.text}
-                                        </span>
-                                        <small className={isExpired ? 'text-muted' : 'text-white-50'}>
-                                          {timeInfo}
-                                        </small>
-                                      </div>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-2">
-                                      <span className={`badge ${link.tipConferinta === 'course' ? 'bg-info' : 'bg-warning'}`}>
-                                        {getConferenceType(link.tipConferinta)}
-                                      </span>
-                                      <button
-                                        className="btn btn-outline-danger btn-sm"
-                                        onClick={() => removeLocalLink(index)}
-                                        title="Șterge din browser"
-                                      >
-                                        <i className="fas fa-times"></i>
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Informații principale */}
-                                <div className="card-body">
-                                  <div className="row">
-                                    <div className="col-md-8">
-                                      <div className="mb-3">
-                                        <h6 className="text-muted mb-2">📅 Program conferință:</h6>
-                                        <div className="bg-light p-3 rounded">
-                                          <div className="mb-2">
-                                            <strong>Start:</strong> {formatDateTime(link.conferenceDate, link.conferenceTime)}
-                                          </div>
-                                          {link.tipConferinta === 'course' && link.conferenceEndDate && (
-                                            <div>
-                                              <strong>Final:</strong> {formatDateTime(link.conferenceEndDate, link.conferenceEndTime)}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="mb-3">
-                                        <h6 className="text-muted mb-2">👤 Date participare:</h6>
-                                        <div className="bg-light p-3 rounded">
-                                          <div><strong>Nume:</strong> {link.participantName}</div>
-                                          <div><strong>Email:</strong> {link.participantEmail}</div>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="col-md-4">
-                                      <div className="mb-3">
-                                        <h6 className="text-muted mb-2">💾 Informații salvare:</h6>
-                                        <div className="bg-light p-3 rounded">
-                                          <div><strong>Salvat la:</strong> {moment(link.savedAt).format('DD.MM.YYYY HH:mm')}</div>
-                                          <div><strong>Sursă:</strong> Browser local</div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Alertă status */}
-                                  {isExpired ? (
-                                    <div className="alert alert-secondary">
-                                      <i className="fas fa-clock me-2"></i>
-                                      <strong>Conferință finalizată</strong> - Această conferință a avut loc deja
-                                    </div>
-                                  ) : (
-                                    <div className="alert alert-success">
-                                      <i className="fas fa-check-circle me-2"></i>
-                                      <strong>Conferință activă</strong> - Poți accesa linkul pentru a participa
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Footer cu acțiuni */}
-                                <div className="card-footer bg-light">
-                                  <div className="d-flex flex-column gap-2">
-                                    <div className="d-grid">
-                                      <a 
-                                        href={link.accessLink} 
-                                        className={`btn ${isExpired ? 'btn-outline-secondary' : 'btn-success'} btn-lg`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <i className="fas fa-external-link-alt me-2"></i>
-                                        {isExpired ? 'Vezi Conferința (Finalizată)' : 'Accesează Conferința ACUM'}
-                                      </a>
-                                    </div>
-                                    
-                                    <div className="btn-group">
-                                      <button 
-                                        className="btn btn-outline-secondary btn-sm"
-                                        onClick={() => copyToClipboard(link.accessLink)}
-                                      >
-                                        <i className="fas fa-copy me-1"></i>
-                                        Copiază Link
-                                      </button>
-                                      <button 
-                                        className="btn btn-outline-info btn-sm"
-                                        onClick={() => window.open(generateQRCode(link.accessLink), '_blank')}
-                                      >
-                                        <i className="fas fa-qrcode me-1"></i>
-                                        QR Code
-                                      </button>
-                                      <button 
-                                        className="btn btn-outline-primary btn-sm"
-                                        onClick={() => shareLink(link.accessLink, link.conferenceTitle)}
-                                      >
-                                        <i className="fas fa-share-alt me-1"></i>
-                                        Distribuie
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Informații utile */}
-              <div className="card mt-4">
-                <div className="card-body">
-                  <h6 className="card-title">
-                    <i className="fas fa-info-circle me-2"></i>
-                    Informații utile
-                  </h6>
-                  <ul className="mb-0">
-                    <li><strong>Linkuri din browser:</strong> Sunt salvate automat în browser-ul tău după înscrierea la conferințe</li>
-                    <li><strong>Căutare cu email:</strong> Caută în baza de date toate conferințele asociate cu email-ul tău</li>
-                    <li><strong>QR Code:</strong> Poți scana codul QR cu telefonul pentru acces rapid la conferință</li>
-                    <li><strong>Linkuri expirate:</strong> Conferințele care au avut loc deja sunt marcate ca expirate</li>
-                    <li><strong>Backup recomandat:</strong> Salvează linkurile și prin email pentru siguranță maximă</li>
-                    <li><strong>Acces dublu:</strong> Linkurile sunt valabile atât din browser, cât și din baza de date</li>
-                  </ul>
-                </div>
-              </div>
+          
 
               {/* Bottom Actions */}
               <div className="text-center mt-5 mb-5">
