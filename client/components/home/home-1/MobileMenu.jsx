@@ -52,6 +52,14 @@ const Home1Header = () => {
                     Termeni și condiții
                   </Link>
                 </li>
+                {/* Link pentru utilizatorii neînregistrați să acceseze linkurile salvate */}
+                {!currentUser && (
+                  <li className="nav-item">
+                    <Link href="/linkurile-mele-guest" className="nav-link">
+                      Linkurile Mele
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
 

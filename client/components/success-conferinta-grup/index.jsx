@@ -32,19 +32,24 @@ const SuccessConferintaGrup = () => {
     }
   }, [session_id, conferinta_id, access_link, currentUser]);
 
-  // Salvare link în localStorage pentru guest users
+  // Salvare link în localStorage pentru toți utilizatorii (nu doar guest users)
   useEffect(() => {
     const accessLinkValue = getAccessLink();
-    if (accessLinkValue && participant?.isGuestUser && !currentUser) {
+    if (accessLinkValue && participant && conferinta) {
       const guestConferenceData = {
         accessLink: accessLinkValue,
-        conferenceTitle: conferinta?.titlu,
+        conferenceTitle: conferinta.titlu,
         participantName: `${participant.nume} ${participant.prenume}`,
         participantEmail: participant.email,
-        conferenceDate: conferinta?.dataInceput,
-        conferenceTime: conferinta?.oraInceput,
+        conferenceDate: conferinta.dataInceput,
+        conferenceTime: conferinta.oraInceput,
+        conferenceEndDate: conferinta.dataFinal,
+        conferenceEndTime: conferinta.oraFinal,
+        tipConferinta: conferinta.tipConferinta,
         savedAt: new Date().toISOString(),
-        sessionId: session_id
+        sessionId: session_id,
+        isGuestUser: !currentUser, // Marcăm dacă este guest user
+        userId: currentUser?.uid || null
       };
       
       // Salvez în localStorage
@@ -52,11 +57,16 @@ const SuccessConferintaGrup = () => {
       const filteredLinks = existingGuestLinks.filter(link => link.sessionId !== session_id);
       filteredLinks.push(guestConferenceData);
       
-      // Păstrez doar ultimele 10 linkuri
-      const limitedLinks = filteredLinks.slice(-10);
+      // Păstrez doar ultimele 15 linkuri
+      const limitedLinks = filteredLinks.slice(-15);
       localStorage.setItem('guestConferenceLinks', JSON.stringify(limitedLinks));
       
-      console.log("💾 [GUEST STORAGE] Link salvat în localStorage pentru guest user");
+      console.log("💾 [LOCAL STORAGE] Link salvat în localStorage:", {
+        isGuestUser: !currentUser,
+        userId: currentUser?.uid || 'GUEST',
+        conferenceTitle: conferinta.titlu,
+        accessLink: accessLinkValue
+      });
     }
   }, [conferinta, participant, session_id, currentUser]);
 

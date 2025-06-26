@@ -6,6 +6,7 @@ import { useTranslation } from "next-i18next";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StyleIcon from "@mui/icons-material/Style";
 import PersonIcon from "@mui/icons-material/Person";
+import BookmarkIcon from "@mui/icons-material/Bookmark";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiData } from "../../../context/ApiContext";
 import { useRouter } from "next/router";
@@ -15,14 +16,25 @@ import NewspaperIcon from "@mui/icons-material/Newspaper";
 
 function NavBar({ fixed, style, fontSize, isMobile }) {
   const { classes } = useStyles();
+  const { currentUser } = useAuth();
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
-  const navData = [
-    "main-dashboard",
-    "citire-personalizata",
-    "settings",
-    "news",
-  ];
+  
+  // Adaptăm navData în funcție de starea utilizatorului
+  const navData = currentUser 
+    ? [
+        "main-dashboard",
+        "citire-personalizata",
+        "settings",
+        "news",
+      ]
+    : [
+        "main-dashboard",
+        "citire-personalizata",
+        "linkurile-mele-guest",
+        "news",
+      ];
+      
   const {
     shuffleCartiViitor,
     startExitAnimation,
@@ -131,6 +143,13 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
                   />
                 ) : item === "citire-personalizata" ? (
                   <StyleIcon
+                    style={{ fontSize }}
+                    className={
+                      isActive ? classes.iconHovered : classes.iconHover
+                    }
+                  />
+                ) : item === "linkurile-mele-guest" ? (
+                  <BookmarkIcon
                     style={{ fontSize }}
                     className={
                       isActive ? classes.iconHovered : classes.iconHover

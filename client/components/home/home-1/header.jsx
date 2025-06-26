@@ -727,14 +727,24 @@ const Home1Header = () => {
                     </Link>
                   </li>
                 ) : (
-                  <li className="login-link">
-                    <Link
-                      onClick={() => onhandleCloseMenu()}
-                      href="/login-client"
-                    >
-                      Login / Signup
-                    </Link>
-                  </li>
+                  <>
+                    <li className="login-link">
+                      <Link
+                        onClick={() => onhandleCloseMenu()}
+                        href="/linkurile-mele-guest"
+                      >
+                        Linkurile Mele
+                      </Link>
+                    </li>
+                    <li className="login-link">
+                      <Link
+                        onClick={() => onhandleCloseMenu()}
+                        href="/login-client"
+                      >
+                        Login / Signup
+                      </Link>
+                    </li>
+                  </>
                 )}
               </ul>
             </div>
@@ -763,6 +773,12 @@ const Home1Header = () => {
               </ul>
             ) : (
               <ul className="nav header-navbar-rht">
+                <li className="register-btn">
+                  <Link href="/linkurile-mele-guest" className="btn reg-btn">
+                    <i className="feather icon-bookmark" />
+                    Linkurile Mele
+                  </Link>
+                </li>
                 <li className="register-btn">
                   <Link href="/register-client" className="btn reg-btn">
                     <i className="feather icon-user" />
