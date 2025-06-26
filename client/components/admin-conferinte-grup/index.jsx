@@ -1296,6 +1296,52 @@ const AdminConferinteGrup = () => {
                   font-family: inherit;
                 }
                 
+                /* Stiluri responsive pentru mobil - margin/padding top și bottom */
+                @media (max-width: 768px) {
+                  .time-controls-container {
+                    margin-top: 30px;
+                    margin-bottom: 30px;
+                    padding-top: 20px;
+                    padding-bottom: 20px;
+                  }
+                  
+                  .time-spinner {
+                    margin-top: 15px;
+                    margin-bottom: 15px;
+                  }
+                  
+                  .time-spinner-btn {
+                    margin-top: 5px;
+                    margin-bottom: 5px;
+                  }
+                }
+                
+                @media (max-width: 576px) {
+                  .time-controls-container {
+                    margin-top: 40px;
+                    margin-bottom: 40px;
+                    padding-top: 25px;
+                    padding-bottom: 25px;
+                  }
+                  
+                  .time-spinner {
+                    margin-top: 20px;
+                    margin-bottom: 20px;
+                  }
+                  
+                  .time-spinner-btn {
+                    margin-top: 8px;
+                    margin-bottom: 8px;
+                    height: 35px;
+                    width: 55px;
+                  }
+                  
+                  .time-input {
+                    height: 45px !important;
+                    font-size: 16px !important;
+                  }
+                }
+                
                 .time-input {
                   border: 2px solid #dee2e6;
                   border-radius: 4px;
@@ -2335,8 +2381,8 @@ const AdminConferinteGrup = () => {
                             />
                           </div>
                           
-                          <div className="col-md-6">
-                            <div className="d-flex align-items-center gap-2" style={{ height: '76px' }}>
+                                                      <div className="col-md-6">
+                              <div className="d-flex align-items-center gap-2 time-controls-container" style={{ height: '76px' }}>
                               {/* Ore */}
                               <div className="time-spinner">
                                 <button
@@ -2436,7 +2482,7 @@ const AdminConferinteGrup = () => {
                             </div>
                             
                             <div className="col-md-6">
-                              <div className="d-flex align-items-center gap-2" style={{ height: '76px' }}>
+                              <div className="d-flex align-items-center gap-2 time-controls-container" style={{ height: '76px' }}>
                                 {/* Ore */}
                                 <div className="time-spinner">
                                   <button
