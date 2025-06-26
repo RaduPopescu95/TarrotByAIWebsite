@@ -1485,57 +1485,7 @@ const AdminConferinteGrup = () => {
                             Email Toți ({selectedConferinta.participanti.length})
                           </button>
 
-                          {/* Dropdown pentru SMS-uri */}
-                          <div className="btn-group me-2" role="group">
-                            <button
-                              className="btn btn-success"
-                              onClick={() => sendSMSToAllParticipants(selectedConferinta, 'confirmation')}
-                              disabled={loading}
-                              title="Trimite SMS de confirmare către toți participanții"
-                            >
-                              <i className="fa fa-mobile me-2"></i>
-                              SMS Toți
-                            </button>
-                            <div className="btn-group" role="group">
-                              <button
-                                className="btn btn-success dropdown-toggle dropdown-toggle-split"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                disabled={loading}
-                                title="Opțiuni SMS"
-                              >
-                                <span className="visually-hidden">Toggle Dropdown</span>
-                              </button>
-                              <ul className="dropdown-menu">
-                                <li>
-                                  <a 
-                                    className="dropdown-item" 
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      sendSMSToAllParticipants(selectedConferinta, 'confirmation');
-                                    }}
-                                  >
-                                    <i className="fa fa-check me-2"></i>
-                                    SMS Confirmare
-                                  </a>
-                                </li>
-                                <li>
-                                  <a 
-                                    className="dropdown-item" 
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      sendSMSToAllParticipants(selectedConferinta, 'reminder');
-                                    }}
-                                  >
-                                    <i className="fa fa-bell me-2"></i>
-                                    SMS Reminder
-                                  </a>
-                                </li>
-                              </ul>
-                            </div>
-                          </div>
+                    
                           
                           <button
                             className="btn btn-info me-2"
@@ -2363,60 +2313,7 @@ const AdminConferinteGrup = () => {
                                   Email
                                 </button>
 
-                                {/* Dropdown pentru SMS individual */}
-                                <div className="btn-group" role="group">
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => sendSMSToParticipant(participant, selectedConferinta, 'confirmation')}
-                                    disabled={loading || !hasValidAccessLink(participant) || (!participant.telefon && !participant.phone)}
-                                    title={
-                                      !hasValidAccessLink(participant) ? "Nu poate trimite SMS - link lipsește" :
-                                      (!participant.telefon && !participant.phone) ? "Nu poate trimite SMS - telefon lipsește" :
-                                      `Trimite SMS de confirmare către ${participant.nume}`
-                                    }
-                                    style={{ borderRadius: "8px 0 0 8px", padding: "8px 10px" }}
-                                  >
-                                    <i className="fa fa-mobile"></i>
-                                  </button>
-                                  <button
-                                    className="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                    disabled={loading || !hasValidAccessLink(participant) || (!participant.telefon && !participant.phone)}
-                                    style={{ borderRadius: "0 8px 8px 0", padding: "8px 6px" }}
-                                    title="Opțiuni SMS"
-                                  >
-                                    <span className="visually-hidden">Toggle SMS Options</span>
-                                  </button>
-                                  <ul className="dropdown-menu">
-                                    <li>
-                                      <a
-                                        className="dropdown-item"
-                                        href="#"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          sendSMSToParticipant(participant, selectedConferinta, 'confirmation');
-                                        }}
-                                      >
-                                        <i className="fa fa-check me-2"></i>
-                                        SMS Confirmare
-                                      </a>
-                                    </li>
-                                    <li>
-                                      <a
-                                        className="dropdown-item"
-                                        href="#"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          sendSMSToParticipant(participant, selectedConferinta, 'reminder');
-                                        }}
-                                      >
-                                        <i className="fa fa-bell me-2"></i>
-                                        SMS Reminder
-                                      </a>
-                                    </li>
-                                  </ul>
-                                </div>
+                      
                                 
                                 {/* Buton pentru copierea link-ului */}
                                 <button
