@@ -31,14 +31,14 @@ export default function CalendarConferinteGrupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    // Verifică dacă există deja o sesiune validă pentru testing
-    const testingAuth = localStorage.getItem('conferinte_calendar_testing_auth');
-    if (testingAuth === 'authenticated') {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
-  }, []);
+  // useEffect(() => {
+  //   // Verifică dacă există deja o sesiune validă pentru testing
+  //   const testingAuth = localStorage.getItem('conferinte_calendar_testing_auth');
+  //   if (testingAuth === 'authenticated') {
+  //     setIsAuthenticated(true);
+  //   }
+  //   setIsLoading(false);
+  // }, []);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
