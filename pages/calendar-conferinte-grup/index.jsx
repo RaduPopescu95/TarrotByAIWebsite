@@ -66,22 +66,22 @@ export default function CalendarConferinteGrupPage() {
   };
 
   // Loading state
-  if (isLoading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        flexDirection: 'column'
-      }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Se verifică accesul...</span>
-        </div>
-        <p className="mt-3">Se verifică accesul...</p>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div style={{ 
+  //       display: 'flex', 
+  //       justifyContent: 'center', 
+  //       alignItems: 'center', 
+  //       height: '100vh',
+  //       flexDirection: 'column'
+  //     }}>
+  //       <div className="spinner-border text-primary" role="status">
+  //         <span className="visually-hidden">Se verifică accesul...</span>
+  //       </div>
+  //       <p className="mt-3">Se verifică accesul...</p>
+  //     </div>
+  //   );
+  // }
 
   // Password protection screen
   if (!isAuthenticated) {
