@@ -26,7 +26,7 @@ const CalendarConferinteGrup = dynamic(
 
 export default function CalendarConferinteGrupPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // TEMPORAR: direct autentificat
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -83,7 +83,8 @@ export default function CalendarConferinteGrupPage() {
   //   );
   // }
 
-  // Password protection screen
+  // TEMPORAR DEZACTIVAT: Password protection screen
+  /*
   if (!isAuthenticated) {
     return (
       <div style={{ 
@@ -166,6 +167,7 @@ export default function CalendarConferinteGrupPage() {
       </div>
     );
   }
+  */
 
   // Main calendar interface with logout option
   return (
