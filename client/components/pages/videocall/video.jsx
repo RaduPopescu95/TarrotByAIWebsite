@@ -22,6 +22,81 @@ const VideoCall = () => {
   const { meetingCode } = router.query;
   const videoContainerRef = useRef(null); // Referință la containerul video
   const [adminPresent, setAdminPresent] = useState(false);
+  const [browserCompatible, setBrowserCompatible] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Verificarea compatibilității browserului
+  useEffect(() => {
+    const checkBrowserCompatibility = () => {
+      const userAgent = navigator.userAgent;
+      const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+      const isFirefox = /Firefox/.test(userAgent);
+      const isSafari = /Safari/.test(userAgent) && /Apple Computer/.test(navigator.vendor);
+      const isEdge = /Edg/.test(userAgent);
+      const isOpera = /OPR/.test(userAgent);
+
+      // Verifică suportul pentru WebRTC
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setBrowserCompatible(false);
+        setErrorMessage("Browserul dumneavoastră nu suportă funcționalitatea video call. Vă rugăm să utilizați Chrome, Firefox, Safari sau Edge.");
+        return;
+      }
+
+      // Verifică versiunea browserului
+      if (isChrome) {
+        const chromeVersion = parseInt(userAgent.match(/Chrome\/(\d+)/)?.[1] || 0);
+        if (chromeVersion < 74) {
+          setBrowserCompatible(false);
+          setErrorMessage("Vă rugăm să actualizați Chrome la ultima versiune pentru a utiliza video call.");
+        }
+      } else if (isFirefox) {
+        const firefoxVersion = parseInt(userAgent.match(/Firefox\/(\d+)/)?.[1] || 0);
+        if (firefoxVersion < 67) {
+          setBrowserCompatible(false);
+          setErrorMessage("Vă rugăm să actualizați Firefox la ultima versiune pentru a utiliza video call.");
+        }
+      } else if (isSafari) {
+        const safariVersion = parseInt(userAgent.match(/Version\/(\d+)/)?.[1] || 0);
+        if (safariVersion < 12) {
+          setBrowserCompatible(false);
+          setErrorMessage("Vă rugăm să actualizați Safari la ultima versiune pentru a utiliza video call.");
+        }
+      }
+
+      // Verifică dacă este HTTPS în producție
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        setBrowserCompatible(false);
+        setErrorMessage("Video call-ul necesită conexiune securizată (HTTPS). Vă rugăm să accesați site-ul prin HTTPS.");
+      }
+    };
+
+    checkBrowserCompatibility();
+  }, []);
+
+  // Verificarea permisiunilor pentru cameră/microfon
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (browserCompatible) {
+        try {
+          await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } catch (error) {
+          console.error("Eroare la accesarea camerei/microfonului:", error);
+          if (error.name === 'NotAllowedError') {
+            setErrorMessage("Vă rugăm să permiteți accesul la cameră și microfon pentru a utiliza video call.");
+          } else if (error.name === 'NotFoundError') {
+            setErrorMessage("Nu s-a găsit cameră sau microfon. Vă rugăm să verificați dispozitivele.");
+          } else {
+            setErrorMessage("Eroare la accesarea camerei/microfonului. Vă rugăm să reîncărcați pagina.");
+          }
+        }
+      }
+    };
+
+    if (videocall && documentId) {
+      checkPermissions();
+    }
+  }, [videocall, documentId, browserCompatible]);
+
   // Detectăm dimensiunea ecranului pentru a ajusta design-ul
   useEffect(() => {
     const handleResize = () => {
@@ -159,7 +234,48 @@ const VideoCall = () => {
         <div style={styles.container}>
           {/* Containerul de video */}
           <div style={styles.videoContainer} ref={videoContainerRef}>
-            {videocall ? (
+            {!browserCompatible ? (
+              <div style={styles.errorContainer}>
+                <div style={styles.errorMessage}>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '48px', color: '#ff4757', marginBottom: '20px' }}></i>
+                  <h3>Problemă de compatibilitate</h3>
+                  <p>{errorMessage}</p>
+                  <div style={styles.solutionBox}>
+                    <h4>Soluții recomandate:</h4>
+                    <ul style={styles.solutionList}>
+                      <li>Actualizați browserul la ultima versiune</li>
+                      <li>Permiteți accesul la cameră și microfon</li>
+                      <li>Dezactivați extensiile care pot bloca video call-ul</li>
+                      <li>Încercați un alt browser (Chrome, Firefox, Safari, Edge)</li>
+                      <li>Verificați că site-ul este accesat prin HTTPS</li>
+                    </ul>
+                  </div>
+                  <button style={styles.retryButton} onClick={() => window.location.reload()}>
+                    Reîncearcă
+                  </button>
+                </div>
+              </div>
+            ) : errorMessage ? (
+              <div style={styles.errorContainer}>
+                <div style={styles.errorMessage}>
+                  <i className="fas fa-video-slash" style={{ fontSize: '48px', color: '#ff6b6b', marginBottom: '20px' }}></i>
+                  <h3>Problemă cu cameră/microfonul</h3>
+                  <p>{errorMessage}</p>
+                  <div style={styles.solutionBox}>
+                    <h4>Cum să rezolvați:</h4>
+                    <ul style={styles.solutionList}>
+                      <li>Apăsați pe iconița de cameră din bara browserului</li>
+                      <li>Selectați "Permite" pentru cameră și microfon</li>
+                      <li>Reîncărcați pagina după ce ați dat permisiunile</li>
+                      <li>Verificați că alte aplicații nu folosesc camera</li>
+                    </ul>
+                  </div>
+                  <button style={styles.retryButton} onClick={() => window.location.reload()}>
+                    Reîncearcă
+                  </button>
+                </div>
+              </div>
+            ) : videocall ? (
               <>
                 {/* Butonul rotund pentru schimbarea layout-ului */}
                 {!isMobile && (
@@ -470,6 +586,41 @@ const styles = {
     textAlign: "center",
     maxWidth: "400px",
     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+  },
+  errorContainer: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  errorMessage: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    textAlign: "center",
+    maxWidth: "400px",
+    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+  },
+  solutionBox: {
+    marginBottom: "20px",
+  },
+  solutionList: {
+    listStyleType: "disc",
+    paddingLeft: "20px",
+  },
+  retryButton: {
+    backgroundColor: "#007bff",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: 5,
+    padding: "10px 20px",
+    cursor: "pointer",
   },
 };
 
