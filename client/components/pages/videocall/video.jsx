@@ -159,7 +159,7 @@ const VideoCall = () => {
         <div style={styles.container}>
           {/* Containerul de video */}
           <div style={styles.videoContainer} ref={videoContainerRef}>
-            {videocall && isSessionActive ? (
+            {videocall ? (
               <>
                 {/* Butonul rotund pentru schimbarea layout-ului */}
                 {!isMobile && (
@@ -297,14 +297,17 @@ const VideoCall = () => {
                     theme: "#777777",
                   }}
                 />
+                
+                {/* Afișăm mesaj de așteptare dacă sesiunea nu e activă */}
+                {!isSessionActive && (
+                  <div style={styles.waitingOverlay}>
+                    <div style={styles.waitingMessage}>
+                      <h4>Așteptăm ca adminul să se conecteze...</h4>
+                      <p>Interfața video este pregătită. Apelul va începe automat când adminul se va conecta.</p>
+                    </div>
+                  </div>
+                )}
               </>
-            ) : videocall && !isSessionActive ? (
-              <div style={styles.nav}>
-                <h4>
-                  Admin-ul nu a intrat in apel, va rugam sa asteptati pana
-                  apelul este pornit
-                </h4>
-              </div>
             ) : (
               <div style={styles.nav}>
                 <h4>Apelul a fost incheiat</h4>
@@ -447,6 +450,26 @@ const styles = {
     fullscreenButton: {
       display: "none", // Ascundem butonul fullscreen pe mobil
     },
+  },
+  waitingOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  waitingMessage: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    textAlign: "center",
+    maxWidth: "400px",
+    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
   },
 };
 
