@@ -1,0 +1,43 @@
+.post-card:hover .post-image {
+  transform: scale(1.05);
+}
+
+.post-card:hover .post-image-overlay {
+  opacity: 1;
+}
+
+.post-card:hover .post-title {
+  color: #667eea;
+}
+
+.post-card:hover .post-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .post-card-content {
+    padding: 1.5rem !important;
+  }
+  
+  .post-card-title {
+    font-size: 1.2rem !important;
+  }
+  
+  .post-card-image-container {
+    height: 280px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-card-content {
+    padding: 1rem !important;
+  }
+  
+  .post-card-title {
+    font-size: 1.1rem !important;
+  }
+  
+  .post-card-image-container {
+    height: 240px !important;
+  }
+} 

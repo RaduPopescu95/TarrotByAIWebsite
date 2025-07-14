@@ -1,9 +1,5 @@
 import React from "react";
 import PropTypes from "prop-types";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import useStyles from "./paper-style";
-import { colors } from "../../utils/colors";
 
 function PapperBlock(props) {
   const {
@@ -17,53 +13,94 @@ function PapperBlock(props) {
     icon,
   } = props;
 
-  const { classes, cx } = useStyles();
-
   return (
-    <div>
-      <Paper
-        className={cx(classes.root, noMargin && classes.noMargin)}
-        sx={{ background: "rgba(255, 255, 255, 0.2)" }}
-        elevation={5}
+    <div style={styles.container}>
+      <div 
+        style={{
+          ...styles.paper,
+          ...(noMargin && styles.noMargin)
+        }}
       >
-        <div className={classes.descBlock}>
-          <span className={classes.iconTitle} style={{ color: "white" }}>
-            <i className={icon} style={{ color: "#d3a03e" }} />
+        <div style={styles.descBlock}>
+          <span style={styles.iconTitle}>
+            <i className={icon} style={styles.icon} />
           </span>
-          <div
-            className={classes.titleText}
-            style={{ backgroundColor: "transparent" }}
-          >
-            <Typography
-              variant="h4"
-              component="h2"
-              // className={classes.title}
-              color={colors.primary3}
-            >
+          <div style={styles.titleText}>
+            <h2 style={styles.title}>
               {title}
-            </Typography>
-            {/* <Typography component="p" className={classes.description}>
-              {desc}
-            </Typography> */}
+            </h2>
           </div>
         </div>
         <section
-          className={cx(
-            classes.content,
-            whiteBg && classes.whiteBg,
-            overflowX && classes.overflowX
-          )}
+          style={{
+            ...styles.content,
+            ...(whiteBg && styles.whiteBg),
+            ...(overflowX && styles.overflowX)
+          }}
         >
           {children}
         </section>
-      </Paper>
+      </div>
     </div>
   );
 }
 
+const styles = {
+  container: {
+    width: "100%",
+  },
+  paper: {
+    background: "rgba(255, 255, 255, 0.2)",
+    borderRadius: "8px",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
+    overflow: "hidden",
+    margin: "1rem 0",
+  },
+  noMargin: {
+    margin: 0,
+  },
+  descBlock: {
+    display: "flex",
+    alignItems: "center",
+    padding: "1rem 1.5rem",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    backgroundColor: "transparent",
+  },
+  iconTitle: {
+    color: "white",
+    marginRight: "0.75rem",
+    fontSize: "1.25rem",
+  },
+  icon: {
+    color: "#d3a03e",
+    fontSize: "1.25rem",
+  },
+  titleText: {
+    backgroundColor: "transparent",
+    flex: 1,
+  },
+  title: {
+    color: "#667eea",
+    fontSize: "1.25rem",
+    fontWeight: "600",
+    margin: 0,
+    lineHeight: "1.3",
+  },
+  content: {
+    padding: "1.5rem",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+  },
+  whiteBg: {
+    backgroundColor: "white",
+  },
+  overflowX: {
+    overflowX: "auto",
+  },
+};
+
 PapperBlock.propTypes = {
   title: PropTypes.string.isRequired,
-  desc: PropTypes.string.isRequired,
+  desc: PropTypes.string,
   icon: PropTypes.string,
   children: PropTypes.node.isRequired,
   whiteBg: PropTypes.bool,
@@ -73,6 +110,7 @@ PapperBlock.propTypes = {
 };
 
 PapperBlock.defaultProps = {
+  desc: "",
   whiteBg: false,
   noMargin: false,
   colorMode: false,

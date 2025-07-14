@@ -16,6 +16,10 @@ const Home1Header = () => {
   } = useAuth();
   const router = useRouter();
 
+  // Detectarea paginilor de consultatii pentru stiluri diferite
+  const isConsultationPage = router.pathname === "/consultatii" || 
+    router.pathname.includes("/consultatii");
+
   const toggleSearch = () => {
     setSearchField(!searchField);
   };
@@ -38,9 +42,44 @@ const Home1Header = () => {
     root.classList.remove("menu-opened");
   };
 
+  // Stiluri dinamice pentru header-ul de consultatii
+  const headerClass = isConsultationPage 
+    ? "header header-custom header-fixed header-one home-head-one header-consultation"
+    : "header header-custom header-fixed header-one home-head-one";
+
   return (
     <>
-      <header className="header header-custom header-fixed header-one home-head-one">
+      {/* Stiluri CSS pentru header-ul de consultatii */}
+      <style jsx>{`
+        .header-consultation {
+          background: rgba(255, 255, 255, 0.95) !important;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-consultation .navbar-brand,
+        .header-consultation .main-nav a,
+        .header-consultation .login-link a,
+        .header-consultation .register-btn a {
+          color: #333 !important;
+        }
+        
+        .header-consultation .main-nav a:hover {
+          color: #667eea !important;
+        }
+        
+        .header-consultation .btn-primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+        }
+        
+        .header-consultation .btn-primary:hover {
+          background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+          transform: translateY(-2px);
+        }
+      `}</style>
+      
+      <header className={headerClass}>
         <div className="container">
           <nav className="navbar navbar-expand-lg header-nav">
             <div className="navbar-header">
@@ -749,7 +788,7 @@ const Home1Header = () => {
                 </li>
               </ul>
             ) : currentUser &&
-              (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+              (currentUser.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || currentUser.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
               <ul className="nav header-navbar-rht">
                 <li className="register-btn">
                   <Link

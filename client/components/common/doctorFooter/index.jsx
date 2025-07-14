@@ -119,31 +119,7 @@ const DoctorFooter = () => {
                   </ul>
                 </div>
               </div>
-              <div className="col-xl-4 col-lg-6 col-md-8">
-                <div className="footer-links">
-                  <h4>Subscribe to Newsletter</h4>
-                  <form action="#">
-                    <div className="input-block">
-                      <input
-                        type="email"
-                        className="form-control"
-                        placeholder="Enter Email Address"
-                      />
-                      <Link href="submit" className="submit-btn">
-                        Submit
-                      </Link>
-                    </div>
-                  </form>
-                  <div className="app-store-links">
-                    <Link href="#">
-                      <img src={app_icon_store} alt="Img" />
-                    </Link>
-                    <Link href="#">
-                      <img src={google_icon_play} alt="Img" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
+             
             </div>
           </div>
           <div className="mid-foot-two">

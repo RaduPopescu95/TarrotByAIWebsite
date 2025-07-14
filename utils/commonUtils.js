@@ -7,11 +7,17 @@ import {
 import moment from "moment";
 
 export const toUrlSlug = (string) => {
+  // Check if string is null, undefined, or not a string
+  if (!string || typeof string !== 'string') {
+    return 'untitled'; // Return a default slug
+  }
+  
   return string
     .toLowerCase()
     .replace(/\s+/g, "-") // Replace spaces with -
     .replace(/[^\w\-]+/g, "") // Remove all non-word chars
-    .replace(/\-\-+/g, "-"); // Replace multiple - with single -
+    .replace(/\-\-+/g, "-") // Replace multiple - with single -
+    .replace(/^-+|-+$/g, ""); // Remove leading and trailing hyphens
 };
 
 const languages = [

@@ -4,7 +4,7 @@ import "bootstrap-daterangepicker/daterangepicker.css";
 
 import Footer from "../../footer";
 import Home1Header from "../../home/home-1/header";
-import { handleGetFirestore } from "../../../../utils/firestoreUtils";
+import { handleGetFirestore, handleUploadFirestoreGeneral } from "../../../../utils/firestoreUtils";
 import moment from "moment";
 import "moment/locale/ro"; // Importăm localizarea în română
 import CalendarComponent from "./CalendarComponent";

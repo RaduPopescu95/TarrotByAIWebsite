@@ -1,112 +1,306 @@
 import React from "react";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
-
-import Paper from "../../Paper";
-import useStyles from "../blog-style";
-import { Button } from "@mui/material";
-import { useRouter } from "next/router";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { toUrlSlug } from "../../../utils/commonUtils";
-import languageDetector from "../../../lib/languageDetector";
-import { colors } from "../../../utils/colors";
-import { useTranslation } from "react-i18next";
 
 function PostWidget({ lastFiveArticles }) {
-  const { classes } = useStyles();
-  const detectedLng = languageDetector.detect();
-  const { t } = useTranslation("common");
-  const route = useRouter();
+  const router = useRouter();
+  const currentLanguage = router.locale || 'ro';
 
-  const handleRoute = (item) => {
-    route.push({
-      pathname: "/news/[slug]",
-      query: {
-        slug: item.id,
-      },
-    });
-  };
+  if (!lastFiveArticles || lastFiveArticles.length === 0) {
+    return (
+      <div style={styles.emptyContainer}>
+        <div style={styles.emptyIcon}>📰</div>
+        <p style={styles.emptyText}>Nu există articole disponibile</p>
+      </div>
+    );
+  }
 
   return (
-    <Paper
-      title={t("Latest Articles")}
-      // title={"asdasds"}
-      icon="ion-android-bookmark"
-      whiteBg
-      desc=""
-    >
-      <div
-        className={classes.albumRoot}
-        style={{ backgroundColor: "transparent" }}
-      >
-        <List component="nav">
-          {lastFiveArticles.map((item, index) => (
+    <div style={styles.widgetContainer}>
+      <div style={styles.header}>
+        <h3 style={styles.title}>Articole populare</h3>
+        <div style={styles.titleDecoration}></div>
+      </div>
+      
+      <div style={styles.postsList}>
+        {lastFiveArticles.map((article, index) => {
+          const articleTitle = currentLanguage === "hi"
+            ? article?.info?.hu?.nume
+            : currentLanguage === "id"
+              ? article?.info?.ru?.nume
+              : article?.info?.[currentLanguage]?.nume || article?.info?.ro?.nume || "Untitled";
+
+          return (
             <Link
               key={index}
               href={{
-                pathname: "/news/[slug]",
-                query: {
-                  slug: `${item.id}-${toUrlSlug(
-                    detectedLng === "hi"
-                      ? item.info.hu.nume
-                      : detectedLng === "id"
-                        ? item.info.ru.nume
-                        : item.info[detectedLng].nume
-                  )}`,
-                },
+                pathname: `/news/${toUrlSlug(articleTitle)}`,
+                query: { id: article?.id },
               }}
-              as={`/news/${item.id}-${toUrlSlug(
-                detectedLng === "hi"
-                  ? item.info.hu.nume
-                  : detectedLng === "id"
-                    ? item.info.ru.nume
-                    : item.info[detectedLng].nume
-              )}`}
               passHref={false}
+              style={styles.linkWrapper}
             >
-              <ListItem
-                button
-                sx={{
-                  "&:hover": {
-                    backgroundColor: colors.primary3, // Culoarea pentru hover pe ListItem
-                    // Schimbă culoarea textului la hover prin referirea la copilul ListItemText
-                    "& .MuiTypography-root": {
-                      color: "white",
-                    },
-                  },
-                  backgroundColor: "transparent",
-                  height:"auto"
+              <article 
+                style={{
+                  ...styles.postItem,
+                  animationDelay: `${index * 0.1}s`
                 }}
               >
-                <ListItemText
-                  primary={
-                    detectedLng === "hi"
-                      ? item.info.hu.nume
-                      : detectedLng === "id"
-                        ? item.info.ru.nume
-                        : item.info[detectedLng].nume
-                  }
-                  sx={{
-                    ".MuiTypography-root": {
-                      // Aplică stilul pentru toate elementele Typography din ListItemText
-                      color: colors.primary3,
-                      height: "2rem",
-                      width: "auto",
-                      height:"auto"
-                    },
-                    ".MuiTypography-secondary": {
-                      color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific
-                    },
-                  }}
-                />
-              </ListItem>
+                <div style={styles.imageContainer}>
+                  <img
+                    src={article?.image?.finalUri}
+                    alt={articleTitle}
+                    style={styles.postImage}
+                  />
+                  <div style={styles.imageOverlay}></div>
+                </div>
+                
+                <div style={styles.postContent}>
+                  <h4 style={styles.postTitle}>{articleTitle}</h4>
+                  <div style={styles.postMeta}>
+                    <span style={styles.postDate}>{article?.firstUploadDate}</span>
+                    <span style={styles.readTime}>2 min</span>
+                  </div>
+                </div>
+                
+                <div style={styles.postHover}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
+              </article>
             </Link>
-          ))}
-        </List>
+          );
+        })}
       </div>
-    </Paper>
+      
+      <div style={styles.footer}>
+        <Link href="/news" style={styles.viewAllLink}>
+          Vezi toate articolele
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </Link>
+      </div>
+    </div>
   );
+}
+
+const styles = {
+  widgetContainer: {
+    backgroundColor: "white",
+    borderRadius: "16px",
+    padding: "0",
+    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.06)",
+    border: "1px solid rgba(0, 0, 0, 0.05)",
+    overflow: "hidden",
+    position: "relative",
+  },
+  header: {
+    padding: "1.5rem 1.5rem 1rem 1.5rem",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "white",
+    position: "relative",
+  },
+  title: {
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    margin: "0",
+    color: "white",
+  },
+  titleDecoration: {
+    position: "absolute",
+    bottom: 0,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "60px",
+    height: "3px",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: "2px",
+  },
+  postsList: {
+    padding: "1rem 0",
+  },
+  linkWrapper: {
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
+  },
+  postItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+    padding: "1rem 1.5rem",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    cursor: "pointer",
+    borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+    position: "relative",
+    opacity: 0,
+    transform: "translateX(20px)",
+    animation: "slideInLeft 0.5s ease forwards",
+    "&:last-child": {
+      borderBottom: "none",
+    },
+    "&:hover": {
+      backgroundColor: "#f8fafc",
+      transform: "translateX(8px)",
+    },
+  },
+  imageContainer: {
+    flexShrink: 0,
+    width: "50px",
+    height: "50px",
+    borderRadius: "12px",
+    overflow: "hidden",
+    position: "relative",
+  },
+  postImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    transition: "transform 0.3s ease",
+  },
+  imageOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+    opacity: 0,
+    transition: "opacity 0.3s ease",
+  },
+  postContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  postTitle: {
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    lineHeight: "1.3",
+    marginBottom: "0.5rem",
+    margin: "0 0 0.5rem 0",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    transition: "color 0.3s ease",
+  },
+  postMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  postDate: {
+    fontSize: "0.75rem",
+    color: "#666",
+    fontWeight: "500",
+  },
+  readTime: {
+    fontSize: "0.75rem",
+    color: "#999",
+    "&::before": {
+      content: "•",
+      marginRight: "0.25rem",
+    },
+  },
+  postHover: {
+    color: "#667eea",
+    opacity: 0,
+    transform: "translateX(-10px)",
+    transition: "all 0.3s ease",
+  },
+  footer: {
+    padding: "1rem 1.5rem",
+    borderTop: "1px solid rgba(0, 0, 0, 0.05)",
+    backgroundColor: "#f8fafc",
+  },
+  viewAllLink: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0.5rem",
+    color: "#667eea",
+    textDecoration: "none",
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      color: "#764ba2",
+    },
+  },
+  emptyContainer: {
+    backgroundColor: "white",
+    borderRadius: "16px",
+    padding: "2rem",
+    textAlign: "center",
+    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.06)",
+    border: "1px solid rgba(0, 0, 0, 0.05)",
+  },
+  emptyIcon: {
+    fontSize: "2rem",
+    marginBottom: "1rem",
+  },
+  emptyText: {
+    color: "#666",
+    fontSize: "0.9rem",
+    margin: "0",
+  },
+};
+
+// Add CSS for animations and hover effects
+if (typeof window !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = `
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .post-item:hover {
+      background-color: #f8fafc !important;
+      transform: translateX(8px) !important;
+    }
+    
+    .post-item:hover .post-title {
+      color: #667eea !important;
+    }
+    
+    .post-item:hover .post-image {
+      transform: scale(1.05) !important;
+    }
+    
+    .post-item:hover .post-image-overlay {
+      opacity: 1 !important;
+    }
+    
+    .post-item:hover .post-hover {
+      opacity: 1 !important;
+      transform: translateX(0) !important;
+    }
+    
+    .view-all-link:hover {
+      color: #764ba2 !important;
+    }
+    
+    .read-time::before {
+      content: "•";
+      margin-right: 0.25rem;
+    }
+  `;
+  if (!document.head.querySelector('style[data-component="post-widget"]')) {
+    styleSheet.setAttribute('data-component', 'post-widget');
+    document.head.appendChild(styleSheet);
+  }
 }
 
 export default PostWidget;

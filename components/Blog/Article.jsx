@@ -1,31 +1,19 @@
-import React, { useEffect } from "react";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { useTheme } from "@mui/material/styles";
-import Divider from "@mui/material/Divider";
-import List from "@mui/material/List";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-
-import useStyles from "./blog-style";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import FacebookIcon from "@mui/icons-material/Facebook";
-import InstagramIcon from "@mui/icons-material/Instagram";
-import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import Image from "next/image";
 import { customStyles } from "../../data/constants";
-import languageDetector from "../../lib/languageDetector";
-import { colors } from "@mui/material";
+import { useTranslation } from "next-i18next";
 import {
   getYoutubeEmbedUrl,
   getYoutubeVideoId,
 } from "../../utils/youtubeLinkUtils";
 
 function Article({ filteredArticles }) {
-  const { classes } = useStyles();
-  const detectedLng = languageDetector.detect();
-
+  const { i18n } = useTranslation("common");
+  const currentLanguage = i18n.language || 'ro';
   const pathname = usePathname();
+
+  // Responsive design is handled via CSS media queries
 
   // Functie pentru partajare pe Facebook
   const shareOnFacebook = () => {
@@ -50,57 +38,50 @@ function Article({ filteredArticles }) {
     );
   };
 
-  // Theme breakpoints
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("sm"));
-
   useEffect(() => {
     console.log("filteredArticles?...", filteredArticles);
-  }, []);
-  // Extrage ID-ul videoclipului YouTube din linkul complet, presupunând că `youtubeLink` este un URL YouTube standard
+  }, [filteredArticles]);
 
   // Asigură-te că youtubeLinks este tratat ca un array chiar dacă este unul singur
   const youtubeEmbedLinks = filteredArticles?.youtubeLinks
     ? filteredArticles?.youtubeLinks.map((link) => getYoutubeEmbedUrl(link))
     : [];
 
-  // return;
   return (
-    <div className={classes.root}>
-      <style>{customStyles}</style> {/* Incluziunea stilurilor CSS */}
-      <article className={classes.article}>
-        <div className={classes.content}>
-          <Typography variant="h5" className={classes.titleBlog}>
-            {detectedLng === "hi"
+    <div style={styles.root}>
+      <style>{customStyles}</style>
+      <article style={styles.article}>
+        <div style={styles.content}>
+          <h2 style={styles.titleBlog}>
+            {currentLanguage === "hi"
               ? filteredArticles?.info?.hu.nume
-              : detectedLng === "id"
+              : currentLanguage === "id"
                 ? filteredArticles?.info?.ru.nume
-                : filteredArticles?.info[detectedLng].nume}
-          </Typography>
-          <span className={classes.caption} style={{ color: "white" }}>
+                : filteredArticles?.info[currentLanguage].nume}
+          </h2>
+          <span style={styles.caption}>
             {filteredArticles?.firstUploadDate}
           </span>
-          <figure className={classes.imageBlog}>
+          <figure style={styles.imageBlog}>
             <img
               width={1440}
-              height={isDesktop ? 282 : 123}
+              height={282}
               src={filteredArticles?.image?.finalUri}
               alt="blog"
+              style={styles.responsiveImage}
             />
           </figure>
           <div
             dangerouslySetInnerHTML={{
               __html:
-                detectedLng === "hi"
+                currentLanguage === "hi"
                   ? filteredArticles?.info?.hu.content
-                  : detectedLng === "id"
+                  : currentLanguage === "id"
                     ? filteredArticles?.info?.ru.content
-                    : filteredArticles?.info[detectedLng].content,
+                    : filteredArticles?.info[currentLanguage].content,
             }}
-            style={{ color: colors.primary3 }}
+            style={styles.contentText}
           ></div>
-          {/* Adăugarea elementului video */}
-          {/* Încorporarea videoclipului YouTube folosind un iframe */}
 
           {/* Încorporarea videoclipurilor YouTube folosind un map */}
           {youtubeEmbedLinks.map((embedLink, index) => (
@@ -112,52 +93,64 @@ function Article({ filteredArticles }) {
               frameBorder="0"
               allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              style={{ borderRadius: 10, marginTop: "3%" }}
+              style={styles.videoFrame}
             ></iframe>
           ))}
-
-          {/* <Divider className={classes.dividerBordered} /> */}
         </div>
       </article>
-      {/* <section className={classes.socmedShare}>
-        <div className={classes.btnArea}>
-          <Typography variant="h6" sx={{ color: "white" }}>
-            {"Share to social media"}
-          </Typography>
-          <Box mt={3}>
-            <Button
-              variant="outlined"
-              className={classes.indigoBtn}
-              type="button"
-              onClick={shareOnFacebook}
-            >
-              <FacebookIcon sx={{ marginRight: isDesktop && 1 }} />
-              {isDesktop && "Facebook"}
-            </Button>
-            <Button
-              variant="outlined"
-              className={classes.cyanBtn}
-              type="button"
-              onClick={shareOnInstagram}
-            >
-              <InstagramIcon sx={{ marginRight: isDesktop && 1 }} />
-              {isDesktop && "Instagram"}
-            </Button>
-            <Button
-              variant="outlined"
-              className={classes.blueBtn}
-              type="button"
-              onClick={shareOnLinkedIn}
-            >
-              <LinkedInIcon sx={{ marginRight: isDesktop && 1 }} />
-              {isDesktop && "Linkedin"}
-            </Button>
-          </Box>
-        </div>
-      </section> */}
-      {/* <Divider className={classes.dividerBordered} /> */}
     </div>
   );
 }
+
+const styles = {
+  root: {
+    marginTop: "2rem",
+  },
+  article: {
+    color: "#333",
+    fontSize: "16px",
+    lineHeight: "24px",
+  },
+  content: {
+    padding: "0 1rem",
+    "@media (min-width: 768px)": {
+      padding: "0 2rem",
+    },
+  },
+  titleBlog: {
+    fontWeight: "500",
+    color: "white",
+    fontSize: "1.5rem",
+    marginBottom: "1rem",
+    lineHeight: "1.3",
+  },
+  caption: {
+    color: "white",
+    fontSize: "0.9rem",
+    opacity: 0.8,
+  },
+  imageBlog: {
+    margin: "2rem 0",
+    "& img": {
+      width: "100%",
+      borderRadius: "8px",
+    },
+  },
+  contentText: {
+    color: "#667eea",
+    fontSize: "16px",
+    lineHeight: "1.6",
+    marginBottom: "1rem",
+  },
+  videoFrame: {
+    borderRadius: "10px",
+    marginTop: "3%",
+    maxWidth: "100%",
+  },
+  responsiveImage: {
+    width: "100%",
+    height: "auto",
+  },
+};
 
 export default Article;

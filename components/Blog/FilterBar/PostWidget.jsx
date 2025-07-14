@@ -1,16 +1,5 @@
 import React from "react";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
-
-import Paper from "../../Paper";
-import useStyles from "../blog-style";
-import { Button } from "@mui/material";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import { toUrlSlug } from "../../../utils/commonUtils";
-import { colors } from "../../../utils/colors";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "next-i18next";
 
 function PostWidget({ handleFilter, filterItem }) {
   const filters = [
@@ -22,56 +11,91 @@ function PostWidget({ handleFilter, filterItem }) {
   ];
   const { t } = useTranslation("common");
 
-  const { classes } = useStyles();
-
-  const route = useRouter();
-
   return (
-    // <Paper title={t("Filters")} icon="ion-android-bookmark" whiteBg desc="">
-    <Paper title={"filters"} icon="ion-android-bookmark" whiteBg desc="">
-      <div
-        className={classes.albumRoot}
-        style={{ backgroundColor: "transparent" }}
-      >
-        <List component="nav">
-          {filters.map((item, index) => (
-            <ListItem
-              key={index}
-              button
-              sx={{
-                "&:hover": {
-                  backgroundColor: colors.primary3, // Culoarea pentru hover pe ListItem
-                  // Schimbă culoarea textului la hover prin referirea la copilul ListItemText
-                  "& .MuiTypography-root": {
-                    color: "white",
-                  },
-                },
-                backgroundColor:
-                  filterItem === item ? colors.primary3 : "transparent",
-              }}
-              onClick={() => handleFilter(item)}
-            >
-              <ListItemText
-                primary={t(item)}
-                // primary={"asd"}
-                sx={{
-                  ".MuiTypography-root": {
-                    // Aplică stilul pentru toate elementele Typography din ListItemText
-                    color: filterItem === item ? "white" : colors.primary3,
-                    height: "2rem",
-                    width: "auto",
-                  },
-                  ".MuiTypography-secondary": {
-                    color: "#d3a03e", // Culoarea pentru textul secundar, fără hover specific
-                  },
-                }}
-              />
-            </ListItem>
-          ))}
-        </List>
+    <div style={styles.filterWidget}>
+      <h3 style={styles.title}>Filtre</h3>
+      <div style={styles.filterList}>
+        {filters.map((item, index) => (
+          <button
+            key={index}
+            onClick={() => handleFilter(item)}
+            style={{
+              ...styles.filterButton,
+              ...(filterItem === item ? styles.filterButtonActive : {}),
+            }}
+          >
+            {item === "All" ? "Toate articolele" : item}
+          </button>
+        ))}
       </div>
-    </Paper>
+    </div>
   );
+}
+
+const styles = {
+  filterWidget: {
+    backgroundColor: "white",
+    borderRadius: "8px",
+    padding: "1.5rem",
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+    border: "1px solid #e0e0e0",
+    marginBottom: "2rem",
+  },
+  title: {
+    fontSize: "1.25rem",
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: "1.5rem",
+    margin: "0 0 1.5rem 0",
+    borderBottom: "2px solid #667eea",
+    paddingBottom: "0.5rem",
+  },
+  filterList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+  filterButton: {
+    display: "block",
+    width: "100%",
+    padding: "0.75rem 1rem",
+    border: "1px solid #e0e0e0",
+    borderRadius: "6px",
+    backgroundColor: "transparent",
+    color: "#667eea",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      backgroundColor: "#667eea",
+      color: "white",
+      transform: "translateX(5px)",
+    },
+  },
+  filterButtonActive: {
+    backgroundColor: "#667eea",
+    color: "white",
+    borderColor: "#667eea",
+  },
+};
+
+// Add CSS for hover effects
+if (typeof window !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = `
+    .filter-button:hover {
+      background-color: #667eea !important;
+      color: white !important;
+      transform: translateX(5px);
+    }
+  `;
+  if (!document.head.querySelector('style[data-component="filter-widget"]')) {
+    styleSheet.setAttribute('data-component', 'filter-widget');
+    document.head.appendChild(styleSheet);
+  }
 }
 
 export default PostWidget;

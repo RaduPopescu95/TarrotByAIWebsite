@@ -10,7 +10,6 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Calendar } from "primereact/calendar";
 import Image from "next/image";
-import { Box, CircularProgress } from "@mui/material";
 import { useAuth } from "../../../../context/AuthContext";
 
 // Încărcarea dinamică a componentelor dependente de DOM
@@ -42,18 +41,31 @@ const Home1 = () => {
     }
   }, []);
 
-  // if(loading){
-  //   return (    <Box
-  //     sx={{
-  //       display: "flex",
-  //       justifyContent: "center", // Center horizontally
-  //       alignItems: "center", // Center vertically
-  //       height: "100vh", // Optional: Set a specific height for the centering container
-  //     }}
-  //   >
-  //     <CircularProgress />
-  //   </Box>)
-  // }
+  if(loading){
+    return (    
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center", 
+        height: "100vh"
+      }}>
+        <div style={{
+          width: "40px",
+          height: "40px",
+          border: "4px solid #f3f3f3",
+          borderTop: "4px solid #667eea",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite"
+        }}></div>
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -98,6 +110,191 @@ const Home1 = () => {
         .enhanced-cta-section {
           width: 100% !important;
           max-width: 100% !important;
+        }
+        
+        /* Bootstrap Grid System */
+        .row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-right: -15px;
+          margin-left: -15px;
+        }
+        
+        .col-lg-6 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 50%;
+          max-width: 50%;
+        }
+        
+        .col-lg-4 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 33.333333%;
+          max-width: 33.333333%;
+        }
+        
+        .col-lg-5 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 41.666667%;
+          max-width: 41.666667%;
+        }
+        
+        .col-lg-7 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 58.333333%;
+          max-width: 58.333333%;
+        }
+        
+        .col-lg-10 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 83.333333%;
+          max-width: 83.333333%;
+        }
+        
+        .col-md-6 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+        }
+        
+        .col-md-12 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+        }
+        
+        .col-12 {
+          position: relative;
+          width: 100%;
+          padding-right: 15px;
+          padding-left: 15px;
+          flex: 0 0 100%;
+          max-width: 100%;
+        }
+        
+        .g-3 > * {
+          padding-right: calc(0.75rem * 0.5);
+          padding-left: calc(0.75rem * 0.5);
+          margin-top: 0.75rem;
+        }
+        
+        .g-4 > * {
+          padding-right: calc(1rem * 0.5);
+          padding-left: calc(1rem * 0.5);
+          margin-top: 1rem;
+        }
+        
+        .align-items-center {
+          align-items: center !important;
+        }
+        
+        .justify-content-center {
+          justify-content: center !important;
+        }
+        
+        .text-center {
+          text-align: center !important;
+        }
+        
+        .mb-5 {
+          margin-bottom: 3rem !important;
+        }
+        
+        .me-2 {
+          margin-right: 0.5rem !important;
+        }
+        
+        .w-100 {
+          width: 100% !important;
+        }
+        
+        .order-1 {
+          order: 1 !important;
+        }
+        
+        .order-2 {
+          order: 2 !important;
+        }
+        
+        .position-relative {
+          position: relative !important;
+        }
+        
+        .img-fluid {
+          max-width: 100%;
+          height: auto;
+        }
+        
+        .py-5 {
+          padding-top: 3rem !important;
+          padding-bottom: 3rem !important;
+        }
+        
+        .bg-light {
+          background-color: #f8f9fa !important;
+        }
+        
+        @media (max-width: 991.98px) {
+          .col-lg-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .col-lg-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .col-lg-5 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .col-lg-7 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .col-lg-10 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .order-lg-1 {
+            order: 1 !important;
+          }
+          
+          .order-lg-2 {
+            order: 2 !important;
+          }
+        }
+        
+        @media (max-width: 767.98px) {
+          .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          
+          .col-md-12 {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
         }
       `}</style>
       
@@ -204,7 +401,7 @@ const Home1 = () => {
                       aceleași căutări spirituale. Învață prin experiențe comune.
                     </p>
                     <ul className="feature-list">
-                      <li><i className="fa fa-check"></i> Interacțiune în timp real</li>±
+                      <li><i className="fa fa-check"></i> Interacțiune în timp real</li>
                       <li><i className="fa fa-check"></i> Grupuri tematice</li>
                       <li><i className="fa fa-check"></i> Moderare profesională</li>
                     </ul>

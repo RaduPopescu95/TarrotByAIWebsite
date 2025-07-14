@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { handleGetArticles, handleGetServices } from "../utils/realtimeUtils";
+import { handleGetArticles } from "../utils/realtimeUtils";
 import languageDetector from "../lib/languageDetector";
 import { handleGetFirestore } from "../utils/firestoreUtils";
 
@@ -72,7 +72,8 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   const handleServices = () => {
-    handleData(setServices, handleGetServices);
+    // Services handling is no longer needed or can be implemented separately
+    setServices([]);
   };
 
   useEffect(() => {

@@ -100,5 +100,50 @@
   "onboardingThirdTitleMessage": "Získajte čítanie o vašej budúcnosti",
   "skip": "PRESKOČIŤ",
   "nextOnboard": "ĎALEJ",
-  "clinicLoginRedirect": "Pokračovať"
+  "clinicLoginRedirect": "Pokračovať",
+  
+  "spiritualGuidance": "DUCHOVNÉ VEDENIE",
+  "discoverSpiritualWisdom": "Objavte <span class=\"font-semibold text-indigo-600\">duchovnú múdrosť</span> prostredníctvom personalizovaných čítaní tarotu a astrológie",
+  "consultatii": "Konzultácie",
+  "readArticles": "Čítať Články",
+  "allArticles": "Všetky Články",
+  "articles": "Články",
+  "pages": "Stránky",
+  "noResultsFound": "Žiadne výsledky nenájdené",
+  "noResultsMessage": "Žiadne články nenájdené",
+  "filterResultsFor": "Filtrovať výsledky pre",
+  "clearFilter": "Vymazať filter",
+  "popularArticles": "Populárne Články",
+  "noContentMessage": "Pracujeme na vytváraní nového obsahu! Vráťte sa čoskoro a prečítajte si najnovšie články. Medzičasom preskúmajte naše existujúce zdroje.",
+  
+  "aboutMe": "O MNE",
+  "aboutPageTitle": "O Cristine Zurba | Duchovný Sprievodca & Tarot",
+  "aboutPageDescription": "Objavte príbeh Cristiny Zurba, duchovnej sprievodkyne a odborníčky na tarot s jedinečnými skúsenosťami v poskytovaní personalizovaného a transformačného vedenia.",
+  
+  "luckyColorTitle": "Šťastná Farba | Cristina Zurba",
+  "luckyColorDescription": "Objavte svoju šťastnú farbu s jedinečnými poznatkami Cristiny Zurba. Naučte sa, ako konkrétne farby môžu ovplyvniť vaše šťastie a pohodu.",
+  
+  "luckyNumberTitle": "Šťastné Číslo | Cristina Zurba", 
+  "luckyNumberDescription": "Nájdite svoje šťastné číslo s vedením Cristiny Zurba. Naučte sa, ako čísla môžu ovplyvniť váš život a rozhodnutia.",
+  
+  "motivationalQuoteTitle": "Motivačný Citát | Cristina Zurba",
+  "motivationalQuoteDescription": "Získajte denné dávky inšpirácie s motivačnými citátmi od Cristiny Zurba. Objavte múdrosť, ktorá vás povedie k osobnému rozvoju.",
+  
+  "luckyHourTitle": "Šťastná Hodina | Cristina Zurba",
+  "luckyHourDescription": "Objavte svoje šťastné hodiny s duchovnými poznatkami Cristiny Zurba. Naučte sa, kedy je najlepší čas pre dôležité rozhodnutia.",
+  
+  "whatThinks": "Čo si myslí",
+  "whatFeels": "Čo cíti", 
+  "yourBook": "Vaša kniha",
+  
+  "loginTitle": "Prihlásenie | Cristina Zurba",
+  "loginDescription": "Prihláste sa do svojho účtu pre prístup k personalizovaným čítaniam tarotu a duchovnému vedeniu od Cristiny Zurba.",
+  
+  "registerTitle": "Registrácia | Cristina Zurba",
+  "registerDescription": "Vytvorte účet pre prístup k exkluzívnym čítaniam tarotu a duchovným službám od Cristiny Zurba.",
+  
+  "forgotPasswordTitle": "Zabudnuté Heslo | Cristina Zurba",
+  "forgotPasswordDescription": "Obnovte svoje heslo pre opätovný prístup k vašemu personalizovanému duchovnému vedeniu.",
+  
+  "filterContent": "Filtrovať Obsah"
 }

@@ -1,16 +1,24 @@
 import React from "react";
-import Box from "@mui/material/Box";
-
 import PostWidget from "./PostWidget";
 
 function FilterBar({ handleFilter, filterItem }) {
   return (
-    <div>
-      {/* <Box py={5} /> */}
+    <div style={styles.filterContainer}>
       <PostWidget handleFilter={handleFilter} filterItem={filterItem} />
-      <Box py={3} />
+      <div style={styles.spacing}></div>
     </div>
   );
 }
+
+const styles = {
+  filterContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2rem",
+  },
+  spacing: {
+    height: "2rem",
+  },
+};
 
 export default FilterBar;

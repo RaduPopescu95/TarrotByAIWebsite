@@ -1,313 +1,862 @@
 import React, { useState, useEffect, Fragment } from "react";
-import AppBar from "@mui/material/AppBar";
-import IconButton from "@mui/material/IconButton";
-import Container from "@mui/material/Container";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { useTheme } from "@mui/material/styles";
 import Logo from "../Logo";
-
-import MobileMenu from "./SideNav/MixedMobile";
-import HeaderMenu from "./TopNav/MixedNav";
-import UserMenu from "./TopNav/UserMenu";
-import useStyles from "./header-style";
-import samplePages from "./data/sample-pages";
-import navData from "./data/single";
-import i18nextConfig from "../../next-i18next.config";
-import { useTranslation } from "next-i18next";
-import multiple from "./data/multiple";
-import { Button, Typography } from "@mui/material";
-
 import { useAuth } from "../../context/AuthContext";
-import { colors } from "../../utils/colors";
 import Link from "next/link";
-import Settings from "./TopNav/Settings";
+import { useTranslation } from "next-i18next";
+import { useRouter } from "next/router";
+
+// SVG Icons from the old navbar
+const StarIcon = ({ style, className, ...props }) => (
+  <svg
+    style={style}
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+  </svg>
+);
+
+const StyleIcon = ({ style, className, ...props }) => (
+  <svg
+    style={style}
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />
+    <line x1="16" y1="8" x2="2" y2="22" />
+    <line x1="17.5" y1="15" x2="9" y2="15" />
+  </svg>
+);
+
+const PersonIcon = ({ style, className, ...props }) => (
+  <svg
+    style={style}
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const NewspaperIcon = ({ style, className, ...props }) => (
+  <svg
+    style={style}
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2z" />
+    <path d="M10 6h8" />
+    <path d="M10 10h8" />
+    <path d="M10 14h8" />
+    <path d="M10 18h8" />
+  </svg>
+);
 
 function Mixed(props) {
   const [fixed, setFixed] = useState(false);
-  const [openDrawer, setOpenDrawer] = useState(false);
-  const [openMenu, setOpenMenu] = useState(false);
-  const { classes, cx } = useStyles();
-  const theme = useTheme();
-  const { home } = props;
-  const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
-  const { userData, currentUser } = useAuth();
-  const { t, i18n } = useTranslation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
+  
+  const { userData } = useAuth();
+  const { t } = useTranslation();
+  const router = useRouter();
 
-  const buttonStyle = {
-    position: "fixed",
-    bottom: 35,
-    left: 10,
-    backgroundColor: "#ffc045",
-    color: "white",
-    padding: "10px 20px",
-    fontSize: "16px",
-    borderRadius: "25px",
-    zIndex: 15,
+  // Check if we're on consultations or admin pages
+  const isConsultationsPage = router.pathname.includes('/consultatii') || 
+                             router.pathname.includes('/admin-consultatii') ||
+                             router.pathname.includes('/calendar') ||
+                             router.pathname.includes('/cont-client') ||
+                             router.pathname.includes('/login-admin-consultatii') ||
+                             router.pathname.includes('/facturi-client-consultatii') ||
+                             router.pathname.includes('/categorii-consultatii');
+
+  // Language mapping with flags
+  const languages = {
+    en: { name: "English", flag: "/flags/english.png" },
+    ro: { name: "Română", flag: "/flags/romania.png" },
+    bg: { name: "Български", flag: "/flags/bulgaria.png" },
+    hr: { name: "Hrvatski", flag: "/flags/croatia.png" },
+    cs: { name: "Čeština", flag: "/flags/czech.png" },
+    fr: { name: "Français", flag: "/flags/france.png" },
+    de: { name: "Deutsch", flag: "/flags/germany.png" },
+    el: { name: "Ελληνικά", flag: "/flags/greece.png" },
+    hi: { name: "हिंदी", flag: "/flags/india.png" },
+    id: { name: "Bahasa Indonesia", flag: "/flags/indonesia.png" },
+    it: { name: "Italiano", flag: "/flags/italy.png" },
+    pl: { name: "Polski", flag: "/flags/poland.png" },
+    sk: { name: "Slovenčina", flag: "/flags/slovakia.png" },
+    es: { name: "Español", flag: "/flags/spanish.png" },
   };
-  let flagFixed = false;
 
-  const handleScroll = () => {
-    const doc = document.documentElement;
-    const scroll = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0);
-    const newFlagFixed = scroll > 80;
-    if (flagFixed !== newFlagFixed) {
-      setFixed(newFlagFixed);
-      flagFixed = newFlagFixed;
-    }
-  };
-
+  // Handle responsive breakpoints
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsDesktop(width >= 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleOpenDrawer = () => {
-    setOpenDrawer(!openDrawer);
+  // Handle scroll for fixed header
+  useEffect(() => {
+    const handleScroll = () => {
+      const scroll = window.pageYOffset;
+      setFixed(scroll > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (languageDropdownOpen && !event.target.closest('.language-dropdown')) {
+        setLanguageDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [languageDropdownOpen]);
+
+  const handleMobileMenuToggle = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const handleToggle = () => {
-    setOpenMenu((prevOpen) => !prevOpen);
+  const handleLanguageChange = (locale) => {
+    setLanguageDropdownOpen(false);
+    router.push(router.asPath, router.asPath, { locale });
   };
 
-  const handleClose = () => {
-    setOpenMenu(false);
-  };
+  const currentLanguage = languages[router.locale] || languages['ro'];
+
+  // Navigation items with modern icons
+  const navItems = [
+    {
+      href: "/",
+      label: "Acasă",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9,22 9,12 15,12 15,22"/>
+        </svg>
+      ),
+      active: router.pathname === "/"
+    },
+    {
+      href: "/about",
+      label: "Despre",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      ),
+      active: router.pathname === "/about"
+    },
+    {
+      href: "/consultatii",
+      label: "Consultații",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14,2 14,8 20,8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10,9 9,9 8,9"/>
+        </svg>
+      ),
+      active: router.pathname === "/consultatii"
+    },
+    {
+      href: "/news",
+      label: "Blog",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2z"/>
+          <path d="M6 6h4"/>
+          <path d="M6 10h4"/>
+          <path d="M6 14h4"/>
+          <path d="M14 6h4"/>
+          <path d="M14 10h4"/>
+        </svg>
+      ),
+      active: router.pathname === "/news"
+    }
+  ];
+
+  // Special navigation icons from old navbar
+  const specialNavItems = [
+    // {
+    //   href: "/main-dashboard",
+    //   label: "Panel",
+    //   icon: <StarIcon style={{ width: "16px", height: "16px" }} />,
+    //   active: router.pathname === "/main-dashboard"
+    // },
+    {
+      href: "/main-dashboard",
+      label: "Citiri",
+      icon: <StyleIcon style={{ width: "16px", height: "16px" }} />,
+      active: router.pathname === "/main-dashboard"
+    },
+    {
+      href: "/settings",
+      label: "Cont",
+      icon: <PersonIcon style={{ width: "16px", height: "16px" }} />,
+      active: router.pathname === "/settings"
+    }
+  ];
 
   return (
     <Fragment>
-      <AppBar
-        position="relative"
-        id="header"
-        className={cx(
-          classes.header,
-          openMenu && classes.noShadow,
-          fixed && classes.fixed,
-          openDrawer && classes.openDrawer
-        )}
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "transparent",
-          maxHeight: "100px",
-          zIndex: 9,
-        }}
-      >
-        <Container
-          fixed={isDesktop}
-          style={{
-            margin: 0,
-            padding: 0,
-            width: "100%",
-            maxWidth: "none",
-          }}
-        >
-          <div
-            className={classes.headerContent}
-            style={{ backgroundColor: "transparent" }}
-          >
-            <nav
-              className={classes.navMenu}
-              style={{ backgroundColor: "transparent" }}
-            >
-              {!props.isOnlySettngs && (
-                <div
-                  className={classes.logo}
-                  style={{
-                    paddingLeft: isMobile ? 10 : 10,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <a href={"/"}>
-                    <Logo type="landscape" fixed={fixed} />
-                  </a>
-                  {userData ? (
-                    <Typography style={{ color: "white" }}>
-                      {t("helloUser")}, {userData && userData.first_name}!
-                    </Typography>
-                  ) : (
-                    <Typography style={{ color: "white" }}>
-                      {t("helloUser")} !
-                    </Typography>
-                  )}
-                </div>
+      <header style={{
+        ...styles.header,
+        ...(isConsultationsPage ? styles.headerWhite : {}),
+        ...(fixed && (isConsultationsPage ? styles.headerWhiteFixed : styles.headerFixed))
+      }}>
+        <div style={styles.container}>
+          <nav style={styles.navbar} className="navbar">
+            {/* Logo Section */}
+            <div style={styles.logoSection} className="logo-section">
+              <Link href="/" style={styles.logoLink}>
+                <Logo type="landscape" fixed={fixed} noLink={true} />
+              </Link>
+              {userData && isDesktop && (
+                <span style={{
+                  ...styles.userGreeting,
+                  color: isConsultationsPage ? '#333' : 'white'
+                }}>
+                  Salut, {userData.first_name}!
+                </span>
               )}
+            </div>
 
-              {isMobile && (
-                <IconButton
-                  onClick={handleOpenDrawer}
-                  className={cx(
-                    "hamburger hamburger--spin",
-                    classes.mobileMenu,
-                    openDrawer && "is-active"
-                  )}
-                  size="large"
-                  aria-label="Toggle navigation menu"
-                >
-                  <span className="hamburger-box" style={{ color: "white" }}>
-                    <span className={cx(classes.bar, "hamburger-inner")} />
-                  </span>
-                </IconButton>
-              )}
-              {isMobile && (
-                // <MobileMenu open={openDrawer} toggleDrawer={handleOpenDrawer} />
-                <>
-                  <div
+            {/* Desktop Navigation */}
+            {isDesktop && (
+              <div style={styles.navMenu}>
+                {navItems.map((item, index) => (
+                  <Link
+                    key={index}
+                    href={item.href}
                     style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      width: "50%",
-                      alignItems: "center",
-                      justifyContent: "space-around",
+                      ...styles.navItem,
+                      ...(item.active && styles.navItemActive),
+                      color: isConsultationsPage 
+                        ? (item.active ? '#667eea' : '#333')
+                        : (item.active ? '#FFD700' : 'white')
                     }}
                   >
-                    {/* {!props.isSlug && <Settings isWhiteBg={true} />} */}
-                    <div
-                      style={{
-                        height: "3rem",
-                        display: "flex",
-                        alignItems: "center",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        paddingTop: "7%",
-                      }}
-                    >
-                      <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
-                        <img
-                          src={"/gplay.png"}
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                          }}
-                        />
-                      </Link>
-                      <p
-                        style={{
-                          margin: 0,
-                          bottom: 10,
-                          position: "relative",
-                          color: colors.white,
-                          backgroundColor: "rgba(40, 49, 64, 0.5)",
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          marginTop: 4,
-                          borderRadius: 8,
-                        }}
-                      >
-                        Android
-                      </p>
-                    </div>
-                    <div
-                      style={{
-                        height: "3rem",
-                        display: "flex",
-                        alignItems: "center",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        paddingTop: "7%",
-                      }}
-                    >
-                      <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
-                        <img
-                          src={"/appstore.png"}
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                          }}
-                        />
-                      </Link>
-                      <p
-                        style={{
-                          margin: 0,
-                          bottom: 10,
-                          position: "relative",
-                          color: colors.white,
-                          backgroundColor: "rgba(40, 49, 64, 0.5)",
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          marginTop: 4,
-                          borderRadius: 8,
-                        }}
-                      >
-                        IOS
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
+                    <span style={styles.navIcon}>{item.icon}</span>
+                    <span style={styles.navLabel}>{item.label}</span>
+                  </Link>
+                ))}
+                
+                {/* Special Navigation Icons */}
+                <div style={styles.specialNavSeparator}></div>
+                {specialNavItems.map((item, index) => (
+                  <Link
+                    key={`special-${index}`}
+                    href={item.href}
+                    style={{
+                      ...styles.specialNavItem,
+                      ...(item.active && styles.specialNavItemActive),
+                      color: isConsultationsPage 
+                        ? (item.active ? '#667eea' : '#333')
+                        : (item.active ? '#FFD700' : 'white')
+                    }}
+                  >
+                    <span style={styles.specialNavIcon}>{item.icon}</span>
+                    <span style={styles.specialNavLabel}>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
 
-              {isDesktop && !props.isOnlySettngs && (
-                <div className={classes.mainMenu}>
-                  <HeaderMenu
-                    open={openMenu}
-                    menuPrimary={navData}
-                    dataMenu={multiple}
-                    menuSecondary={samplePages}
-                    toggle={handleToggle}
-                    close={handleClose}
-                    singleNav={home}
-                    fixed={fixed}
+            {/* Right Section - Language Dropdown, Store Links & Mobile Menu */}
+            <div style={styles.rightSection}>
+              {/* Language Dropdown */}
+              <div className="language-dropdown" style={styles.languageDropdown}>
+                <button
+                  onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
+                  style={{
+                    ...styles.languageButton,
+                    color: isConsultationsPage ? '#333' : 'white',
+                    backgroundColor: isConsultationsPage 
+                      ? 'rgba(0, 0, 0, 0.1)' 
+                      : 'rgba(255, 255, 255, 0.1)',
+                    borderColor: isConsultationsPage 
+                      ? 'rgba(0, 0, 0, 0.2)' 
+                      : 'rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isConsultationsPage 
+                      ? 'rgba(0, 0, 0, 0.15)' 
+                      : 'rgba(255, 255, 255, 0.15)';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isConsultationsPage 
+                      ? 'rgba(0, 0, 0, 0.1)' 
+                      : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                  aria-label="Change language"
+                >
+                  <img 
+                    src={currentLanguage.flag} 
+                    alt={currentLanguage.name}
+                    style={styles.flagIcon}
                   />
+                  {isDesktop && <span style={styles.languageText}>{currentLanguage.name}</span>}
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    style={{
+                      ...styles.dropdownArrow,
+                      transform: languageDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                  >
+                    <polyline points="6,9 12,15 18,9"/>
+                  </svg>
+                </button>
+                
+                {languageDropdownOpen && (
+                  <div style={{
+                    ...styles.languageDropdownMenu,
+                    opacity: 1,
+                    visibility: 'visible',
+                    transform: 'translateY(0)'
+                  }}>
+                    {Object.entries(languages).map(([locale, lang]) => (
+                      <button
+                        key={locale}
+                        onClick={() => handleLanguageChange(locale)}
+                        style={{
+                          ...styles.languageOption,
+                          ...(router.locale === locale && styles.languageOptionActive)
+                        }}
+                        onMouseEnter={(e) => {
+                          if (router.locale !== locale) {
+                            e.target.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (router.locale !== locale) {
+                            e.target.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <img 
+                          src={lang.flag} 
+                          alt={lang.name}
+                          style={styles.flagIconSmall}
+                        />
+                        <span style={styles.languageOptionText}>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Store Links */}
+              <div style={styles.storeLinks} className="store-links">
+                <a 
+                  href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.storeLink}
+                  className="store-link"
+                >
+                  <img src="/gplay.png" alt="Google Play" style={styles.storeIcon} />
+                  {isDesktop && <span style={styles.storeText}>Android</span>}
+                </a>
+                <a 
+                  href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.storeLink}
+                  className="store-link"
+                >
+                  <img src="/appstore.png" alt="App Store" style={styles.storeIcon} />
+                  {isDesktop && <span style={styles.storeText}>iOS</span>}
+                </a>
+              </div>
+
+              {/* Mobile Menu Toggle */}
+              {!isDesktop && (
+                <button
+                  onClick={handleMobileMenuToggle}
+                  style={{
+                    ...styles.mobileMenuButton,
+                    color: isConsultationsPage ? '#333' : (fixed ? '#333' : 'white')
+                  }}
+                  className="mobile-menu-button"
+                  aria-label="Toggle menu"
+                >
+                  <div style={styles.hamburgerIcon}>
+                    <span style={{
+                      ...styles.hamburgerLine,
+                      backgroundColor: isConsultationsPage ? '#333' : 'white',
+                      ...(mobileMenuOpen && styles.hamburgerLine1Active)
+                    }} />
+                    <span style={{
+                      ...styles.hamburgerLine,
+                      backgroundColor: isConsultationsPage ? '#333' : 'white',
+                      ...(mobileMenuOpen && styles.hamburgerLine2Active)
+                    }} />
+                    <span style={{
+                      ...styles.hamburgerLine,
+                      backgroundColor: isConsultationsPage ? '#333' : 'white',
+                      ...(mobileMenuOpen && styles.hamburgerLine3Active)
+                    }} />
+                  </div>
+                </button>
+              )}
+            </div>
+          </nav>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {!isDesktop && (
+          <div style={{
+            ...styles.mobileMenu,
+            ...(mobileMenuOpen && styles.mobileMenuOpen)
+          }}>
+            <div style={styles.mobileMenuContent}>
+              {userData && (
+                <div style={styles.mobileUserGreeting}>
+                  Salut, {userData.first_name}!
                 </div>
               )}
-
-              {isDesktop && (
-                <UserMenu
-                  isOnlySettngs={props.isOnlySettngs}
-                  isSlug={props.isSlug}
-                />
-              )}
-            </nav>
+              {navItems.map((item, index) => (
+                <Link
+                  key={index}
+                  href={item.href}
+                  style={{
+                    ...styles.mobileNavItem,
+                    ...(item.active && styles.mobileNavItemActive)
+                  }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <span style={styles.mobileNavIcon}>{item.icon}</span>
+                  <span style={styles.mobileNavLabel}>{item.label}</span>
+                </Link>
+              ))}
+              
+              {/* Special Navigation Items in Mobile */}
+              <div style={styles.mobileSeparator}></div>
+              {specialNavItems.map((item, index) => (
+                <Link
+                  key={`mobile-special-${index}`}
+                  href={item.href}
+                  style={{
+                    ...styles.mobileNavItem,
+                    ...(item.active && styles.mobileNavItemActive)
+                  }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <span style={styles.mobileNavIcon}>{item.icon}</span>
+                  <span style={styles.mobileNavLabel}>{item.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </Container>
-      </AppBar>
-
-      {/* <div
-        style={{
-          backgroundColor: "#252525",
-          height: isDesktop ? "86px" : "56px",
-          width: "100%",
-        }}
-      ></div> */}
-      {isMobile && !props.isOnlySettngs && (
-        <div
-          style={{
-            position: "fixed", // Schimbă aici din "absolute" în "fixed"
-            bottom: 0,
-            zIndex: 12,
-            width: "100%",
-            backgroundColor: colors.primary3,
-            height: "60px",
-          }}
-        >
-          <HeaderMenu
-            isMobile={isMobile}
-            open={openMenu}
-            menuPrimary={navData}
-            dataMenu={multiple}
-            menuSecondary={samplePages}
-            toggle={handleToggle}
-            close={handleClose}
-            singleNav={home}
-            fixed={fixed}
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-around",
-              content: '""',
-              listStyleType: "none" /* Elimină bullet points */,
-              paddingLeft: 0 /* Opțional, elimină indentarea */,
-              margin: 4,
-            }}
-            fontSize={50}
-          />
-        </div>
-      )}
+        )}
+      </header>
     </Fragment>
   );
 }
+
+const styles = {
+  header: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    background: "linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%)",
+    backdropFilter: "blur(20px)",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    zIndex: 1000,
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 4px 32px rgba(102, 126, 234, 0.2)",
+  },
+  headerWhite: {
+    background: "rgba(255, 255, 255, 0.98)",
+    borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+    boxShadow: "0 4px 32px rgba(0, 0, 0, 0.1)",
+  },
+  headerFixed: {
+    background: "linear-gradient(135deg, rgba(102, 126, 234, 0.98) 0%, rgba(118, 75, 162, 0.98) 100%)",
+    backdropFilter: "blur(20px)",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    boxShadow: "0 4px 32px rgba(102, 126, 234, 0.25)",
+  },
+  headerWhiteFixed: {
+    background: "rgba(255, 255, 255, 0.98)",
+    borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+    boxShadow: "0 4px 32px rgba(0, 0, 0, 0.1)",
+  },
+  container: {
+    maxWidth: "1400px",
+    margin: "0 auto",
+    padding: "0 20px",
+  },
+  navbar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: "70px",
+    gap: "1rem",
+    flexWrap: "nowrap",
+  },
+  
+  // Logo Section
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    flex: "0 0 auto",
+    minWidth: "200px",
+  },
+  logoLink: {
+    display: "flex",
+    alignItems: "center",
+    textDecoration: "none",
+    transition: "transform 0.2s ease",
+  },
+  userGreeting: {
+    fontSize: "12px",
+    fontWeight: "500",
+    opacity: 0.9,
+    whiteSpace: "nowrap",
+  },
+  
+  // Desktop Navigation
+  navMenu: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.25rem",
+    flex: "1 1 auto",
+    justifyContent: "center",
+    flexWrap: "nowrap",
+  },
+  navItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.4rem",
+    padding: "10px 12px",
+    borderRadius: "10px",
+    textDecoration: "none",
+    fontSize: "13px",
+    fontWeight: "500",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+  },
+  navItemActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backdropFilter: "blur(10px)",
+    transform: "translateY(-2px)",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
+  },
+  navIcon: {
+    display: "flex",
+    alignItems: "center",
+    transition: "transform 0.2s ease",
+  },
+  navLabel: {
+    transition: "all 0.2s ease",
+  },
+  
+  // Special Navigation Items
+  specialNavSeparator: {
+    width: "1px",
+    height: "25px",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    margin: "0 0.5rem",
+  },
+  specialNavItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.4rem",
+    padding: "8px 10px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    fontSize: "12px",
+    fontWeight: "500",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    whiteSpace: "nowrap",
+  },
+  specialNavItemActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backdropFilter: "blur(10px)",
+    transform: "translateY(-2px)",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
+  },
+  specialNavIcon: {
+    display: "flex",
+    alignItems: "center",
+    transition: "transform 0.2s ease",
+  },
+  specialNavLabel: {
+    transition: "all 0.2s ease",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  
+  // Right Section
+  rightSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    flex: "0 0 auto",
+  },
+  
+  // Language Dropdown
+  languageDropdown: {
+    position: "relative",
+  },
+  languageButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    background: "none",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    padding: "8px 12px",
+    cursor: "pointer",
+    borderRadius: "10px",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  flagIcon: {
+    width: "20px",
+    height: "20px",
+    borderRadius: "4px",
+    objectFit: "cover",
+  },
+  languageText: {
+    fontSize: "12px",
+    fontWeight: "500",
+  },
+  dropdownArrow: {
+    transition: "transform 0.2s ease",
+    marginLeft: "0.25rem",
+  },
+  languageDropdownMenu: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    right: 0,
+    minWidth: "200px",
+    background: "rgba(255, 255, 255, 0.98)",
+    backdropFilter: "blur(20px)",
+    borderRadius: "12px",
+    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    padding: "8px",
+    zIndex: 1000,
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    opacity: 0,
+    visibility: "hidden",
+    transform: "translateY(-10px)",
+  },
+  languageOption: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    padding: "10px 12px",
+    width: "100%",
+    background: "none",
+    border: "none",
+    borderRadius: "8px",
+    color: "#333",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  languageOptionActive: {
+    backgroundColor: "rgba(102, 126, 234, 0.15)",
+    color: "#667eea",
+    fontWeight: "600",
+  },
+  flagIconSmall: {
+    width: "20px",
+    height: "20px",
+    borderRadius: "4px",
+    objectFit: "cover",
+  },
+  languageOptionText: {
+    fontSize: "14px",
+    fontWeight: "inherit",
+  },
+  storeLinks: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  storeLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.3rem",
+    padding: "6px 8px",
+    borderRadius: "8px",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    color: "white",
+    textDecoration: "none",
+    fontSize: "11px",
+    fontWeight: "500",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    whiteSpace: "nowrap",
+  },
+  storeIcon: {
+    width: "16px",
+    height: "16px",
+    borderRadius: "3px",
+  },
+  storeText: {
+    color: "white",
+    fontSize: "10px",
+    fontWeight: "500",
+  },
+  
+  // Mobile Menu Button
+  mobileMenuButton: {
+    background: "none",
+    border: "none",
+    padding: "8px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
+  },
+  hamburgerIcon: {
+    width: "24px",
+    height: "18px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+  },
+  hamburgerLine: {
+    width: "100%",
+    height: "2px",
+    borderRadius: "2px",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    transformOrigin: "center",
+  },
+  hamburgerLine1Active: {
+    transform: "rotate(45deg) translate(5px, 5px)",
+  },
+  hamburgerLine2Active: {
+    opacity: 0,
+    transform: "scaleX(0)",
+  },
+  hamburgerLine3Active: {
+    transform: "rotate(-45deg) translate(7px, -6px)",
+  },
+  
+  // Mobile Menu
+  mobileMenu: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    background: "linear-gradient(135deg, rgba(102, 126, 234, 0.98) 0%, rgba(118, 75, 162, 0.98) 100%)",
+    backdropFilter: "blur(20px)",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    transform: "translateY(-100%)",
+    opacity: 0,
+    visibility: "hidden",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  mobileMenuOpen: {
+    transform: "translateY(0)",
+    opacity: 1,
+    visibility: "visible",
+  },
+  mobileMenuContent: {
+    padding: "2rem 20px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+  },
+  mobileUserGreeting: {
+    color: "white",
+    fontSize: "16px",
+    fontWeight: "600",
+    marginBottom: "1.5rem",
+    padding: "0 16px",
+    opacity: 0.9,
+  },
+  mobileNavItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+    padding: "16px",
+    borderRadius: "12px",
+    textDecoration: "none",
+    color: "white",
+    fontSize: "16px",
+    fontWeight: "500",
+    marginBottom: "0.5rem",
+    transition: "all 0.3s ease",
+    border: "1px solid transparent",
+  },
+  mobileNavItemActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    color: "#FFD700",
+  },
+  mobileNavIcon: {
+    display: "flex",
+    alignItems: "center",
+  },
+  mobileNavLabel: {
+    fontSize: "16px",
+    fontWeight: "500",
+  },
+  mobileSeparator: {
+    height: "1px",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    margin: "1rem 0",
+  },
+};
+
+// CSS hover effects and responsive styles are handled in global styles
 
 Mixed.defaultProps = {
   home: false,

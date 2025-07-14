@@ -84,6 +84,7 @@
     "jquery": "^3.7.1",
     "jspdf": "^2.5.2",
     "libphonenumber-js": "^1.11.12",
+    "lucide-react": "^0.525.0",
     "micro": "^10.0.1",
     "mini-css-extract-plugin": "^2.9.0",
     "moment": "^2.30.1",

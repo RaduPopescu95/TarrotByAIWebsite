@@ -442,7 +442,7 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-user" />
+                              <i className="fa-solid fa-user" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
@@ -456,7 +456,7 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-user-clock" />
+                              <i className="fa-solid fa-user-clock" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
@@ -470,14 +470,14 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-calendar-days" />
+                              <i className="fa-solid fa-calendar-days" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="row">
+                    <div className="row" style={{ marginTop: '30px' }}>
                       <div className="col-md-4">
                         <div className="dashboard-widget-box">
                           <div className="dashboard-content-info">
@@ -486,7 +486,7 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-users" />
+                              <i className="fa-solid fa-users" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
@@ -500,7 +500,7 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-video" />
+                              <i className="fa-solid fa-video" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
@@ -514,7 +514,7 @@ const DoctorDashboard = (props) => {
                           </div>
                           <div className="dashboard-widget-icon">
                             <span className="dash-icon-box">
-                              <i className="fa-solid fa-calendar-week" />
+                              <i className="fa-solid fa-calendar-week" style={{ color: '#667eea' }} />
                             </span>
                           </div>
                         </div>
@@ -528,24 +528,24 @@ const DoctorDashboard = (props) => {
                   <div className="col-xl-12 d-flex">
                     <div className="dashboard-main-col w-100">
                       {nextReservation?.nume && (
-                        <div className="upcoming-appointment-card">
-                          <div className="title-card">
-                            <h5>Următoarea rezervare</h5>
+                        <div className="upcoming-appointment-card" style={{ backgroundColor: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '10px', marginBottom: '20px' }}>
+                          <div className="title-card" style={{ backgroundColor: '#667eea', borderRadius: '10px 10px 0 0', padding: '15px' }}>
+                            <h5 style={{ color: 'white', margin: 0 }}>Următoarea rezervare</h5>
                           </div>
-                          <div className="upcoming-patient-info">
+                          <div className="upcoming-patient-info" style={{ padding: '20px' }}>
                             <div className="info-details">
                               <span className="img-avatar">
                                 <img src="/img/userprofile.png" alt="Img" />
                               </span>
                               <div className="name-info">
-                                <h6>{nextReservation?.nume}</h6>
+                                <h6 style={{ color: '#333' }}>{nextReservation?.nume}</h6>
                               </div>
                             </div>
                             <div className="date-details">
-                              <span>
+                              <span style={{ color: '#666' }}>
                                 Categorie: {nextReservation?.categorie.about}
                               </span>
-                              <h6>
+                              <h6 style={{ color: '#333' }}>
                                 {formatSelectedSlot(
                                   nextReservation?.selectedSlot?.day,
                                   nextReservation?.selectedSlot?.currentYear
@@ -554,12 +554,12 @@ const DoctorDashboard = (props) => {
                               </h6>
                             </div>
                           </div>
-                          <div className="appointment-card-footer">
-                            <h5>
+                          <div className="appointment-card-footer" style={{ padding: '20px', borderTop: '1px solid #e9ecef' }}>
+                            <h5 style={{ color: '#333', marginBottom: '15px' }}>
                               {nextReservation?.tipConsultatie === "Video" ? (
-                                <i className="fa-solid fa-video" />
+                                <i className="fa-solid fa-video" style={{ color: '#667eea', marginRight: '8px' }} />
                               ) : (
-                                <i className="fa-solid fa-volume-up" />
+                                <i className="fa-solid fa-volume-up" style={{ color: '#667eea', marginRight: '8px' }} />
                               )}
                               Consultație {nextReservation?.tipConsultatie}
                             </h5>
@@ -567,12 +567,31 @@ const DoctorDashboard = (props) => {
                               <Link
                                 href={`/meeting-admin?meetingCode=${nextReservation?.meetingCode}__${nextReservation?.documentId}`}
                                 className="btn"
+                                style={{ 
+                                  backgroundColor: '#667eea', 
+                                  color: 'white', 
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '6px',
+                                  fontWeight: '500',
+                                  textDecoration: 'none',
+                                  marginRight: '10px'
+                                }}
                               >
                                 Începe ședința
                               </Link>
                               <Link
                                 href={`/detalii-rezervare?meetingId=${nextReservation?.documentId}`}
                                 className="btn"
+                                style={{ 
+                                  backgroundColor: 'white', 
+                                  color: '#667eea', 
+                                  border: '2px solid #667eea',
+                                  padding: '6px 14px',
+                                  borderRadius: '6px',
+                                  fontWeight: '500',
+                                  textDecoration: 'none'
+                                }}
                               >
                                 Vezi detalii
                               </Link>
@@ -582,44 +601,63 @@ const DoctorDashboard = (props) => {
                       )}
 
                       {nextConferenceGrup?.titlu && (
-                        <div className="upcoming-appointment-card">
-                          <div className="title-card">
-                            <h5>Următoarea conferință de grup</h5>
+                        <div className="upcoming-appointment-card" style={{ backgroundColor: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '10px', marginBottom: '20px' }}>
+                          <div className="title-card" style={{ backgroundColor: '#667eea', borderRadius: '10px 10px 0 0', padding: '15px' }}>
+                            <h5 style={{ color: 'white', margin: 0 }}>Următoarea conferință de grup</h5>
                           </div>
-                          <div className="upcoming-patient-info">
+                          <div className="upcoming-patient-info" style={{ padding: '20px' }}>
                             <div className="info-details">
                               <span className="img-avatar">
                                 <img src="/img/conferinta-grup-icon.png" alt="Img" />
                               </span>
                               <div className="name-info">
-                                <h6>{nextConferenceGrup?.titlu}</h6>
+                                <h6 style={{ color: '#333' }}>{nextConferenceGrup?.titlu}</h6>
                               </div>
                             </div>
                             <div className="date-details">
-                              <span>
+                              <span style={{ color: '#666' }}>
                                 Tip: {nextConferenceGrup?.tipConferinta}
                               </span>
-                              <h6>
+                              <h6 style={{ color: '#333' }}>
                                 {moment(nextConferenceGrup?.dataIncepere).format('DD MMMM YYYY')}
                                 , ora {nextConferenceGrup?.oraIncepere}
                               </h6>
                             </div>
                           </div>
-                          <div className="appointment-card-footer">
-                            <h5>
-                              <i className="fa-solid fa-users" />
+                          <div className="appointment-card-footer" style={{ padding: '20px', borderTop: '1px solid #e9ecef' }}>
+                            <h5 style={{ color: '#333', marginBottom: '15px' }}>
+                              <i className="fa-solid fa-users" style={{ color: '#667eea', marginRight: '8px' }} />
                               Conferință de grup
                             </h5>
                             <div className="btn-appointments">
                               <Link
                                 href={`/conferinta-grup/${nextConferenceGrup?.accessLink}`}
                                 className="btn"
+                                style={{ 
+                                  backgroundColor: '#667eea', 
+                                  color: 'white', 
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '6px',
+                                  fontWeight: '500',
+                                  textDecoration: 'none',
+                                  marginRight: '10px'
+                                }}
                               >
                                 Începe conferința
                               </Link>
                               <Link
                                 href={`/admin-conferinte-grup`}
                                 className="btn"
+                                style={{ 
+                                  backgroundColor: 'white', 
+                                  color: '#667eea', 
+                                  border: '2px solid #667eea',
+                                  padding: '6px 14px',
+                                  borderRadius: '6px',
+                                  fontWeight: '500',
+                                  textDecoration: 'none'
+                                }}
                               >
                                 Administrează
                               </Link>
@@ -632,7 +670,7 @@ const DoctorDashboard = (props) => {
                 )}
 
                 {/* Secțiunile mari cu tabelele - după statistici */}
-                <div className="col-xl-6 d-flex">
+                <div className="col-xl-12 d-flex" style={{ marginBottom: '20px' }}>
                   <div className="dashboard-card w-100">
                     <div className="dashboard-card-head">
                       <div className="header-title">
@@ -706,7 +744,7 @@ const DoctorDashboard = (props) => {
                 </div>
                 
                 {/* Secțiunea pentru conferințele de grup de azi */}
-                <div className="col-xl-6 d-flex">
+                <div className="col-xl-12 d-flex">
                   <div className="dashboard-card w-100">
                     <div className="dashboard-card-head">
                       <div className="header-title">

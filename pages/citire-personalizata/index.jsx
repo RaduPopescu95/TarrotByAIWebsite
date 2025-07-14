@@ -1,32 +1,17 @@
 import * as React from "react";
-import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
-import CardContent from "@mui/material/CardContent";
-import CardMedia from "@mui/material/CardMedia";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
 import Header from "../../components/Header";
-// import Footer from "../components/Footer";
-
-import { useSpacing } from "../../theme/common";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { AnimatePresence, motion } from "framer-motion";
-
 import Image from "next/image";
-import StyleIcon from "@mui/icons-material/Style";
 import Link from "next/link";
-// import { toUrlSlug } from "../utils/commonUtils";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
-import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
-import { Shuffle } from "@mui/icons-material";
 import { normalizeString } from "../../utils/strintText";
 import {
   handleGetFirestoreSingleArrayData,
@@ -35,15 +20,7 @@ import {
 import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";
-// export async function getStaticProps() {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//     },
-//     revalidate: 5, // Regenerează pagina la fiecare 10 secunde dacă este accesată
-//   };
-// }
+import { Sparkles } from "lucide-react";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -52,8 +29,6 @@ export async function getServerSideProps({ locale }) {
     },
   };
 }
-
-// ... rest of your code
 
 const MediaCardConstantService = ({
   item,
@@ -69,7 +44,6 @@ const MediaCardConstantService = ({
     numereNorocoase,
     culoriNorocoase,
     citateMotivationale,
-
     varianteCarti,
     categoriiPersonalizate,
     cartiPersonalizate,
@@ -90,11 +64,21 @@ const MediaCardConstantService = ({
     setLoading,
   } = useApiData();
   const detectedLng = languageDetector.detect();
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Check if mobile
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
   const card =
     shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
-  const { classes, cx } = useSpacing();
 
   console.log("carti PERSONALIZATE...", cartiPersonalizate);
   console.log("Card...", shuffledCartiPersonalizate);
@@ -102,14 +86,10 @@ const MediaCardConstantService = ({
 
   // Starea pentru a gestiona afișarea fundalului alternativ
   const [flipped, setFlipped] = React.useState(false);
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
 
   // Funcția pentru a schimba starea la click pe card
-
   const getVariantaCarti = async (index) => {
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
@@ -117,8 +97,6 @@ const MediaCardConstantService = ({
     console.log("card...nou...", card);
     console.log("categorie...nou...", conditieCategorie);
     try {
-      // console.log(item.image.finalUri);
-
       const cardNameNormalized = normalizeString(card.info.ro.nume);
       const categoryNameNormalized = normalizeString(
         conditieCategorie.info.ro.nume
@@ -140,29 +118,9 @@ const MediaCardConstantService = ({
 
         // ---- START HISTORY ----
         if (currentNumber !== 0) {
-          // console.log("sendToHistory...currentnr < 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
           console.log("test...selected card....", selectedCard);
           setItem(selectedCard);
-          // setSendToHistory([...arr]);
         } else if (currentNumber === 0) {
-          // console.log("sendToHistory...currentnr === 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          // const auth = authentication;
-          // if (auth.currentUser) {
-          // console.log("Is user...saving personal reading...");
-          // const userLocation = `Users/${
-          //   auth.currentUser ? auth.currentUser.uid : ""
-          // }/PersonalReading`;
-          // if (arr.length > 0) {
-          //   handleUploadFirestoreSubcollection(arr, userLocation);
-          // }
-          // }
-
-          //   // setSendToHistory([]);
-          // console.log(item);
           updateNumber(8);
           setItem(selectedCard);
         }
@@ -218,19 +176,8 @@ const MediaCardConstantService = ({
     <motion.div
       onClick={() => getVariantaCarti(index)}
       style={{
-        borderRadius: 1,
-        display: "flex",
-        flexDirection: "column", // Modifică direcția de așezare a elementelor
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        height: "auto",
-        width: "auto",
-
+        ...styles.cardContainer,
         bottom: isMiddleCard ? 30 : 0,
-
-        perspective: "1000px", // Adaugă perspectivă pentru efectul 3D
-        cursor: "pointer",
       }}
       variants={variants}
       initial="initial"
@@ -239,14 +186,7 @@ const MediaCardConstantService = ({
     >
       {/* Partea din față a cartonașului */}
       <motion.div
-        style={{
-          position: "absolute",
-          backfaceVisibility: "hidden",
-          width: "auto",
-          height: "100%",
-
-          /* Restul stilurilor pentru față */
-        }}
+        style={styles.cardFront}
         variants={frontVariants}
         initial="initial"
         animate="animate"
@@ -254,24 +194,13 @@ const MediaCardConstantService = ({
         <img
           src={"/card-back.png"}
           alt={item.text}
-          className={classes.cardImg}
+          style={styles.cardImage}
         />
       </motion.div>
 
       {/* Partea din spate a cartonașului */}
-
       <motion.div
-        style={{
-          // position: "relative",
-          backfaceVisibility: "hidden",
-          transform: "rotateY(180deg)",
-          width: "100%",
-          height: "100%",
-          display: "flex",
-
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        style={styles.cardBack}
         variants={backVariants}
         initial="initial"
         animate="animate"
@@ -280,40 +209,19 @@ const MediaCardConstantService = ({
           <img
             src={card.image.finalUri}
             alt={item.text}
-            className={classes.cardImg}
+            style={styles.cardImage}
           />
         )}
       </motion.div>
 
-      <div
-        style={{
-          backgroundColor: colors.primary3,
-          padding: "0.3rem",
-          borderRadius: 5,
-          marginTop: 5,
-        }}
-      >
-        <Typography
-          style={{
-            position: "relative", // Poziționare absolută în raport cu părintele relativ
-            bottom: "0%", // Poziționează textul la jumătatea înălțimii containerului părinte
-            left: 0, // Aliniază la stânga containerului părinte
-            // bottom: -40, // Aliniază la dreapta containerului părinte
-            textAlign: "flex-start", // Centrează textul orizontal
-            maxWidth: "100%", // limitează lățimea maximă
-            // whiteSpace: "nowrap", // împiedică întreruperea textului
-            // overflow: "hidden", // ascunde textul care depășește lățimea maximă
-            textOverflow: "ellipsis", // adaugă '...' dacă textul este prea lung
-            color: colors.white,
-            fontSize: isMobile ? 5 : 20,
-          }}
-        >
+      <div style={styles.cardLabel}>
+        <span style={{...styles.cardLabelText, fontSize: isMobile ? '10px' : '16px'}}>
           {detectedLng === "hi"
             ? item.info.hu.nume
             : detectedLng === "id"
               ? item.info.ru.nume
               : item.info[detectedLng].nume}
-        </Typography>
+        </span>
       </div>
     </motion.div>
   );
@@ -325,7 +233,6 @@ export function CitirePersonalizata({ services }) {
     numereNorocoase,
     culoriNorocoase,
     citateMotivationale,
-
     varianteCarti,
     categoriiPersonalizate,
     cartiPersonalizate,
@@ -347,24 +254,29 @@ export function CitirePersonalizata({ services }) {
   } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
   const { t } = useTranslation("common");
-  const { classes, cx } = useSpacing();
   const { currentNumber, updateNumber } = useNumberContext();
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
   const [item, setItem] = React.useState({});
   const [imageCard, setImageCard] = React.useState("");
+  const [isMobile, setIsMobile] = React.useState(false);
 
   const router = useRouter();
+
+  // Check if mobile
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || "https://www.cristinazurba.ro";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
-
-  const maxLines = 4; // Numărul maxim de rânduri dorit
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleSetItem = (item) => {
     console.log("item....", item);
@@ -382,8 +294,6 @@ export function CitirePersonalizata({ services }) {
       currentNumber
     );
     try {
-      // console.log(item.image.finalUri);
-
       const cardNameNormalized = normalizeString(card.info.ro.nume);
       const categoryNameNormalized = normalizeString(
         conditieCategorie.info.ro.nume
@@ -405,32 +315,11 @@ export function CitirePersonalizata({ services }) {
 
         // ---- START HISTORY ----
         if (currentNumber !== 0) {
-          // console.log("sendToHistory...currentnr < 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
           console.log("test...selected card....", selectedCard);
           setTimeout(() => {
             setItem(selectedCard);
           }, 500);
-
-          // setSendToHistory([...arr]);
         } else if (currentNumber === 0) {
-          // console.log("sendToHistory...currentnr === 8", sendToHistory);
-          // let arr = [...sendToHistory];
-          // arr.push(selectedCard);
-          // const auth = authentication;
-          // if (auth.currentUser) {
-          // console.log("Is user...saving personal reading...");
-          // const userLocation = `Users/${
-          //   auth.currentUser ? auth.currentUser.uid : ""
-          // }/PersonalReading`;
-          // if (arr.length > 0) {
-          //   handleUploadFirestoreSubcollection(arr, userLocation);
-          // }
-          // }
-
-          //   // setSendToHistory([]);
-          // console.log(item);
           updateNumber(8);
           setTimeout(() => {
             setItem(selectedCard);
@@ -485,10 +374,7 @@ export function CitirePersonalizata({ services }) {
         updateNumber(8);
         break;
     }
-
-    // Aici puteți adăuga orice logică suplimentară dorită după terminarea videoclipului
   };
-  // Adaugă aici orice altă logică pe care dorești să o execuți
 
   const [visibleCards, setVisibleCards] = React.useState(
     new Array(categoriiPersonalizate.arr.length).fill(true)
@@ -553,8 +439,11 @@ export function CitirePersonalizata({ services }) {
           name="description"
           content="Embark on a journey of self-discovery with Cristina Zurba's personal readings. These tailored readings offer insights into your personal growth, challenges, and potential. Ideal for individuals seeking guidance and deeper understanding of their personal journey."
         />
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
+          crossOrigin="anonymous"
+        ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Personal Reading | Cristina Zurba" />
         <meta
@@ -567,65 +456,40 @@ export function CitirePersonalizata({ services }) {
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>
-      <div
-        style={{
-          overflow: "auto",
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
-          minHeight: "100vh",
-        }}
-      >
+
+      {/* Main wrapper with unified design */}
+      <div style={styles.mainWrapper}>
+        {/* Header */}
         <section>
           <Header />
         </section>
 
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-            }}
-          >
+          /* Loading Spinner */
+          <div style={styles.loadingContainer}>
             <motion.div animate={spinnerAnimation}>
-              <StyleIcon
-                style={{ fontSize: 80, color: "white", height: "100vh" }}
-              />
+              <div style={styles.spinnerIcon}>
+                <Sparkles size={80} color="#667eea" />
+              </div>
             </motion.div>
           </div>
         ) : (
+          /* Main Content */
           <section>
-            <div
-              style={{
-                paddingTop: isDesktop ? "8%" : "30%",
-                height: "100%",
-                marginBottom: "60px",
-                justifyContent: "center",
-                display: "flex",
-              }}
-              className={classes.wraperSection}
-            >
-              <Grid
-                container
-                rowSpacing={isMobile ? 5 : 5}
-                columnSpacing={0}
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                  top: 30,
-                  position: "relative",
-                  paddingLeft: isDesktop ? 10 : 0,
-                  paddingRight: isDesktop ? 10 : 0,
-                  height: "100%",
-                  width: isMobile ? "100%" : "90%",
-                }}
-              >
+            <div style={{
+              ...styles.contentContainer,
+              paddingTop: isMobile ? "30%" : "8%",
+            }}>
+              <div style={{
+                ...styles.cardsGrid,
+                width: isMobile ? "100%" : "90%",
+                paddingLeft: isMobile ? 0 : 40,
+                paddingRight: isMobile ? 0 : 40,
+              }}>
                 <AnimatePresence>
                   {categoriiPersonalizate.arr &&
                     categoriiPersonalizate.arr.map((item, index) => {
                       // Aplică stilul de sus pentru cardurile din mijloc
-
                       const isLastItem = index === constantServices.length - 1;
                       const isMiddleCard = index % 3 === 1 && !isLastItem; // Verifică dacă cardul este pe poziția din mijloc în rând
                       if (!visibleCards[index]) {
@@ -635,19 +499,9 @@ export function CitirePersonalizata({ services }) {
                         <React.Fragment key={index}>
                           {isLastItem && (
                             // Adaugă un element gol/spacer înainte de ultimul card
-                            <Grid item xs={4} sm={4} md={4} />
+                            <div style={styles.spacerItem} />
                           )}
-                          <Grid
-                            item
-                            xs={4}
-                            sm={4}
-                            md={4}
-                            sx={{
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                            }}
-                          >
+                          <div style={styles.cardGridItem}>
                             <MediaCardConstantService
                               item={item}
                               isMiddleCard={isMiddleCard}
@@ -657,16 +511,17 @@ export function CitirePersonalizata({ services }) {
                               setImageCard={setImageCard}
                               conditieCategorie={item.info.ro.nume}
                             />
-                          </Grid>
+                          </div>
                         </React.Fragment>
                       );
                     })}
                 </AnimatePresence>
-              </Grid>
+              </div>
             </div>
           </section>
         )}
 
+        {/* Dialog Component */}
         <CitirePersonalizatDialog
           item={item}
           setItem={setItem}
@@ -674,13 +529,154 @@ export function CitirePersonalizata({ services }) {
           setImageCard={setImageCard}
           handleVideoEnd={handleVideoEnd}
         />
-
-        {/* <section>
-          <Footer />
-        </section> */}
       </div>
     </>
   );
+}
+
+// Styles matching /consultatii design
+const styles = {
+  mainWrapper: {
+    background: 'linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)',
+    minHeight: '100vh',
+    overflow: 'auto',
+  },
+  loadingContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+  },
+  spinnerIcon: {
+    fontSize: '80px',
+    color: 'white',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+  },
+  spinnerText: {
+    fontSize: '80px',
+  },
+  contentContainer: {
+    height: '100%',
+    marginBottom: '60px',
+    justifyContent: 'center',
+    display: 'flex',
+    padding: '2rem 1rem',
+  },
+  cardsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '2rem',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    top: '30px',
+    height: '100%',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: '1rem',
+      padding: '0 10px',
+    },
+  },
+  cardGridItem: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  spacerItem: {
+    // Empty spacer for last item alignment
+  },
+  cardContainer: {
+    borderRadius: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    height: 'auto',
+    width: 'auto',
+    perspective: '1000px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+  },
+  cardFront: {
+    position: 'absolute',
+    backfaceVisibility: 'hidden',
+    width: '100%',
+    height: '100%',
+  },
+  cardBack: {
+    backfaceVisibility: 'hidden',
+    transform: 'rotateY(180deg)',
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardImage: {
+    width: '40%',
+    height: 'auto',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    transition: 'all 0.3s ease',
+  },
+  cardLabel: {
+    backgroundColor: '#667eea',
+    padding: '0.5rem 1rem',
+    borderRadius: '8px',
+    marginTop: '8px',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+  },
+  cardLabelText: {
+    position: 'relative',
+    textAlign: 'center',
+    maxWidth: '100%',
+    textOverflow: 'ellipsis',
+    color: 'white',
+    fontWeight: '600',
+    fontSize: '16px',
+  },
+};
+
+// Add responsive styles and hover effects
+if (typeof window !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = `
+    .card-container:hover {
+      transform: translateY(-5px) scale(1.02);
+    }
+    
+    .card-image:hover {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    
+    @media (max-width: 768px) {
+      .cards-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1rem !important;
+      }
+      
+      .card-container {
+        transform: scale(0.8);
+      }
+      
+      .card-label {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 10px !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .card-container {
+        transform: scale(0.7);
+      }
+    }
+  `;
+  document.head.appendChild(styleSheet);
 }
 
 export default CitirePersonalizata;

@@ -1,47 +1,28 @@
 import * as React from "react";
-import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
-import CardContent from "@mui/material/CardContent";
-import CardMedia from "@mui/material/CardMedia";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import {
-  Box,
-  CircularProgress,
-  Container,
-  Grid,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
 import Header from "../../components/Header";
-// import Footer from "../../components/Footer";
-
-import { useSpacing } from "../../theme/common";
 import { useRouter } from "next/router";
 import Head from "next/head";
-
 import Image from "next/image";
-
 import Link from "next/link";
-// import { toUrlSlug } from "../../utils/commonUtils";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, menuOptions } from "../../data/servicesData";
-import { colors } from "../../utils/colors";
 import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import Footer from "../../components/Footer";
-// export async function getStaticProps() {
-//   const services = await handleGetServices();
-//   return {
-//     props: {
-//       services,
-//     },
-//     revalidate: 5, // Regenerează pagina la fiecare 10 secunde dacă este accesată
-//   };
-// }
+import { 
+  Sparkles, 
+  Star, 
+  Dice6, 
+  Palette, 
+  Clock, 
+  Heart, 
+  Brain, 
+  Smile, 
+  BookOpen 
+} from "lucide-react";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -51,70 +32,84 @@ export async function getServerSideProps({ locale }) {
   };
 }
 
-// ... rest of your code
+const getServiceIcon = (route) => {
+  const iconMap = {
+    '/citire-personalizata': Sparkles,
+    '/citire-viitor': Star,
+    '/numar-norocos': Dice6,
+    '/culoare-norocoasa': Palette,
+    '/ora-norocoasa': Clock,
+    '/citat-motivational': Heart,
+    '/ce-gandeste': Brain,
+    '/ce-simte': Smile,
+    '/cartea-ta': BookOpen,
+  };
+  return iconMap[route] || Star;
+};
 
 const MediaCardConstantService = ({ item }) => {
   const { t: tCommon } = useTranslation("common");
-  const { classes, cx } = useSpacing();
   const route = useRouter();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const maxLines = 4;
-  const cardTextStyles = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: maxLines,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    lineHeight: "1.4em", // Înălțimea unei linii
-    maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
-  };
+  const [isMobile, setIsMobile] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
-    <Box
-      onClick={() => route.push(item.route)}
-      sx={{
-        borderRadius: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-
-        cursor: "pointer",
-        borderRadius: "18px",
-        transition: "all 0.3s ease", // Adaugă tranziție pentru efect neted
-        "&:hover": {
-          boxShadow: "0px 10px 10px rgba(0,0,0,0.2)", // Umbra la hover,
-          backgroundColor: "transparent",
-        },
-      }}
-      className={classes.MediaCardConstantServiceBox}
-    >
-      <img
-        src={"/dash-frame.png"}
-        alt={item.title}
+          <div
+        className="service-card"
+        onClick={() => route.push(item.route)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         style={{
-          objectFit: "cover",
-          width: "100%",
-          height: "100%", // Poți încerca să setezi la 100% pentru a umple containerul
-          position: "absolute",
-          top: 0,
-          left: 0,
-        }}
-      />
-      <span
-        style={{
-          position: "relative",
-          color: "white",
-          zIndex: 1,
-          fontSize: isMobile ? 13 : 20,
-          width: isMobile ? "50%" : "auto",
+          ...styles.serviceCard,
+          ...(isHovered ? styles.serviceCardHover : {}),
+          fontSize: isMobile ? '14px' : '16px',
         }}
       >
-        {item.text}
-      </span>
-    </Box>
+              <div className="card-image-container" style={styles.cardImageContainer}>
+          {/* Main Image */}
+          <img
+            className="main-card-image"
+            src={"/dash-frame.png"}
+            alt={item.text}
+            style={{
+              ...styles.mainCardImage,
+              ...(isHovered ? styles.mainCardImageHover : {}),
+            }}
+          />
+          {/* Golden Shadow Behind Image */}
+          <div className="golden-shadow" style={{
+            ...styles.goldenShadow,
+            ...(isHovered ? styles.goldenShadowActive : {}),
+          }}></div>
+          {/* Icon Badge in top-right */}
+          <div className="icon-badge" style={{
+            ...styles.iconBadge,
+            ...(isHovered ? styles.iconBadgeHover : {}),
+          }}>
+            {React.createElement(getServiceIcon(item.route), {
+              size: 20,
+              color: '#ffffff',
+              className: 'service-icon'
+            })}
+          </div>
+          {/* Text overlay on center */}
+          <div style={styles.textOverlay}>
+            <span className="card-text-overlay" style={styles.cardTextOverlay}>
+              {item.text}
+            </span>
+          </div>
+        </div>
+      <div className="card-indicator" style={styles.cardIndicator}></div>
+    </div>
   );
 };
 
@@ -136,16 +131,17 @@ export function Landing({ services }) {
     zilnicCitateMotivationale,
   } = useApiData();
   const { t } = useTranslation("common", "services");
-  const { classes, cx } = useSpacing();
+  const [isMobile, setIsMobile] = React.useState(false);
 
-  // const menuOptions = [
-  //   { text: "asdadds", route: "/citire-personalizata" },
-  //   { text: "asdadds", route: "/citire-viitor" },
-  //   { text: "asdadds", route: "/numar-norocos" },
-  //   { text: "asdadds", route: "/culoare-norocoasa" },
-  //   { text: "asdadds", route: "/ora-norocoasa" },
-  //   { text: "asdadds", route: "/citat-motivational" },
-  // ];
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const menuOptions = [
     { text: t("personalReading"), route: "/citire-personalizata" },
     { text: t("futureReading"), route: "/citire-viitor" },
@@ -164,21 +160,6 @@ export function Landing({ services }) {
     process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
-
-  const maxLines = 4; // Numărul maxim de rânduri dorit
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  const cardTextStyles = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: maxLines,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    lineHeight: "1.4em", // Înălțimea unei linii
-    maxHeight: `${maxLines * 1.4}em`, // Înălțime maximă calculată în funcție de numărul de rânduri
-  };
 
   const handleAddToFirestore = async () => {
     const types = [
@@ -224,7 +205,7 @@ export function Landing({ services }) {
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"
+          crossOrigin="anonymous"
         ></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content="Cristina Zurba" />
@@ -238,51 +219,29 @@ export function Landing({ services }) {
         />
         <meta name="format-detection" content="telephone=no" />
       </Head>
-      <div
-        style={{
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
-        }}
-      >
+      
+      {/* Main wrapper with unified design */}
+      <div style={styles.mainWrapper}>
+        {/* Header */}
         <section>
           <Header />
         </section>
 
-        <section>
-          <div
-            style={{ paddingTop: isMobile ? "25%" : "9%" }}
-            className={classes.wraperSection}
-          >
-            <Grid
-              container
-              rowSpacing={isMobile ? 5 : 5}
-              columnSpacing={0}
-              sx={{
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-              }}
-            >
-              {menuOptions.map((item, index) => {
-                return (
-                  <Grid
-                    key={index}
-                    item
-                    xs={6}
-                    sm={4}
-                    md={4}
-                    sx={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <MediaCardConstantService item={item} />
-                  </Grid>
-                );
-              })}
-            </Grid>
+        {/* Services Grid */}
+        <section style={styles.servicesSection}>
+          <div className="services-container" style={{...styles.servicesContainer, paddingTop: isMobile ? "10%" : "6%"}}>
+
+            <div className="services-grid" style={styles.servicesGrid}>
+              {menuOptions.map((item, index) => (
+                <div key={index} style={styles.gridItem}>
+                  <MediaCardConstantService item={item} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
+
+        {/* Footer */}
         <section>
           <Footer />
         </section>
@@ -290,5 +249,175 @@ export function Landing({ services }) {
     </>
   );
 }
+
+// Styles matching /consultatii design
+const styles = {
+  mainWrapper: {
+    background: 'linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)',
+    minHeight: '100vh',
+    width: '100%',
+  },
+  servicesSection: {
+    padding: '4rem 0 6rem 0',
+  },
+  servicesContainer: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '0 20px',
+  },
+  headerSection: {
+    textAlign: 'center',
+    marginBottom: '4rem',
+  },
+  mainTitle: {
+    fontSize: '2.5rem',
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: '1rem',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  },
+  subtitle: {
+    fontSize: '1.1rem',
+    color: '#64748b',
+    fontWeight: '400',
+    margin: 0,
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  },
+  servicesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 270px))',
+    gap: '2rem',
+    alignItems: 'start',
+    justifyContent: 'center',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 240px))',
+      gap: '1.5rem',
+    },
+    '@media (max-width: 480px)': {
+      gridTemplateColumns: '1fr',
+      gap: '1.5rem',
+    },
+  },
+  gridItem: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  serviceCard: {
+    background: 'transparent',
+    borderRadius: '20px',
+    padding: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    width: '100%',
+    border: 'none',
+    textAlign: 'center',
+  },
+  serviceCardHover: {
+    // No transform here since image container handles the hover effect
+  },
+  cardImageContainer: {
+    width: '100%',
+    maxWidth: '240px',
+    aspectRatio: '5/4',
+    position: 'relative',
+    borderRadius: '18px',
+    overflow: 'hidden',
+    marginBottom: '1rem',
+    backgroundColor: 'transparent',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    margin: '0 auto 1rem auto',
+  },
+  mainCardImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transition: 'all 0.3s ease',
+  },
+  mainCardImageHover: {
+    transform: 'scale(1.05)',
+  },
+  iconBadge: {
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.8)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    zIndex: 4,
+    backdropFilter: 'blur(4px)',
+  },
+  iconBadgeHover: {
+    transform: 'scale(1.1)',
+    boxShadow: '0 8px 20px rgba(255, 215, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 1)',
+    background: 'linear-gradient(135deg, #FFA500 0%, #FFD700 100%)',
+  },
+  goldenShadow: {
+    position: 'absolute',
+    top: '-10px',
+    left: '-10px',
+    right: '-10px',
+    bottom: '-10px',
+    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+    opacity: 0,
+    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    zIndex: -1,
+    borderRadius: '25px',
+    filter: 'blur(15px)',
+  },
+  goldenShadowActive: {
+    opacity: 0.6,
+    filter: 'blur(20px)',
+    transform: 'scale(1.1)',
+  },
+  textOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 3,
+    textAlign: 'center',
+    width: '80%',
+  },
+  cardTextOverlay: {
+    color: 'white',
+    fontSize: '1.1rem',
+    fontWeight: '600',
+    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    lineHeight: '1.3',
+  },
+  cardTitle: {
+    fontSize: '1.1rem',
+    fontWeight: '600',
+    color: '#1e293b',
+    margin: '0 0 1rem 0',
+    lineHeight: '1.4',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  },
+  cardIndicator: {
+    width: '40px',
+    height: '3px',
+    background: 'linear-gradient(90deg, #FFD700 0%, #FFA500 100%)',
+    borderRadius: '2px',
+    marginTop: 'auto',
+    transition: 'all 0.3s ease',
+  },
+};
+
+
 
 export default Landing;

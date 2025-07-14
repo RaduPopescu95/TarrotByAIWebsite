@@ -1,22 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "next-i18next";
-import IconButton from "@mui/material/IconButton";
-import SettingsIcon from "@mui/icons-material/Settings";
-import Popper from "@mui/material/Popper";
-import List from "@mui/material/List";
-import ListSubheader from "@mui/material/ListSubheader";
-import Paper from "@mui/material/Paper";
-import Grow from "@mui/material/Grow";
-import ClickAwayListener from "@mui/material/ClickAwayListener";
-import useStyles from "../header-style";
 import i18nextConfig from "../../../next-i18next.config";
 import LanguageSwitch from "../../LangSwitch/Menu";
-import { Divider } from "@mui/material";
-import { colors } from "../../../utils/colors";
 
 function Settings(props) {
-  const { classes } = useStyles();
   const [open, setOpen] = useState(false);
   const [currentLocale, setCurrentLocale] = useState("");
   const anchorRef = useRef(null);
@@ -25,7 +13,7 @@ function Settings(props) {
   const { toggleDark, toggleDir, invert, isMobile } = props;
 
   useEffect(() => {
-    const savedLocale = localStorage.getItem("locale") || "en"; // Presupunem 'en' ca default
+    const savedLocale = localStorage.getItem("locale") || "en";
     setCurrentLocale(savedLocale);
   }, []);
 
@@ -34,7 +22,6 @@ function Settings(props) {
   };
 
   const handleClose = (event) => {
-    // Verifică dacă evenimentul și target-ul evenimentului sunt definite
     if (
       event &&
       event.target &&
@@ -45,6 +32,24 @@ function Settings(props) {
     }
     setOpen(false);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (anchorRef.current && !anchorRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
 
   const flagImages = {
     en: "/flags/english.png",
@@ -61,92 +66,107 @@ function Settings(props) {
     pl: "/flags/poland.png",
     sk: "/flags/slovakia.png",
     es: "/flags/spanish.png",
-    // Adaugă aici alte limbi și căile către imaginile lor
   };
 
   return (
-    <div className={classes.setting} style={{ margin: isMobile && 20 }}>
-      <IconButton
+    <div style={{ ...styles.setting, margin: isMobile && 20 }}>
+      <button
         ref={anchorRef}
         aria-describedby={open ? "settings-popper" : undefined}
         aria-label="Settings"
         onClick={handleToggle}
-        className={classes.icon}
-        size="large"
+        style={styles.iconButton}
       >
         <img
           className="flag"
-          src={flagImages[i18n.language]} // Alege imaginea corespunzătoare limbii
+          src={flagImages[i18n.language]}
           alt={i18n.language}
           width={45}
           height={45}
-          style={{ marginRight: 10, minWidth: 45, minHeight: 45 }}
+          style={styles.flagImage}
         />
-      </IconButton>
-      <Popper
-        open={open}
-        anchorEl={anchorRef.current}
-        role={undefined}
-        transition
-        disablePortal
-        placement="bottom-start"
-        className={classes.popper}
-      >
-        {({ TransitionProps }) => (
-          <Grow {...TransitionProps}>
-            <Paper
-              style={{
-                backgroundColor: props.isWhiteBg && colors.primary3,
-                zIndex: 10,
-              }}
-            >
-              <ClickAwayListener onClickAway={handleClose}>
-                <List
-                  component="nav"
-                  aria-label="Language-menu"
-                  // subheader={
-                  //   <>
-                  //     <ListSubheader component="div" style={{ color: "white" }}>
-                  //       {t("Language")}
-                  //     </ListSubheader>
-                  //     <div
-                  //       style={{
-                  //         backgroundColor: "white",
-                  //         height: "1px",
-                  //         width: "100%",
-                  //       }}
-                  //     ></div>
-                  //   </>
-                  // }
-                  style={{ display: "flex", flexDirection: "column" }} // Adaugă acest stil
-                >
-                  {i18nextConfig.i18n.locales.map((locale) => (
-                    <LanguageSwitch
-                      ssg={i18nextConfig.ssg}
-                      locale={locale}
-                      key={locale}
-                      checked={locale === i18n.language}
-                      toggleDir={toggleDir}
-                      closePopup={handleClose}
-                    />
-                  ))}
-                </List>
-              </ClickAwayListener>
-            </Paper>
-          </Grow>
-        )}
-      </Popper>
+      </button>
+      
+      {open && (
+        <div style={styles.popper} id="settings-popper">
+          <div style={{
+            ...styles.paper,
+            backgroundColor: props.isWhiteBg ? "#667eea" : "white",
+          }}>
+            <ul style={styles.list}>
+              {i18nextConfig.i18n.locales.map((locale) => (
+                <LanguageSwitch
+                  ssg={i18nextConfig.ssg}
+                  locale={locale}
+                  key={locale}
+                  checked={locale === i18n.language}
+                  toggleDir={toggleDir}
+                  closePopup={handleClose}
+                />
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+const styles = {
+  setting: {
+    position: "relative",
+    display: "inline-block",
+  },
+  iconButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    padding: "8px",
+    borderRadius: "50%",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  flagImage: {
+    marginRight: 10,
+    minWidth: 45,
+    minHeight: 45,
+    borderRadius: "50%",
+    objectFit: "cover",
+  },
+  popper: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    zIndex: 1000,
+    minWidth: "200px",
+    marginTop: "8px",
+  },
+  paper: {
+    padding: "8px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
+    border: "1px solid #e0e0e0",
+  },
+  list: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+};
+
 Settings.propTypes = {
-  toggleDark: PropTypes.func.isRequired,
-  toggleDir: PropTypes.func.isRequired,
+  toggleDark: PropTypes.func,
+  toggleDir: PropTypes.func,
   invert: PropTypes.bool,
 };
 
 Settings.defaultProps = {
+  toggleDark: () => {},
+  toggleDir: () => {},
   invert: false,
 };
 

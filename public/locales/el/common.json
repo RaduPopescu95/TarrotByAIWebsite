@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Λάβετε ανάγνωση για το μέλλον σας",
   "skip": "ΠΑΡΑΛΕΙΨΗ",
   "nextOnboard": "ΕΠΟΜΕΝΟ",
-  "clinicLoginRedirect": "Συνέχεια"
+  "clinicLoginRedirect": "Συνέχεια",
+  
+  "spiritualGuidance": "ΠΝΕΥΜΑΤΙΚΗ ΚΑΘΟΔΗΓΗΣΗ",
+  "discoverSpiritualWisdom": "Ανακαλύψτε την <span class=\"font-semibold text-indigo-600\">πνευματική σοφία</span> μέσω εξατομικευμένων αναγνώσεων ταρώ και αστρολογίας",
+  "consultatii": "Συμβουλές",
+  "readArticles": "Διαβάστε Άρθρα",
+  "allArticles": "Όλα τα Άρθρα",
+  "articles": "Άρθρα",
+  "pages": "Σελίδες",
+  "noResultsFound": "Δεν βρέθηκαν αποτελέσματα",
+  "noResultsMessage": "Δεν βρέθηκαν άρθρα",
+  "filterResultsFor": "Φιλτράρισμα αποτελεσμάτων για",
+  "clearFilter": "Καθαρισμός φίλτρου",
+  "popularArticles": "Δημοφιλή Άρθρα",
+  "noContentMessage": "Εργαζόμαστε για τη δημιουργία νέου περιεχομένου! Επιστρέψτε σύντομα για να διαβάσετε τα πιο πρόσφατα άρθρα. Στο μεταξύ, εξερευνήστε τους υπάρχοντες πόρους μας.",
+  
+  "aboutMe": "ΣΧΕΤΙΚΑ ΜΕ ΕΜΕΝΑ",
+  "aboutPageTitle": "Σχετικά με την Cristina Zurba | Πνευματικός Οδηγός & Ταρώ",
+  "aboutPageDescription": "Ανακαλύψτε την ιστορία της Cristina Zurba, πνευματικού οδηγού και ειδικού στο ταρώ με μοναδική εμπειρία στην παροχή εξατομικευμένης και μεταμορφωτικής καθοδήγησης.",
+  
+  "luckyColorTitle": "Τυχερό Χρώμα | Cristina Zurba",
+  "luckyColorDescription": "Ανακαλύψτε το τυχερό σας χρώμα με τις μοναδικές γνώσεις της Cristina Zurba. Μάθετε πώς συγκεκριμένα χρώματα μπορούν να επηρεάσουν την τύχη και την ευημερία σας.",
+  
+  "luckyNumberTitle": "Τυχερός Αριθμός | Cristina Zurba", 
+  "luckyNumberDescription": "Βρείτε τον τυχερό σας αριθμό με την καθοδήγηση της Cristina Zurba. Μάθετε πώς οι αριθμοί μπορούν να επηρεάσουν τη ζωή και τις αποφάσεις σας.",
+  
+  "motivationalQuoteTitle": "Παρακινητικό Απόφθεγμα | Cristina Zurba",
+  "motivationalQuoteDescription": "Λάβετε καθημερινές δόσεις έμπνευσης με παρακινητικά αποφθέγματα από την Cristina Zurba. Ανακαλύψτε τη σοφία που θα σας οδηγήσει στην προσωπική ανάπτυξη.",
+  
+  "luckyHourTitle": "Τυχερή Ώρα | Cristina Zurba",
+  "luckyHourDescription": "Ανακαλύψτε τις τυχερές σας ώρες με τις πνευματικές γνώσεις της Cristina Zurba. Μάθετε πότε είναι η καλύτερη στιγμή για σημαντικές αποφάσεις.",
+  
+  "whatThinks": "Τι σκέφτεται",
+  "whatFeels": "Τι αισθάνεται", 
+  "yourBook": "Το βιβλίο σας",
+  
+  "loginTitle": "Σύνδεση | Cristina Zurba",
+  "loginDescription": "Συνδεθείτε στον λογαριασμό σας για πρόσβαση σε εξατομικευμένες αναγνώσεις ταρώ και πνευματική καθοδήγηση από την Cristina Zurba.",
+  
+  "registerTitle": "Εγγραφή | Cristina Zurba",
+  "registerDescription": "Δημιουργήστε λογαριασμό για πρόσβαση σε αποκλειστικές αναγνώσεις ταρώ και πνευματικές υπηρεσίες από την Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Ξεχασμένος Κωδικός | Cristina Zurba",
+  "forgotPasswordDescription": "Επαναφέρετε τον κωδικό σας για να αποκτήσετε ξανά πρόσβαση στην εξατομικευμένη πνευματική σας καθοδήγηση.",
+  
+  "filterContent": "Φιλτράρισμα Περιεχομένου"
 }

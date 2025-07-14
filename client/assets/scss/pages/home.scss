@@ -689,9 +689,10 @@
     font-weight: $__semibold;
     font-size: $__font__size__48;
     margin-bottom: 15px;
-    color: $__midnight_black;
+    color: $__black;
     span {
-      color: $__blue__14;
+      color: $__black;
+      font-weight: $__bold;
     }
     @include respond-below(custom991) {
       font-size: $__font__size__36;
@@ -2283,9 +2284,9 @@
   margin-top: 2rem;
   
   .btn-primary-custom {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #5a67d8;
+    color: #2d3748;
     padding: 15px 25px;
     border-radius: 50px;
     font-weight: 600;
@@ -2297,26 +2298,28 @@
     align-items: center;
     justify-content: center;
     min-height: 50px;
+    width: 100%;
     
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-      color: white;
-      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      color: #5a67d8;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
       text-decoration: none;
+      border-color: #5a67d8;
     }
     
     &:focus {
-      color: white;
+      color: #2d3748;
       text-decoration: none;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
     }
   }
   
   .btn-secondary-custom {
     background: transparent;
-    border: 2px solid #667eea;
-    color: #667eea;
+    border: 2px solid #5a67d8;
+    color: #5a67d8;
     padding: 13px 25px;
     border-radius: 50px;
     font-weight: 600;
@@ -2327,25 +2330,41 @@
     align-items: center;
     justify-content: center;
     min-height: 50px;
+    width: 100%;
     
     &:hover {
-      background: #667eea;
-      color: white;
+      background: #f8f9fa;
+      color: #2d3748;
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 25px rgba(90, 103, 216, 0.3);
       text-decoration: none;
+      border-color: #5a67d8;
     }
     
     &:focus {
-      color: white;
-      background: #667eea;
+      color: #2d3748;
+      background: #f8f9fa;
       text-decoration: none;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
     }
   }
   
-  // Responsive pentru tablete
-  @media (max-width: 991px) {
+  // Asigură-te că grid-ul Bootstrap funcționează corect
+  .row {
+    margin: 0 -10px;
+    
+    .col-md-6 {
+      padding: 0 10px;
+      margin-bottom: 15px;
+    }
+    
+    .col-12 {
+      padding: 0 10px;
+    }
+  }
+  
+  // Responsive pentru tablete (768px - 991px)
+  @media (min-width: 768px) and (max-width: 991px) {
     margin-top: 1.5rem;
     
     .btn-primary-custom,
@@ -2354,10 +2373,15 @@
       font-size: 15px;
       min-height: 48px;
     }
+    
+    .row .col-md-6 {
+      flex: 0 0 50%;
+      max-width: 50%;
+    }
   }
   
-  // Responsive pentru mobile
-  @media (max-width: 768px) {
+  // Responsive pentru mobile (< 768px)
+  @media (max-width: 767px) {
     margin-top: 1.5rem;
     
     .btn-primary-custom,
@@ -2373,13 +2397,15 @@
       margin: 0 -5px;
       
       .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
         padding: 0 5px;
         margin-bottom: 10px;
       }
     }
   }
   
-  // Responsive pentru ecrane foarte mici
+  // Responsive pentru ecrane foarte mici (< 480px)
   @media (max-width: 480px) {
     .btn-primary-custom,
     .btn-secondary-custom {
@@ -2447,10 +2473,15 @@
     }
     
     &.one-on-one {
-      border-top: 4px solid #667eea;
+      border-top: 4px solid #5a67d8;
       
       .feature-icon {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border: 2px solid #5a67d8;
+        
+        i {
+          color: #5a67d8;
+        }
       }
     }
     
@@ -2471,10 +2502,12 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #5a67d8;
     
     i {
       font-size: 2rem;
-      color: white;
+      color: #5a67d8;
     }
   }
   
@@ -2610,7 +2643,7 @@
 
 /* Enhanced CTA Section */
 .enhanced-cta-section {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #ffffff 100%);
   position: relative;
   overflow: hidden;
   
@@ -2642,14 +2675,15 @@
     .cta-badge {
       display: inline-flex;
       align-items: center;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
+      background: linear-gradient(135deg, #ffffff, #f8f9fa);
+      color: #2d3748;
+      border: 2px solid #5a67d8;
       padding: 8px 20px;
       border-radius: 25px;
       font-size: 14px;
       font-weight: 600;
       margin-bottom: 1.5rem;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 4px 15px rgba(90, 103, 216, 0.3);
     }
     
     .cta-title {
@@ -2660,10 +2694,8 @@
       margin-bottom: 1.5rem;
       
       .highlight {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: #5a67d8;
+        font-weight: 900;
       }
       
       @media (max-width: 768px) {
@@ -2778,17 +2810,20 @@
       }
       
       .btn-cta-primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        color: #2d3748;
+        border: 2px solid #5a67d8;
         
         .btn-icon {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(90, 103, 216, 0.1);
         }
         
         &:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-          border-color: #667eea;
+          box-shadow: 0 10px 25px rgba(90, 103, 216, 0.3);
+          border-color: #5a67d8;
+          background: linear-gradient(135deg, #ffffff, #f8f9fa);
+          color: #5a67d8;
         }
       }
       

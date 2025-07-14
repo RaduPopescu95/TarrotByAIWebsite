@@ -1,5 +1,5 @@
 // pages/sitemap.xml.js
-import { handleGetArticles, handleGetServices } from "../utils/realtimeUtils";
+import { handleGetArticles } from "../utils/realtimeUtils";
 import { toUrlSlug } from "../utils/commonUtils";
 
 const URL = "https://cristinazurba.com";

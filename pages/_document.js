@@ -5,6 +5,9 @@ class MyDocument extends Document {
     return (
       <Html>
         <Head>
+          {/* Meta tag pentru responsive design pe mobil */}
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          
           {/* Pastreaza meta tag-ul Google AdSense aici */}
           {/* You can add custom tags here, but do not remove the <Head> component */}
     

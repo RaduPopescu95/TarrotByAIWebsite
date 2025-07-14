@@ -1425,31 +1425,7 @@ const PharmacyFeatured = () => {
                   </ul>
                 </div>
               </div>
-              <div className="col-xl-4 col-lg-6 col-md-8">
-                <div className="footer-links">
-                  <h4>Subscribe to Newsletter</h4>
-                  <form action="#">
-                    <div className="input-block">
-                      <input
-                        type="email"
-                        className="form-control"
-                        placeholder="Enter Email Address"
-                      />
-                      <button type="submit" className="submit-btn">
-                        Submit
-                      </button>
-                    </div>
-                  </form>
-                  <div className="app-store-links">
-                    <Link href="#">
-                      <img src={app_icon_store} alt="" />
-                    </Link>
-                    <Link href="#">
-                      <img src={google_icon_play} alt="" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
+           
             </div>
           </div>
           <div className="mid-foot-two">

@@ -70,7 +70,28 @@ const RegisterClient = (props) => {
   return (
     <>
       <Home1Header />
-      <div className="content top-space">
+      
+      <div className="breadcrumb-bar-two">
+        <div className="container">
+          <div className="row align-items-center inner-banner">
+            <div className="col-md-12 col-12 text-center">
+              <h2 className="breadcrumb-title">Înregistrare</h2>
+              <nav aria-label="breadcrumb" className="page-breadcrumb">
+                <ol className="breadcrumb">
+                  <li className="breadcrumb-item">
+                    <Link href="/consultatii">Acasă</Link>
+                  </li>
+                  <li className="breadcrumb-item" aria-current="page">
+                    Înregistrare
+                  </li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="content">
         <div className="container-fluid">
           <div className="row">
             <div className="col-md-8 offset-md-2">

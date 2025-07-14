@@ -1,16 +1,24 @@
 import React from "react";
-import Box from "@mui/material/Box";
-
 import PostWidget from "./PostWidget";
 
 function Sidebar({ lastFiveArticles }) {
   return (
-    <div>
-      {/* <Box py={5} /> */}
+    <div style={styles.sidebarContainer}>
       <PostWidget lastFiveArticles={lastFiveArticles} />
-      <Box py={3} />
+      <div style={styles.spacing}></div>
     </div>
   );
 }
+
+const styles = {
+  sidebarContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2rem",
+  },
+  spacing: {
+    height: "2rem",
+  },
+};
 
 export default Sidebar;

@@ -1292,13 +1292,13 @@ const AdminConferinteGrup = () => {
                       <div 
                         className="card border-0 shadow-sm h-100"
                         style={{
-                          background: "linear-gradient(135deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 100%)",
+                          background: "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
                           borderRadius: "12px",
                           transition: "all 0.3s ease"
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.transform = "translateY(-3px)";
-                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(250, 112, 154, 0.25)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(44, 62, 80, 0.25)";
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = "translateY(0)";

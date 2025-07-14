@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Get reading about your future",
   "skip": "SKIP",
   "nextOnboard": "NEXT",
-  "clinicLoginRedirect": "Continue"
+  "clinicLoginRedirect": "Continue",
+  
+  "spiritualGuidance": "SPIRITUAL GUIDANCE",
+  "discoverSpiritualWisdom": "Discover spiritual wisdom through personalized tarot and astrology readings",
+  "consultatii": "Consultations",
+  "readArticles": "Read Articles",
+  "allArticles": "All Articles",
+  "articles": "Articles",
+  "pages": "Pages",
+  "noResultsFound": "No results found",
+  "noResultsMessage": "No articles found",
+  "filterResultsFor": "Filter results for",
+  "clearFilter": "Clear filter",
+  "popularArticles": "Popular Articles",
+  "noContentMessage": "We're working on creating new content! Come back soon to read the latest articles. In the meantime, explore our existing resources.",
+  
+  "aboutMe": "ABOUT ME",
+  "aboutPageTitle": "About Cristina Zurba | Spiritual Guide & Tarot",
+  "aboutPageDescription": "Discover Cristina Zurba's story, a spiritual guide and tarot expert with unique experience in providing personalized and transformative guidance.",
+  
+  "luckyColorTitle": "Lucky Color | Cristina Zurba",
+  "luckyColorDescription": "Discover your lucky color with Cristina Zurba's unique insights. Learn how specific colors can influence your fortune and well-being.",
+  
+  "luckyNumberTitle": "Lucky Number | Cristina Zurba", 
+  "luckyNumberDescription": "Find your lucky number with Cristina Zurba's guidance. Learn how numbers can influence your life and decisions.",
+  
+  "motivationalQuoteTitle": "Motivational Quote | Cristina Zurba",
+  "motivationalQuoteDescription": "Get daily doses of inspiration with motivational quotes from Cristina Zurba. Discover wisdom that will guide you towards personal development.",
+  
+  "luckyHourTitle": "Lucky Hour | Cristina Zurba",
+  "luckyHourDescription": "Discover your lucky hours with Cristina Zurba's spiritual insights. Learn when the best time is for important decisions.",
+  
+  "whatThinks": "What thinks",
+  "whatFeels": "What feels", 
+  "yourBook": "Your book",
+  
+  "loginTitle": "Login | Cristina Zurba",
+  "loginDescription": "Login to your account for access to personalized tarot readings and spiritual guidance from Cristina Zurba.",
+  
+  "registerTitle": "Register | Cristina Zurba",
+  "registerDescription": "Create an account for access to exclusive tarot readings and spiritual services from Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Forgot Password | Cristina Zurba",
+  "forgotPasswordDescription": "Reset your password to regain access to your personalized spiritual guidance.",
+  
+  "filterContent": "Filter Content"
 }

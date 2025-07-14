@@ -27,28 +27,7 @@ const Home10Footer = () => {
       <footer className="footer footer-fifteen">
         <div className="footer-top footer-top-fifteen aos" data-aos="fade-up">
           <div className="container">
-            <div className="row join-news-row">
-              <div className="col-lg-8 col-md-6">
-                <div className="join-news-foot">
-                  <h4>Join Our Newsletter</h4>
-                  <p>Subscribe Now for Exclusive Insights &amp; Offers</p>
-                </div>
-              </div>
-              <div className="col-lg-4 col-md-6">
-                <div className="form-set">
-                  <form action="index-10.html">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Enter your Email"
-                    />
-                    <button type="submit" className="btn btn-primary">
-                      Subscribe
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
+        
             <div className="row">
               <div className="col-lg-4 col-md-6">
                 <div className="footer-widget">

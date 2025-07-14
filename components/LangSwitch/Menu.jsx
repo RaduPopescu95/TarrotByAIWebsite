@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "next-i18next";
-import CheckIcon from "@mui/icons-material/Check";
-import ListItem from "@mui/material/ListItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction";
-import ListItemText from "@mui/material/ListItemText";
 import { useRouter } from "next/router";
 import i18nextConfig from "../../next-i18next.config";
 import languageDetector from "../../lib/languageDetector";
@@ -16,7 +11,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
   const { t } = useTranslation("common");
 
   useEffect(() => {
-    const savedLocale = localStorage.getItem("locale") || "en"; // Presupunem 'en' ca default
+    const savedLocale = localStorage.getItem("locale") || "en";
     setCurrentLocale(savedLocale);
   }, []);
 
@@ -47,7 +42,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
     }
   };
 
-  // Definește calea către imagini pentru fiecare limbă (înlocuiește cu calea reală către imagini)
+  // Definește calea către imagini pentru fiecare limbă
   const flagImages = {
     en: "/flags/english.png",
     ro: "/flags/romania.png",
@@ -63,48 +58,90 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
     pl: "/flags/poland.png",
     sk: "/flags/slovakia.png",
     es: "/flags/spanish.png",
-    // Adaugă aici alte limbi și căile către imaginile lor
   };
 
   return ssg ? (
-    <ListItem role={undefined} dense button onClick={() => changeLang(locale)}>
-      <ListItemIcon className="flag">
+    <div 
+      style={styles.listItem}
+      onClick={() => changeLang(locale)}
+    >
+      <div style={styles.flag}>
         <i className={locale} />
-      </ListItemIcon>
-      <ListItemText primary={t(locale)} />
+      </div>
+      <div style={styles.text}>
+        {t(locale)}
+      </div>
       {checked && (
-        <ListItemSecondaryAction>
-          <CheckIcon color="primary" />
-        </ListItemSecondaryAction>
+        <div style={styles.checkIcon}>
+          <i className="fa fa-check" style={{color: "#667eea"}} />
+        </div>
       )}
-    </ListItem>
+    </div>
   ) : (
-    <ListItem
-      sx={{ zIndex: 10 }}
-      role={undefined}
-      dense
-      button
+    <div
+      style={styles.listItem}
       onClick={() => changeLang(locale)}
     >
       <img
         className="flag"
-        src={flagImages[locale]} // Alege imaginea corespunzătoare limbii
+        src={flagImages[locale]}
         alt={locale}
-        width={20}
-        height={20}
-        style={{ marginRight: 10 }}
+        style={styles.flagImage}
       />
-      <ListItemText
-        primary={t(locale)}
-        style={{ color: "white", zIndex: 10 }}
-      />
+      <div style={styles.textWhite}>
+        {t(locale)}
+      </div>
       {checked && (
-        <ListItemSecondaryAction>
-          <CheckIcon color="primary" style={{ color: "rgb(255,192,69)" }} />
-        </ListItemSecondaryAction>
+        <div style={styles.checkIcon}>
+          <i className="fa fa-check" style={{color: "rgb(255,192,69)"}} />
+        </div>
       )}
-    </ListItem>
+    </div>
   );
+};
+
+const styles = {
+  listItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "8px 16px",
+    cursor: "pointer",
+    transition: "background-color 0.3s ease",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+    },
+  },
+  flag: {
+    marginRight: "10px",
+    width: "20px",
+    height: "20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  flagImage: {
+    width: "20px",
+    height: "20px",
+    marginRight: "10px",
+    borderRadius: "2px",
+    objectFit: "cover",
+  },
+  text: {
+    flex: 1,
+    fontSize: "14px",
+    color: "#333",
+    zIndex: 10,
+  },
+  textWhite: {
+    flex: 1,
+    fontSize: "14px",
+    color: "white",
+    zIndex: 10,
+  },
+  checkIcon: {
+    marginLeft: "auto",
+    fontSize: "16px",
+  },
 };
 
 LanguageSwitch.propTypes = {

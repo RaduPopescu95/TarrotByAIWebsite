@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Ottieni una lettura sul tuo futuro",
   "skip": "SALTA",
   "nextOnboard": "PROSSIMO",
-  "clinicLoginRedirect": "Continua"
+  "clinicLoginRedirect": "Continua",
+  
+  "spiritualGuidance": "GUIDA SPIRITUALE",
+  "discoverSpiritualWisdom": "Scopri la <span class=\"font-semibold text-indigo-600\">saggezza spirituale</span> attraverso letture personalizzate di tarocchi e astrologia",
+  "consultatii": "Consultazioni",
+  "readArticles": "Leggi Articoli",
+  "allArticles": "Tutti gli Articoli",
+  "articles": "Articoli",
+  "pages": "Pagine",
+  "noResultsFound": "Nessun risultato trovato",
+  "noResultsMessage": "Nessun articolo trovato",
+  "filterResultsFor": "Filtra risultati per",
+  "clearFilter": "Cancella filtro",
+  "popularArticles": "Articoli Popolari",
+  "noContentMessage": "Stiamo lavorando per creare nuovi contenuti! Torna presto per leggere gli ultimi articoli. Nel frattempo, esplora le nostre risorse esistenti.",
+  
+  "aboutMe": "CHI SONO",
+  "aboutPageTitle": "Chi è Cristina Zurba | Guida Spirituale e Tarocchi",
+  "aboutPageDescription": "Scopri la storia di Cristina Zurba, guida spirituale ed esperta di tarocchi con esperienza unica nel fornire orientamento personalizzato e trasformativo.",
+  
+  "luckyColorTitle": "Colore Fortunato | Cristina Zurba",
+  "luckyColorDescription": "Scopri il tuo colore fortunato con le intuizioni uniche di Cristina Zurba. Impara come colori specifici possono influenzare la tua fortuna e il benessere.",
+  
+  "luckyNumberTitle": "Numero Fortunato | Cristina Zurba", 
+  "luckyNumberDescription": "Trova il tuo numero fortunato con la guida di Cristina Zurba. Impara come i numeri possono influenzare la tua vita e le tue decisioni.",
+  
+  "motivationalQuoteTitle": "Citazione Motivazionale | Cristina Zurba",
+  "motivationalQuoteDescription": "Ricevi dosi quotidiane di ispirazione con citazioni motivazionali di Cristina Zurba. Scopri la saggezza che ti guiderà verso lo sviluppo personale.",
+  
+  "luckyHourTitle": "Ora Fortunata | Cristina Zurba",
+  "luckyHourDescription": "Scopri le tue ore fortunate con le intuizioni spirituali di Cristina Zurba. Impara quando è il momento migliore per decisioni importanti.",
+  
+  "whatThinks": "Cosa pensa",
+  "whatFeels": "Cosa sente", 
+  "yourBook": "Il tuo libro",
+  
+  "loginTitle": "Accedi | Cristina Zurba",
+  "loginDescription": "Accedi al tuo account per accedere a letture personalizzate di tarocchi e guida spirituale da Cristina Zurba.",
+  
+  "registerTitle": "Registrati | Cristina Zurba",
+  "registerDescription": "Crea un account per accedere a letture esclusive di tarocchi e servizi spirituali da Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Password Dimenticata | Cristina Zurba",
+  "forgotPasswordDescription": "Reimposta la tua password per riottenere l'accesso alla tua guida spirituale personalizzata.",
+  
+  "filterContent": "Filtra Contenuto"
 }

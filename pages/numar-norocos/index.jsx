@@ -137,16 +137,16 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Lucky Number | Cristina Zurba</title>
+        <title>{t("luckyNumberTitle")}</title>
         <meta
           name="description"
-          content="Discover the power of numbers in shaping your destiny with Cristina Zurba's insights on lucky numbers. Learn how these numbers can influence your life, bringing luck and positive changes. Ideal for those interested in numerology and seeking personal guidance through their own lucky numbers."
+          content={t("luckyNumberDescription")}
         />
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Lucky Number | Cristina Zurba" />
+        <meta property="og:title" content={t("luckyNumberTitle")} />
         <meta
           property="og:description"
-          content="Discover the power of numbers in shaping your destiny with Cristina Zurba's insights on lucky numbers. Learn how these numbers can influence your life, bringing luck and positive changes. Ideal for those interested in numerology and seeking personal guidance through their own lucky numbers."
+          content={t("luckyNumberDescription")}
         />
         <meta
           property="og:image"
@@ -156,82 +156,190 @@ export function NumarNorocos() {
       </Head>
       <div
         style={{
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
-          height: isMobile ? "100vh" : "100%",
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+          minHeight: "100vh",
         }}
       >
+        {/* Modern Header */}
         <section>
           <Header />
         </section>
 
-        <section>
-          <div
-            style={{
-              paddingTop: isMobile ? "15%" : "7%",
-              height: isMobile ? "100%" : "100vh",
-            }}
-            className={classes.wraperSection}
-          >
-            <Grid
-              container
-              rowSpacing={isMobile ? 5 : 5}
-              columnSpacing={0}
-              sx={{
-                display: "flex",
-                justifyContent: "flex-start",
+        {/* Modern Minimal Design */}
+        <section style={{ padding: "80px 0" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
+            {/* Hero Section */}
+            <div style={{ textAlign: "center", marginBottom: "80px" }}>
+              <div style={{
+                display: "inline-flex",
                 alignItems: "center",
-                top: 30,
-                position: "relative",
-                paddingLeft: isMobile ? 5 : 10,
-                paddingRight: isMobile ? 5 : 10,
-              }}
-            >
-              <Grid item xs={12} sm={12} md={12}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    width: "100%",
-                    height: "100%",
-                    flexDirection: "column",
-                    marginBottom: "60px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "120px",
-                      height: "120px",
-                      borderRadius: "50%",
-                      backgroundColor: colors.primary3,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <h2 style={{ color: "white", fontSize: 80 }}>
-                      {zilnicNumereNorocoase.number}
-                    </h2>
-                  </div>
-                  <Image
-                    src="/lucky-deco.png"
-                    width={278}
-                    height={65}
-                    alt="Picture of the author"
-                    style={{ marginTop: 10 }}
-                  />
-                  {zilnicNumereNorocoase.info && (
-                    <p style={{ textAlign: "justify", fontSize: 18 }}>
+                gap: "12px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                padding: "12px 24px",
+                borderRadius: "50px",
+                fontSize: "14px",
+                fontWeight: "600",
+                marginBottom: "24px",
+                boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
+              }}>
+                <span style={{ fontSize: "18px" }}>🍀</span>
+                Numărul Tău Norocos
+              </div>
+              
+              <h1 style={{
+                fontSize: isMobile ? "2.5rem" : "3.5rem",
+                fontWeight: "800",
+                color: "#1a202c",
+                margin: "0 0 16px 0",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
+              }}>
+                Descoperă Energia Zilei
+              </h1>
+              
+              <p style={{
+                fontSize: "1.2rem",
+                color: "#64748b",
+                maxWidth: "600px",
+                margin: "0 auto",
+                lineHeight: "1.6"
+              }}>
+                Numerele au o energie specială care poate influența ziua ta. Află care este numărul tău norocos de astăzi.
+              </p>
+            </div>
+
+            {/* Lucky Number Card */}
+            <div style={{
+              background: "white",
+              borderRadius: "24px",
+              padding: isMobile ? "40px 20px" : "60px 40px",
+              textAlign: "center",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08)",
+              border: "1px solid rgba(102, 126, 234, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              maxWidth: "600px",
+              margin: "0 auto"
+            }}>
+              {/* Background Pattern */}
+              <div style={{
+                position: "absolute",
+                top: "-50%",
+                left: "-50%",
+                width: "200%",
+                height: "200%",
+                background: "linear-gradient(45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%), linear-gradient(-45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%)",
+                backgroundSize: "20px 20px",
+                zIndex: 0
+              }} />
+
+              {/* Content */}
+              <div style={{ position: "relative", zIndex: 1 }}>
+                {/* Number Display */}
+                <div style={{
+                  width: isMobile ? "140px" : "180px",
+                  height: isMobile ? "140px" : "180px",
+                  margin: "0 auto 30px",
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 15px 35px rgba(102, 126, 234, 0.4)",
+                  position: "relative"
+                }}>
+                  {/* Glow Effect */}
+                  <div style={{
+                    position: "absolute",
+                    top: "-10px",
+                    left: "-10px",
+                    right: "-10px",
+                    bottom: "-10px",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    borderRadius: "50%",
+                    opacity: "0.3",
+                    filter: "blur(20px)",
+                    zIndex: -1
+                  }} />
+                  
+                  <span style={{
+                    fontSize: isMobile ? "4rem" : "5rem",
+                    fontWeight: "900",
+                    color: "white",
+                    textShadow: "0 2px 4px rgba(0, 0, 0, 0.2)"
+                  }}>
+                    {zilnicNumereNorocoase.number}
+                  </span>
+                </div>
+
+                {/* Decorative Elements */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "20px",
+                  marginBottom: "30px",
+                  fontSize: "24px"
+                }}>
+                  <span>✨</span>
+                  <span>🌟</span>
+                  <span>✨</span>
+                </div>
+
+                {/* Description */}
+                {zilnicNumereNorocoase.info && (
+                  <div style={{
+                    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                    padding: "30px",
+                    borderRadius: "16px",
+                    border: "1px solid #e2e8f0",
+                    position: "relative"
+                  }}>
+                    <div style={{
+                      position: "absolute",
+                      top: "15px",
+                      left: "20px",
+                      fontSize: "40px",
+                      color: "#667eea",
+                      opacity: "0.3",
+                      fontFamily: "Georgia, serif"
+                    }}>
+                      "
+                    </div>
+                    
+                    <p style={{
+                      fontSize: "1.1rem",
+                      lineHeight: "1.7",
+                      color: "#374151",
+                      margin: "0",
+                      textAlign: "justify",
+                      fontStyle: "italic",
+                      paddingLeft: "20px"
+                    }}>
                       {detectedLng === "hi"
                         ? zilnicNumereNorocoase.info.hu.descriere
                         : detectedLng === "id"
                           ? zilnicNumereNorocoase.info.ru.descriere
                           : zilnicNumereNorocoase.info[detectedLng].descriere}
                     </p>
-                  )}
-                </div>
-              </Grid>
-            </Grid>
+                  </div>
+                )}
+
+
+              </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div style={{
+              textAlign: "center",
+              marginTop: "60px",
+              color: "#64748b",
+              fontSize: "0.9rem"
+            }}>
+              <p>Numerele norocoase sunt ghiduri energetice pentru ziua ta. Folosește-le cu încredere! ✨</p>
+            </div>
           </div>
         </section>
         {/* <section>

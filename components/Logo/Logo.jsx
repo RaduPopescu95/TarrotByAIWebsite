@@ -1,40 +1,56 @@
 import React from "react";
 import PropTypes from "prop-types";
+import Link from "next/link";
 
-import useStyles from "./logo-style";
-import Image from "next/image";
-// import LazyLoad from "react-lazyload";
-import { useMediaQuery, useTheme } from "@mui/material";
+function Logo({ type, fixed, noLink = false }) {
+  const logoSrc = "/LogoPngTransparent.png";
+  
+  const logoImage = (
+    <img
+      src={logoSrc}
+      alt="Cristina Zurba Logo"
+      style={{
+        ...styles.logo,
+        ...(fixed && styles.logoFixed),
+      }}
+    />
+  );
 
-function Logo(props) {
-  const { classes, cx } = useStyles();
-  const { type, size } = props;
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  // If noLink is true, return just the image (for use inside other Link components)
+  if (noLink) {
+    return logoImage;
+  }
+  
+  // Otherwise, wrap in Link as before
   return (
-    <span className={cx(classes[type], classes.logo, classes[size])}>
-      {/* <LazyLoad height={200} offset={100} once> */}
-      <img
-        src={"/LogoPngTransparent.png"}
-        alt="Cristina Zurba Logo"
-        width={65}
-        height={50}
-        style={{ height: "60px" }}
-      />
-      {/* </LazyLoad> */}
-      {/* { type !== 'only' ? brand.starter.name : '' } */}
-    </span>
+    <Link href="/" passHref>
+      {logoImage}
+    </Link>
   );
 }
 
+const styles = {
+  logo: {
+    height: "50px",
+    width: "auto",
+    transition: "all 0.3s ease",
+    cursor: "pointer",
+  },
+  logoFixed: {
+    height: "40px",
+  },
+};
+
 Logo.propTypes = {
-  type: PropTypes.string.isRequired,
-  size: PropTypes.string,
+  type: PropTypes.string,
+  fixed: PropTypes.bool,
+  noLink: PropTypes.bool,
 };
 
 Logo.defaultProps = {
-  size: "medium",
+  type: "default",
+  fixed: false,
+  noLink: false,
 };
 
 export default Logo;

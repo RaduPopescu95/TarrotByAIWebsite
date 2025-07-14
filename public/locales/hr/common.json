@@ -99,5 +99,50 @@
   "onboardingThirdTitleMessage": "Dobijte čitanje o svojoj budućnosti",
   "skip": "PRESKOČI",
   "nextOnboard": "SLJEDEĆE",
-  "clinicLoginRedirect": "Nastavi"
+  "clinicLoginRedirect": "Nastavi",
+  
+  "spiritualGuidance": "DUHOVNO VODSTVO",
+  "discoverSpiritualWisdom": "Otkrijte <span class=\"font-semibold text-indigo-600\">duhovnu mudrost</span> kroz personalizirana čitanja tarota i astrologije",
+  "consultatii": "Konzultacije",
+  "readArticles": "Čitaj Članke",
+  "allArticles": "Svi Članci",
+  "articles": "Članci",
+  "pages": "Stranice",
+  "noResultsFound": "Nema pronađenih rezultata",
+  "noResultsMessage": "Nema pronađenih članaka",
+  "filterResultsFor": "Filtriraj rezultate za",
+  "clearFilter": "Očisti filter",
+  "popularArticles": "Popularni Članci",
+  "noContentMessage": "Radimo na stvaranju novog sadržaja! Vratite se uskoro da pročitate najnovije članke. U međuvremenu istražite naše postojeće resurse.",
+  
+  "aboutMe": "O MENI",
+  "aboutPageTitle": "O Cristini Zurba | Duhovni Vodič & Tarot",
+  "aboutPageDescription": "Otkrijte priču Cristine Zurba, duhovnog vodiča i stručnjaka za tarot s jedinstvenim iskustvom u pružanju personaliziranog i transformativnog vodstva.",
+  
+  "luckyColorTitle": "Sretna Boja | Cristina Zurba",
+  "luckyColorDescription": "Otkrijte svoju sretnu boju s jedinstvenim uvjerenjima Cristine Zurba. Naučite kako određene boje mogu utjecati na vašu sreću i dobrobit.",
+  
+  "luckyNumberTitle": "Sretni Broj | Cristina Zurba", 
+  "luckyNumberDescription": "Pronađite svoj sretni broj s vodstvom Cristine Zurba. Naučite kako brojevi mogu utjecati na vaš život i odluke.",
+  
+  "motivationalQuoteTitle": "Motivacijski Citat | Cristina Zurba",
+  "motivationalQuoteDescription": "Primajte dnevne doze inspiracije s motivacijskim citatima od Cristine Zurba. Otkrijte mudrost koja će vas voditi prema osobnom razvoju.",
+  
+  "luckyHourTitle": "Sretni Sat | Cristina Zurba",
+  "luckyHourDescription": "Otkrijte svoje sretne sate s duhovnim uvjerenjima Cristine Zurba. Naučite kada je najbolje vrijeme za važne odluke.",
+  
+  "whatThinks": "Što misli",
+  "whatFeels": "Što osjeća", 
+  "yourBook": "Vaša knjiga",
+  
+  "loginTitle": "Prijava | Cristina Zurba",
+  "loginDescription": "Prijavite se na svoj račun za pristup personaliziranim čitanjima tarota i duhovnom vodstvu od Cristine Zurba.",
+  
+  "registerTitle": "Registracija | Cristina Zurba",
+  "registerDescription": "Stvorite račun za pristup ekskluzivnim čitanjima tarota i duhovnim uslugama od Cristine Zurba.",
+  
+  "forgotPasswordTitle": "Zaboravljena Lozinka | Cristina Zurba",
+  "forgotPasswordDescription": "Resetirajte svoju lozinku da biste ponovno dobili pristup svojem personaliziranom duhovnom vodstvu.",
+  
+  "filterContent": "Filtriraj Sadržaj"
 }

@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Lesen Sie über Ihre Zukunft",
   "skip": "ÜBERSPRINGEN",
   "nextOnboard": "WEITER",
-  "clinicLoginRedirect": "Fortfahren"
+  "clinicLoginRedirect": "Fortfahren",
+  
+  "spiritualGuidance": "SPIRITUELLE FÜHRUNG",
+  "discoverSpiritualWisdom": "Entdecken Sie <span class=\"font-semibold text-indigo-600\">spirituelle Weisheit</span> durch personalisierte Tarot- und Astrologielesungen",
+  "consultatii": "Beratungen",
+  "readArticles": "Artikel Lesen",
+  "allArticles": "Alle Artikel",
+  "articles": "Artikel",
+  "pages": "Seiten",
+  "noResultsFound": "Keine Ergebnisse gefunden",
+  "noResultsMessage": "Keine Artikel gefunden",
+  "filterResultsFor": "Ergebnisse filtern für",
+  "clearFilter": "Filter löschen",
+  "popularArticles": "Beliebte Artikel",
+  "noContentMessage": "Wir arbeiten an neuen Inhalten! Kommen Sie bald wieder, um die neuesten Artikel zu lesen. In der Zwischenzeit erkunden Sie unsere vorhandenen Ressourcen.",
+  
+  "aboutMe": "ÜBER MICH",
+  "aboutPageTitle": "Über Cristina Zurba | Spiritueller Führer & Tarot",
+  "aboutPageDescription": "Entdecken Sie Cristina Zurbas Geschichte, eine spirituelle Führerin und Tarot-Expertin mit einzigartiger Erfahrung in der Bereitstellung personalisierter und transformativer Führung.",
+  
+  "luckyColorTitle": "Glücksfarbe | Cristina Zurba",
+  "luckyColorDescription": "Entdecken Sie Ihre Glücksfarbe mit Cristina Zurbas einzigartigen Einsichten. Erfahren Sie, wie bestimmte Farben Ihr Glück und Wohlbefinden beeinflussen können.",
+  
+  "luckyNumberTitle": "Glückszahl | Cristina Zurba", 
+  "luckyNumberDescription": "Finden Sie Ihre Glückszahl mit Cristina Zurbas Führung. Erfahren Sie, wie Zahlen Ihr Leben und Ihre Entscheidungen beeinflussen können.",
+  
+  "motivationalQuoteTitle": "Motivationszitat | Cristina Zurba",
+  "motivationalQuoteDescription": "Erhalten Sie tägliche Inspirationsdosen mit Motivationszitaten von Cristina Zurba. Entdecken Sie Weisheit, die Sie zur persönlichen Entwicklung führt.",
+  
+  "luckyHourTitle": "Glücksstunde | Cristina Zurba",
+  "luckyHourDescription": "Entdecken Sie Ihre Glücksstunden mit Cristina Zurbas spirituellen Einsichten. Erfahren Sie, wann der beste Zeitpunkt für wichtige Entscheidungen ist.",
+  
+  "whatThinks": "Was denkt",
+  "whatFeels": "Was fühlt", 
+  "yourBook": "Ihr Buch",
+  
+  "loginTitle": "Anmelden | Cristina Zurba",
+  "loginDescription": "Melden Sie sich in Ihrem Konto an, um Zugang zu personalisierten Tarot-Lesungen und spiritueller Führung von Cristina Zurba zu erhalten.",
+  
+  "registerTitle": "Registrieren | Cristina Zurba",
+  "registerDescription": "Erstellen Sie ein Konto für Zugang zu exklusiven Tarot-Lesungen und spirituellen Dienstleistungen von Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Passwort Vergessen | Cristina Zurba",
+  "forgotPasswordDescription": "Setzen Sie Ihr Passwort zurück, um wieder Zugang zu Ihrer personalisierten spirituellen Führung zu erhalten.",
+  
+  "filterContent": "Inhalte Filtern"
 }

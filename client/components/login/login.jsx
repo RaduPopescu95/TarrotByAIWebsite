@@ -36,7 +36,7 @@ const LoginContainer = (props) => {
 
       <>
         {/* Page Content */}
-        <div className="content top-space">
+        <div className="content top-space" style={{ paddingTop: '120px' }}>
           <div className="container-fluid">
             <div className="row">
               <div className="col-md-8 offset-md-2">

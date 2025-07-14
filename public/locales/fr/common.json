@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Obtenez une lecture sur votre avenir",
   "skip": "PASSER",
   "nextOnboard": "SUIVANT",
-  "clinicLoginRedirect": "Continuer"
+  "clinicLoginRedirect": "Continuer",
+  
+  "spiritualGuidance": "GUIDANCE SPIRITUELLE",
+  "discoverSpiritualWisdom": "Découvrez la <span class=\"font-semibold text-indigo-600\">sagesse spirituelle</span> à travers des lectures personnalisées de tarot et d'astrologie",
+  "consultatii": "Consultations",
+  "readArticles": "Lire les Articles",
+  "allArticles": "Tous les Articles",
+  "articles": "Articles",
+  "pages": "Pages",
+  "noResultsFound": "Aucun résultat trouvé",
+  "noResultsMessage": "Aucun article trouvé",
+  "filterResultsFor": "Filtrer les résultats pour",
+  "clearFilter": "Effacer le filtre",
+  "popularArticles": "Articles Populaires",
+  "noContentMessage": "Nous travaillons à créer du nouveau contenu ! Revenez bientôt pour lire les derniers articles. En attendant, explorez nos ressources existantes.",
+  
+  "aboutMe": "À PROPOS DE MOI",
+  "aboutPageTitle": "À propos de Cristina Zurba | Guide Spirituel et Tarot",
+  "aboutPageDescription": "Découvrez l'histoire de Cristina Zurba, guide spirituel et experte en tarot avec une expérience unique dans la fourniture de guidance personnalisée et transformatrice.",
+  
+  "luckyColorTitle": "Couleur Porte-Bonheur | Cristina Zurba",
+  "luckyColorDescription": "Découvrez votre couleur porte-bonheur avec les insights uniques de Cristina Zurba. Apprenez comment des couleurs spécifiques peuvent influencer votre fortune et bien-être.",
+  
+  "luckyNumberTitle": "Numéro Porte-Bonheur | Cristina Zurba", 
+  "luckyNumberDescription": "Trouvez votre numéro porte-bonheur avec les conseils de Cristina Zurba. Apprenez comment les nombres peuvent influencer votre vie et vos décisions.",
+  
+  "motivationalQuoteTitle": "Citation Motivationnelle | Cristina Zurba",
+  "motivationalQuoteDescription": "Recevez des doses quotidiennes d'inspiration avec des citations motivationnelles de Cristina Zurba. Découvrez la sagesse qui vous guidera vers le développement personnel.",
+  
+  "luckyHourTitle": "Heure Porte-Bonheur | Cristina Zurba",
+  "luckyHourDescription": "Découvrez vos heures porte-bonheur avec les insights spirituels de Cristina Zurba. Apprenez quand est le meilleur moment pour les décisions importantes.",
+  
+  "whatThinks": "Ce qu'il pense",
+  "whatFeels": "Ce qu'il ressent", 
+  "yourBook": "Votre livre",
+  
+  "loginTitle": "Connexion | Cristina Zurba",
+  "loginDescription": "Connectez-vous à votre compte pour accéder aux lectures personnalisées de tarot et aux conseils spirituels de Cristina Zurba.",
+  
+  "registerTitle": "S'inscrire | Cristina Zurba",
+  "registerDescription": "Créez un compte pour accéder aux lectures exclusives de tarot et aux services spirituels de Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Mot de Passe Oublié | Cristina Zurba",
+  "forgotPasswordDescription": "Réinitialisez votre mot de passe pour retrouver l'accès à vos conseils spirituels personnalisés.",
+  
+  "filterContent": "Filtrer le Contenu"
 }

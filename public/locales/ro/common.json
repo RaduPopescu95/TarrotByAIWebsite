@@ -98,5 +98,50 @@
   "onboardingThirdTitleMessage": "Obțineți lecturi despre viitorul tău",
   "skip": "OMITE",
   "nextOnboard": "URMĂTORUL",
-  "clinicLoginRedirect": "Continuă"
+  "clinicLoginRedirect": "Continuă",
+  
+  "spiritualGuidance": "ÎNDRUMIRE SPIRITUALĂ",
+  "discoverSpiritualWisdom": "Descoperă înțelepciunea spirituală prin lecturi personalizate de tarot și astrologie",
+  "consultatii": "Consultații",
+  "readArticles": "Citește articolele",
+  "allArticles": "Toate articolele",
+  "articles": "Articole",
+  "pages": "Pagini",
+  "noResultsFound": "Nu au fost găsite rezultate",
+  "noResultsMessage": "Nu au fost găsite articole",
+  "filterResultsFor": "Rezultate filtrate pentru",
+  "clearFilter": "Șterge filtrul",
+  "popularArticles": "Articole populare",
+  "noContentMessage": "Lucrăm la crearea unor conținuturi noi! Revino în curând pentru a citi cele mai recente articole. Între timp, explorează resursele noastre existente.",
+  
+  "aboutMe": "DESPRE MINE",
+  "aboutPageTitle": "Despre Cristina Zurba | Ghid Spiritual & Tarot",
+  "aboutPageDescription": "Descoperă povestea Cristinei Zurba, ghid spiritual și expert în tarot cu o experiență unică în oferirea de îndrumări personalizate și transformatoare.",
+  
+  "luckyColorTitle": "Culoare Norocoasă | Cristina Zurba",
+  "luckyColorDescription": "Descoperă culoarea ta norocoasă cu îndrumările unice ale Cristinei Zurba. Învață cum anumite culori pot influența norocul și bunăstarea ta.",
+  
+  "luckyNumberTitle": "Număr Norocos | Cristina Zurba", 
+  "luckyNumberDescription": "Găsește numărul tău norocos cu îndrumarea Cristinei Zurba. Învață cum numerele pot influența viața și deciziile tale.",
+  
+  "motivationalQuoteTitle": "Citat Motivațional | Cristina Zurba",
+  "motivationalQuoteDescription": "Primește o doză zilnică de inspirație cu citate motivaționale de la Cristina Zurba. Descoperă înțelepciunea care te va ghida către dezvoltarea personală.",
+  
+  "luckyHourTitle": "Oră Norocoasă | Cristina Zurba",
+  "luckyHourDescription": "Descoperă orele tale norocoase cu înțelegerile spirituale ale Cristinei Zurba. Învață când este cel mai bun moment pentru decizii importante.",
+  
+  "whatThinks": "Ce gândește",
+  "whatFeels": "Ce simte", 
+  "yourBook": "Cartea ta",
+  
+  "loginTitle": "Autentificare | Cristina Zurba",
+  "loginDescription": "Autentifică-te în contul tău pentru acces la lecturi personalizate de tarot și îndrumări spirituale de la Cristina Zurba.",
+  
+  "registerTitle": "Înregistrare | Cristina Zurba",
+  "registerDescription": "Creează un cont pentru acces la lecturi exclusive de tarot și servicii spirituale de la Cristina Zurba.",
+  
+  "forgotPasswordTitle": "Parolă Uitată | Cristina Zurba",
+  "forgotPasswordDescription": "Resetează-ți parola pentru a-ți recăpăta accesul la îndrumările spirituale personalizate.",
+  
+  "filterContent": "Filtrează conținutul"
 }

@@ -1,23 +1,10 @@
 import * as React from "react";
-import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
-import CardContent from "@mui/material/CardContent";
-import CardMedia from "@mui/material/CardMedia";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
 import Header from "../../components/Header";
-// import Footer from "../components/Footer";
-
-import { useSpacing } from "../../theme/common";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { AnimatePresence, motion } from "framer-motion";
-
 import Image from "next/image";
-import StyleIcon from "@mui/icons-material/Style";
-import Link from "next/link";
-// import { toUrlSlug } from "../utils/commonUtils";
+import { Sparkles } from "lucide-react";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { constantServices, futureOptions } from "../../data/servicesData";
@@ -26,7 +13,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
-import { Shuffle } from "@mui/icons-material";
 import { normalizeString } from "../../utils/strintText";
 import {
   handleGetFirestoreSingleArrayData,
@@ -94,7 +80,6 @@ const MediaCardConstantService = ({
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
   const card =
     shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
-  const { classes, cx } = useSpacing();
 
   console.log("carti PERSONALIZATE...", cartiPersonalizate);
   console.log("Card...", shuffledCartiPersonalizate);
@@ -102,11 +87,27 @@ const MediaCardConstantService = ({
 
   // Starea pentru a gestiona afișarea fundalului alternativ
   const [flipped, setFlipped] = React.useState(false);
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [isMobile, setIsMobile] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(false);
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
+
+  // Simple responsive check without MUI
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    // Set initial values
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Funcția pentru a schimba starea la click pe card
 
@@ -114,7 +115,7 @@ const MediaCardConstantService = ({
     console.log(index);
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
-    const conditieCategorie = categoriiPersonalizate.arr[index];
+    const conditieCategorie = categoriiPersonalizate.arr?.[index];
     console.log("card...nou...", card);
     console.log("categorie...nou...", conditieCategorie);
     try {
@@ -253,7 +254,12 @@ const MediaCardConstantService = ({
         <img
           src={"/card-back.png"}
           alt={item.text}
-          className={classes.singleCardImg}
+          style={{
+            width: isDesktop ? "75%" : "85%",
+            height: "auto",
+            objectFit: "cover",
+            borderRadius: "12px"
+          }}
         />
       </motion.div>
 
@@ -279,7 +285,12 @@ const MediaCardConstantService = ({
           <img
             src={card.image.finalUri}
             alt={item.text}
-            className={classes.singleCardImg}
+            style={{
+              width: isDesktop ? "75%" : "85%",
+              height: "auto",
+              objectFit: "cover",
+              borderRadius: "12px"
+            }}
           />
         )}
       </motion.div>
@@ -292,17 +303,14 @@ const MediaCardConstantService = ({
           marginTop: 5,
         }}
       >
-        <Typography
+        <span
           style={{
-            position: "relative", // Poziționare absolută în raport cu părintele relativ
-            bottom: "0%", // Poziționează textul la jumătatea înălțimii containerului părinte
-            left: 0, // Aliniază la stânga containerului părinte
-            // bottom: -40, // Aliniază la dreapta containerului părinte
-            textAlign: "flex-start", // Centrează textul orizontal
-            maxWidth: "100%", // limitează lățimea maximă
-            // whiteSpace: "nowrap", // împiedică întreruperea textului
-            // overflow: "hidden", // ascunde textul care depășește lățimea maximă
-            textOverflow: "ellipsis", // adaugă '...' dacă textul este prea lung
+            position: "relative",
+            bottom: "0%",
+            left: 0,
+            textAlign: "flex-start",
+            maxWidth: "100%",
+            textOverflow: "ellipsis",
             color: colors.white,
             fontSize: isMobile ? 20 : 20,
           }}
@@ -312,7 +320,7 @@ const MediaCardConstantService = ({
             : detectedLng === "id"
               ? item.info.ru.nume
               : item.info[detectedLng].nume}
-        </Typography>
+        </span>
       </div>
     </motion.div>
   );
@@ -346,12 +354,13 @@ export function CitirePersonalizata({ services }) {
   } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
   const { t } = useTranslation("common");
-  const { classes, cx } = useSpacing();
   const { currentNumber, updateNumber } = useNumberContext();
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
   const [item, setItem] = React.useState({});
   const [imageCard, setImageCard] = React.useState("");
+  const [isMobile, setIsMobile] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(false);
 
   const router = useRouter();
 
@@ -360,10 +369,22 @@ export function CitirePersonalizata({ services }) {
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
-  const maxLines = 4; // Numărul maxim de rânduri dorit
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  // Simple responsive check without MUI
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    // Set initial values
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSetItem = (item) => {
     console.log("item....", item);
@@ -393,7 +414,7 @@ export function CitirePersonalizata({ services }) {
     if (triggerExitAnimation) {
       setVisibleCards(new Array(1).fill(false));
     }
-  }, [triggerExitAnimation, categoriiPersonalizate.arr.length]);
+  }, [triggerExitAnimation, categoriiPersonalizate.arr?.length]);
 
   const isFirstEntry = React.useRef(true);
 
@@ -459,7 +480,7 @@ export function CitirePersonalizata({ services }) {
       <div
         style={{
           overflow: "auto",
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
           minHeight: "100vh",
         }}
       >
@@ -473,62 +494,146 @@ export function CitirePersonalizata({ services }) {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              height: "100%",
+              height: "100vh",
+              flexDirection: "column",
             }}
           >
             <motion.div animate={spinnerAnimation}>
-              <StyleIcon
-                style={{ fontSize: 80, color: "white", height: "100vh" }}
+              <Sparkles
+                size={80}
+                style={{ color: "#667eea", marginBottom: "20px" }}
               />
             </motion.div>
+            <p style={{ color: "#667eea", fontSize: "1.2rem", marginTop: "20px" }}>
+              Pregătesc cărțile tale...
+            </p>
           </div>
         ) : (
-          <section>
-            <div
-              style={{
-                paddingTop: isDesktop ? "8%" : "30%",
-                height: "100%",
-                marginBottom: "60px",
-                justifyContent: "center",
-                display: "flex",
-              }}
-              className={classes.wraperSection}
-            >
-              <Grid
-                container
-                rowSpacing={isMobile ? 5 : 5}
-                columnSpacing={0}
-                sx={{
+          <section style={{ padding: isDesktop ? "120px 0 40px 0" : "100px 0 60px 0" }}>
+            <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
+              
+              {/* Two Column Layout for Desktop */}
+              <div style={{
+                display: isDesktop ? "grid" : "block",
+                gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr",
+                gap: isDesktop ? "60px" : "0",
+                alignItems: "center",
+                minHeight: isDesktop ? "calc(50vh - 100px)" : "auto"
+              }}>
+                
+                {/* Left Column - Hero Section */}
+                <div style={{ 
+                  textAlign: isDesktop ? "left" : "center", 
+                  marginBottom: isDesktop ? "0" : "60px" 
+                }}>
+                  <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    padding: "12px 24px",
+                    borderRadius: "50px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    marginBottom: "24px",
+                    boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
+                  }}>
+                    <Sparkles size={18} />
+                    Cartea Ta
+                  </div>
+                  
+                  <h1 style={{
+                    fontSize: isMobile ? "2.5rem" : isDesktop ? "3.2rem" : "3.5rem",
+                    fontWeight: "800",
+                    color: "#1a202c",
+                    margin: "0 0 16px 0",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text"
+                  }}>
+                    Descoperă Mesajul Tău
+                  </h1>
+                  
+                  <p style={{
+                    fontSize: "1.2rem",
+                    color: "#64748b",
+                    maxWidth: isDesktop ? "none" : "600px",
+                    margin: isDesktop ? "0" : "0 auto",
+                    lineHeight: "1.6"
+                  }}>
+                    Fiecare carte poartă un mesaj special pentru tine. Concentrează-te pe întrebarea ta și lasă intuiția să te ghideze.
+                  </p>
+                </div>
+
+                {/* Right Column - Card Display */}
+                <div style={{
                   display: "flex",
-                  justifyContent: "flex-start",
+                  justifyContent: "center",
                   alignItems: "center",
-                  top: 30,
-                  position: "relative",
-                  paddingLeft: isDesktop ? 10 : 0,
-                  paddingRight: isDesktop ? 10 : 0,
-                  height: "100%",
-                  width: isMobile ? "100%" : "90%",
-                }}
-              >
+                  minHeight: isDesktop ? "auto" : "400px"
+                }}>
                 <AnimatePresence>
                   {categoriiPersonalizate.arr &&
                     categoriiPersonalizate.arr.length > 0 && (
-                      <React.Fragment>
-                        {/* Presupunând că vreți să aplicați aceeași logică ca și cum ar fi fost parcurși într-un map */}
-                        <Grid
-                          item
-                          xs={12}
-                          sm={12}
-                          md={12}
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                      <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -30 }}
+                        transition={{ duration: 0.6 }}
+                        style={{
+                          background: "white",
+                          borderRadius: "24px",
+                          padding: isDesktop ? "30px" : "40px",
+                          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08)",
+                          border: "1px solid rgba(102, 126, 234, 0.1)",
+                          position: "relative",
+                          overflow: "visible",
+                          maxWidth: isDesktop ? "380px" : "450px",
+                          width: "100%"
+                        }}
+                      >
+                        {/* Background Pattern */}
+                        <div style={{
+                          position: "absolute",
+                          top: "-50%",
+                          left: "-50%",
+                          width: "200%",
+                          height: "200%",
+                          background: "linear-gradient(45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%), linear-gradient(-45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%)",
+                          backgroundSize: "20px 20px",
+                          zIndex: 0
+                        }} />
+
+                        {/* Floating Icon in Top Right Corner */}
+                        <div style={{
+                          position: "absolute",
+                          top: "-15px",
+                          right: "-15px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "50px",
+                          height: "50px",
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          borderRadius: "50%",
+                          boxShadow: "0 8px 20px rgba(102, 126, 234, 0.3)",
+                          zIndex: 1000
+                        }}>
+                          <Sparkles size={20} style={{ color: "white" }} />
+                        </div>
+
+                        {/* Card Content */}
+                        <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+
+                       
+
+                    
+
                           <MediaCardConstantService
                             item={categoriiPersonalizate.arr[1]}
-                            isMiddleCard={false} // Presupunând că primul element nu poate fi cardul din mijloc
+                            isMiddleCard={false}
                             index={0}
                             flipAllCards={flipAllCards}
                             setItem={setItem}
@@ -537,11 +642,43 @@ export function CitirePersonalizata({ services }) {
                               categoriiPersonalizate.arr[0].info.ro.nume
                             }
                           />
-                        </Grid>
-                      </React.Fragment>
+                        </div>
+                      </motion.div>
                     )}
                 </AnimatePresence>
-              </Grid>
+                </div>
+              </div>
+
+              {/* Bottom Instructions - Only for Mobile */}
+              {!isDesktop && (
+                <div style={{
+                  textAlign: "center",
+                  background: "white",
+                  borderRadius: "16px",
+                  padding: "30px",
+                  boxShadow: "0 8px 25px rgba(0, 0, 0, 0.06)",
+                  border: "1px solid rgba(102, 126, 234, 0.1)",
+                  marginTop: "40px"
+                }}>
+                  <h4 style={{
+                    fontSize: "1.2rem",
+                    fontWeight: "600",
+                    color: "#1a202c",
+                    marginBottom: "16px"
+                  }}>
+                    Cum să folosești această lectură
+                  </h4>
+                  <p style={{
+                    fontSize: "1rem",
+                    color: "#64748b",
+                    lineHeight: "1.6",
+                    marginBottom: "0"
+                  }}>
+                    Concentrează-te pe întrebarea ta și permite intuiției să te ghideze către carta potrivită. 
+                    Fiecare carte aleasă îți oferă îndrumări personalizate pentru situația ta actuală.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}

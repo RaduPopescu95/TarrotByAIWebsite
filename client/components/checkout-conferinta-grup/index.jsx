@@ -644,22 +644,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                             <span className="h4 text-primary">{conferinta.pretParticipare} RON</span>
                           </div>
 
-                          {/* Test Mode Checkbox */}
-                          <div className="form-check mb-4 p-4 bg-warning bg-opacity-10 border border-warning rounded">
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              id="testMode"
-                              checked={testMode}
-                              onChange={(e) => setTestMode(e.target.checked)}
-                            />
-                            <label className="form-check-label" htmlFor="testMode">
-                              <i className="fa fa-flask text-warning me-2"></i>
-                              <strong>Mod Test - Simulează fara plata</strong>
-                            </label>
-                          
-                          </div>
-
+                        
                           {testMode ? (
                             <button
                               type="button"

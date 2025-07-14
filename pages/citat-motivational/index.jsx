@@ -125,21 +125,21 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Motivational Quote | Cristina Zurba</title>
+        <title>{t("motivationalQuoteTitle")}</title>
         <meta
           name="description"
-          content="Discover Cristina Zurba's collection of motivational quotes, designed to inspire and uplift. Each quote is carefully chosen to boost motivation and provide encouragement. Perfect for those seeking a dose of positivity and inspiration in their daily lives."
+          content={t("motivationalQuoteDescription")}
         />
                         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
           crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta
           property="og:title"
-          content="Motivational Quote | Cristina Zurba"
+          content={t("motivationalQuoteTitle")}
         />
         <meta
           property="og:description"
-          content="Discover Cristina Zurba's collection of motivational quotes, designed to inspire and uplift. Each quote is carefully chosen to boost motivation and provide encouragement. Perfect for those seeking a dose of positivity and inspiration in their daily lives."
+          content={t("motivationalQuoteDescription")}
         />
         <meta
           property="og:image"
@@ -149,57 +149,154 @@ export function NumarNorocos() {
       </Head>
       <div
         style={{
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+          minHeight: "100vh",
         }}
       >
+        {/* Modern Header */}
         <section>
           <Header />
         </section>
 
-        <section>
-          <div
-            style={{
-              paddingTop: "7%",
-              height: "100vh",
-              marginBottom: "60px",
-            }}
-            className={classes.wraperSection}
-          >
-            <Grid
-              container
-              rowSpacing={isMobile ? 5 : 5}
-              columnSpacing={0}
-              sx={{
-                display: "flex",
-                justifyContent: "flex-start",
+        {/* Modern Minimal Design */}
+        <section style={{ padding: "80px 0" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
+            {/* Hero Section */}
+            <div style={{ textAlign: "center", marginBottom: "80px" }}>
+              <div style={{
+                display: "inline-flex",
                 alignItems: "center",
-                top: 30,
-                position: "relative",
-                paddingLeft: isMobile ? 5 : 10,
-                paddingRight: isMobile ? 5 : 10,
-              }}
-            >
-              <Grid item xs={12} sm={12} md={12}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    width: "100%",
-                    height: "100%",
-                    flexDirection: "column",
-                  }}
-                >
-                  <Image
-                    src="/lucky-deco.png"
-                    width={278}
-                    height={65}
-                    alt="Picture of the author"
-                    style={{ marginTop: 10 }}
-                  />
-                  <h1>{t("motivationalQuoteOfTheDay")}</h1>
-                  {zilnicCitateMotivationale.info && (
-                    <p style={{ textAlign: "justify", fontSize: 18 }}>
+                gap: "12px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                padding: "12px 24px",
+                borderRadius: "50px",
+                fontSize: "14px",
+                fontWeight: "600",
+                marginBottom: "24px",
+                boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
+              }}>
+                <span style={{ fontSize: "18px" }}>💫</span>
+                Citat Motivațional
+              </div>
+              
+              <h1 style={{
+                fontSize: isMobile ? "2.5rem" : "3.5rem",
+                fontWeight: "800",
+                color: "#1a202c",
+                margin: "0 0 16px 0",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
+              }}>
+                Inspirație Pentru Suflet
+              </h1>
+              
+              <p style={{
+                fontSize: "1.2rem",
+                color: "#64748b",
+                maxWidth: "600px",
+                margin: "0 auto",
+                lineHeight: "1.6"
+              }}>
+                Fiecare zi este o oportunitate nouă. Lasă-te inspirat de înțelepciunea cuvintelor care îți vor ghida pașii.
+              </p>
+            </div>
+
+            {/* Quote Card */}
+            <div style={{
+              background: "white",
+              borderRadius: "24px",
+              padding: isMobile ? "40px 20px" : "60px 40px",
+              textAlign: "center",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08)",
+              border: "1px solid rgba(102, 126, 234, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              maxWidth: "800px",
+              margin: "0 auto"
+            }}>
+              {/* Background Pattern */}
+              <div style={{
+                position: "absolute",
+                top: "-50%",
+                left: "-50%",
+                width: "200%",
+                height: "200%",
+                background: "linear-gradient(45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%), linear-gradient(-45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%)",
+                backgroundSize: "20px 20px",
+                zIndex: 0
+              }} />
+
+              {/* Content */}
+              <div style={{ position: "relative", zIndex: 1 }}>
+                {/* Quote Icon */}
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "80px",
+                  height: "80px",
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  borderRadius: "50%",
+                  marginBottom: "30px",
+                  boxShadow: "0 10px 25px rgba(102, 126, 234, 0.3)"
+                }}>
+                  <span style={{
+                    fontSize: "32px",
+                    color: "white"
+                  }}>💫</span>
+                </div>
+
+                {/* Quote Text */}
+                {zilnicCitateMotivationale.info && (
+                  <div style={{
+                    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                    padding: "40px",
+                    borderRadius: "16px",
+                    border: "1px solid #e2e8f0",
+                    position: "relative",
+                    marginBottom: "30px"
+                  }}>
+                    {/* Opening Quote */}
+                    <div style={{
+                      position: "absolute",
+                      top: "10px",
+                      left: "20px",
+                      fontSize: "60px",
+                      color: "#667eea",
+                      opacity: "0.3",
+                      fontFamily: "Georgia, serif",
+                      lineHeight: "1"
+                    }}>
+                      "
+                    </div>
+
+                    {/* Closing Quote */}
+                    <div style={{
+                      position: "absolute",
+                      bottom: "10px",
+                      right: "20px",
+                      fontSize: "60px",
+                      color: "#667eea",
+                      opacity: "0.3",
+                      fontFamily: "Georgia, serif",
+                      lineHeight: "1",
+                      transform: "rotate(180deg)"
+                    }}>
+                      "
+                    </div>
+                    
+                    <p style={{
+                      fontSize: isMobile ? "1.3rem" : "1.5rem",
+                      lineHeight: "1.6",
+                      color: "#1a202c",
+                      margin: "0",
+                      fontStyle: "italic",
+                      fontWeight: "500",
+                      padding: "20px 40px"
+                    }}>
                       {detectedLng === "hi"
                         ? zilnicCitateMotivationale.info.hu.descriere
                         : detectedLng === "id"
@@ -207,10 +304,35 @@ export function NumarNorocos() {
                           : zilnicCitateMotivationale.info[detectedLng]
                               .descriere}
                     </p>
-                  )}
+                  </div>
+                )}
+
+                {/* Decorative Elements */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "20px",
+                  marginBottom: "30px",
+                  fontSize: "24px"
+                }}>
+                  <span>✨</span>
+                  <span>🌟</span>
+                  <span>💫</span>
                 </div>
-              </Grid>
-            </Grid>
+
+
+              </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div style={{
+              textAlign: "center",
+              marginTop: "60px",
+              color: "#64748b",
+              fontSize: "0.9rem"
+            }}>
+              <p>Cuvintele au puterea să transforme. Lasă-te inspirat și acționează! 💫</p>
+            </div>
           </div>
         </section>
         {/* <section>

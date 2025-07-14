@@ -89,39 +89,7 @@ const Home12Footer = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="col-lg-4 col-sm-6">
-                  <div className="footer-links-middle">
-                    <h4>Join Our Newsletter</h4>
-                    <form action="/home-12">
-                      <div className="input-block">
-                        <input
-                          type="email"
-                          className="form-control"
-                          placeholder="Enter Email Address"
-                        />
-                        <button className="submit-btn">Submit</button>
-                      </div>
-                    </form>
-                    <p>* Will send you weekly updates for your better</p>
-                    <ul className="social-icons">
-                      <li>
-                        <Link href="#" className="fb">
-                          <i className="fa-brands fa-facebook-f" />
-                        </Link>
-                      </li>
-                      <li>
-                        <Link href="#" className="insta">
-                          <i className="fa-brands fa-instagram" />
-                        </Link>
-                      </li>
-                      <li>
-                        <Link href="#" className="linked-in">
-                          <i className="fa-brands fa-linkedin-in" />
-                        </Link>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
+             
               </div>
             </div>
           </div>

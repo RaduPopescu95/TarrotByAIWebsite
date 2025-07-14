@@ -118,18 +118,18 @@ export function NumarNorocos() {
   return (
     <>
       <Head>
-        <title>Lucky Color | Cristina Zurba</title>
+        <title>{t("luckyColorTitle")}</title>
         <meta
           name="description"
-          content="Discover your lucky color with Cristina Zurba's unique insights. Learn how specific colors can influence your fortune and well-being. This guidance is perfect for anyone looking to enhance their luck and personal energy through the power of color."
+          content={t("luckyColorDescription")}
         />
                         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
           crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
-        <meta property="og:title" content="Lucky Color | Cristina Zurba" />
+        <meta property="og:title" content={t("luckyColorTitle")} />
         <meta
           property="og:description"
-          content="Discover your lucky color with Cristina Zurba's unique insights. Learn how specific colors can influence your fortune and well-being. This guidance is perfect for anyone looking to enhance their luck and personal energy through the power of color."
+          content={t("luckyColorDescription")}
         />
         <meta
           property="og:image"
@@ -139,98 +139,215 @@ export function NumarNorocos() {
       </Head>
       <div
         style={{
-          backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+          minHeight: "100vh",
         }}
       >
+        {/* Modern Header */}
         <section>
           <Header />
         </section>
 
-        <section>
-          <div
-            style={{ paddingTop: isMobile ? "15%" : "5%", height: "100%" }}
-            className={classes.wraperSection}
-          >
-            <Grid
-              container
-              rowSpacing={isMobile ? 5 : 5}
-              columnSpacing={0}
-              sx={{
-                display: "flex",
-                justifyContent: "flex-start",
+        {/* Modern Minimal Design */}
+        <section style={{ padding: "80px 0" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
+            {/* Hero Section */}
+            <div style={{ textAlign: "center", marginBottom: "80px" }}>
+              <div style={{
+                display: "inline-flex",
                 alignItems: "center",
-                top: 30,
-                position: "relative",
-                paddingLeft: isMobile ? 5 : 10,
-                paddingRight: isMobile ? 5 : 10,
-              }}
-            >
-              <Grid item xs={12} sm={12} md={12}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    width: "100%",
-                    height: "100%",
-                    flexDirection: "column",
-                    marginBottom: "60px",
-                  }}
-                >
-                  {zilnicCuloriNorocoase.image &&
-                    (isMobile ? (
+                gap: "12px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                padding: "12px 24px",
+                borderRadius: "50px",
+                fontSize: "14px",
+                fontWeight: "600",
+                marginBottom: "24px",
+                boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
+              }}>
+                <span style={{ fontSize: "18px" }}>🎨</span>
+                Culoarea Ta Norocoasă
+              </div>
+              
+              <h1 style={{
+                fontSize: isMobile ? "2.5rem" : "3.5rem",
+                fontWeight: "800",
+                color: "#1a202c",
+                margin: "0 0 16px 0",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
+              }}>
+                Descoperă Culoarea Zilei
+              </h1>
+              
+              <p style={{
+                fontSize: "1.2rem",
+                color: "#64748b",
+                maxWidth: "600px",
+                margin: "0 auto",
+                lineHeight: "1.6"
+              }}>
+                Fiecare culoare poartă o energie unică care poate influența starea ta de spirit și succesul zilei.
+              </p>
+            </div>
+
+            {/* Lucky Color Card */}
+            <div style={{
+              background: "white",
+              borderRadius: "24px",
+              padding: isMobile ? "40px 20px" : "60px 40px",
+              textAlign: "center",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08)",
+              border: "1px solid rgba(102, 126, 234, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              maxWidth: "600px",
+              margin: "0 auto"
+            }}>
+              {/* Background Pattern */}
+              <div style={{
+                position: "absolute",
+                top: "-50%",
+                left: "-50%",
+                width: "200%",
+                height: "200%",
+                background: "linear-gradient(45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%), linear-gradient(-45deg, rgba(102, 126, 234, 0.03) 25%, transparent 25%)",
+                backgroundSize: "20px 20px",
+                zIndex: 0
+              }} />
+
+              {/* Content */}
+              <div style={{ position: "relative", zIndex: 1 }}>
+                {/* Color Display */}
+                {zilnicCuloriNorocoase.image && (
+                  <div style={{
+                    margin: "0 auto 30px",
+                    position: "relative",
+                    display: "inline-block"
+                  }}>
+                    <div style={{
+                      width: isMobile ? "200px" : "250px",
+                      height: isMobile ? "200px" : "250px",
+                      borderRadius: "50%",
+                      padding: "20px",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      boxShadow: "0 15px 35px rgba(102, 126, 234, 0.4)"
+                    }}>
                       <img
                         src={zilnicCuloriNorocoase.image.finalUri}
-                        width={280}
-                        height={280}
-                        alt="Picture of the author"
-                        style={{ marginTop: 10 }}
+                        width={isMobile ? 160 : 210}
+                        height={isMobile ? 160 : 210}
+                        alt="Lucky Color"
+                        style={{
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "5px solid white",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)"
+                        }}
                       />
-                    ) : (
-                      <img
-                        src={zilnicCuloriNorocoase.image.finalUri}
-                        width={400}
-                        height={400}
-                        alt="Picture of the author"
-                        style={{ marginTop: 10 }}
-                      />
-                    ))}
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      flexDirection: "column",
-
-                      height: "auto",
-                      marginTop: 20,
-                    }}
-                  >
-                    <h1>{t("luckyColorOfTheDay")}</h1>
-
-                    {zilnicCuloriNorocoase.info && (
-                      <h2>
-                        {detectedLng === "hi"
-                          ? zilnicCuloriNorocoase.info.hu.nume
-                          : detectedLng === "id"
-                            ? zilnicCuloriNorocoase.info.ru.nume
-                            : zilnicCuloriNorocoase.info[detectedLng].nume}
-                      </h2>
-                    )}
-                    {zilnicCuloriNorocoase.info && (
-                      <p style={{ textAlign: "justify", fontSize: 18 }}>
-                        {detectedLng === "hi"
-                          ? zilnicCuloriNorocoase.info.hu.descriere
-                          : detectedLng === "id"
-                            ? zilnicCuloriNorocoase.info.ru.descriere
-                            : zilnicCuloriNorocoase.info[detectedLng].descriere}
-                      </p>
-                    )}
+                    </div>
+                    
+                    {/* Glow Effect */}
+                    <div style={{
+                      position: "absolute",
+                      top: "-15px",
+                      left: "-15px",
+                      right: "-15px",
+                      bottom: "-15px",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      borderRadius: "50%",
+                      opacity: "0.2",
+                      filter: "blur(25px)",
+                      zIndex: -1
+                    }} />
                   </div>
+                )}
+
+                {/* Color Name */}
+                {zilnicCuloriNorocoase.info && (
+                  <h2 style={{
+                    fontSize: isMobile ? "2rem" : "2.5rem",
+                    fontWeight: "700",
+                    color: "#1a202c",
+                    margin: "0 0 20px 0",
+                    textTransform: "capitalize"
+                  }}>
+                    {detectedLng === "hi"
+                      ? zilnicCuloriNorocoase.info.hu.nume
+                      : detectedLng === "id"
+                        ? zilnicCuloriNorocoase.info.ru.nume
+                        : zilnicCuloriNorocoase.info[detectedLng].nume}
+                  </h2>
+                )}
+
+                {/* Decorative Elements */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "20px",
+                  marginBottom: "30px",
+                  fontSize: "24px"
+                }}>
+                  <span>🌈</span>
+                  <span>✨</span>
+                  <span>🎨</span>
                 </div>
-              </Grid>
-            </Grid>
+
+                {/* Description */}
+                {zilnicCuloriNorocoase.info && (
+                  <div style={{
+                    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                    padding: "30px",
+                    borderRadius: "16px",
+                    border: "1px solid #e2e8f0",
+                    position: "relative"
+                  }}>
+                    <div style={{
+                      position: "absolute",
+                      top: "15px",
+                      left: "20px",
+                      fontSize: "40px",
+                      color: "#667eea",
+                      opacity: "0.3",
+                      fontFamily: "Georgia, serif"
+                    }}>
+                      "
+                    </div>
+                    
+                    <p style={{
+                      fontSize: "1.1rem",
+                      lineHeight: "1.7",
+                      color: "#374151",
+                      margin: "0",
+                      textAlign: "justify",
+                      fontStyle: "italic",
+                      paddingLeft: "20px"
+                    }}>
+                      {detectedLng === "hi"
+                        ? zilnicCuloriNorocoase.info.hu.descriere
+                        : detectedLng === "id"
+                          ? zilnicCuloriNorocoase.info.ru.descriere
+                          : zilnicCuloriNorocoase.info[detectedLng].descriere}
+                    </p>
+                  </div>
+                )}
+
+
+              </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div style={{
+              textAlign: "center",
+              marginTop: "60px",
+              color: "#64748b",
+              fontSize: "0.9rem"
+            }}>
+              <p>Culorile au puterea de a influența energia ta. Îmbracă-te în culoarea zilei pentru noroc! 🌈</p>
+            </div>
           </div>
         </section>
         {/* <section>

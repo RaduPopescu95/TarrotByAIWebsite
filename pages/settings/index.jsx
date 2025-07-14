@@ -1,19 +1,6 @@
 import * as React from "react";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
-import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
-import Link from "@mui/material/Link";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import Typography from "@mui/material/Typography";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Image from "next/image";
-import { colors } from "../../utils/colors";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   handleChangeEmail,
@@ -23,44 +10,26 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import PasswordDialog from "../../components/PasswordDialog/PasswordDialog";
 import { handleUpdateFirestore } from "../../utils/firestoreUtils";
-import { Alert, IconButton, useMediaQuery, useTheme } from "@mui/material";
 import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "react-i18next";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Head from "next/head";
 
 function Copyright(props) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-      }}
-    >
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        align="center"
-        {...props}
-      >
+    <div style={styles.copyrightContainer}>
+      <p style={styles.copyrightText}>
         {"Copyright © "}
-        <span color="inherit">Cristina Zurba</span> {new Date().getFullYear()}
+        <span>Cristina Zurba</span> {new Date().getFullYear()}
         {"."}
-      </Typography>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        align="center"
-        {...props}
-      >
+      </p>
+      <p style={styles.copyrightText}>
         {"dezvoltat de "}
-        <Link color="inherit" href="https://webappdynamicx.ro/">
+        <Link href="https://webappdynamicx.ro/" style={styles.copyrightLink}>
           Web App Dynamicx
         </Link>{" "}
         {"."}
-      </Typography>
+      </p>
     </div>
   );
 }
@@ -72,10 +41,6 @@ export async function getServerSideProps({ locale }) {
     },
   };
 }
-
-// TODO remove, this demo shouldn't need to reset the theme.
-
-const defaultTheme = createTheme();
 
 export default function SignInSide() {
   const {
@@ -103,14 +68,20 @@ export default function SignInSide() {
   const [email, setEmail] = React.useState("");
   const [last_name, setLastName] = React.useState("");
   const [first_name, setFirstName] = React.useState("");
-
   const [snackMessage, setSnackMessage] = React.useState("");
-
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [isMobile, setIsMobile] = React.useState(false);
 
   const router = useRouter();
+
+  // Check if mobile
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleResetForm = () => {
     setEmail("");
@@ -124,6 +95,7 @@ export default function SignInSide() {
     if (event) {
       event.preventDefault();
     }
+    setIsLoading(true);
 
     let copyUserData = { ...userData };
 
@@ -193,7 +165,6 @@ export default function SignInSide() {
       const userLocation = `Users/${
         userData.owner_uid ? userData.owner_uid : ""
       }`; // Calea către document
-      // setUserData(newData);
       console.log("TEst...here", copyUserData);
       setUserData(copyUserData);
       handleUpdateFirestore(userLocation, copyUserData)
@@ -207,87 +178,64 @@ export default function SignInSide() {
           console.error("Error updating document: ", error);
         });
     }
+
+    setIsLoading(false);
   };
 
   return (
     <>
       <Head>
+        <title>Setări Cont | Cristina Zurba</title>
+        <meta name="description" content="Gestionează setările contului tău pentru consultațiile spirituale cu Cristina Zurba." />
         <meta name="robots" content="noindex,nofollow" />
+        <meta property="og:title" content="Setări Cont | Cristina Zurba" />
+        <meta property="og:description" content="Gestionează setările contului tău pentru consultațiile spirituale cu Cristina Zurba." />
       </Head>
-      <ThemeProvider theme={defaultTheme}>
-        <Grid container component="main" sx={{ height: "100vh" }}>
-          <CssBaseline />
-          <section>
-            <Header isOnlySettngs={true} />
-          </section>
-          {isGuestUser ? (
-            <Grid
-              item
-              xs={12}
-              sm={8}
-              md={5}
-              // component={Paper}
-              elevation={6}
-              square
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
 
-                marginLeft: isMobile ? "15%" : 0,
-                marginTop: isMobile ? "20%" : 0,
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 10,
-                  top: isMobile ? 20 : 90,
-                  zIndex: 11,
-                }}
+      {/* Main wrapper with unified design */}
+      <div style={styles.mainWrapper}>
+        {/* Header */}
+        <section>
+          <Header isOnlySettngs={true} />
+        </section>
+
+        {/* Main content container */}
+        <div style={styles.contentContainer}>
+          
+          {/* Left side - Settings forms */}
+          <div style={{...styles.leftSide, marginLeft: isMobile ? '15%' : '0', marginTop: isMobile ? '22%' : '0'}}>
+            
+            {/* Back button */}
+            <div style={styles.backButton}>
+              <button
+                onClick={() => window.history.back()}
+                style={styles.backButtonElement}
               >
-                <IconButton
-                  aria-label="delete"
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-              </div>
-              <Box
-                sx={{
-                  mt: 1,
-                  mb: 8,
-                  mx: 4,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
+                ← Back
+              </button>
+            </div>
 
-                  height: "55%",
-                  width: "100%",
-                  marginTop: "10%",
-                  justifyContent: "space-around",
-                }}
-              >
-                <Image
-                  src="/LogoPngTransparent.png"
-                  width={140}
-                  height={140}
-                  alt="Picture of the author"
-                />
+            {/* Guest user view */}
+            {isGuestUser ? (
+              <div style={styles.guestContainer}>
+                <div style={styles.logoContainer}>
+                  <Image
+                    src="/LogoPngTransparent.png"
+                    width={140}
+                    height={140}
+                    alt="Cristina Zurba Logo"
+                  />
+                </div>
 
-                <Typography component="h1" variant="h5">
+                <h1 style={styles.guestTitle}>
                   {t("createAccountCTA")}
-                </Typography>
-                <Typography variant="p">
+                </h1>
+                <p style={styles.guestMessage}>
                   {t("createAccountCTAMessage")}
-                </Typography>
-                <Box
-                  component="form"
-                  noValidate
-                  onSubmit={handleSubmit}
-                  sx={{ mt: 1, width: "80%" }}
-                >
-                  <Button
+                </p>
+
+                <form onSubmit={handleSubmit} style={styles.guestForm}>
+                  <button
                     onClick={() => {
                       handleLogout().then(() => {
                         setCurrentUser(null);
@@ -297,445 +245,584 @@ export default function SignInSide() {
                       });
                     }}
                     type="submit"
-                    fullWidth
-                    variant="contained"
-                    sx={{
-                      mt: 3,
-                      mb: 2,
-                      backgroundColor: colors.primary3,
-                      borderColor: colors.primary3,
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      color: colors.white,
-                      "&:hover": {
-                        backgroundColor: colors.primary3, // Menține culoarea de fundal la hover
-                        boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.25)", // Adaugă umbra la hover
-                        // puteți ajusta valorile umbrei după preferință
-                      },
-                    }}
+                    style={styles.registerButton}
                   >
                     {t("register")}
-                  </Button>
-
-                  <Copyright sx={{ mt: 5 }} />
-                </Box>
-              </Box>
-            </Grid>
-          ) : (
-            <Grid
-              item
-              xs={12}
-              sm={8}
-              md={5}
-              // component={Paper}
-              elevation={6}
-              square
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-
-                marginLeft: isMobile ? "15%" : 0,
-                marginTop: isMobile ? "22%" : 0,
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 10,
-                  top: isMobile ? 20 : 90,
-                  zIndex: 11,
-                }}
-              >
-                <IconButton
-                  aria-label="delete"
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
+                  </button>
+                  <div style={styles.copyrightSection}>
+                    <Copyright />
+                  </div>
+                </form>
               </div>
-              <Box
-                sx={{
-                  mt: 0,
-                  mb: 8,
-                  mx: 4,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
-                <Image
-                  src="/LogoPngTransparent.png"
-                  width={130}
-                  height={130}
-                  alt="Picture of the author"
-                />
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    flexDirection: "column",
-                    marginTop: 5,
-                  }}
-                >
-                  <Typography component="h1" variant="h4">
+            ) : (
+              /* Authenticated user view */
+              <div style={styles.userContainer}>
+                <div style={styles.logoContainer}>
+                  <Image
+                    src="/LogoPngTransparent.png"
+                    width={130}
+                    height={130}
+                    alt="Cristina Zurba Logo"
+                  />
+                </div>
+
+                <div style={styles.userInfo}>
+                  <h1 style={styles.userTitle}>
                     {t("myAccount")}
-                  </Typography>
-                  <Typography
-                    component="p"
+                  </h1>
+                  <button
                     onClick={() => router.push("/istoric-citiri-personalizate")}
-                    style={{ cursor: "pointer", color: colors.primary3 }}
+                    style={styles.historyLink}
                   >
                     {t("historyPersonalized")}
-                  </Typography>
-
-                  <Typography
-                    component="p"
+                  </button>
+                  <button
                     onClick={() => router.push("/istoric-citiri-viitor")}
-                    style={{ cursor: "pointer" }}
+                    style={styles.historyLinkSecondary}
                   >
                     {t("historyFuture")}
-                  </Typography>
+                  </button>
                 </div>
-                <Box component="form" noValidate onSubmit={handleSubmit}>
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    id="first-name"
-                    label={t("firstName")}
-                    name="first-name"
-                    autoComplete="first-name"
-                    autoFocus
-                    onChange={(e) => setFirstName(e.target.value)}
-                    value={first_name}
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    id="last-name"
-                    label={t("lastName")}
-                    name="last-name"
-                    autoComplete="last-name"
-                    autoFocus
-                    onChange={(e) => setLastName(e.target.value)}
-                    value={last_name}
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    id="email"
-                    label={t("email")}
-                    name="email"
-                    autoComplete="email"
-                    autoFocus
-                    onChange={(e) => setEmail(e.target.value)}
-                    value={email}
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="newPassword"
-                    label={t("createPassword")}
-                    type="password"
-                    id="newPassword"
-                    autoComplete="current-password"
-                    onChange={(e) => setPassword(e.target.value)}
-                    value={password}
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="confirmPassword"
-                    label={t("confirmPassword")}
-                    type="password"
-                    id="confirmPassword"
-                    autoComplete="confirm-password"
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    value={confirmPassword}
-                  />
-                  {/* <FormControlLabel
-      control={<Checkbox value="remember" color="primary" />}
-      label="Remember me"
-    /> */}
 
-                  <Button
+                <form onSubmit={handleSubmit} style={styles.settingsForm}>
+                  {/* First Name */}
+                  <div style={styles.inputGroup}>
+                    <label htmlFor="first-name" style={styles.label}>
+                      {t("firstName")}
+                    </label>
+                    <input
+                      type="text"
+                      id="first-name"
+                      name="first-name"
+                      autoComplete="first-name"
+                      onChange={(e) => setFirstName(e.target.value)}
+                      value={first_name}
+                      style={styles.input}
+                      placeholder={t("firstName")}
+                    />
+                  </div>
+
+                  {/* Last Name */}
+                  <div style={styles.inputGroup}>
+                    <label htmlFor="last-name" style={styles.label}>
+                      {t("lastName")}
+                    </label>
+                    <input
+                      type="text"
+                      id="last-name"
+                      name="last-name"
+                      autoComplete="last-name"
+                      onChange={(e) => setLastName(e.target.value)}
+                      value={last_name}
+                      style={styles.input}
+                      placeholder={t("lastName")}
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div style={styles.inputGroup}>
+                    <label htmlFor="email" style={styles.label}>
+                      {t("email")}
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      autoComplete="email"
+                      onChange={(e) => setEmail(e.target.value)}
+                      value={email}
+                      style={styles.input}
+                      placeholder={t("email")}
+                    />
+                  </div>
+
+                  {/* New Password */}
+                  <div style={styles.inputGroup}>
+                    <label htmlFor="newPassword" style={styles.label}>
+                      {t("createPassword")}
+                    </label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      name="newPassword"
+                      autoComplete="new-password"
+                      onChange={(e) => setPassword(e.target.value)}
+                      value={password}
+                      style={styles.input}
+                      placeholder={t("createPassword")}
+                    />
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div style={styles.inputGroup}>
+                    <label htmlFor="confirmPassword" style={styles.label}>
+                      {t("confirmPassword")}
+                    </label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      autoComplete="new-password"
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      value={confirmPassword}
+                      style={styles.input}
+                      placeholder={t("confirmPassword")}
+                    />
+                  </div>
+
+                  {/* Save Changes Button */}
+                  <button
                     type="submit"
-                    fullWidth
-                    variant="contained"
-                    sx={{
-                      mt: 3,
-                      mb: 2,
-                      backgroundColor: colors.primary3,
-                      borderColor: colors.primary3,
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      color: colors.white,
-                      "&:hover": {
-                        backgroundColor: colors.primary3, // Menține culoarea de fundal la hover
-                        boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.25)", // Adaugă umbra la hover
-                        // puteți ajusta valorile umbrei după preferință
-                      },
-                    }}
+                    style={styles.saveButton}
+                    disabled={isLoading}
                   >
-                    {t("saveChanges")}
-                  </Button>
-                  <Grid container>
-                    <Grid item xs>
-                      <Button
-                        variant="body2"
-                        onClick={() => {
-                          handleLogout().then(() => {
-                            setCurrentUser(null);
-                            setUserData(null);
-                            setAsGuestUser(false);
-                            router.push("/login");
-                          });
-                        }}
-                      >
-                        {t("logOut")}
-                      </Button>
-                    </Grid>
-                    {/* <Grid item>
-                    <Button variant="body2"> {t("deleteAccount")}</Button>
-                  </Grid> */}
-                  </Grid>
-                  <Copyright sx={{ mt: 5 }} />
-                </Box>
-              </Box>
-            </Grid>
-          )}
-          <Grid
-            item
-            xs={false}
-            sm={4}
-            md={7}
-            sx={{
-              backgroundRepeat: "no-repeat",
-              backgroundImage: `linear-gradient(to bottom, ${colors.gradientLogin1}, ${colors.gradientLogin4}, ${colors.gradientLogin2})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                flexDirection: "column",
-                height: "100%",
-                paddingTop: "3%",
-                paddingBottom: "3%",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
+                    {isLoading ? (
+                      <div style={styles.spinner}></div>
+                    ) : (
+                      t("saveChanges")
+                    )}
+                  </button>
+
+                  {/* Actions */}
+                  <div style={styles.actionsContainer}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleLogout().then(() => {
+                          setCurrentUser(null);
+                          setUserData(null);
+                          setAsGuestUser(false);
+                          router.push("/login");
+                        });
+                      }}
+                      style={styles.logoutButton}
+                    >
+                      {t("logOut")}
+                    </button>
+                  </div>
+
+                  {/* Copyright */}
+                  <div style={styles.copyrightSection}>
+                    <Copyright />
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Right side - Marketing content */}
+          <div style={styles.rightSide}>
+            <div style={styles.marketingContent}>
+              <div style={styles.marketingContainer}>
+                
+                {/* App marketing section */}
+                <div style={styles.appSection}>
                   <Image
                     src="/appmarketing.png"
                     width={450}
-                    height={500}
-                    alt="Picture of the author"
-                    style={{
-                      top: 20,
-                      position: "relative",
-                      height: 450,
-                      width: 450,
-                    }}
+                    height={450}
+                    alt="App Marketing"
+                    style={styles.appImage}
                   />
-                  <div
-                    style={{
-                      maxHeight: "100px",
-                      width: "auto",
-
-                      display: "flex",
-                      flexDirection: "row",
-                    }}
-                  >
-                    <h2
-                      style={{
-                        color: colors.primary3,
-                        fontWeight: "300",
-                        margin: 0, // Elimină marja implicită de sus și jos
-                        paddingBottom: "0px", // Adaugă un spațiu mic la partea de jos, dacă este necesar
-                      }}
-                    >
+                  
+                  <div style={styles.downloadSection}>
+                    <h2 style={styles.downloadTitle}>
                       {t("downloadThe")}
-                      <span
-                        style={{
-                          color: colors.primary3,
-                          fontWeight: "bold",
-                          marginLeft: 5, // Elimină marja implicită de sus și jos
-                        }}
-                      >
+                      <span style={styles.downloadTitleBold}>
                         {t("appNow")}
                       </span>
                     </h2>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      marginTop: 10,
-                      width: "70%",
-                      justifyContent: "space-around",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "3rem",
-                        display: "flex",
-                        alignItems: "center",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        paddingTop: "7%",
-                      }}
-                    >
+                  
+                  <div style={styles.storeButtons}>
+                    <div style={styles.storeButton}>
                       <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
                         <img
-                          src={"/gplay.png"}
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                          }}
+                          src="/gplay.png"
+                          alt="Google Play"
+                          style={styles.storeIcon}
                         />
                       </Link>
-                      <p
-                        style={{
-                          margin: 0,
-                          bottom: 10,
-                          position: "relative",
-                          color: colors.white,
-                          backgroundColor: "rgba(40, 49, 64, 0.5)",
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          marginTop: 4,
-                          borderRadius: 8,
-                        }}
-                      >
-                        Android
-                      </p>
+                      <p style={styles.storeLabel}>Android</p>
                     </div>
-                    <div
-                      style={{
-                        height: "3rem",
-                        display: "flex",
-                        alignItems: "center",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        paddingTop: "7%",
-                      }}
-                    >
+                    <div style={styles.storeButton}>
                       <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
                         <img
-                          src={"/appstore.png"}
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                          }}
+                          src="/appstore.png"
+                          alt="App Store"
+                          style={styles.storeIcon}
                         />
                       </Link>
-                      <p
-                        style={{
-                          margin: 0,
-                          bottom: 10,
-                          position: "relative",
-                          color: colors.white,
-                          backgroundColor: "rgba(40, 49, 64, 0.5)",
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          marginTop: 4,
-                          borderRadius: 8,
-                        }}
-                      >
-                        IOS
-                      </p>
+                      <p style={styles.storeLabel}>iOS</p>
                     </div>
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
+
+                {/* Tarot section */}
+                <div style={styles.tarotSection}>
                   <Image
                     src="/lucky-deco.png"
                     width={278}
                     height={65}
-                    alt="Picture of the author"
+                    alt="Lucky decoration"
                   />
                   <Image
                     src="/onboardImg.png"
-                    width={450}
-                    height={500}
-                    alt="Picture of the author"
-                    style={{
-                      top: 20,
-                      position: "relative",
-                      height: 450,
-                      width: 400,
-                    }}
+                    width={400}
+                    height={450}
+                    alt="Tarot reading"
+                    style={styles.tarotImage}
                   />
-                  <Typography
-                    variant="h1"
-                    style={{
-                      color: colors.primary3,
-                      fontSize: isMobile ? 40 : 80,
-                    }}
-                  >
+                  <h1 style={{...styles.tarotTitle, fontSize: isMobile ? '40px' : '80px'}}>
                     {t("tarotByAi")}
-                  </Typography>
+                  </h1>
                 </div>
+
               </div>
             </div>
-          </Grid>
+          </div>
+        </div>
 
-          <PasswordDialog
-            setModalVisible={setModalVisible}
-            modalVisible={modalVisible}
-            currentPassword={currentPassword}
-            setCurrentPassword={setCurrentPassword}
-            handleSubmit={handleSubmit}
-          />
-          {showSnackback && (
-            <Box
-              sx={{
-                mt: 2,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                position: "absolute",
-                bottom: 20,
-                left: "40%",
-              }}
-            >
-              <Alert severity="info">{message}</Alert>
-            </Box>
-          )}
-        </Grid>
-      </ThemeProvider>
+        {/* Password Dialog */}
+        <PasswordDialog
+          setModalVisible={setModalVisible}
+          modalVisible={modalVisible}
+          currentPassword={currentPassword}
+          setCurrentPassword={setCurrentPassword}
+          handleSubmit={handleSubmit}
+        />
+
+        {/* Snackbar */}
+        {showSnackback && (
+          <div style={styles.snackbar}>
+            <div style={styles.alert}>
+              {message}
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
+
+// Styles matching /consultatii design
+const styles = {
+  mainWrapper: {
+    minHeight: '100vh',
+    backgroundColor: '#ffffff',
+    width: '100%',
+    position: 'relative',
+  },
+  contentContainer: {
+    display: 'flex',
+    minHeight: '100vh',
+  },
+  leftSide: {
+    width: '41.67%', // 5/12
+    padding: '2rem',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    position: 'relative',
+    '@media (max-width: 768px)': {
+      width: '100%',
+      padding: '1rem',
+    },
+  },
+  rightSide: {
+    width: '58.33%', // 7/12
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '@media (max-width: 768px)': {
+      display: 'none',
+    },
+  },
+  backButton: {
+    position: 'absolute',
+    left: '10px',
+    top: '90px',
+    zIndex: 11,
+    '@media (max-width: 768px)': {
+      top: '20px',
+    },
+  },
+  backButtonElement: {
+    background: 'none',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    color: '#667eea',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.5rem',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
+  },
+  guestContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    height: '55%',
+    width: '100%',
+    marginTop: '10%',
+  },
+  logoContainer: {
+    textAlign: 'center',
+    marginBottom: '2rem',
+  },
+  guestTitle: {
+    fontSize: '1.5rem',
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: '1rem',
+  },
+  guestMessage: {
+    fontSize: '1rem',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: '2rem',
+  },
+  guestForm: {
+    width: '80%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  registerButton: {
+    width: '100%',
+    padding: '15px 24px',
+    marginBottom: '2rem',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    border: 'none',
+    color: 'white',
+    borderRadius: '25px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+  },
+  userContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: '0',
+  },
+  userInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginTop: '1rem',
+    marginBottom: '2rem',
+  },
+  userTitle: {
+    fontSize: '2rem',
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: '1rem',
+  },
+  historyLink: {
+    background: 'none',
+    border: 'none',
+    color: '#667eea',
+    fontSize: '16px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    marginBottom: '0.5rem',
+    padding: '0.5rem',
+  },
+  historyLinkSecondary: {
+    background: 'none',
+    border: 'none',
+    color: '#333',
+    fontSize: '16px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    padding: '0.5rem',
+  },
+  settingsForm: {
+    width: '100%',
+    maxWidth: '400px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  inputGroup: {
+    marginBottom: '1.5rem',
+  },
+  label: {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '0.5rem',
+  },
+  input: {
+    width: '100%',
+    padding: '12px 16px',
+    border: '2px solid #e9ecef',
+    borderRadius: '12px',
+    fontSize: '16px',
+    transition: 'all 0.3s ease',
+    backgroundColor: 'white',
+    boxSizing: 'border-box',
+  },
+  saveButton: {
+    width: '100%',
+    padding: '15px 24px',
+    marginBottom: '2rem',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    border: 'none',
+    color: 'white',
+    borderRadius: '25px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '50px',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+  },
+  spinner: {
+    width: '20px',
+    height: '20px',
+    border: '2px solid transparent',
+    borderTop: '2px solid currentColor',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  },
+  actionsContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '2rem',
+  },
+  logoutButton: {
+    background: 'none',
+    border: 'none',
+    color: '#667eea',
+    fontSize: '16px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    padding: '0.5rem',
+  },
+  copyrightSection: {
+    marginTop: '2rem',
+  },
+  copyrightContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '1rem',
+  },
+  copyrightText: {
+    fontSize: '12px',
+    color: '#666',
+    margin: '0',
+  },
+  copyrightLink: {
+    color: '#667eea',
+    textDecoration: 'none',
+  },
+  marketingContent: {
+    padding: '2rem',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marketingContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '3rem',
+    maxWidth: '1000px',
+  },
+  appSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  appImage: {
+    marginBottom: '1rem',
+  },
+  downloadSection: {
+    textAlign: 'center',
+    marginBottom: '1rem',
+  },
+  downloadTitle: {
+    color: 'white',
+    fontWeight: '300',
+    margin: '0',
+    fontSize: '1.5rem',
+  },
+  downloadTitleBold: {
+    fontWeight: 'bold',
+    marginLeft: '5px',
+  },
+  storeButtons: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    gap: '2rem',
+    width: '70%',
+  },
+  storeButton: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+  },
+  storeIcon: {
+    width: '60px',
+    height: '60px',
+    marginBottom: '0.5rem',
+  },
+  storeLabel: {
+    margin: '0',
+    color: 'white',
+    backgroundColor: 'rgba(40, 49, 64, 0.5)',
+    padding: '4px 8px',
+    borderRadius: '8px',
+    fontSize: '14px',
+  },
+  tarotSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  tarotImage: {
+    marginTop: '1rem',
+    marginBottom: '1rem',
+  },
+  tarotTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    margin: '0',
+    textAlign: 'center',
+  },
+  snackbar: {
+    position: 'fixed',
+    bottom: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 1000,
+  },
+  alert: {
+    padding: '12px 24px',
+    backgroundColor: '#e3f2fd',
+    color: '#0277bd',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    fontSize: '14px',
+  },
+};

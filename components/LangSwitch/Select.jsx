@@ -1,121 +1,196 @@
-import React, { useState, useEffect } from "react";
-import { makeStyles } from "tss-react/mui";
-import PropTypes from "prop-types";
-import LangIcon from "@mui/icons-material/Language";
-import InputAdornment from "@mui/material/InputAdornment";
-import SelectMUI from "@mui/material/Select";
-import OutlinedInput from "@mui/material/OutlinedInput";
-import MenuItem from "@mui/material/MenuItem";
-import { useTranslation } from "next-i18next";
+import React, { useState } from "react";
 import { useRouter } from "next/router";
-import languageDetector from "~/lib/languageDetector";
-import i18nextConfig from "~/next-i18next.config";
+import { setCookie } from "../../utils/cookies";
+import { useTranslation } from "next-i18next";
+import { imgAPI } from "../../utils/images";
+import languageDetector from "../../lib/languageDetector";
 
-const useStyles = makeStyles({ uniqId: "select_lang" })(
-  (theme, _params, classes) => ({
-    selectLang: {
-      maxWidth: 250,
-      overflow: "hidden",
-      position: "relative",
-      display: "block",
-      margin: `${theme.spacing(2)}px auto ${theme.spacing(4)}px`,
-      [`& .${classes.icon}`]: {
-        top: 29,
-        color: theme.palette.primary.dark,
-        position: "relative",
-      },
-      "& svg": {
-        color: theme.palette.primary.dark,
-      },
-      "& > div + div": {
-        paddingLeft: theme.spacing(4),
-        width: "calc(100% - 32px)",
-      },
-    },
-  })
-);
+const options = [
+  { value: "en", label: "English", flag: "/flags/us.png" },
+  { value: "ro", label: "Romana", flag: "/flags/ro.png" },
+  { value: "es", label: "Español", flag: "/flags/es.png" },
+  { value: "de", label: "Deutsch", flag: "/flags/de.png" },
+  { value: "fr", label: "Français", flag: "/flags/fr.png" },
+  { value: "it", label: "Italiano", flag: "/flags/it.png" },
+  { value: "pt", label: "Português", flag: "/flags/pt.png" },
+  { value: "nl", label: "Nederlands", flag: "/flags/nl.png" },
+  { value: "pl", label: "Polski", flag: "/flags/pl.png" },
+  { value: "ru", label: "Русский", flag: "/flags/ru.png" },
+  { value: "hu", label: "Magyar", flag: "/flags/hu.png" },
+  { value: "sv", label: "Svenska", flag: "/flags/sv.png" },
+  { value: "da", label: "Dansk", flag: "/flags/da.png" },
+  { value: "no", label: "Norsk", flag: "/flags/no.png" },
+  { value: "fi", label: "Suomi", flag: "/flags/fi.png" },
+  { value: "is", label: "Íslenska", flag: "/flags/is.png" },
+  { value: "cs", label: "Čeština", flag: "/flags/cs.png" },
+  { value: "sk", label: "Slovenčina", flag: "/flags/sk.png" },
+  { value: "sl", label: "Slovenščina", flag: "/flags/sl.png" },
+  { value: "hr", label: "Hrvatski", flag: "/flags/hr.png" },
+  { value: "bg", label: "Български", flag: "/flags/bg.png" },
+  { value: "lt", label: "Lietuvių", flag: "/flags/lt.png" },
+  { value: "lv", label: "Latviešu", flag: "/flags/lv.png" },
+  { value: "et", label: "Eesti", flag: "/flags/et.png" },
+  { value: "mt", label: "Malti", flag: "/flags/mt.png" },
+  { value: "el", label: "Ελληνικά", flag: "/flags/el.png" },
+  { value: "ar", label: "العربية", flag: "/flags/ar.png" },
+  { value: "he", label: "עברית", flag: "/flags/he.png" },
+  { value: "hi", label: "हिन्दी", flag: "/flags/hi.png" },
+  { value: "tr", label: "Türkçe", flag: "/flags/tr.png" },
+  { value: "zh", label: "中文", flag: "/flags/zh.png" },
+  { value: "ja", label: "日本語", flag: "/flags/ja.png" },
+  { value: "ko", label: "한국어", flag: "/flags/ko.png" },
+  { value: "th", label: "ไทย", flag: "/flags/th.png" },
+  { value: "vi", label: "Tiếng Việt", flag: "/flags/vi.png" },
+  { value: "id", label: "Bahasa Indonesia", flag: "/flags/id.png" },
+  { value: "ms", label: "Bahasa Melayu", flag: "/flags/ms.png" },
+];
 
-function SelectLang(props) {
-  const [ctn, setCtn] = useState(null);
-  const { classes } = useStyles();
-
-  // Translation Function
+export default function SelectLang() {
+  const { t } = useTranslation("common");
+  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const { t, i18n } = useTranslation("common");
-  const [values, setValues] = useState({
-    lang: i18n.language,
-  });
+  const detectedLng = languageDetector.detect();
 
-  useEffect(() => {
-    setCtn(document.getElementById("main-wrap"));
-  }, []);
+  const handleLanguageChange = (lang) => {
+    setCookie("next-i18next", lang);
+    
+    const pathname = router.pathname;
+    const query = router.query;
+    
+    router.push({ pathname, query }, router.asPath, { locale: lang });
+    setIsOpen(false);
+  };
 
-  function handleChange(event) {
-    const lang = event.target.value;
-
-    setValues((oldValues) => ({
-      ...oldValues,
-      [event.target.name]: lang,
-    }));
-
-    if (i18nextConfig.ssg) {
-      let href = router.asPath;
-      let pName = router.pathname;
-      Object.keys(router.query).forEach((k) => {
-        if (k === "locale") {
-          pName = pName.replace(`[${k}]`, lang);
-          return;
-        }
-        pName = pName.replace(`[${k}]`, router.query[k]);
-      });
-      if (lang) {
-        href = pName;
-      }
-      router.push(href);
-    } else {
-      const { pathname, asPath, query } = router;
-      router.push({ pathname, query }, asPath, { locale: lang });
-    }
-
-    languageDetector.cache(lang);
-    if (lang === "ar") {
-      props.toggleDir("rtl");
-    } else {
-      props.toggleDir("ltr");
-    }
-  }
+  const currentLanguage = options.find(option => option.value === detectedLng) || options[0];
 
   return (
-    <SelectMUI
-      variant="standard"
-      value={values.lang}
-      onChange={handleChange}
-      MenuProps={{
-        container: ctn,
-      }}
-      startAdornment={
-        <InputAdornment className={classes.icon} position="start">
-          <LangIcon />
-        </InputAdornment>
-      }
-      className={classes.selectLang}
-      input={<OutlinedInput name="lang" id="outlined-lang-simple" />}
-    >
-      {i18nextConfig.i18n.locales.map((locale) => (
-        <MenuItem key={locale} value={locale}>
-          {t(locale)}
-        </MenuItem>
-      ))}
-    </SelectMUI>
+    <div style={styles.container}>
+      <div 
+        style={styles.trigger}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <img 
+          src={currentLanguage.flag} 
+          alt={currentLanguage.label}
+          style={styles.flag}
+        />
+        <span style={styles.label}>{currentLanguage.label}</span>
+        <i 
+          className="fa fa-chevron-down" 
+          style={{
+            ...styles.chevron,
+            ...(isOpen && styles.chevronOpen)
+          }}
+        />
+      </div>
+      
+      {isOpen && (
+        <div style={styles.dropdown}>
+          <div style={styles.dropdownContent}>
+            {options.map((option) => (
+              <div
+                key={option.value}
+                style={{
+                  ...styles.option,
+                  ...(option.value === detectedLng && styles.optionActive)
+                }}
+                onClick={() => handleLanguageChange(option.value)}
+              >
+                <img 
+                  src={option.flag} 
+                  alt={option.label}
+                  style={styles.optionFlag}
+                />
+                <span style={styles.optionLabel}>{option.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-SelectLang.propTypes = {
-  toggleDir: PropTypes.func,
+const styles = {
+  container: {
+    position: "relative",
+    display: "inline-block",
+  },
+  trigger: {
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    padding: "8px 12px",
+    backgroundColor: "transparent",
+    border: "none",
+    borderRadius: "4px",
+    transition: "all 0.3s ease",
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "500",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+    },
+  },
+  flag: {
+    width: "20px",
+    height: "15px",
+    marginRight: "8px",
+    borderRadius: "2px",
+    objectFit: "cover",
+  },
+  label: {
+    marginRight: "8px",
+    color: "white",
+  },
+  chevron: {
+    fontSize: "12px",
+    color: "white",
+    transition: "transform 0.3s ease",
+  },
+  chevronOpen: {
+    transform: "rotate(180deg)",
+  },
+  dropdown: {
+    position: "absolute",
+    top: "100%",
+    left: "0",
+    right: "0",
+    zIndex: 1000,
+    backgroundColor: "white",
+    borderRadius: "8px",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
+    border: "1px solid #e9ecef",
+    overflow: "hidden",
+    marginTop: "4px",
+  },
+  dropdownContent: {
+    maxHeight: "300px",
+    overflowY: "auto",
+  },
+  option: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 12px",
+    cursor: "pointer",
+    transition: "background-color 0.3s ease",
+    "&:hover": {
+      backgroundColor: "#f8f9fa",
+    },
+  },
+  optionActive: {
+    backgroundColor: "#667eea",
+    color: "white",
+  },
+  optionFlag: {
+    width: "20px",
+    height: "15px",
+    marginRight: "8px",
+    borderRadius: "2px",
+    objectFit: "cover",
+  },
+  optionLabel: {
+    fontSize: "14px",
+    color: "inherit",
+  },
 };
-
-SelectLang.defaultProps = {
-  toggleDir: () => {},
-};
-
-export default SelectLang;

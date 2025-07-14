@@ -23,6 +23,15 @@ const AdminVideoCall = () => {
   const videoContainerRef = useRef(null); // Referință la containerul video
   const [browserCompatible, setBrowserCompatible] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState("");
+  const [recordingPermission, setRecordingPermission] = useState(true); // Admin has default permission
+  const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const recordingIntervalRef = useRef(null);
 
   // Verificarea compatibilității browserului
   useEffect(() => {
@@ -136,6 +145,110 @@ const AdminVideoCall = () => {
       setDocumentId(extractedDocumentId);
     }
   }, [meetingCode]);
+
+  // Recording functionality
+  const startRecording = async () => {
+    try {
+      setRecordingError("");
+
+      const response = await fetch('/api/recording/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelId: documentId,
+          meetingCode: meetingCode,
+          userRole: 'admin'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsRecording(true);
+        setRecordingStartTime(Date.now());
+        
+        // Start recording duration timer
+        recordingIntervalRef.current = setInterval(() => {
+          setRecordingDuration((prev) => prev + 1);
+        }, 1000);
+
+        // Update recording status in Firebase
+        if (documentId) {
+          const docRef = doc(db, "RezervariConsultatii", documentId);
+          await updateDoc(docRef, {
+            recording: {
+              isRecording: true,
+              startTime: Date.now(),
+              resourceId: data.resourceId,
+              sid: data.sid
+            }
+          });
+        }
+      } else {
+        setRecordingError(data.message || "Eroare la pornirea înregistrării");
+      }
+    } catch (error) {
+      console.error("Recording start error:", error);
+      setRecordingError("Eroare la pornirea înregistrării");
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      setRecordingError("");
+      
+      const response = await fetch('/api/recording/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelId: documentId,
+          meetingCode: meetingCode,
+          userRole: 'admin'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsRecording(false);
+        setRecordingStartTime(null);
+        setRecordingDuration(0);
+        
+        // Clear recording timer
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+
+        // Update recording status in Firebase
+        if (documentId) {
+          const docRef = doc(db, "RezervariConsultatii", documentId);
+          await updateDoc(docRef, {
+            recording: {
+              isRecording: false,
+              endTime: Date.now(),
+              processingStatus: 'processing'
+            }
+          });
+        }
+      } else {
+        setRecordingError(data.message || "Eroare la oprirea înregistrării");
+      }
+    } catch (error) {
+      console.error("Recording stop error:", error);
+      setRecordingError("Eroare la oprirea înregistrării");
+    }
+  };
+
+  const formatRecordingTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Funcție pentru a intra în fullscreen
   const handleFullscreen = () => {
@@ -276,6 +389,32 @@ const AdminVideoCall = () => {
                   </button>
                 )}
 
+                {/* Recording Controls */}
+                <div style={styles.recordingControls}>
+                  <button
+                    style={{
+                      ...styles.recordButton,
+                      backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
+                      animation: isRecording ? "pulse 2s infinite" : "none",
+                    }}
+                    onClick={isRecording ? stopRecording : startRecording}
+                  >
+                    <i className={`fas ${isRecording ? "fa-stop" : "fa-record-vinyl"}`} />
+                  </button>
+                  
+                  {isRecording && (
+                    <div style={styles.recordingInfo}>
+                      <div style={styles.recordingIndicator}>
+                        <div style={styles.recordingDot}></div>
+                        <span>REC</span>
+                      </div>
+                      <div style={styles.recordingTime}>
+                        {formatRecordingTime(recordingDuration)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <AgoraUIKit
                   rtcProps={{
                     appId: appID,
@@ -415,6 +554,20 @@ const AdminVideoCall = () => {
                   .padStart(2, "0")}:${(elapsedTime % 60)
                   .toString()
                   .padStart(2, "0")}`}
+              </div>
+            )}
+
+            {/* Recording Error Notification */}
+            {recordingError && (
+              <div style={styles.errorNotification}>
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>{recordingError}</span>
+                <button
+                  style={styles.errorCloseButton}
+                  onClick={() => setRecordingError("")}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
             )}
           </div>
@@ -569,6 +722,64 @@ const styles = {
     borderRadius: 5,
     cursor: "pointer",
     fontSize: "16px",
+  },
+  recordingControls: {
+    position: "absolute",
+    bottom: "4%",
+    left: "5%",
+    display: "flex",
+    alignItems: "center",
+  },
+  recordButton: {
+    backgroundColor: "#e74c3c",
+    color: "#ffffff",
+    borderRadius: "50%",
+    border: "none",
+    width: "60px",
+    height: "60px",
+    fontSize: "24px",
+    cursor: "pointer",
+    marginRight: "10px",
+  },
+  recordingInfo: {
+    display: "flex",
+    alignItems: "center",
+  },
+  recordingIndicator: {
+    display: "flex",
+    alignItems: "center",
+    marginRight: "10px",
+  },
+  recordingDot: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    backgroundColor: "#ffffff",
+    marginRight: "5px",
+  },
+  recordingTime: {
+    fontSize: "18px",
+    fontWeight: "bold",
+  },
+  errorNotification: {
+    position: "absolute",
+    top: "10%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: "10px",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  errorCloseButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#ffffff",
+    fontSize: "24px",
+    cursor: "pointer",
+    marginLeft: "10px",
   },
 };
 

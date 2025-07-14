@@ -1,6 +1,6 @@
 import { CssBaseline, Box, CircularProgress } from "@mui/material";
 import { Outlet } from "react-router-dom";
-import * as styles from "./MainScreenStyles";
+import useStyles from "./MainScreenStyles";
 import CustomDrawer from "../../components/Dashboard/CustomDrawer";
 import { useEffect } from "react";
 import { authentication } from "../../firebase";
@@ -11,8 +11,10 @@ import { useState } from "react";
 import Head from "next/head";
 
 export default function MainScreen() {
+  const { classes } = useStyles();
   const route = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  
   useEffect(() => {
     setIsLoading(true);
     const authenticated = authentication;
@@ -34,6 +36,7 @@ export default function MainScreen() {
       }
     });
   });
+  
   return (
     <>
       <Head>
@@ -51,7 +54,7 @@ export default function MainScreen() {
           <CircularProgress />
         </Box>
       ) : (
-        <Box sx={styles.mainBox}>
+        <Box className={classes.mainBox}>
           <CssBaseline />
           {/* <CustomDrawer /> */}
         </Box>

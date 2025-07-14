@@ -130,7 +130,8 @@ const Aboutus = (props) => {
           width: 80px;
           height: 80px;
           border-radius: 50%;
-          background: #667eea;
+          background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+          border: 2px solid #5a67d8;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -140,7 +141,7 @@ const Aboutus = (props) => {
         
         .feature-icon i {
           font-size: 2rem;
-          color: white;
+          color: #5a67d8;
         }
         
         .feature-card:hover .feature-icon {
@@ -183,7 +184,8 @@ const Aboutus = (props) => {
           width: 100px;
           height: 100px;
           border-radius: 50%;
-          background: #667eea;
+          background: linear-gradient(135deg, #5a67d8, #667eea);
+          border: 2px solid #5a67d8;
           margin: 0 auto 1.5rem;
           display: flex;
           align-items: center;
@@ -198,20 +200,21 @@ const Aboutus = (props) => {
         
         .tech-icon:hover {
           transform: scale(1.1);
-          box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 15px 35px rgba(90, 103, 216, 0.5);
+          background: linear-gradient(135deg, #667eea, #764ba2);
         }
         
         .cta-section {
-          background: #667eea;
-          color: white;
+          background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+          color: #2d3748;
           padding: 100px 0;
           position: relative;
         }
         
         .btn-custom {
           background: white;
-          color: #667eea;
-          border: 2px solid white;
+          color: #5a67d8;
+          border: 2px solid #5a67d8;
           padding: 15px 30px;
           border-radius: 50px;
           font-weight: 600;
@@ -222,11 +225,11 @@ const Aboutus = (props) => {
         }
         
         .btn-custom:hover {
-          background: transparent;
+          background: #5a67d8;
           color: white;
-          border-color: white;
+          border-color: #5a67d8;
           transform: translateY(-3px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 10px 25px rgba(90, 103, 216, 0.3);
           text-decoration: none;
         }
         
@@ -321,7 +324,7 @@ const Aboutus = (props) => {
               </div>
               <div className="col-lg-6">
                 <h2 className="section-title text-start">Cristina Zurba</h2>
-                <h3 style={{ color: '#667eea', marginBottom: '1.5rem' }}>
+                <h3 style={{ color: '#5a67d8', marginBottom: '1.5rem' }}>
                   Ghid Spiritual & Creator de Conținut
                 </h3>
                 <p style={{ fontSize: '1.1rem', lineHeight: '1.8', marginBottom: '1.5rem' }}>

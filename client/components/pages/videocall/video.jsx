@@ -24,6 +24,15 @@ const VideoCall = () => {
   const [adminPresent, setAdminPresent] = useState(false);
   const [browserCompatible, setBrowserCompatible] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState("");
+  const [recordingPermission, setRecordingPermission] = useState(false);
+  const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const recordingIntervalRef = useRef(null);
 
   // Verificarea compatibilității browserului
   useEffect(() => {
@@ -167,6 +176,124 @@ const VideoCall = () => {
     }
   }, [meetingCode]);
 
+  // Recording functionality
+  const startRecording = async () => {
+    try {
+      setRecordingError("");
+      
+      // Check if both parties consented to recording
+      if (!recordingPermission) {
+        setShowRecordingModal(true);
+        return;
+      }
+
+      const response = await fetch('/api/recording/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelId: documentId,
+          meetingCode: meetingCode,
+          userRole: 'client'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsRecording(true);
+        setRecordingStartTime(Date.now());
+        
+        // Start recording duration timer
+        recordingIntervalRef.current = setInterval(() => {
+          setRecordingDuration((prev) => prev + 1);
+        }, 1000);
+
+        // Update recording status in Firebase
+        if (documentId) {
+          const docRef = doc(db, "RezervariConsultatii", documentId);
+          await updateDoc(docRef, {
+            recording: {
+              isRecording: true,
+              startTime: Date.now(),
+              resourceId: data.resourceId,
+              sid: data.sid
+            }
+          });
+        }
+      } else {
+        setRecordingError(data.message || "Eroare la pornirea înregistrării");
+      }
+    } catch (error) {
+      console.error("Recording start error:", error);
+      setRecordingError("Eroare la pornirea înregistrării");
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      setRecordingError("");
+      
+      const response = await fetch('/api/recording/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelId: documentId,
+          meetingCode: meetingCode,
+          userRole: 'client'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsRecording(false);
+        setRecordingStartTime(null);
+        setRecordingDuration(0);
+        
+        // Clear recording timer
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+
+        // Update recording status in Firebase
+        if (documentId) {
+          const docRef = doc(db, "RezervariConsultatii", documentId);
+          await updateDoc(docRef, {
+            recording: {
+              isRecording: false,
+              endTime: Date.now(),
+              processingStatus: 'processing'
+            }
+          });
+        }
+      } else {
+        setRecordingError(data.message || "Eroare la oprirea înregistrării");
+      }
+    } catch (error) {
+      console.error("Recording stop error:", error);
+      setRecordingError("Eroare la oprirea înregistrării");
+    }
+  };
+
+  const formatRecordingTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleRecordingPermission = (granted) => {
+    setRecordingPermission(granted);
+    setShowRecordingModal(false);
+    if (granted) {
+      startRecording();
+    }
+  };
+
   // Funcție pentru a intra în fullscreen
   const handleFullscreen = () => {
     const elem = videoContainerRef.current;
@@ -303,6 +430,34 @@ const VideoCall = () => {
                       }`}
                     />
                   </button>
+                )}
+
+                {/* Recording Controls */}
+                {isSessionActive && (
+                  <div style={styles.recordingControls}>
+                    <button
+                      style={{
+                        ...styles.recordButton,
+                        backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
+                        animation: isRecording ? "pulse 2s infinite" : "none",
+                      }}
+                      onClick={isRecording ? stopRecording : startRecording}
+                    >
+                      <i className={`fas ${isRecording ? "fa-stop" : "fa-record-vinyl"}`} />
+                    </button>
+                    
+                    {isRecording && (
+                      <div style={styles.recordingInfo}>
+                        <div style={styles.recordingIndicator}>
+                          <div style={styles.recordingDot}></div>
+                          <span>REC</span>
+                        </div>
+                        <div style={styles.recordingTime}>
+                          {formatRecordingTime(recordingDuration)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <AgoraUIKit
@@ -454,6 +609,62 @@ const VideoCall = () => {
           </div>
         </div>
       </div>
+
+      {/* Recording Permission Modal */}
+      {showRecordingModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h3>Consimțământ pentru înregistrare</h3>
+              <i className="fas fa-video" style={styles.modalIcon}></i>
+            </div>
+            <div style={styles.modalContent}>
+              <p>
+                Această consultație va fi înregistrată pentru scopuri de documentare și pentru a putea fi revizuită ulterior.
+              </p>
+              <p>
+                <strong>Înregistrarea va conține:</strong>
+              </p>
+              <ul style={styles.modalList}>
+                <li>Video și audio din întreaga conversație</li>
+                <li>Ecranul partajat (dacă este cazul)</li>
+                <li>Toate interacțiunile din timpul consultației</li>
+              </ul>
+              <p>
+                <strong>Confidențialitate:</strong> Înregistrarea va fi stocată securizat și va fi accesibilă doar participanților la consultație.
+              </p>
+            </div>
+            <div style={styles.modalFooter}>
+              <button
+                style={styles.modalButtonDecline}
+                onClick={() => handleRecordingPermission(false)}
+              >
+                Nu permit înregistrarea
+              </button>
+              <button
+                style={styles.modalButtonAccept}
+                onClick={() => handleRecordingPermission(true)}
+              >
+                Sunt de acord cu înregistrarea
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recording Error Notification */}
+      {recordingError && (
+        <div style={styles.errorNotification}>
+          <i className="fas fa-exclamation-triangle"></i>
+          <span>{recordingError}</span>
+          <button
+            style={styles.errorCloseButton}
+            onClick={() => setRecordingError("")}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
     </>
   );
 };
@@ -621,6 +832,147 @@ const styles = {
     borderRadius: 5,
     padding: "10px 20px",
     cursor: "pointer",
+  },
+  recordingControls: {
+    position: "absolute",
+    bottom: "4%",
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: "25px",
+    padding: "10px 20px",
+    zIndex: 1000,
+    color: "#ffffff",
+  },
+  recordButton: {
+    backgroundColor: "#e74c3c",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "50%",
+    width: "50px",
+    height: "50px",
+    fontSize: "20px",
+    cursor: "pointer",
+    marginRight: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.3s ease",
+  },
+  recordingInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  recordingIndicator: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: "bold",
+  },
+  recordingDot: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    backgroundColor: "#ff4757",
+    animation: "blink 1s infinite",
+  },
+  recordingTime: {
+    fontSize: "16px",
+    fontWeight: "bold",
+    color: "#ffffff",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2000,
+  },
+  modal: {
+    backgroundColor: "#ffffff",
+    padding: "30px",
+    borderRadius: "12px",
+    maxWidth: "500px",
+    width: "90%",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+  },
+  modalHeader: {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "20px",
+    borderBottom: "2px solid #f0f0f0",
+    paddingBottom: "15px",
+  },
+  modalIcon: {
+    fontSize: "28px",
+    marginRight: "15px",
+    color: "#e74c3c",
+  },
+  modalContent: {
+    marginBottom: "25px",
+    lineHeight: "1.6",
+  },
+  modalList: {
+    listStyleType: "disc",
+    paddingLeft: "20px",
+    margin: "15px 0",
+  },
+  modalFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "15px",
+  },
+  modalButtonDecline: {
+    backgroundColor: "#6c757d",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    padding: "12px 24px",
+    cursor: "pointer",
+    fontSize: "16px",
+    flex: 1,
+  },
+  modalButtonAccept: {
+    backgroundColor: "#28a745",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    padding: "12px 24px",
+    cursor: "pointer",
+    fontSize: "16px",
+    flex: 1,
+  },
+  errorNotification: {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    backgroundColor: "#ff4757",
+    color: "#ffffff",
+    padding: "15px 20px",
+    borderRadius: "8px",
+    zIndex: 2000,
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    maxWidth: "400px",
+  },
+  errorCloseButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#ffffff",
+    fontSize: "18px",
+    cursor: "pointer",
+    marginLeft: "10px",
   },
 };
 

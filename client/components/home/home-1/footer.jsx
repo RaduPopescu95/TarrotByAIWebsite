@@ -104,47 +104,7 @@ const Home1Footer = () => {
                   </div>
                 </div>
               </div>
-              <div className="col-lg-3 col-md-7">
-                <div className="footer-widget">
-                  <h2 className="footer-title">Join Our Newsletter</h2>
-                  <div className="subscribe-form">
-                    <form action="#">
-                      <input
-                        type="email"
-                        className="form-control"
-                        placeholder="Enter Email"
-                      />
-                      <button type="submit" className="btn">
-                        Submit
-                      </button>
-                    </form>
-                  </div>
-                  <div className="social-icon">
-                    <ul>
-                      <li>
-                        <a href="#">
-                          <i className="fab fa-facebook" />
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <i className="fab fa-instagram" />
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <i className="fab fa-twitter" />
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <i className="fab fa-linkedin-in" />
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+           
             </div>
           </div>
         </div>
