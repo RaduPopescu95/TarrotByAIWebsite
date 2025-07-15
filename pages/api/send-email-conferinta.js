@@ -213,6 +213,9 @@ export default async function handler(req, res) {
 
     console.log("✅ [EMAIL API] Validarea datelor a trecut cu succes");
 
+    // Determină URL-ul de bază pentru site (producție vs dezvoltare)
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.cristinazurba.com' : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cristinazurba.com');
+
     // Generez template-ul HTML
     const htmlContent = createEmailTemplate(participantData, conferintaData, accessLink, isTestMode);
     console.log("✅ [EMAIL API] Template HTML generat");

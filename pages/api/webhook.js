@@ -66,6 +66,22 @@ export default async (req, res) => {
         console.log(`💳 [${requestId}] Session amount: ${session.amount_total / 100} RON`);
         console.log(`💳 [${requestId}] Customer email: ${session.customer_details?.email || session.customer_email}`);
 
+        // 🔍 Detectează tipul de plată prin metadata
+        const isConferencePayment = session.metadata?.conferintaId || session.metadata?.tipConferinta;
+        
+        if (isConferencePayment) {
+          console.log(`⚠️ [${requestId}] Plată pentru CONFERINȚĂ detectată - redirect către webhook conferințe`);
+          console.log(`⚠️ [${requestId}] Metadata conferință:`, {
+            conferintaId: session.metadata?.conferintaId,
+            tipConferinta: session.metadata?.tipConferinta,
+            participantName: session.metadata?.participantName
+          });
+          console.log(`⚠️ [${requestId}] Acest webhook procesează DOAR consultații individuale`);
+          break; // Skip processing pentru conferințe
+        }
+
+        console.log(`✅ [${requestId}] Plată pentru CONSULTAȚIE INDIVIDUALĂ confirmată`);
+
         try {
           // 1. Verifică dacă rezervarea există deja (identic cu frontend-ul)
           console.log(`🔍 [${requestId}] Verifică dacă session_id există deja...`);

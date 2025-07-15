@@ -1,6 +1,6 @@
 import { buffer } from "micro";
 import Stripe from 'stripe';
-import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestoreUtils';
+import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestoreGeneral } from '../../utils/firestoreUtils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
@@ -53,6 +53,23 @@ export default async function handler(req, res) {
         console.log(`💳 [${requestId}] Session amount: ${session.amount_total / 100} RON`);
         console.log(`💳 [${requestId}] Session status: ${session.status}`);
         console.log(`💳 [${requestId}] Payment status: ${session.payment_status}`);
+        
+        // 🔍 Verifică că este plată pentru conferință
+        const isConferencePayment = session.metadata?.conferintaId || session.metadata?.tipConferinta;
+        
+        if (!isConferencePayment) {
+          console.log(`⚠️ [${requestId}] Plată pentru CONSULTAȚIE INDIVIDUALĂ detectată - redirect către webhook consultații`);
+          console.log(`⚠️ [${requestId}] Metadata consultație:`, {
+            nume: session.metadata?.nume,
+            tipConsultatie: session.metadata?.tipConsultatie,
+            categorie: session.metadata?.categorie ? 'present' : 'absent'
+          });
+          console.log(`⚠️ [${requestId}] Acest webhook procesează DOAR conferințe de grup`);
+          break; // Skip processing pentru consultații
+        }
+
+        console.log(`✅ [${requestId}] Plată pentru CONFERINȚĂ confirmată`);
+        console.log(`✅ [${requestId}] ConferințaID: ${session.metadata?.conferintaId}`);
         
         await handleSuccessfulPayment(session, requestId);
         console.log(`✅ [${requestId}] Checkout session procesat cu succes`);
@@ -245,7 +262,6 @@ async function handleSuccessfulPayment(session, requestId) {
     // 6. Salvează înregistrarea plății pentru tracking (dacă nu există deja)
     console.log(`💳 [${requestId}] [${paymentId}] Salvez înregistrarea plății...`);
     try {
-      const { handleUploadFirestoreGeneral } = require('../../utils/firestoreUtils');
       const plataData = {
         conferintaId: conferintaId,
         conferintaTitlu: conferinta.titlu,
