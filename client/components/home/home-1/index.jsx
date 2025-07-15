@@ -8,7 +8,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import "../../../../styles/consultations.css";
+// import "../../../../styles/consultations.css"; // Disabled for build fix
 import { Calendar } from "primereact/calendar";
 import Image from "next/image";
 import { useAuth } from "../../../../context/AuthContext";
