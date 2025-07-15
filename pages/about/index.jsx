@@ -2,6 +2,8 @@ import React from "react";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Head from "next/head";
+import Link from "next/link";
+import Image from "next/image";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { 
@@ -84,26 +86,26 @@ const AboutPage = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <a href="/consultatii" className="group relative px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none inline-block">
+                <Link href="/consultatii" className="group relative px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none inline-block">
                   <span className="relative flex items-center gap-3">
                     <Calendar className="w-5 h-5" />
                     Programează o consultație
                   </span>
-                </a>
+                </Link>
                 
-                <a href="/main-dashboard" className="group px-8 py-4 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-semibold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
+                <Link href="/main-dashboard" className="group px-8 py-4 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-semibold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
                   <span className="flex items-center gap-3">
                     <Sparkles className="w-5 h-5" />
                     Explorează serviciile
                   </span>
-                </a>
+                </Link>
               </div>
             </div>
 
             {/* Right column - Hero image */}
             <div className="flex justify-center lg:justify-center items-center">
               <div className="relative">
-                <img src="/icon.png" alt="Cristina Zurba" className="w-80 h-80 lg:w-96 lg:h-96 rounded-full border-4 border-white shadow-2xl object-cover relative z-10" />
+                <Image src="/icon.png" alt="Cristina Zurba" width={384} height={384} className="w-80 h-80 lg:w-96 lg:h-96 rounded-full border-4 border-white shadow-2xl object-cover relative z-10" />
                 {/* Glowing Effect */}
                 <div className="absolute inset-0 w-80 h-80 lg:w-96 lg:h-96 bg-gradient-to-r from-indigo-400/30 to-purple-400/30 rounded-full blur-2xl opacity-60 animate-pulse"></div>
               </div>
@@ -276,20 +278,20 @@ const AboutPage = () => {
           </p>
           
                                <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <a href="/consultatii" className="group relative px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-lg rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none inline-block">
+            <Link href="/consultatii" className="group relative px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-lg rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none inline-block">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative flex items-center gap-3 justify-center">
                 <Calendar className="w-6 h-6" />
                 Programează o consultație
               </span>
-            </a>
+            </Link>
             
-            <a href="/main-dashboard" className="group px-10 py-5 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-bold text-lg rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
+            <Link href="/main-dashboard" className="group px-10 py-5 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-bold text-lg rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
               <span className="flex items-center gap-3 justify-center">
                 <Sparkles className="w-6 h-6" />
                 Explorează serviciile
               </span>
-            </a>
+            </Link>
           </div>
       </div>
       </section>
