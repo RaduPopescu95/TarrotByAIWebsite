@@ -143,5 +143,13 @@
   "forgotPasswordTitle": "Forgot Password | Cristina Zurba",
   "forgotPasswordDescription": "Reset your password to regain access to your personalized spiritual guidance.",
   
-  "filterContent": "Filter Content"
+  "filterContent": "Filter Content",
+  
+  "individualSessions": "Individual Sessions",
+  "conferencesCourses": "Conferences/Courses",
+  "articles": "Articles",
+  "instantReadings": "Instant Readings",
+  
+  "activeFilter": "Active filter",
+  "clearFilter": "Clear filter"
 }

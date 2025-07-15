@@ -143,5 +143,13 @@
   "forgotPasswordTitle": "Password Dimenticata | Cristina Zurba",
   "forgotPasswordDescription": "Reimposta la tua password per riottenere l'accesso alla tua guida spirituale personalizzata.",
   
-  "filterContent": "Filtra Contenuto"
+  "filterContent": "Filtra Contenuto",
+  
+  "individualSessions": "Sessioni Individuali",
+  "conferencesCourses": "Conferenze/Corsi",
+  "articles": "Articoli",
+  "instantReadings": "Letture Istantanee",
+  
+  "activeFilter": "Filtro attivo",
+  "clearFilter": "Cancella filtro"
 }

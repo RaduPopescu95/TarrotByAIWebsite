@@ -143,5 +143,13 @@
   "forgotPasswordTitle": "Ξεχασμένος Κωδικός | Cristina Zurba",
   "forgotPasswordDescription": "Επαναφέρετε τον κωδικό σας για να αποκτήσετε ξανά πρόσβαση στην εξατομικευμένη πνευματική σας καθοδήγηση.",
   
-  "filterContent": "Φιλτράρισμα Περιεχομένου"
+  "filterContent": "Φιλτράρισμα Περιεχομένου",
+  
+  "individualSessions": "Ατομικές Συνεδρίες",
+  "conferencesCourses": "Συνέδρια/Μαθήματα",
+  "articles": "Άρθρα",
+  "instantReadings": "Άμεσες Αναγνώσεις",
+  
+  "activeFilter": "Ενεργό φίλτρο",
+  "clearFilter": "Καθαρισμός φίλτρου"
 }

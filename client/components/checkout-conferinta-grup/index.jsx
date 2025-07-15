@@ -465,7 +465,13 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                   </span>
 
                   <div className="mb-3">
-                    <p className="text-muted">{conferinta.descriere}</p>
+                    <div 
+                      className="text-muted"
+                      style={{ lineHeight: '1.6' }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: conferinta.descriere?.includes('<') ? conferinta.descriere : `<p>${conferinta.descriere || ''}</p>`
+                      }}
+                    />
                   </div>
 
                   <div className="detail-item mb-2">

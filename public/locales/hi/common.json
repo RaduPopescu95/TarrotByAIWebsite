@@ -98,5 +98,15 @@
   "onboardingThirdTitleMessage": "अपने भविष्य के बारे में पठन प्राप्त करें",
   "skip": "छोड़ें",
   "nextOnboard": "अगला",
-  "clinicLoginRedirect": "जारी रखें"
+  "clinicLoginRedirect": "जारी रखें",
+  
+  "filterContent": "सामग्री फ़िल्टर करें",
+  
+  "individualSessions": "व्यक्तिगत सत्र",
+  "conferencesCourses": "सम्मेलन/पाठ्यक्रम",
+  "articles": "लेख",
+  "instantReadings": "तत्काल रीडिंग",
+  
+  "activeFilter": "सक्रिय फ़िल्टर",
+  "clearFilter": "फ़िल्टर साफ़ करें"
 }

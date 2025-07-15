@@ -331,6 +331,17 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
 
       {/* Main Content */}
       <div className="bg-gray-50 min-h-screen">
+        <style jsx>{`
+          .article-content p {
+            color: #000000 !important;
+          }
+          .article-content div {
+            color: #000000 !important;
+          }
+          .article-content span {
+            color: #000000 !important;
+          }
+        `}</style>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             
@@ -398,9 +409,13 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                     </div>
 
                     {/* Article Content with Better Typography */}
-                    <div className="prose prose-lg prose-slate max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-p:text-gray-700 prose-p:leading-relaxed prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-indigo-50 prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6">
+                    <div className="prose prose-lg prose-slate max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-p:text-gray-900 prose-p:leading-relaxed prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-indigo-50 prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6">
                       {filteredArticle?.info?.ro?.content ? (
                         <div 
+                          className="article-content"
+                          style={{
+                            color: '#000000'
+                          }}
                           dangerouslySetInnerHTML={{ 
                             __html: filteredArticle.info.ro.content 
                           }}

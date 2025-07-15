@@ -615,7 +615,13 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                       {displayInfo.type}
                     </div>
                     <h2 className="text-primary">{conferinta.titlu}</h2>
-                    <p className="text-muted">{conferinta.descriere}</p>
+                    <div 
+                      className="text-muted"
+                      style={{ lineHeight: '1.6' }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: conferinta.descriere?.includes('<') ? conferinta.descriere : `<p>${conferinta.descriere || ''}</p>`
+                      }}
+                    />
                   </div>
 
                   <div className="row mb-4">

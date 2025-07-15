@@ -142,5 +142,13 @@
   "forgotPasswordTitle": "Забравена парола | Кристина Зурба",
   "forgotPasswordDescription": "Възстановете паролата си, за да получите отново достъп до вашите персонализирани духовни насоки.",
   
-  "filterContent": "Филтрирай съдържанието"
+  "filterContent": "Филтрирай съдържанието",
+  
+  "individualSessions": "Индивидуални сесии",
+  "conferencesCourses": "Конференции/Курсове",
+  "articles": "Статии",
+  "instantReadings": "Мигновени четения",
+  
+  "activeFilter": "Активен филтър",
+  "clearFilter": "Изчисти филтъра"
 }

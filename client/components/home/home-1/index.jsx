@@ -8,6 +8,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import "../../../../styles/consultations.css";
 import { Calendar } from "primereact/calendar";
 import Image from "next/image";
 import { useAuth } from "../../../../context/AuthContext";
@@ -322,13 +323,25 @@ const Home1 = () => {
                       <div className="col-md-6 col-12">
                         <Link href="/calendar" className="btn btn-primary-custom w-100">
                           <i className="fa fa-user me-2"></i>
-                          Consultații Individuale
+                          Ședințe individuale
                         </Link>
                       </div>
                       <div className="col-md-6 col-12">
                         <Link href="/calendar-conferinte-grup" className="btn btn-secondary-custom w-100">
                           <i className="fa fa-users me-2"></i>
-                          Conferințe/Cursuri
+                          Conferințe/cursuri
+                        </Link>
+                      </div>
+                      <div className="col-md-6 col-12">
+                        <Link href="/news" className="btn btn-info-custom w-100">
+                          <i className="fa fa-newspaper me-2"></i>
+                          Articole
+                        </Link>
+                      </div>
+                      <div className="col-md-6 col-12">
+                        <Link href="/main-dashboard" className="btn btn-success-custom w-100">
+                          <i className="fa fa-magic me-2"></i>
+                          Citiri instant
                         </Link>
                       </div>
                     </div>

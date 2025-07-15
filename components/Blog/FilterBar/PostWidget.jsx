@@ -2,29 +2,31 @@ import React from "react";
 import { useTranslation } from "next-i18next";
 
 function PostWidget({ handleFilter, filterItem }) {
-  const filters = [
-    "All",
-    "Previziuni zilnice",
-    "Previziuni săptămânale",
-    "Previziuni lunare",
-    "Previziuni anuale",
-  ];
   const { t } = useTranslation("common");
+  
+  // Filter mapping: translation key -> filter value for backend
+  const filterMapping = [
+    { key: "all", value: "All", translationKey: "All" },
+    { key: "daily", value: "Previziuni zilnice", translationKey: "Previziuni zilnice" },
+    { key: "weekly", value: "Previziuni săptămânale", translationKey: "Previziuni săptămânale" },
+    { key: "monthly", value: "Previziuni lunare", translationKey: "Previziuni lunare" },
+    { key: "yearly", value: "Previziuni anuale", translationKey: "Previziuni anuale" },
+  ];
 
   return (
     <div style={styles.filterWidget}>
-      <h3 style={styles.title}>Filtre</h3>
+      <h3 style={styles.title}>{t("Filters")}</h3>
       <div style={styles.filterList}>
-        {filters.map((item, index) => (
+        {filterMapping.map((filter, index) => (
           <button
             key={index}
-            onClick={() => handleFilter(item)}
+            onClick={() => handleFilter(filter.value)}
             style={{
               ...styles.filterButton,
-              ...(filterItem === item ? styles.filterButtonActive : {}),
+              ...(filterItem === filter.value ? styles.filterButtonActive : {}),
             }}
           >
-            {item === "All" ? "Toate articolele" : item}
+            {t(filter.translationKey)}
           </button>
         ))}
       </div>

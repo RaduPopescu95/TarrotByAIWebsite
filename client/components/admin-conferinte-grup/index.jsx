@@ -16,7 +16,24 @@ import "moment/locale/ro";
 import { doc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../../../firebase";
+import QuillEditor from "../../QuillForm";
 // Eliminat Firebase Functions - folosim API Next.js
+
+// Funcție utilitate pentru compatibilitate cu descrierile existente
+const getDescriptionText = (description) => {
+  if (!description) return '';
+  // Elimină tagurile HTML pentru a obține textul pur
+  return description.replace(/<[^>]*>/g, '');
+};
+
+const getDescriptionHTML = (description) => {
+  if (!description) return '';
+  // Dacă nu conține taguri HTML, înfășoară în paragrafe
+  if (!description.includes('<')) {
+    return `<p>${description}</p>`;
+  }
+  return description;
+};
 
 moment.locale("ro");
 
@@ -314,7 +331,9 @@ const AdminConferinteGrup = () => {
     }
     console.log("✅ [VALIDARE] Titlu valid");
 
-    if (!formData.descriere.trim()) {
+    // Validare pentru conținut Quill - elimină tagurile HTML și verifică dacă rămâne text
+    const descriereText = getDescriptionText(formData.descriere).trim();
+    if (!descriereText) {
       console.log("❌ [VALIDARE] Descrierea lipsește");
       showAlert("danger", "Descrierea este obligatorie");
       return false;
@@ -1617,7 +1636,7 @@ const AdminConferinteGrup = () => {
                               {conferinta.titlu}
                             </h5>
                             
-                            <p className="card-text text-muted mb-3" style={{ 
+                            <div className="card-text text-muted mb-3" style={{ 
                               fontSize: "0.9rem",
                               lineHeight: "1.4",
                               display: "-webkit-box",
@@ -1625,8 +1644,8 @@ const AdminConferinteGrup = () => {
                               WebkitBoxOrient: "vertical",
                               overflow: "hidden"
                             }}>
-                              {conferinta.descriere}
-                            </p>
+                              {getDescriptionText(conferinta.descriere)}
+                            </div>
 
                             {/* Informații detaliate */}
                             <div className="mb-3">
@@ -2306,15 +2325,12 @@ const AdminConferinteGrup = () => {
                         <label className="form-label">
                           Descriere <span className="text-danger">*</span>
                         </label>
-                        <textarea
-                          className="form-control"
-                          name="descriere"
-                          value={formData.descriere}
-                          onChange={handleInputChange}
-                          rows="4"
-                          placeholder="Descrierea detaliată a conferinței..."
-                          required
-                        />
+                        <div style={{ backgroundColor: 'white', borderRadius: '4px' }}>
+                          <QuillEditor
+                            content={formData.descriere}
+                            setContent={(content) => setFormData(prev => ({ ...prev, descriere: content }))}
+                          />
+                        </div>
                       </div>
 
                       <div className="row">

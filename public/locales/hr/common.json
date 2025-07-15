@@ -144,5 +144,13 @@
   "forgotPasswordTitle": "Zaboravljena Lozinka | Cristina Zurba",
   "forgotPasswordDescription": "Resetirajte svoju lozinku da biste ponovno dobili pristup svojem personaliziranom duhovnom vodstvu.",
   
-  "filterContent": "Filtriraj Sadržaj"
+  "filterContent": "Filtriraj Sadržaj",
+  
+  "individualSessions": "Individualne Sesije",
+  "conferencesCourses": "Konferencije/Tečajevi",
+  "articles": "Članci",
+  "instantReadings": "Trenutna Čitanja",
+  
+  "activeFilter": "Aktivni filtar",
+  "clearFilter": "Obriši filtar"
 }

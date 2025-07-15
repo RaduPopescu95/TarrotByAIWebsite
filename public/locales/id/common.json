@@ -98,5 +98,15 @@
   "onboardingThirdTitleMessage": "Dapatkan bacaan tentang masa depan Anda",
   "skip": "LEWATI",
   "nextOnboard": "BERIKUTNYA",
-  "clinicLoginRedirect": "Lanjutkan"
+  "clinicLoginRedirect": "Lanjutkan",
+  
+  "filterContent": "Filter Konten",
+  
+  "individualSessions": "Sesi Individual",
+  "conferencesCourses": "Konferensi/Kursus",
+  "articles": "Artikel",
+  "instantReadings": "Bacaan Instan",
+  
+  "activeFilter": "Filter aktif",
+  "clearFilter": "Hapus filter"
 }

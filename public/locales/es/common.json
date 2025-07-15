@@ -144,5 +144,13 @@
   "forgotPasswordTitle": "Contraseña Olvidada | Cristina Zurba",
   "forgotPasswordDescription": "Restablece tu contraseña para recuperar el acceso a tu guía espiritual personalizada.",
   
-  "filterContent": "Filtrar Contenido"
+  "filterContent": "Filtrar Contenido",
+  
+  "individualSessions": "Sesiones Individuales",
+  "conferencesCourses": "Conferencias/Cursos",
+  "articles": "Artículos",
+  "instantReadings": "Lecturas Instantáneas",
+  
+  "activeFilter": "Filtro activo",
+  "clearFilter": "Limpiar filtro"
 }

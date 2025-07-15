@@ -12,17 +12,7 @@ import { useApiData } from "../../context/ApiContext";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import Footer from "../../components/Footer";
-import { 
-  Sparkles, 
-  Star, 
-  Dice6, 
-  Palette, 
-  Clock, 
-  Heart, 
-  Brain, 
-  Smile, 
-  BookOpen 
-} from "lucide-react";
+
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -32,20 +22,7 @@ export async function getServerSideProps({ locale }) {
   };
 }
 
-const getServiceIcon = (route) => {
-  const iconMap = {
-    '/citire-personalizata': Sparkles,
-    '/citire-viitor': Star,
-    '/numar-norocos': Dice6,
-    '/culoare-norocoasa': Palette,
-    '/ora-norocoasa': Clock,
-    '/citat-motivational': Heart,
-    '/ce-gandeste': Brain,
-    '/ce-simte': Smile,
-    '/cartea-ta': BookOpen,
-  };
-  return iconMap[route] || Star;
-};
+
 
 const MediaCardConstantService = ({ item }) => {
   const { t: tCommon } = useTranslation("common");
@@ -63,52 +40,34 @@ const MediaCardConstantService = ({ item }) => {
   }, []);
 
   return (
-          <div
-        className="service-card"
-        onClick={() => route.push(item.route)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        style={{
-          ...styles.serviceCard,
-          ...(isHovered ? styles.serviceCardHover : {}),
-          fontSize: isMobile ? '14px' : '16px',
-        }}
-      >
-              <div className="card-image-container" style={styles.cardImageContainer}>
-          {/* Main Image */}
-          <img
-            className="main-card-image"
-            src={"/dash-frame.png"}
-            alt={item.text}
-            style={{
-              ...styles.mainCardImage,
-              ...(isHovered ? styles.mainCardImageHover : {}),
-            }}
-          />
-          {/* Golden Shadow Behind Image */}
-          <div className="golden-shadow" style={{
-            ...styles.goldenShadow,
-            ...(isHovered ? styles.goldenShadowActive : {}),
-          }}></div>
-          {/* Icon Badge in top-right */}
-          <div className="icon-badge" style={{
-            ...styles.iconBadge,
-            ...(isHovered ? styles.iconBadgeHover : {}),
-          }}>
-            {React.createElement(getServiceIcon(item.route), {
-              size: 20,
-              color: '#ffffff',
-              className: 'service-icon'
-            })}
-          </div>
-          {/* Text overlay on center */}
-          <div style={styles.textOverlay}>
-            <span className="card-text-overlay" style={styles.cardTextOverlay}>
-              {item.text}
-            </span>
-          </div>
-        </div>
-      <div className="card-indicator" style={styles.cardIndicator}></div>
+    <div
+      className="service-card"
+      onClick={() => route.push(item.route)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        ...styles.serviceCard,
+        ...(isHovered ? styles.serviceCardHover : {}),
+      }}
+    >
+      <div className="card-content" style={{
+        ...styles.cardContent,
+        ...(isHovered ? styles.cardContentHover : {}),
+      }}>
+        {/* Bottom overlay for text visibility */}
+        <div style={{
+          ...styles.bottomOverlay,
+          ...(isHovered ? styles.bottomOverlayHover : {}),
+        }}></div>
+        
+        {/* Service Title positioned at bottom */}
+        <h3 style={{
+          ...styles.serviceTitle,
+          ...(isHovered ? styles.serviceTitleHover : {}),
+        }}>
+          {item.text}
+        </h3>
+      </div>
     </div>
   );
 };
@@ -253,12 +212,18 @@ export function Landing({ services }) {
 // Styles matching /consultatii design
 const styles = {
   mainWrapper: {
-    background: 'linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)',
+    background: '#fafbfc',
     minHeight: '100vh',
     width: '100%',
   },
   servicesSection: {
     padding: '4rem 0 6rem 0',
+    background: `
+      radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 40% 60%, rgba(168, 85, 247, 0.02) 0%, transparent 50%)
+    `,
+    position: 'relative',
   },
   servicesContainer: {
     maxWidth: '1200px',
@@ -285,13 +250,13 @@ const styles = {
   },
   servicesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 270px))',
-    gap: '2rem',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 350px))',
+    gap: '2.5rem',
     alignItems: 'start',
     justifyContent: 'center',
     '@media (max-width: 768px)': {
-      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 240px))',
-      gap: '1.5rem',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 320px))',
+      gap: '2rem',
     },
     '@media (max-width: 480px)': {
       gridTemplateColumns: '1fr',
@@ -306,7 +271,7 @@ const styles = {
   },
   serviceCard: {
     background: 'transparent',
-    borderRadius: '20px',
+    borderRadius: '24px',
     padding: '0',
     display: 'flex',
     flexDirection: 'column',
@@ -318,103 +283,86 @@ const styles = {
     width: '100%',
     border: 'none',
     textAlign: 'center',
+    minHeight: '200px',
   },
   serviceCardHover: {
-    // No transform here since image container handles the hover effect
+    transform: 'translateY(-8px)',
   },
-  cardImageContainer: {
+  cardContent: {
     width: '100%',
-    maxWidth: '240px',
-    aspectRatio: '5/4',
-    position: 'relative',
-    borderRadius: '18px',
-    overflow: 'hidden',
-    marginBottom: '1rem',
-    backgroundColor: 'transparent',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    margin: '0 auto 1rem auto',
-  },
-  mainCardImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'all 0.3s ease',
-  },
-  mainCardImageHover: {
-    transform: 'scale(1.05)',
-  },
-  iconBadge: {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+    height: '240px',
+    backgroundImage: `url('/floarea-vietii.jpg')`,
+    backgroundSize: '100% auto',
+    backgroundPosition: 'center 10%',
+    backgroundRepeat: 'no-repeat',
+    borderRadius: '20px',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.8)',
+    justifyContent: 'flex-end',
+    padding: '0 1.5rem 1rem 1.5rem',
+    boxShadow: '0 4px 20px rgba(139, 92, 246, 0.15), 0 1px 3px rgba(139, 92, 246, 0.1)',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    zIndex: 4,
-    backdropFilter: 'blur(4px)',
+    border: '1px solid rgba(139, 92, 246, 0.1)',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  iconBadgeHover: {
-    transform: 'scale(1.1)',
-    boxShadow: '0 8px 20px rgba(255, 215, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 1)',
-    background: 'linear-gradient(135deg, #FFA500 0%, #FFD700 100%)',
+  cardContentHover: {
+    transform: 'scale(1.05)',
+    boxShadow: '0 12px 40px rgba(139, 92, 246, 0.4), 0 6px 16px rgba(139, 92, 246, 0.25)',
   },
-  goldenShadow: {
+  bottomOverlay: {
     position: 'absolute',
-    top: '-10px',
-    left: '-10px',
-    right: '-10px',
-    bottom: '-10px',
-    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-    opacity: 0,
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    zIndex: -1,
-    borderRadius: '25px',
-    filter: 'blur(15px)',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 30%, transparent 100%)',
+    borderRadius: '0 0 20px 20px',
+    pointerEvents: 'none',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
-  goldenShadowActive: {
-    opacity: 0.6,
-    filter: 'blur(20px)',
-    transform: 'scale(1.1)',
+  bottomOverlayHover: {
+    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.5) 40%, rgba(0, 0, 0, 0.2) 70%, transparent 100%)',
+    height: '60%',
   },
-  textOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 3,
-    textAlign: 'center',
-    width: '80%',
-  },
-  cardTextOverlay: {
-    color: 'white',
-    fontSize: '1.1rem',
-    fontWeight: '600',
-    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  serviceTitle: {
+    fontSize: '1.6rem',
+    fontWeight: '700',
+    color: '#ffffff',
+    margin: 0,
     lineHeight: '1.3',
-  },
-  cardTitle: {
-    fontSize: '1.1rem',
-    fontWeight: '600',
-    color: '#1e293b',
-    margin: '0 0 1rem 0',
-    lineHeight: '1.4',
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    textAlign: 'center',
+    letterSpacing: '-0.02em',
+    position: 'relative',
+    zIndex: 1,
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    textShadow: `
+      -1px -1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      1px 1px 0 #000,
+      -2px 0 0 #000,
+      2px 0 0 #000,
+      0 -2px 0 #000,
+      0 2px 0 #000
+    `,
   },
-  cardIndicator: {
-    width: '40px',
-    height: '3px',
-    background: 'linear-gradient(90deg, #FFD700 0%, #FFA500 100%)',
-    borderRadius: '2px',
-    marginTop: 'auto',
-    transition: 'all 0.3s ease',
+  serviceTitleHover: {
+    fontSize: '1.7rem',
+    textShadow: `
+      -2px -2px 0 #000,
+      2px -2px 0 #000,
+      -2px 2px 0 #000,
+      2px 2px 0 #000,
+      -3px 0 0 #000,
+      3px 0 0 #000,
+      0 -3px 0 #000,
+      0 3px 0 #000,
+      0 0 8px rgba(255, 255, 255, 0.3)
+    `,
+    transform: 'translateY(-2px)',
   },
 };
 

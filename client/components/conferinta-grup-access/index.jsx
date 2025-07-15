@@ -668,7 +668,12 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                       </div>
                       <div className="col-md-6">
                         <h6 className="text-primary">Detalii conferință:</h6>
-                        <p>{conferinta.descriere}</p>
+                        <div 
+                          style={{ lineHeight: '1.6' }}
+                          dangerouslySetInnerHTML={{ 
+                            __html: conferinta.descriere?.includes('<') ? conferinta.descriere : `<p>${conferinta.descriere || ''}</p>`
+                          }}
+                        />
                       </div>
                     </div>
                   </div>

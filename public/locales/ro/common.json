@@ -2,9 +2,9 @@
   "CeGandeste":"Ce Gandeste",
   "CarteaTa":"Cartea ta",
   "CeSimte":"Ce simte",
-  "Filters": "Filter",
+  "Filters": "Filtre",
   "Latest Articles": "Ultimele articole",
-  "All": "Tot continutul",
+  "All": "Toate articolele",
   "Previziuni zilnice": "Previziuni zilnice",
   "Previziuni săptămânale": "Previziuni săptămânale",
   "Previziuni lunare": "Previziuni lunare",
@@ -143,5 +143,13 @@
   "forgotPasswordTitle": "Parolă Uitată | Cristina Zurba",
   "forgotPasswordDescription": "Resetează-ți parola pentru a-ți recăpăta accesul la îndrumările spirituale personalizate.",
   
-  "filterContent": "Filtrează conținutul"
+  "filterContent": "Filtrează conținutul",
+  
+  "individualSessions": "Ședințe individuale",
+  "conferencesCourses": "Conferințe/cursuri",
+  "articles": "Articole",
+  "instantReadings": "Citiri instant",
+  
+  "activeFilter": "Filtru activ",
+  "clearFilter": "Șterge filtrul"
 }

@@ -142,5 +142,13 @@
   "forgotPasswordTitle": "Zapomenuté Heslo | Cristina Zurba",
   "forgotPasswordDescription": "Obnovte své heslo pro opětovný přístup k vašemu personalizovanému duchovnímu vedení.",
   
-  "filterContent": "Filtrovat Obsah"
+  "filterContent": "Filtrovat Obsah",
+  
+  "individualSessions": "Individuální Sezení",
+  "conferencesCourses": "Konference/Kurzy",
+  "articles": "Články",
+  "instantReadings": "Okamžitá Čtení",
+  
+  "activeFilter": "Aktivní filtr",
+  "clearFilter": "Vymazat filtr"
 }

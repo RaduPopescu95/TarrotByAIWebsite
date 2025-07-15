@@ -537,10 +537,10 @@ function BlogHome(props) {
                 {/* Sidebar */}
                 <div className="lg:col-span-4">
                   <div className="sticky top-24 space-y-8">
-                    {/* <FilterBar
+                    <FilterBar
                       handleFilter={handleFilter}
                       filterItem={filterItem}
-                    /> */}
+                    />
                     <Sidebar lastFiveArticles={latestFiveArticles} />
                   </div>
                 </div>

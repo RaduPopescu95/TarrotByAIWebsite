@@ -122,8 +122,10 @@ const CalendarConferinteGrup = () => {
   };
 
   const filteredConferinte = conferinte.filter(conferinta => {
+    // Elimină tagurile HTML din descriere pentru căutare
+    const descriereText = conferinta.descriere?.replace(/<[^>]*>/g, '') || '';
     const matchesSearch = conferinta.titlu.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         conferinta.descriere.toLowerCase().includes(searchTerm.toLowerCase());
+                         descriereText.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || 
                            conferinta.tipConferinta === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -274,11 +276,15 @@ const CalendarConferinteGrup = () => {
 
                         <h5 className="card-title">{conferinta.titlu}</h5>
                         
-                        <p className="card-text text-muted flex-grow-1">
-                          {conferinta.descriere.length > 100 
-                            ? `${conferinta.descriere.substring(0, 100)}...` 
-                            : conferinta.descriere}
-                        </p>
+                        <div className="card-text text-muted flex-grow-1">
+                          {(() => {
+                            // Elimină tagurile HTML pentru previzualizare
+                            const textContent = conferinta.descriere?.replace(/<[^>]*>/g, '') || '';
+                            return textContent.length > 100 
+                              ? `${textContent.substring(0, 100)}...` 
+                              : textContent;
+                          })()}
+                        </div>
 
                         <div className="mb-3">
                           <div className="d-flex align-items-center mb-2">

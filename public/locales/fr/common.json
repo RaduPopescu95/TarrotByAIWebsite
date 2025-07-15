@@ -143,5 +143,13 @@
   "forgotPasswordTitle": "Mot de Passe Oublié | Cristina Zurba",
   "forgotPasswordDescription": "Réinitialisez votre mot de passe pour retrouver l'accès à vos conseils spirituels personnalisés.",
   
-  "filterContent": "Filtrer le Contenu"
+  "filterContent": "Filtrer le Contenu",
+  
+  "individualSessions": "Séances Individuelles",
+  "conferencesCourses": "Conférences/Cours",
+  "articles": "Articles",
+  "instantReadings": "Lectures Instantanées",
+  
+  "activeFilter": "Filtre actif",
+  "clearFilter": "Effacer le filtre"
 }
