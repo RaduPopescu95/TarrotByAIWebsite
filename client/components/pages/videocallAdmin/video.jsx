@@ -398,8 +398,9 @@ const AdminVideoCall = () => {
                       animation: isRecording ? "pulse 2s infinite" : "none",
                     }}
                     onClick={isRecording ? stopRecording : startRecording}
+                    title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
                   >
-                    <i className={`fas ${isRecording ? "fa-stop" : "fa-record-vinyl"}`} />
+                    <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
                   </button>
                   
                   {isRecording && (
@@ -725,41 +726,55 @@ const styles = {
   },
   recordingControls: {
     position: "absolute",
-    bottom: "4%",
-    left: "5%",
+    top: "20px",
+    right: "20px",
     display: "flex",
     alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: "25px",
+    padding: "10px 20px",
+    zIndex: 1000,
+    color: "#ffffff",
   },
   recordButton: {
     backgroundColor: "#e74c3c",
     color: "#ffffff",
     borderRadius: "50%",
     border: "none",
-    width: "60px",
-    height: "60px",
-    fontSize: "24px",
+    width: "50px",
+    height: "50px",
+    fontSize: "18px",
     cursor: "pointer",
-    marginRight: "10px",
+    marginRight: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.3s ease",
   },
   recordingInfo: {
     display: "flex",
     alignItems: "center",
+    gap: "10px",
   },
   recordingIndicator: {
     display: "flex",
     alignItems: "center",
-    marginRight: "10px",
+    gap: "5px",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: "bold",
   },
   recordingDot: {
-    width: "10px",
-    height: "10px",
+    width: "8px",
+    height: "8px",
     borderRadius: "50%",
-    backgroundColor: "#ffffff",
-    marginRight: "5px",
+    backgroundColor: "#ff4757",
+    animation: "blink 1s infinite",
   },
   recordingTime: {
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: "bold",
+    color: "#ffffff",
   },
   errorNotification: {
     position: "absolute",

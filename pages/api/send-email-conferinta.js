@@ -11,8 +11,14 @@ const transporter = nodemailer.createTransport({
 
 // Template HTML pentru emailul de confirmare
 const createEmailTemplate = (participantData, conferintaData, accessLink, isTestMode = false) => {
-  const { nume, prenume, email } = participantData;
+  const { nume, prenume, email, metodaPlata } = participantData;
   const { titlu, descriere, tipConferinta, dataInceput, dataFinal, oraInceput, oraFinal, pretParticipare } = conferintaData;
+  
+  // Verifică dacă participantul a fost adăugat manual
+  const isManuallyAdded = metodaPlata === "MANUAL_ADMIN";
+  
+  // Determină URL-ul de bază pentru site (producție vs dezvoltare)
+  const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.cristinazurba.com' : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cristinazurba.com');
   
   // Format data display
   let dataDisplay = '';
@@ -65,7 +71,9 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #007bff; margin: 0; font-size: 28px;">✅ Confirmare Înscriere</h1>
           <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px;">
-            ${isTestMode ? 'Simularea ta a fost completată cu succes!' : 'Plata ta a fost procesată cu succes!'}
+            ${isTestMode ? 'Simularea ta a fost completată cu succes!' : 
+              isManuallyAdded ? 'Înregistrarea ta a fost confirmată cu succes!' : 
+              'Plata ta a fost procesată cu succes!'}
           </p>
                 </div>
 
@@ -122,9 +130,9 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
             Accesează ${tipConferinta === 'course' ? 'cursul' : 'conferința'}:
           </p>
           <p style="margin-bottom: 15px; font-size: 16px; color: #007bff; word-break: break-all; line-height: 1.4;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}" 
+            <a href="${baseUrl}/conferinta-grup/${accessLink}" 
                style="color: #007bff; text-decoration: underline; font-weight: bold;">
-              ${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}
+              ${baseUrl}/conferinta-grup/${accessLink}
             </a>
           </p>
           <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">
@@ -232,7 +240,7 @@ export default async function handler(req, res) {
         - Participant: ${participantData.nume} ${participantData.prenume}
         - Preț: ${conferintaData.pretParticipare} RON ${isTestMode ? '(SIMULAT)' : ''}
         
-        Link de acces: ${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${accessLink}
+        Link de acces: ${baseUrl}/conferinta-grup/${accessLink}
         
         Mulțumim!
       `

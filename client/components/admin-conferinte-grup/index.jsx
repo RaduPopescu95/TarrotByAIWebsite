@@ -41,6 +41,19 @@ const AdminConferinteGrup = () => {
     courses: 0
   });
 
+  // State-uri pentru adăugarea manuală a participanților
+  const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
+  const [addParticipantForm, setAddParticipantForm] = useState({
+    nume: "",
+    prenume: "",
+    email: "",
+    telefon: "",
+    observatii: ""
+  });
+  const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
+  const [newlyAddedParticipant, setNewlyAddedParticipant] = useState(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+
   // Log pentru a verifica dacă funcțiile Firestore sunt importate corect
   console.log("🔧 [INIT] Funcții Firestore disponibile:", {
     handleGetFirestore: typeof handleGetFirestore,
@@ -61,7 +74,9 @@ const AdminConferinteGrup = () => {
     numarMaxParticipanti: "",
     pretParticipare: "",
     imagine: null,
-    status: "activa"
+    status: "activa",
+    hasPassword: false,
+    password: ""
   });
 
   const showAlert = (type, message) => {
@@ -223,16 +238,31 @@ const AdminConferinteGrup = () => {
   }, [selectedConferinta, activeTab]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    console.log(`📝 [INPUT] Schimbare câmp: ${name} = ${value}`);
+    const { name, value, type, checked } = e.target;
+    console.log(`📝 [INPUT] Schimbare câmp: ${name} = ${type === 'checkbox' ? checked : value}`);
     setFormData(prev => {
       const newData = {
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
       };
+      
+      // Dacă se debifează hasPassword, golește și parola
+      if (name === 'hasPassword' && !checked) {
+        newData.password = '';
+      }
+      
       console.log("📝 [INPUT] FormData actualizat:", newData);
       return newData;
     });
+  };
+
+  // Handler pentru input-urile formularului de adăugare participant
+  const handleAddParticipantInputChange = (e) => {
+    const { name, value } = e.target;
+    setAddParticipantForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -257,7 +287,9 @@ const AdminConferinteGrup = () => {
       numarMaxParticipanti: "",
       pretParticipare: "",
       imagine: null,
-      status: "activa"
+      status: "activa",
+      hasPassword: false,
+      password: ""
     });
     setEditingConferinta(null);
   };
@@ -328,6 +360,16 @@ const AdminConferinteGrup = () => {
     }
     console.log("✅ [VALIDARE] Preț valid");
 
+    // Validare parolă dacă este bifată
+    if (formData.hasPassword && (!formData.password || formData.password.trim().length < 3)) {
+      console.log("❌ [VALIDARE] Parola este invalidă:", formData.password);
+      showAlert("danger", "Parola trebuie să aibă cel puțin 3 caractere");
+      return false;
+    }
+    if (formData.hasPassword) {
+      console.log("✅ [VALIDARE] Parolă validă");
+    }
+
     console.log("🎉 [VALIDARE] Toate validările au trecut cu succes!");
     return true;
   };
@@ -385,6 +427,8 @@ const AdminConferinteGrup = () => {
         status: formData.status,
         imageUrl: imageUrl, // Salvez URL-ul imaginii, nu obiectul File
         accessLink: editingConferinta?.accessLink || generateConferenceAccessLink(), // Generez accessLink pentru conferință
+        hasPassword: formData.hasPassword,
+        password: formData.hasPassword ? formData.password.trim() : null,
         participanti: [],
         creatDe: userData?.owner_uid || "admin",
         dataCreare: moment().format("YYYY-MM-DD HH:mm:ss")
@@ -454,7 +498,9 @@ const AdminConferinteGrup = () => {
       numarMaxParticipanti: conferinta.numarMaxParticipanti?.toString() || "",
       pretParticipare: conferinta.pretParticipare?.toString() || "",
       imagine: null,
-      status: conferinta.status
+      status: conferinta.status,
+      hasPassword: conferinta.hasPassword || false,
+      password: conferinta.password || ""
     });
     setEditingConferinta(conferinta);
     setActiveTab("create");
@@ -636,6 +682,210 @@ const AdminConferinteGrup = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Funcție pentru generarea unui accessLink unic (similar cu cea din checkout)
+  const generateUniqueAccessLink = (conferintaId) => {
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const timestamp = Date.now();
+    const userIdentifier = `guest_${Math.random().toString(36).substring(2, 10)}`;
+    return `grup_${conferintaId}_${userIdentifier}_${timestamp}_${randomString}`;
+  };
+
+  // Funcție pentru validarea formularului de adăugare participant
+  const validateAddParticipantForm = () => {
+    if (!addParticipantForm.nume.trim()) {
+      showAlert("danger", "Numele este obligatoriu");
+      return false;
+    }
+    if (!addParticipantForm.prenume.trim()) {
+      showAlert("danger", "Prenumele este obligatoriu");
+      return false;
+    }
+    if (!addParticipantForm.email.trim()) {
+      showAlert("danger", "Email-ul este obligatoriu");
+      return false;
+    }
+    if (!addParticipantForm.telefon.trim()) {
+      showAlert("danger", "Telefonul este obligatoriu");
+      return false;
+    }
+    
+    // Verifică email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(addParticipantForm.email)) {
+      showAlert("danger", "Format email invalid");
+      return false;
+    }
+
+    return true;
+  };
+
+  // Funcție pentru adăugarea manuală a unui participant
+  const handleAddParticipant = async () => {
+    if (!validateAddParticipantForm()) return;
+
+    try {
+      setLoading(true);
+      console.log("➕ [ADD PARTICIPANT] Adăugare participant manual...");
+
+      // Verifică din nou dacă mai sunt locuri disponibile
+      const conferinte = await handleGetFirestore("ConferinteGrup");
+      const conferintaUpdated = conferinte.find(c => c.documentId === selectedConferinta.documentId);
+      
+      if (conferintaUpdated.numarMaxParticipanti && 
+          (conferintaUpdated.participanti?.length || 0) >= conferintaUpdated.numarMaxParticipanti) {
+        showAlert("danger", "Nu mai sunt locuri disponibile pentru această conferință");
+        setLoading(false);
+        return;
+      }
+
+      // Verifică dacă email-ul există deja
+      const existingParticipant = conferintaUpdated.participanti?.find(p => 
+        p && p.email.toLowerCase() === addParticipantForm.email.toLowerCase()
+      );
+      
+      if (existingParticipant) {
+        showAlert("danger", "Există deja un participant cu acest email");
+        setLoading(false);
+        return;
+      }
+
+      // Generează link-ul unic de acces
+      const uniqueAccessLink = generateUniqueAccessLink(selectedConferinta.documentId);
+
+      // Creează datele participantului cu aceeași structură ca în checkout
+      const participantData = {
+        userId: uniqueAccessLink, // Pentru manual addition folosim access link-ul ca ID unic
+        nume: addParticipantForm.nume,
+        prenume: addParticipantForm.prenume,
+        email: addParticipantForm.email,
+        telefon: addParticipantForm.telefon,
+        observatii: addParticipantForm.observatii,
+        dataInscrierii: new Date().toISOString(),
+        status: "confirmat",
+        accessLink: uniqueAccessLink,
+        metodaPlata: "MANUAL_ADMIN",
+        pretPlatit: selectedConferinta.pretParticipare,
+        isGuestUser: true, // Participanții adăugați manual sunt considerați guest users
+        addedBy: currentUser?.uid || "admin",
+        addedDate: new Date().toISOString()
+      };
+
+      console.log("➕ [ADD PARTICIPANT] Date participant:", participantData);
+
+      // Actualizează conferința cu noul participant
+      const participantiExistenti = conferintaUpdated.participanti || [];
+      const participantiNoi = [...participantiExistenti, participantData];
+
+      await handleUpdateFirestore(
+        `ConferinteGrup/${selectedConferinta.documentId}`,
+        { 
+          participanti: participantiNoi,
+          updatedAt: new Date().toISOString()
+        }
+      );
+
+      console.log("✅ [ADD PARTICIPANT] Participant adăugat cu succes în conferință");
+
+      // Creează înregistrarea de plată (pentru tracking)
+      const plataData = {
+        conferintaId: selectedConferinta.documentId,
+        conferintaTitlu: selectedConferinta.titlu,
+        userId: uniqueAccessLink,
+        participantData: participantData,
+        suma: selectedConferinta.pretParticipare,
+        status: "succeeded",
+        metodaPlata: "MANUAL_ADMIN",
+        stripeSessionId: `manual_${Date.now()}`,
+        stripePaymentIntentId: `manual_pi_${Date.now()}`,
+        dataPlata: new Date().toISOString(),
+        accessLink: uniqueAccessLink,
+        isGuestUser: true,
+        addedBy: currentUser?.uid || "admin",
+        addedDate: new Date().toISOString()
+      };
+
+      await handleUploadFirestoreGeneral(plataData, "PlatiConferinteGrup");
+      console.log("✅ [ADD PARTICIPANT] Înregistrarea plății salvată");
+
+      showAlert("success", "Participant adăugat cu succes!");
+
+      // Resetează formularul
+      setAddParticipantForm({
+        nume: "",
+        prenume: "",
+        email: "",
+        telefon: "",
+        observatii: ""
+      });
+
+      // Închide modalul
+      setShowAddParticipantModal(false);
+
+      // Pregătește pentru dialogul de confirmare email
+      setNewlyAddedParticipant(participantData);
+      setShowEmailConfirmDialog(true);
+
+      // Reîncarcă conferințele pentru a reflecta modificările
+      await fetchConferinte(true);
+
+      // Actualizează conferința selectată
+      const updatedConferinta = { ...selectedConferinta, participanti: participantiNoi };
+      setSelectedConferinta(updatedConferinta);
+
+    } catch (error) {
+      console.error("💥 [ADD PARTICIPANT] Eroare la adăugarea participantului:", error);
+      showAlert("danger", "Eroare la adăugarea participantului: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funcție pentru trimiterea emailului de confirmare
+  const sendConfirmationEmail = async (participantData, conferintaData) => {
+    try {
+      setEmailLoading(true);
+      console.log("📧 [SEND EMAIL] Trimitere email confirmare...");
+      
+      const emailResponse = await fetch('/api/send-email-conferinta', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participantData: participantData,
+          conferintaData: conferintaData,
+          accessLink: participantData.accessLink,
+          isTestMode: false
+        }),
+      });
+
+      const emailResult = await emailResponse.json();
+      if (emailResult.success) {
+        console.log("✅ [SEND EMAIL] Email trimis cu succes:", emailResult.messageId);
+        showAlert("success", `Email de confirmare trimis cu succes către ${participantData.email}`);
+      } else {
+        console.log("⚠️ [SEND EMAIL] Eroare la trimiterea emailului:", emailResult.error);
+        showAlert("warning", "Participant adăugat cu succes, dar emailul nu a putut fi trimis");
+      }
+    } catch (emailError) {
+      console.error("💥 [SEND EMAIL] Eroare la trimiterea emailului:", emailError);
+      showAlert("warning", "Participant adăugat cu succes, dar emailul nu a putut fi trimis");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  // Funcție pentru gestionarea dialogului de confirmare email
+  const handleEmailConfirmation = async (sendEmail) => {
+    if (sendEmail && newlyAddedParticipant) {
+      await sendConfirmationEmail(newlyAddedParticipant, selectedConferinta);
+    }
+    
+    // Resetează state-ul
+    setShowEmailConfirmDialog(false);
+    setNewlyAddedParticipant(null);
   };
 
   // Funcție pentru copierea link-ului de acces la conferință
@@ -1098,38 +1348,17 @@ const AdminConferinteGrup = () => {
                   </button>
                   {activeTab === "participants" && (
                     <>
-                      {/* Butoane pentru email și copierea link-ului */}
-                      {selectedConferinta?.participanti && selectedConferinta.participanti.length > 0 && (
-                        <>
-                    <button
-                            className="btn btn-primary me-2"
-                            onClick={() => sendEmailToAllParticipants(selectedConferinta)}
-                            disabled={loading}
-                            title="Trimite email cu link-ul către toți participanții"
-                          >
-                            <i className="fa fa-envelope me-2"></i>
-                            Email Toți ({selectedConferinta.participanti.length})
-                          </button>
-                          
-                          <button
-                            className="btn btn-info me-2"
-                            onClick={() => copyConferenceLink(selectedConferinta)}
-                            disabled={loading}
-                            title="Copiază link-ul conferinței"
-                          >
-                            <i className="fa fa-copy me-2"></i>
-                            Copiază Link
-                          </button>
-                        </>
-                      )}
+
                       
                       <button
-                        className="btn btn-outline-success me-2"
-                      onClick={() => exportParticipants(selectedConferinta)}
-                    >
-                      <i className="fa fa-download me-2"></i>
-                      Export CSV
-                    </button>
+                        className="btn btn-success me-2"
+                        onClick={() => setShowAddParticipantModal(true)}
+                        disabled={loading}
+                        title="Adaugă participant manual"
+                      >
+                        <i className="fa fa-user-plus me-2"></i>
+                        Adaugă Participant
+                      </button>
                       <button
                         className="btn btn-success me-2"
                         onClick={() => handleJoinAsAdmin(selectedConferinta)}
@@ -1379,26 +1608,7 @@ const AdminConferinteGrup = () => {
                               </div>
                             )}
                             
-                            {/* Badge pentru tip și status */}
-                            <div className="position-absolute top-0 start-0 m-3">
-                                <span className={`badge ${
-                                conferinta.tipConferinta === "course" ? "bg-info" : "bg-primary"
-                              } me-2`} style={{ fontSize: "0.75rem" }}>
-                                {conferinta.tipConferinta === "course" ? "CURS" : "CONFERINȚĂ"}
-                                </span>
-                              <span className={`badge ${
-                                conferinta.status === "activa" ? "bg-success" : "bg-secondary"
-                              }`} style={{ fontSize: "0.75rem" }}>
-                                {conferinta.status.toUpperCase()}
-                              </span>
-                            </div>
 
-                            {/* Preț */}
-                            <div className="position-absolute top-0 end-0 m-3">
-                              <div className="bg-white rounded-pill px-3 py-1">
-                                <strong className="text-primary">{conferinta.pretParticipare} RON</strong>
-                              </div>
-                            </div>
                           </div>
 
                           {/* Conținut card */}
@@ -1422,7 +1632,9 @@ const AdminConferinteGrup = () => {
                             <div className="mb-3">
                               <div className="d-flex align-items-center mb-2">
                                 <i className="fa fa-calendar text-primary me-2"></i>
-                                <small className="text-muted">{formatDataDisplay(conferinta)}</small>
+                                <span className="text-dark" style={{ fontSize: "0.9rem", fontWeight: "500" }}>
+                                  {formatDataDisplay(conferinta)}
+                                </span>
                               </div>
                               
                               <div className="d-flex align-items-center justify-content-between">
@@ -1448,6 +1660,31 @@ const AdminConferinteGrup = () => {
                                     `${calculateAvailableSpots(conferinta)} locuri`
                                   }
                                 </span>
+                              </div>
+                            </div>
+
+                            {/* Badge-uri și preț */}
+                            <div className="d-flex justify-content-between align-items-center mb-3 pt-2" style={{ borderTop: "1px solid #e9ecef" }}>
+                              <div className="d-flex gap-2">
+                                <span className={`badge ${
+                                  conferinta.tipConferinta === "course" ? "bg-info" : "bg-primary"
+                                }`} style={{ fontSize: "0.75rem" }}>
+                                  {conferinta.tipConferinta === "course" ? "CURS" : "CONFERINȚĂ"}
+                                </span>
+                                <span className={`badge ${
+                                  conferinta.status === "activa" ? "bg-success" : "bg-secondary"
+                                }`} style={{ fontSize: "0.75rem" }}>
+                                  {conferinta.status.toUpperCase()}
+                                </span>
+                                {conferinta.hasPassword && (
+                                  <span className="badge bg-warning text-dark" style={{ fontSize: "0.75rem" }} title={`Cod de acces: ${conferinta.password}`}>
+                                    <i className="fa fa-lock me-1"></i>
+                                    COD: {conferinta.password}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="bg-light rounded-pill px-3 py-1">
+                                <strong className="text-primary">{conferinta.pretParticipare} RON</strong>
                               </div>
                             </div>
 
@@ -1838,23 +2075,29 @@ const AdminConferinteGrup = () => {
 
                               {/* Informații contact */}
                               <div className="mb-3">
-                                <div className="d-flex align-items-center mb-2 p-2 rounded" style={{ backgroundColor: "#f8f9fa" }}>
+                                <div className="d-flex align-items-start mb-2 p-2 rounded" style={{ backgroundColor: "#f8f9fa" }}>
                                   <div 
                                     className="d-flex align-items-center justify-content-center me-3"
                                     style={{
                                       width: "32px",
                                       height: "32px",
                                       borderRadius: "8px",
-                                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                      flexShrink: 0
                                     }}
                                   >
                                     <i className="fa fa-envelope fa-sm text-white"></i>
                                 </div>
-                                  <div className="flex-grow-1">
+                                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
                                     <a 
                                       href={`mailto:${participant.email}`} 
                                       className="text-decoration-none small text-dark fw-medium"
-                                      style={{ fontSize: "0.85rem" }}
+                                      style={{ 
+                                        fontSize: "0.85rem",
+                                        wordBreak: "break-word",
+                                        overflowWrap: "break-word",
+                                        display: "block"
+                                      }}
                                     >
                                       {participant.email}
                                     </a>
@@ -2235,6 +2478,65 @@ const AdminConferinteGrup = () => {
                         </select>
                       </div>
 
+                      {/* Secțiunea pentru parola conferinței */}
+                      <div className="card border-warning mb-3">
+                        <div className="card-header bg-warning bg-opacity-10">
+                          <h6 className="mb-0">
+                            <i className="fa fa-lock me-2 text-warning"></i>
+                            Cod de Acces (Parolă)
+                          </h6>
+                        </div>
+                        <div className="card-body">
+                          <div className="form-check mb-3">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              name="hasPassword"
+                              id="hasPassword"
+                              checked={formData.hasPassword}
+                              onChange={handleInputChange}
+                            />
+                            <label className="form-check-label" htmlFor="hasPassword">
+                              <strong>Conferință cu cod de acces</strong>
+                              <br />
+                              <small className="text-muted">
+                                Participanții vor avea nevoie de un cod pentru a se putea înscrie
+                              </small>
+                            </label>
+                          </div>
+
+                          {formData.hasPassword && (
+                            <div className="form-group">
+                              <label className="form-label">
+                                Cod de Acces <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                placeholder="ex: TAROT2024"
+                                minLength="3"
+                                required
+                              />
+                              <small className="text-muted">
+                                Minimum 3 caractere. Participanții vor introduce acest cod la rezervare.
+                              </small>
+                            </div>
+                          )}
+
+                          {!formData.hasPassword && (
+                            <div className="alert alert-info mb-0">
+                              <i className="fa fa-info-circle me-2"></i>
+                              <small>
+                                Conferința va fi deschisă pentru toți utilizatorii fără necesitatea unui cod de acces.
+                              </small>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="d-flex gap-2">
                         <button
                           type="submit"
@@ -2274,6 +2576,250 @@ const AdminConferinteGrup = () => {
           </div>
         </div>
       </div>
+
+
+
+      {/* Modal pentru adăugarea participantului */}
+      {showAddParticipantModal && (
+        <div className="modal fade show" style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 1055,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }} tabIndex="-1">
+          <div className="modal-dialog modal-lg" style={{ 
+            margin: 0,
+            maxWidth: '90vw',
+            width: '800px'
+          }}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fa fa-user-plus me-2"></i>
+                  Adaugă Participant Manual
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowAddParticipantModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-info">
+                  <i className="fa fa-info-circle me-2"></i>
+                  <strong>Conferință:</strong> {selectedConferinta?.titlu}
+                  <br />
+                  <strong>Preț:</strong> {selectedConferinta?.pretParticipare} RON
+                  <br />
+                  <small className="text-muted">
+                    Participantul va fi adăugat cu plata marcată ca "MANUAL_ADMIN"
+                  </small>
+                </div>
+
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Nume <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="nume"
+                          value={addParticipantForm.nume}
+                          onChange={handleAddParticipantInputChange}
+                          placeholder="Numele de familie"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Prenume <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="prenume"
+                          value={addParticipantForm.prenume}
+                          onChange={handleAddParticipantInputChange}
+                          placeholder="Prenumele"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Email <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          className="form-control"
+                          name="email"
+                          value={addParticipantForm.email}
+                          onChange={handleAddParticipantInputChange}
+                          placeholder="adresa@email.com"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Telefon <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          className="form-control"
+                          name="telefon"
+                          value={addParticipantForm.telefon}
+                          onChange={handleAddParticipantInputChange}
+                          placeholder="+40 xxx xxx xxx"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Observații (opțional)</label>
+                    <textarea
+                      className="form-control"
+                      name="observatii"
+                      value={addParticipantForm.observatii}
+                      onChange={handleAddParticipantInputChange}
+                      rows="3"
+                      placeholder="Observații sau note speciale..."
+                    />
+                  </div>
+                </form>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowAddParticipantModal(false)}
+                >
+                  <i className="fa fa-times me-2"></i>
+                  Anulează
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleAddParticipant}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <i className="fa fa-spinner fa-spin me-2"></i>
+                      Adaugă...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa fa-user-plus me-2"></i>
+                      Adaugă Participant
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog pentru confirmarea trimiterii emailului */}
+      {showEmailConfirmDialog && (
+        <div className="modal fade show" style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 1055,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }} tabIndex="-1">
+          <div className="modal-dialog" style={{ 
+            margin: 0,
+            maxWidth: '90vw',
+            width: '500px'
+          }}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fa fa-envelope me-2"></i>
+                  Trimite Email de Confirmare?
+                </h5>
+              </div>
+              <div className="modal-body">
+                <p>
+                  Participantul <strong>{newlyAddedParticipant?.nume} {newlyAddedParticipant?.prenume}</strong> 
+                  a fost adăugat cu succes la conferința <strong>{selectedConferinta?.titlu}</strong>.
+                </p>
+                <p>
+                  Vrei să trimiți un email de confirmare cu link-ul de acces către <strong>{newlyAddedParticipant?.email}</strong>?
+                </p>
+                
+                <div className="alert alert-info">
+                  <i className="fa fa-info-circle me-2"></i>
+                  <strong>Emailul va conține:</strong>
+                  <ul className="mb-0 mt-2">
+                    <li>Detaliile conferinței</li>
+                    <li>Link-ul unic de acces</li>
+                    <li>Instrucțiuni de participare</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => handleEmailConfirmation(false)}
+                  disabled={emailLoading}
+                >
+                  <i className="fa fa-times me-2"></i>
+                  Nu, mulțumesc
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={() => handleEmailConfirmation(true)}
+                  disabled={emailLoading}
+                >
+                  {emailLoading ? (
+                    <>
+                      <i className="fa fa-spinner fa-spin me-2"></i>
+                      Trimitere...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa fa-envelope me-2"></i>
+                      Da, trimite email
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay pentru modalele active */}
+      {(showAddParticipantModal || showEmailConfirmDialog) && (
+        <div className="modal-backdrop fade show"></div>
+      )}
     </>
   );
 };

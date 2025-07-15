@@ -71,6 +71,10 @@ export default async function handler(req, res) {
 
     // Trimite reminder-urile
     const results = [];
+    // Determină URL-ul de bază pentru site (producție vs dezvoltare)
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.cristinazurba.com' : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cristinazurba.com');
+    console.log(`📧 [REMINDERS] Base URL detectat: ${baseUrl}`);
+
     for (const reminder of remindersToSend) {
       try {
         const emailType = reminder.reminderType === 'day' ? 'reminder_day' : 'reminder_hour';
@@ -84,13 +88,13 @@ export default async function handler(req, res) {
           dataFinal: reminder.conferinta.dataFinal,
           oraInceput: reminder.conferinta.oraInceput,
           oraFinal: reminder.conferinta.oraFinal,
-          accessLink: `${process.env.NEXT_PUBLIC_SITE_URL}/conferinta-grup/${reminder.participant.uniqueAccessLink}`,
+          accessLink: `${baseUrl}/conferinta-grup/${reminder.participant.uniqueAccessLink}`,
           description: reminder.conferinta.descriere,
           emailType: emailType
         };
 
         // Trimite email-ul prin API-ul nostru
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email-conferinta`, {
+        const response = await fetch(`${baseUrl}/api/send-email-conferinta`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

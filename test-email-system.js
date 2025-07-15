@@ -27,7 +27,7 @@ const testEmailSystem = async () => {
   try {
     console.log("📧 [TEST] Trimit request către API...");
     
-    const response = await fetch('http://localhost:3000/api/send-email-conferinta', {
+    const response = await fetch('http://https://www.cristinazurba.com/api/send-email-conferinta', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ const testCourseEmail = async () => {
   };
 
   try {
-    const response = await fetch('http://localhost:3000/api/send-email-conferinta', {
+    const response = await fetch('http://https://www.cristinazurba.com/api/send-email-conferinta', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

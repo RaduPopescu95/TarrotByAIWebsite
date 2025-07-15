@@ -256,11 +256,19 @@ const CalendarConferinteGrup = () => {
                       
                       <div className="card-body d-flex flex-column">
                         <div className="d-flex justify-content-between align-items-start mb-2">
-                          <span className={
-                            displayInfo.type === "Curs" ? styles.badgeCurs : styles.badgeConferinta
-                          }>
-                            {displayInfo.type}
-                          </span>
+                          <div className="d-flex gap-2">
+                            <span className={
+                              displayInfo.type === "Curs" ? styles.badgeCurs : styles.badgeConferinta
+                            }>
+                              {displayInfo.type}
+                            </span>
+                            {conferinta.hasPassword && (
+                              <span className="badge bg-warning text-dark" title="Conferință cu cod de acces">
+                                <i className="fa fa-lock me-1"></i>
+                                Cod necesar
+                              </span>
+                            )}
+                          </div>
                           {statusBadge}
                         </div>
 

@@ -32,7 +32,8 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     prenume: "",
     email: "",
     telefon: "",
-    observatii: ""
+    observatii: "",
+    password: ""
   });
 
   // Test mode pentru simulare fără Stripe
@@ -132,6 +133,18 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     if (!emailRegex.test(formData.email)) {
       showAlert("danger", "Format email invalid");
       return false;
+    }
+
+    // Verifică parola dacă conferința are cod de acces
+    if (conferinta.hasPassword) {
+      if (!formData.password.trim()) {
+        showAlert("danger", "Codul de acces este obligatoriu");
+        return false;
+      }
+      if (formData.password.trim() !== conferinta.password) {
+        showAlert("danger", "Codul de acces este incorect");
+        return false;
+      }
     }
 
     return true;
@@ -606,6 +619,37 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Câmp pentru codul de acces (parola) - doar dacă conferința are parolă */}
+                    {conferinta.hasPassword && (
+                      <div className="form-group mb-4">
+                        <div className="card border-warning">
+                          <div className="card-header bg-warning bg-opacity-10">
+                            <h6 className="mb-0">
+                              <i className="fa fa-lock me-2 text-warning"></i>
+                              Cod de Acces Necesar
+                            </h6>
+                          </div>
+                          <div className="card-body">
+                            <label className="form-label">
+                              Introdu codul de acces pentru această conferință <span className="text-danger">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              name="password"
+                              value={formData.password}
+                              onChange={handleInputChange}
+                              placeholder="Codul de acces primit"
+                              required
+                            />
+                            <small className="text-muted">
+                              Această conferință necesită un cod de acces special. Dacă nu ai codul, contactează organizatorul.
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="form-group mb-4">
                       <label className="form-label">Observații (opțional)</label>
