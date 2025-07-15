@@ -118,10 +118,17 @@ export default async function handler(req, res) {
         },
       ],
       mode: 'payment',
+      locale: 'ro', // Setează limba pentru interfața de checkout
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer_email: participantData.email,
+      billing_address_collection: 'required', // Solicită adresa de facturare pentru Oblio
+      phone_number_collection: { enabled: true }, // Solicită numărul de telefon
       metadata: metadata,
+      // Adaugă opțiunea pentru crearea unei facturi automate
+      invoice_creation: {
+        enabled: true,
+      },
     });
 
     console.log(`✅ [${checkoutId}] Stripe checkout session creată cu succes`);

@@ -5,11 +5,9 @@ import Home1Header from "../../home/home-1/header";
 import { useAuth } from "../../../../context/AuthContext";
 import { useRouter } from "next/router";
 import {
-  handleUploadFirestoreGeneral,
   handleGetFirestore,
 } from "../../../../utils/firestoreUtils";
 import { formatDateSlot } from "../../../../utils/timeUtils";
-import { v4 as uuidv4 } from "uuid"; // Importă uuid pentru generarea codurilor unice
 
 const BookingSuccess = (props) => {
   const { currentUser } = useAuth();
@@ -50,48 +48,51 @@ const BookingSuccess = (props) => {
     if (router.isReady && session_id) {
       const fetchSession = async () => {
         try {
+          console.log("🔍 [FRONTEND] Caută rezervarea pentru session_id:", session_id);
+          
+          // Verifică dacă rezervarea există în Firestore (salvată prin webhook)
           const existingDocument = await checkIfSessionExists(session_id);
 
           if (existingDocument) {
+            console.log("✅ [FRONTEND] Rezervarea găsită în Firestore:", existingDocument.documentId);
             setDateRezervari(existingDocument);
             setLoading(false);
             return;
           }
 
-          const response = await fetch(
-            `/api/get-session?session_id=${session_id}`
-          );
-          const sessionData = await response.json();
-          console.log("sessionData....", sessionData);
-          if (sessionData) {
-            const meetingCode = uuidv4();
+          // Dacă nu există în Firestore, înseamnă că webhook-ul încă procesează
+          // Așteaptă un timp scurt și încearcă din nou
+          console.log("⏳ [FRONTEND] Rezervarea nu există încă, aștept webhook-ul...");
+          
+          let retryCount = 0;
+          const maxRetries = 10; // Încearcă 10 secunde
+          
+          const waitForWebhook = async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Așteaptă 1 secundă
+            
+            const document = await checkIfSessionExists(session_id);
+            if (document) {
+              console.log("✅ [FRONTEND] Rezervarea găsită după retry:", document.documentId);
+              setDateRezervari(document);
+              setLoading(false);
+              return true;
+            }
+            
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.log(`⏳ [FRONTEND] Retry ${retryCount}/${maxRetries} pentru session_id: ${session_id}`);
+              return await waitForWebhook();
+            } else {
+              console.error("❌ [FRONTEND] Webhook-ul nu a procesat rezervarea în timp util");
+              setLoading(false);
+              return false;
+            }
+          };
+          
+          await waitForWebhook();
 
-            let rezervareData = {
-              nume: sessionData.metadata.nume,
-              alteInformatii: sessionData.metadata.alteInformatii,
-              email: sessionData.customer_email,
-              telefon: sessionData.metadata.telefon,
-              categorie: JSON.parse(sessionData.metadata.categorie),
-              tipConsultatie: sessionData.metadata.tipConsultatie,
-              selectedSlot: JSON.parse(sessionData.metadata.selectedSlot),
-              costConsultatie: sessionData.amount_total / 100,
-              session_id: session_id,
-              meetingCode: meetingCode,
-              meetingActive: false,
-              owner_uid: sessionData.metadata.owner_uid || "",
-              adresaClient: sessionData.metadata.adresaClient || "",
-            };
-
-            let data = await handleUploadFirestoreGeneral(
-              rezervareData,
-              "RezervariConsultatii"
-            );
-            rezervareData.documentId = data.documentId;
-            setDateRezervari(rezervareData);
-            setLoading(false);
-          }
         } catch (error) {
-          console.error("Eroare la preluarea sesiunii Stripe:", error);
+          console.error("❌ [FRONTEND] Eroare la căutarea rezervării:", error);
           setLoading(false);
         }
       };

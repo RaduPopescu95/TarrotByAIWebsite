@@ -1,3 +1,4 @@
+import { buffer } from "micro";
 import Stripe from 'stripe';
 import { handleGetFirestore, handleUpdateFirestore } from '../../utils/firestoreUtils';
 
@@ -11,7 +12,6 @@ export default async function handler(req, res) {
   console.log(`🔔 [${requestId}] Timestamp: ${new Date().toISOString()}`);
   console.log(`🔔 [${requestId}] Method: ${req.method}`);
   console.log(`🔔 [${requestId}] Headers present: ${Object.keys(req.headers).join(', ')}`);
-  console.log(`🔔 [${requestId}] Body length: ${req.body ? req.body.length : 0} bytes`);
   
   if (req.method !== 'POST') {
     console.log(`❌ [${requestId}] Method not allowed: ${req.method}`);
@@ -25,8 +25,12 @@ export default async function handler(req, res) {
   let event;
 
   try {
+    console.log(`🔔 [${requestId}] Începe citirea raw body...`);
+    const buf = await buffer(req);
+    console.log(`🔔 [${requestId}] Raw body length: ${buf.length} bytes`);
+    
     console.log(`🔔 [${requestId}] Începe validarea semnăturii Stripe...`);
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
     console.log(`✅ [${requestId}] Semnătura Stripe validată cu succes`);
     console.log(`🔔 [${requestId}] Event type: ${event.type}`);
     console.log(`🔔 [${requestId}] Event ID: ${event.id}`);
@@ -34,7 +38,6 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error(`💥 [${requestId}] Webhook signature verification failed:`, err.message);
     console.error(`💥 [${requestId}] Error stack:`, err.stack);
-    console.error(`💥 [${requestId}] Raw body preview:`, req.body?.slice(0, 200));
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -392,8 +395,6 @@ async function sendConfirmationEmail({ participantEmail, participantName, confer
 // Configurare pentru raw body parsing (necesar pentru Stripe webhook)
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
+    bodyParser: false,
   },
-} 
+}; 
