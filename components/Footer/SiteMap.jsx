@@ -9,23 +9,10 @@ function Copyright() {
 
   return (
     <p style={styles.copyright}>
-      &copy;&nbsp; 2024. Cristina Zurba. Toate drepturile rezervate.
+      &copy;&nbsp; 2024. Cristina Zurba. {t("allRightsReserved")}.
     </p>
   );
 }
-
-const footers = [
-  {
-    title: "Companie",
-    description: ["Despre"],
-    link: ["/about"],
-  },
-  {
-    title: "Legal",
-    description: ["Politica de confidențialitate"],
-    link: ["/privacypolicy"],
-  },
-];
 
 // Social Media Icons as SVG components
 const InstagramIcon = ({ style }) => (
@@ -145,6 +132,19 @@ function Footer(props) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const footers = [
+    {
+      title: t("company"),
+      description: [t("about")],
+      link: ["/about"],
+    },
+    {
+      title: t("legal"),
+      description: [t("privacyPolicy")],
+      link: ["/privacypolicy"],
+    },
+  ];
+
   return (
     <footer style={styles.footer}>
       <div style={styles.container}>
@@ -210,7 +210,7 @@ function Footer(props) {
             ...styles.socialSection,
             alignItems: isMobile ? "flex-start" : "flex-end"
           }} className="footer-social">
-            <h3 style={styles.socialTitle}>Urmărește-mă</h3>
+            <h3 style={styles.socialTitle}>{t("followMe")}</h3>
             <div style={{
               ...styles.socialIcons,
               justifyContent: isMobile ? "flex-start" : "flex-end",

@@ -265,7 +265,7 @@ export default function CitireViitorDialog({
           <div className="future-modal-container" onClick={(e) => e.stopPropagation()}>
             {/* Custom Header */}
             <div className="future-modal-header">
-              <h2 className="future-modal-title">Citire Viitor</h2>
+              {/* <h2 className="future-modal-title">Citire Viitor</h2> */}
               <button className="future-close-button" onClick={handleClose}>
                 ×
               </button>

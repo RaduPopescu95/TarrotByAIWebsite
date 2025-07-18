@@ -332,18 +332,7 @@ const Home1 = () => {
                           Conferințe/cursuri
                         </Link>
                       </div>
-                      <div className="col-md-6 col-12">
-                        <Link href="/news" className="btn btn-info-custom w-100">
-                          <i className="fa fa-newspaper me-2"></i>
-                          Articole
-                        </Link>
-                      </div>
-                      <div className="col-md-6 col-12">
-                        <Link href="/main-dashboard" className="btn btn-success-custom w-100">
-                          <i className="fa fa-magic me-2"></i>
-                          Citiri instant
-                        </Link>
-                      </div>
+                
                     </div>
                   </div>
                 </div>

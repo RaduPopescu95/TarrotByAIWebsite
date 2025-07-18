@@ -184,7 +184,7 @@ export function NumarNorocos() {
                 boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
               }}>
                 <span style={{ fontSize: "18px" }}>🍀</span>
-                Numărul Tău Norocos
+                {t("yourLuckyNumber")}
               </div>
               
               <h1 style={{
@@ -197,7 +197,7 @@ export function NumarNorocos() {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text"
               }}>
-                Descoperă Energia Zilei
+                {t("discoverDailyEnergy")}
               </h1>
               
               <p style={{
@@ -207,7 +207,7 @@ export function NumarNorocos() {
                 margin: "0 auto",
                 lineHeight: "1.6"
               }}>
-                Numerele au o energie specială care poate influența ziua ta. Află care este numărul tău norocos de astăzi.
+                {t("numbersEnergyDescription")}
               </p>
             </div>
 

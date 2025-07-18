@@ -167,7 +167,7 @@ export function NumarNorocos() {
                 boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
               }}>
                 <span style={{ fontSize: "18px" }}>🎨</span>
-                Culoarea Ta Norocoasă
+                {t("yourLuckyColor")}
               </div>
               
               <h1 style={{
@@ -180,7 +180,7 @@ export function NumarNorocos() {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text"
               }}>
-                Descoperă Culoarea Zilei
+                {t("discoverDailyColor")}
               </h1>
               
               <p style={{
@@ -190,7 +190,7 @@ export function NumarNorocos() {
                 margin: "0 auto",
                 lineHeight: "1.6"
               }}>
-                Fiecare culoare poartă o energie unică care poate influența starea ta de spirit și succesul zilei.
+                {t("colorsEnergyDescription")}
               </p>
             </div>
 
@@ -346,7 +346,7 @@ export function NumarNorocos() {
               color: "#64748b",
               fontSize: "0.9rem"
             }}>
-              <p>Culorile au puterea de a influența energia ta. Îmbracă-te în culoarea zilei pentru noroc! 🌈</p>
+                              <p>{t("colorsInfluenceEnergy")}</p>
             </div>
           </div>
         </section>

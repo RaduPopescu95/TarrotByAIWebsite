@@ -17,7 +17,7 @@ import {
   handleGetFirestore,
   handleQueryFirestore,
 } from "../../utils/firestoreUtils";
-import FilterBar from "../../components/Blog/FilterBar/FilterBar";
+import HeroFilters from "../../components/Blog/FilterBar/HeroFilters";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
@@ -190,24 +190,35 @@ function BlogHome(props) {
   const handleFilter = async (filterItem) => {
     setFilterItem(filterItem);
 
-    let articlesData = [];
+    let allArticlesData = [];
     if (filterItem === "All") {
-      articlesData = paginatedArticles;
+      allArticlesData = articles.articlesData;
     } else {
-      articlesData = paginatedArticles.filter(
+      allArticlesData = articles.articlesData.filter(
         (article) => article.categorie === filterItem
       );
     }
 
     // Sortarea articolelor filtrate după data și ora
-    const sortedArticles = articlesData.sort((a, b) => {
+    const sortedArticles = allArticlesData.sort((a, b) => {
       const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
       const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
       return dateTimeB - dateTimeA;
     });
 
+    // Update the featured sections based on filtered articles
+    const newLastArticle = sortedArticles.length > 0 ? sortedArticles[0] : null;
+    const newLatestArticles = sortedArticles.length > 1 ? sortedArticles.slice(1, 3) : [];
+    const newLatestFiveArticles = sortedArticles.length > 0 ? sortedArticles.slice(0, 5) : [];
+    
+    setLastArticle(newLastArticle);
+    setLatestArticles(newLatestArticles);
+    setLatestFiverArticles(newLatestFiveArticles);
+
+    // Update paginated articles for the main grid (excluding featured ones)
+    const paginatedFiltered = sortedArticles.slice(featuredArticlesCount);
     setCurrentPage(1);
-    setFilteredArticles(sortedArticles);
+    setFilteredArticles(paginatedFiltered);
   };
 
   useEffect(() => {
@@ -287,16 +298,14 @@ function BlogHome(props) {
           <div className="text-center">
             <div className="relative inline-block">
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 relative z-10">
-                Blog & Articole
+                {t("blogAndArticles")}
               </h1>
               <div className="absolute -top-2 -left-4 w-24 h-24 bg-yellow-400/20 rounded-full blur-xl"></div>
               <div className="absolute -bottom-2 -right-4 w-32 h-32 bg-pink-400/20 rounded-full blur-xl"></div>
             </div>
             
             <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-4xl mx-auto leading-relaxed">
-              Descoperă insights valoroase despre dezvoltarea personală, spiritualitate și 
-              <span className="text-yellow-300 font-semibold"> ghiduri practice</span> pentru 
-              o viață mai împlinită
+              {t("blogHeroDescription")}
             </p>
 
             {/* Stats Cards */}
@@ -305,19 +314,22 @@ function BlogHome(props) {
                 <div className="text-3xl font-bold text-white mb-2">
                   {articles.articlesData ? articles.articlesData.length : 0}+
                 </div>
-                <div className="text-white/80 font-medium">Articole publicate</div>
+                <div className="text-white/80 font-medium">{t("publishedArticles")}</div>
               </div>
               
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
                 <div className="text-3xl font-bold text-white mb-2">5</div>
-                <div className="text-white/80 font-medium">Categorii diverse</div>
+                <div className="text-white/80 font-medium">{t("diverseCategories")}</div>
               </div>
               
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
                 <div className="text-3xl font-bold text-white mb-2">1000+</div>
-                <div className="text-white/80 font-medium">Cititori lunari</div>
+                <div className="text-white/80 font-medium">{t("monthlyReaders")}</div>
               </div>
             </div>
+
+            {/* Filters integrated in hero */}
+            <HeroFilters handleFilter={handleFilter} filterItem={filterItem} />
 
             {/* Floating Elements */}
             <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 animate-pulse"></div>
@@ -338,10 +350,10 @@ function BlogHome(props) {
                 <div className="mb-12">
                   <div className="text-center mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-                      Cel mai recent articol
+                      {t("latestArticle")}
                     </h1>
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                      Descoperă cel mai nou insight pentru dezvoltarea personală
+                      {t("discoverLatestInsight")}
                     </p>
                   </div>
 
@@ -378,7 +390,7 @@ function BlogHome(props) {
                           onClick={() => router.push(getArticleUrl(lastArticle))}
                           className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 hover:shadow-lg w-fit"
                         >
-                          Citește articolul
+                          {t("readArticle")}
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                           </svg>
@@ -393,7 +405,7 @@ function BlogHome(props) {
               {latestArticles && latestArticles.length > 0 && (
                 <div className="mb-16">
                   <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-                    Articole recente
+                    {t("recentArticles")}
                   </h2>
                   
                   <div className="grid md:grid-cols-2 gap-8">
@@ -425,7 +437,7 @@ function BlogHome(props) {
                             onClick={() => router.push(getArticleUrl(article))}
                             className="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:text-indigo-700 transition-colors duration-300"
                           >
-                            Citește mai mult
+                            {t("readMore")}
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
@@ -437,16 +449,16 @@ function BlogHome(props) {
                 </div>
               )}
 
-              {/* All Articles Grid with Filters and Pagination */}
+              {/* All Articles Grid with Sidebar for Popular Articles */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Main Articles Grid */}
                 <div className="lg:col-span-8">
                   <div className="mb-8">
                     <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                      Toate articolele
+                      {t("allArticles")}
                     </h2>
                     <p className="text-gray-600">
-                      Explorează întreaga noastră colecție de articole despre dezvoltarea personală
+                      {t("exploreAllArticles")}
                     </p>
                   </div>
 
@@ -466,7 +478,7 @@ function BlogHome(props) {
                           <div className="md:col-span-2 p-6 flex flex-col justify-center">
                             <div className="flex items-center gap-3 mb-4">
                               <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
-                                {article.categorie || 'General'}
+                                {t(article.categorie) || t('General')}
                               </span>
                               <span className="text-gray-500 text-sm">
                                 {article.firstUploadDate}
@@ -485,7 +497,7 @@ function BlogHome(props) {
                               onClick={() => router.push(getArticleUrl(article))}
                               className="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:text-indigo-700 transition-colors duration-300 w-fit"
                             >
-                              Citește articolul
+                              {t("readArticle")}
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                               </svg>
@@ -510,11 +522,11 @@ function BlogHome(props) {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                       </svg>
-                      <span className="hidden md:inline">Anterior</span>
+                      <span className="hidden md:inline">{t("previous")}</span>
                     </button>
                     
                     <span className="px-4 py-2 text-gray-600 font-medium">
-                      Pagina {currentPage}
+                      {t("page")} {currentPage}
                     </span>
                     
                     <button
@@ -526,7 +538,7 @@ function BlogHome(props) {
                           : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
                       }`}
                     >
-                      <span className="hidden md:inline">Următorul</span>
+                      <span className="hidden md:inline">{t("next")}</span>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
                       </svg>
@@ -534,13 +546,9 @@ function BlogHome(props) {
                   </div>
                 </div>
 
-                {/* Sidebar */}
+                {/* Sidebar - Only Popular Articles */}
                 <div className="lg:col-span-4">
                   <div className="sticky top-24 space-y-8">
-                    <FilterBar
-                      handleFilter={handleFilter}
-                      filterItem={filterItem}
-                    />
                     <Sidebar lastFiveArticles={latestFiveArticles} />
                   </div>
                 </div>

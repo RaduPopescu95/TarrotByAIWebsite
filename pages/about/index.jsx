@@ -82,21 +82,21 @@ const AboutPage = () => {
               </h1>
               
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto lg:mx-0 leading-relaxed font-light mb-8">
-                Ghid spiritual și expert în <span className="font-semibold text-indigo-600">tarot</span> cu peste 10 ani de experiență în transformarea vieților prin înțelepciune spirituală
+                {t("aboutHeroDescription")}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/consultatii" className="group relative px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none inline-block">
                   <span className="relative flex items-center gap-3">
                     <Calendar className="w-5 h-5" />
-                    Programează o consultație
+                    {t("scheduleConsultation")}
                   </span>
                 </Link>
                 
                 <Link href="/main-dashboard" className="group px-8 py-4 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-semibold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
                   <span className="flex items-center gap-3">
                     <Sparkles className="w-5 h-5" />
-                    Explorează serviciile
+                    {t("exploreServices")}
                   </span>
                 </Link>
               </div>
@@ -120,16 +120,16 @@ const AboutPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-8 shadow-xl">
-                <h2 className="text-4xl font-bold text-gray-900 mb-6">Povestea mea</h2>
+                <h2 className="text-4xl font-bold text-gray-900 mb-6">{t("myStory")}</h2>
                 <p className="text-lg text-gray-600 leading-relaxed mb-6">
-                  Călătoria mea în lumea spiritualității a început cu o curiozitate profundă pentru misterele universului și dorința de a ajuta oamenii să își găsească drumul în viață.
+                  {t("myJourneyDescription")}
                 </p>
                 <p className="text-lg text-gray-600 leading-relaxed mb-6">
-                  Prin anii de studiu și practică, am dezvoltat o abordare unică care combină tradiția antică a tarot-ului cu înțelegerea modernă a psihologiei umane.
+                  {t("uniqueApproachDescription")}
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                  <span className="text-indigo-600 font-semibold">Peste 10,000 de citiri realizate</span>
+                  <span className="text-indigo-600 font-semibold">{t("readingsCompleted")}</span>
                 </div>
               </div>
             </div>
@@ -140,10 +140,10 @@ const AboutPage = () => {
                    <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
                      <Star className="w-6 h-6 text-white fill-current" />
                    </div>
-                   <h3 className="text-xl font-bold text-gray-900">Experiență Autentică</h3>
+                   <h3 className="text-xl font-bold text-gray-900">{t("authenticExperience")}</h3>
                  </div>
                  <p className="text-gray-600">
-                   Fiecare citire este personalizată și ghidată de intuiția dezvoltată în anii de practică constantă.
+                   {t("authenticExperienceDescription")}
                  </p>
                </div>
  
@@ -152,10 +152,10 @@ const AboutPage = () => {
                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
                      <CheckCircle className="w-6 h-6 text-white" />
                    </div>
-                   <h3 className="text-xl font-bold text-gray-900">Abordare Modernă</h3>
+                   <h3 className="text-xl font-bold text-gray-900">{t("modernApproach")}</h3>
                  </div>
                  <p className="text-gray-600">
-                   Combin înțelepciunea tradițională cu tehnologia modernă pentru o experiență unică.
+                   {t("modernApproachDescription")}
                  </p>
                </div>
             </div>
@@ -168,19 +168,19 @@ const AboutPage = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Rezultate în cifre
+              {t("resultsInNumbers")}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Impactul transformator al ghidării spirituale în viețile celor care au ales să își urmeze intuiția
+              {t("transformativeImpactDescription")}
             </p>
           </div>
 
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
              {[
-               { number: "10K+", label: "Citiri realizate", icon: <Crystal className="w-10 h-10 text-indigo-600" /> },
-               { number: "5⭐", label: "Rating mediu", icon: <Star className="w-10 h-10 text-yellow-500 fill-current" /> },
-               { number: "8", label: "Ani de experiență", icon: <Calendar className="w-10 h-10 text-purple-600" /> },
-               { number: "100%", label: "Confidențialitate", icon: <Lock className="w-10 h-10 text-pink-600" /> }
+               { number: "10K+", label: t("readingsPerformed"), icon: <Crystal className="w-10 h-10 text-indigo-600" /> },
+               { number: "5⭐", label: t("averageRating"), icon: <Star className="w-10 h-10 text-yellow-500 fill-current" /> },
+               { number: "8", label: t("yearsOfExperience"), icon: <Calendar className="w-10 h-10 text-purple-600" /> },
+               { number: "100%", label: t("confidentiality"), icon: <Lock className="w-10 h-10 text-pink-600" /> }
              ].map((stat, index) => (
                <div key={index} className="group">
                  <div className="bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 text-center shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
@@ -203,30 +203,30 @@ const AboutPage = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Serviciile mele
+              {t("myServices")}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Oferă ghidare personalizată pentru fiecare aspect important al vieții tale
+              {t("personalizedGuidanceDescription")}
             </p>
           </div>
 
                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
              {[
                {
-                 title: "Citiri Tarot Personalizate",
-                 description: "Descoperă răspunsuri la întrebările tale cele mai importante prin citiri detaliate și personalizate.",
+                 title: t("personalizedTarotReadings"),
+                 description: t("personalizedTarotDescription"),
                  icon: <Layers className="w-16 h-16 text-indigo-600" />,
                  gradient: "from-indigo-500 to-purple-600"
                },
                {
-                 title: "Consultații Spirituale",
-                 description: "Sesiuni individuale de ghidare pentru dezvoltare personală și echilibrul interior.",
+                 title: t("spiritualConsultations"),
+                 description: t("spiritualConsultationsDescription"),
                  icon: <Sparkles className="w-16 h-16 text-purple-600" />,
                  gradient: "from-purple-500 to-pink-600"
                },
                {
-                 title: "Citiri pentru Viitor",
-                 description: "Explorează posibilitățile care te așteaptă și pregătește-te pentru următoarele etape.",
+                 title: t("futureReadings"),
+                 description: t("futureReadingsDescription"),
                  icon: <Crystal className="w-16 h-16 text-pink-600" />,
                  gradient: "from-pink-500 to-indigo-600"
                }
@@ -246,7 +246,7 @@ const AboutPage = () => {
                      </p>
                      <div className="text-center">
                        <button className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${service.gradient} text-white font-semibold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-lg`}>
-                         <span>Află mai multe</span>
+                         <span>{t("learnMore")}</span>
                          <ArrowRight className="w-4 h-4" />
                        </button>
                      </div>
@@ -271,10 +271,10 @@ const AboutPage = () => {
 
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl lg:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-8">
-            Începe călătoria ta spirituală astăzi
+            {t("startSpiritualJourney")}
           </h2>
           <p className="text-xl text-gray-600 leading-relaxed mb-12 max-w-2xl mx-auto">
-            Descoperă răspunsurile pe care le cauți și găsește-ți drumul către o viață mai împlinită și echilibrată.
+            {t("findAnswersDescription")}
           </p>
           
                                <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -282,14 +282,14 @@ const AboutPage = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative flex items-center gap-3 justify-center">
                 <Calendar className="w-6 h-6" />
-                Programează o consultație
+                {t("scheduleConsultation")}
               </span>
             </Link>
             
             <Link href="/main-dashboard" className="group px-10 py-5 bg-white/80 backdrop-blur-lg border border-white/30 text-gray-700 font-bold text-lg rounded-2xl transform transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-xl text-decoration-none inline-block">
               <span className="flex items-center gap-3 justify-center">
                 <Sparkles className="w-6 h-6" />
-                Explorează serviciile
+                {t("exploreServices")}
               </span>
             </Link>
           </div>

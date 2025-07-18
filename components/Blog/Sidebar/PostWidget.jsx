@@ -1,9 +1,11 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { toUrlSlug } from "../../../utils/commonUtils";
 
 function PostWidget({ lastFiveArticles }) {
+  const { t } = useTranslation("common");
   const router = useRouter();
   const currentLanguage = router.locale || 'ro';
 
@@ -11,7 +13,7 @@ function PostWidget({ lastFiveArticles }) {
     return (
       <div style={styles.emptyContainer}>
         <div style={styles.emptyIcon}>📰</div>
-        <p style={styles.emptyText}>Nu există articole disponibile</p>
+        <p style={styles.emptyText}>{t("noArticlesAvailable")}</p>
       </div>
     );
   }
@@ -19,7 +21,7 @@ function PostWidget({ lastFiveArticles }) {
   return (
     <div style={styles.widgetContainer}>
       <div style={styles.header}>
-        <h3 style={styles.title}>Articole populare</h3>
+        <h3 style={styles.title}>{t("popularArticles")}</h3>
         <div style={styles.titleDecoration}></div>
       </div>
       
@@ -77,7 +79,7 @@ function PostWidget({ lastFiveArticles }) {
       
       <div style={styles.footer}>
         <Link href="/news" style={styles.viewAllLink}>
-          Vezi toate articolele
+          {t("viewAllArticles")}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>

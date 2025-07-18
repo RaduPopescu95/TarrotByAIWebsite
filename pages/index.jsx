@@ -135,6 +135,7 @@ function Landing(props) {
   const { articles, lastVisibleId } = props;
 
   const router = useRouter();
+  const currentLanguage = i18n.language || 'ro';
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com";
@@ -431,7 +432,7 @@ function Landing(props) {
                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                ARTICOL ÎN EVIDENȚĂ
+                                {t("featuredArticle")}
                               </div>
                             </div>
                             
@@ -504,13 +505,13 @@ function Landing(props) {
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M15 18l-6-6 6-6"/>
                             </svg>
-                              <span className="hidden md:inline">Anterior</span>
+                              <span className="hidden md:inline">{t("previous")}</span>
                           </button>
                           
                             <div className="flex flex-col items-center gap-3">
                               <div className="flex items-center gap-2 text-lg font-semibold">
                                 <span className="text-indigo-600 text-xl">{currentPage}</span>
-                                <span className="text-gray-400 text-sm">din</span>
+                                <span className="text-gray-400 text-sm">{t("of")}</span>
                                 <span className="text-gray-600">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
                               </div>
                               <div className="w-32 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -533,7 +534,7 @@ function Landing(props) {
                                   : 'bg-white text-indigo-600 border-2 border-indigo-600 hover:border-indigo-700 hover:text-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                               }`}
                             >
-                              <span className="hidden md:inline">Următorul</span>
+                              <span className="hidden md:inline">{t("next")}</span>
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M9 18l6-6-6-6"/>
                             </svg>
@@ -566,32 +567,40 @@ function Landing(props) {
                         </div>
                             <div className="p-6">
                               <div className="space-y-4">
-                                {latestFiveArticles && latestFiveArticles.slice(0, 5).map((article, index) => (
-                                  <div key={index} className="group">
-                                    <a href={`/news/${article.info?.ro?.nume?.toLowerCase()?.replace(/[^\w\s]/gi, '')?.replace(/\s+/g, '-')}?id=${article.id}`} className="flex items-center gap-4 p-3 rounded-xl hover:bg-indigo-50 transition-colors duration-200">
-                                      <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden">
-                                        <img 
-                                          src={article.image?.finalUri} 
-                                          alt={article.info?.ro?.nume}
-                                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                        />
-                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                                          {article.info?.ro?.nume}
-                                        </h4>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                          {article.firstUploadDate}
-                                        </p>
-                                      </div>
-                                      <div className="flex-shrink-0">
-                                        <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                        </svg>
-                                      </div>
-                                    </a>
-                                  </div>
-                                ))}
+                                {latestFiveArticles && latestFiveArticles.slice(0, 5).map((article, index) => {
+                                  const articleTitle = currentLanguage === "hi"
+                                    ? article?.info?.hu?.nume
+                                    : currentLanguage === "id"
+                                      ? article?.info?.ru?.nume
+                                      : article?.info?.[currentLanguage]?.nume || article?.info?.ro?.nume || "Untitled";
+                                  
+                                  return (
+                                    <div key={index} className="group">
+                                      <a href={`/news/${articleTitle?.toLowerCase()?.replace(/[^\w\s]/gi, '')?.replace(/\s+/g, '-')}?id=${article.id}`} className="flex items-center gap-4 p-3 rounded-xl hover:bg-indigo-50 transition-colors duration-200">
+                                        <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden">
+                                          <img 
+                                            src={article.image?.finalUri} 
+                                            alt={articleTitle}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                          />
+                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                                            {articleTitle}
+                                          </h4>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {article.firstUploadDate}
+                                          </p>
+                                        </div>
+                                        <div className="flex-shrink-0">
+                                          <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                          </svg>
+                                        </div>
+                                      </a>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>

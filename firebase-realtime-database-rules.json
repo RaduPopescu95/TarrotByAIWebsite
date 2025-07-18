@@ -1,0 +1,32 @@
+{
+  "rules": {
+    "chats": {
+      "$chatId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        
+        "messages": {
+          "$messageId": {
+            ".validate": "newData.hasChildren(['senderId', 'senderName', 'message', 'timestamp', 'type']) && newData.child('senderId').val() == auth.uid"
+          }
+        },
+        
+        "participants": {
+          "$userId": {
+            ".write": "$userId == auth.uid || $userId.beginsWith('guest_')"
+          }
+        },
+        
+        "typing": {
+          "$userId": {
+            ".write": "$userId == auth.uid || $userId.beginsWith('guest_')"
+          }
+        },
+        
+        "metadata": {
+          ".write": "auth != null"
+        }
+      }
+    }
+  }
+} 

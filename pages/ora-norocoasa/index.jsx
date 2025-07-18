@@ -175,7 +175,7 @@ export function CitateMotivationale() {
                 boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
               }}>
                 <span style={{ fontSize: "18px" }}>⏰</span>
-                Ora Ta Norocoasă
+                {t("yourLuckyHour")}
               </div>
               
               <h1 style={{
@@ -188,7 +188,7 @@ export function CitateMotivationale() {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text"
               }}>
-                Timpul Perfect Pentru Tine
+                {t("perfectTimeForYou")}
               </h1>
               
               <p style={{
@@ -198,7 +198,7 @@ export function CitateMotivationale() {
                 margin: "0 auto",
                 lineHeight: "1.6"
               }}>
-                Fiecare oră din zi are energia sa unică. Descoperă momentul perfect pentru activitățile tale importante.
+                {t("hoursEnergyDescription")}
               </p>
             </div>
 
@@ -361,7 +361,7 @@ export function CitateMotivationale() {
               color: "#64748b",
               fontSize: "0.9rem"
             }}>
-              <p>Timpul este energia în acțiune. Profită de orele norocoase pentru rezultate maxime! ⏰</p>
+                              <p>{t("timeEnergyAction")}</p>
             </div>
           </div>
         </section>

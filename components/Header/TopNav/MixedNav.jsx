@@ -145,7 +145,7 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
             />
           </Link>
           <p style={styles.storeLabel}>
-            Android
+            {t("android")}
           </p>
         </div>
       )}
@@ -202,7 +202,7 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
             />
           </Link>
           <p style={styles.storeLabel}>
-            iOS
+            {t("ios")}
           </p>
         </div>
       )}

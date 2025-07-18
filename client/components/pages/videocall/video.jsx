@@ -5,6 +5,9 @@ import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebase";
+import RealtimeChat from "../../../Chat/RealtimeChat";
+import ChatFAB from "../../../Chat/ChatFAB";
+import { setUserOfflineInChat, monitorConsultationForChatCleanup } from "../../../../utils/chatUtils";
 
 // Funcție pentru a obține timpul curent
 const getCurrentTime = () => Math.floor(Date.now() / 1000);
@@ -33,6 +36,11 @@ const VideoCall = () => {
   const [recordingPermission, setRecordingPermission] = useState(false);
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const recordingIntervalRef = useRef(null);
+  
+  // Chat states
+  const [isChatVisible, setIsChatVisible] = useState(false);
+  const [participantData, setParticipantData] = useState(null);
+  const chatCleanupMonitorRef = useRef(null);
 
   // Verificarea compatibilității browserului
   useEffect(() => {
@@ -137,6 +145,18 @@ const VideoCall = () => {
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
         const data = snapshot.data();
         setTotalTime(data?.categorie?.timp);
+        
+        // Set participant data for chat
+        if (data) {
+          setParticipantData({
+            nume: data.nume,
+            prenume: data.prenume || '',
+            email: data.email,
+            telefon: data.telefon,
+            isGuestUser: userRole === 'client' && !data.emailUtilizator
+          });
+        }
+        
         if (data?.presence?.admin) {
           setAdminPresent(true);
         }
@@ -160,9 +180,22 @@ const VideoCall = () => {
         }
       });
 
+      // Start monitoring chat for cleanup
+      chatCleanupMonitorRef.current = monitorConsultationForChatCleanup(
+        documentId,
+        (chatId) => {
+          console.log(`💬 [CHAT] Chat marcat pentru cleanup: ${chatId}`);
+        }
+      );
+
       return () => {
         updateDoc(docRef, { [`presence.${userRole}`]: false });
         unsubscribe();
+        
+        // Stop chat cleanup monitoring
+        if (chatCleanupMonitorRef.current) {
+          chatCleanupMonitorRef.current();
+        }
       };
     }
   }, [documentId, userRole]);
@@ -330,6 +363,11 @@ const VideoCall = () => {
         intervalRef.current = null;
       }
 
+      // Set user offline in chat before ending call
+      const chatId = `consultation_${documentId}`;
+      const userId = currentUser?.uid || `guest_${Date.now()}`;
+      await setUserOfflineInChat(chatId, userId);
+
       // Setăm prezența adminului și a clientului la false în baza de date
       await updateDoc(docRef, {
         "presence.client": false,
@@ -338,7 +376,14 @@ const VideoCall = () => {
   };
 
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
+    const handleBeforeUnload = async (event) => {
+      // Set user offline in chat
+      if (documentId) {
+        const chatId = `consultation_${documentId}`;
+        const userId = currentUser?.uid || `guest_${Date.now()}`;
+        await setUserOfflineInChat(chatId, userId);
+      }
+      
       // Apelăm handleEndCall înainte ca utilizatorul să părăsească pagina
       handleEndCall();
       // Notă: Mesajele de confirmare personalizate pentru "beforeunload" nu sunt suportate de majoritatea browserelor moderne
@@ -608,6 +653,27 @@ const VideoCall = () => {
             )}
           </div>
         </div>
+
+        {/* Chat Components */}
+        {documentId && (
+          <>
+            <ChatFAB
+              meetingId={documentId}
+              meetingType="consultation"
+              onToggleChat={() => setIsChatVisible(!isChatVisible)}
+              isChatVisible={isChatVisible}
+            />
+
+            <RealtimeChat
+              meetingId={documentId}
+              meetingType="consultation"
+              participantData={participantData}
+              isVisible={isChatVisible}
+              onToggle={() => setIsChatVisible(!isChatVisible)}
+              onClose={() => setIsChatVisible(false)}
+            />
+          </>
+        )}
       </div>
 
       {/* Recording Permission Modal */}

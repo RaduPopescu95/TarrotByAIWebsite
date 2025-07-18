@@ -177,7 +177,7 @@ export function NumarNorocos() {
                 boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
               }}>
                 <span style={{ fontSize: "18px" }}>💫</span>
-                Citat Motivațional
+                {t("motivationalQuote")}
               </div>
               
               <h1 style={{
@@ -190,7 +190,7 @@ export function NumarNorocos() {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text"
               }}>
-                Inspirație Pentru Suflet
+                {t("inspirationForSoul")}
               </h1>
               
               <p style={{
@@ -200,7 +200,7 @@ export function NumarNorocos() {
                 margin: "0 auto",
                 lineHeight: "1.6"
               }}>
-                Fiecare zi este o oportunitate nouă. Lasă-te inspirat de înțelepciunea cuvintelor care îți vor ghida pașii.
+                {t("dailyOpportunityDescription")}
               </p>
             </div>
 

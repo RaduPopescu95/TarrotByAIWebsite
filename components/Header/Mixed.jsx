@@ -161,7 +161,7 @@ function Mixed(props) {
   const navItems = [
     {
       href: "/",
-      label: "Acasă",
+      label: t("home"),
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -172,7 +172,7 @@ function Mixed(props) {
     },
     {
       href: "/about",
-      label: "Despre",
+      label: t("about"),
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="10"/>
@@ -184,7 +184,7 @@ function Mixed(props) {
     },
     {
       href: "/consultatii",
-      label: "Consultații",
+      label: t("consultatii"),
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -198,7 +198,7 @@ function Mixed(props) {
     },
     {
       href: "/news",
-      label: "Blog",
+      label: t("blog"),
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2z"/>
@@ -223,13 +223,13 @@ function Mixed(props) {
     // },
     {
       href: "/main-dashboard",
-      label: "Citiri",
+      label: t("personalReading"),
       icon: <StyleIcon style={{ width: "16px", height: "16px" }} />,
       active: router.pathname === "/main-dashboard"
     },
     {
       href: "/settings",
-      label: "Cont",
+      label: t("settings"),
       icon: <PersonIcon style={{ width: "16px", height: "16px" }} />,
       active: router.pathname === "/settings"
     }
@@ -254,7 +254,7 @@ function Mixed(props) {
                   ...styles.userGreeting,
                   color: isConsultationsPage ? '#333' : 'white'
                 }}>
-                  Salut, {userData.first_name}!
+                  {t("helloUser")}, {userData.first_name}!
                 </span>
               )}
             </div>
@@ -400,7 +400,7 @@ function Mixed(props) {
                   className="store-link"
                 >
                   <img src="/gplay.png" alt="Google Play" style={styles.storeIcon} />
-                  {isDesktop && <span style={styles.storeText}>Android</span>}
+                  {isDesktop && <span style={styles.storeText}>{t("android")}</span>}
                 </a>
                 <a 
                   href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937"
@@ -410,7 +410,7 @@ function Mixed(props) {
                   className="store-link"
                 >
                   <img src="/appstore.png" alt="App Store" style={styles.storeIcon} />
-                  {isDesktop && <span style={styles.storeText}>iOS</span>}
+                  {isDesktop && <span style={styles.storeText}>{t("ios")}</span>}
                 </a>
               </div>
 
@@ -457,7 +457,7 @@ function Mixed(props) {
             <div style={styles.mobileMenuContent}>
               {userData && (
                 <div style={styles.mobileUserGreeting}>
-                  Salut, {userData.first_name}!
+                  {t("helloUser")}, {userData.first_name}!
                 </div>
               )}
               {navItems.map((item, index) => (

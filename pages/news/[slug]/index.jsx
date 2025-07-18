@@ -8,6 +8,10 @@ import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
+import languageDetector from "../../../lib/languageDetector";
+import { toUrlSlug } from "../../../utils/commonUtils";
 
 export async function getServerSideProps(context) {
   try {
@@ -112,6 +116,7 @@ export async function getServerSideProps(context) {
         articles,
         filteredArticle,
         relatedArticles,
+        ...(await serverSideTranslations(locale, ["common"])),
       },
     };
   } catch (error) {
@@ -126,12 +131,28 @@ export async function getServerSideProps(context) {
 
 function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
   const router = useRouter();
+  const { t, i18n } = useTranslation("common");
+  const detectedLng = languageDetector.detect();
+
+  // Function to get article URL with proper language and slug
+  const getArticleUrl = (article) => {
+    const articleTitle = detectedLng === "hi" 
+      ? article?.info?.hu?.nume 
+      : detectedLng === "id" 
+      ? article?.info?.ru?.nume 
+      : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || "untitled";
+    
+    return {
+      pathname: `/news/${toUrlSlug(articleTitle)}`,
+      query: { id: article?.id },
+    };
+  };
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Eroare</h1>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">{t("error")}</h1>
           <p className="text-gray-600">{error}</p>
         </div>
       </div>
@@ -142,12 +163,12 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Articol negăsit</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">{t("articleNotFound")}</h1>
           <button 
             onClick={() => router.push("/news")}
             className="text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            Înapoi la blog
+            {t("backToBlog")}
           </button>
         </div>
       </div>
@@ -155,8 +176,17 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
   }
 
   const shareUrl = filteredArticle.currentUrl;
-  const articleTitle = filteredArticle?.info?.ro?.nume || 'Articol';
-  const articleDescription = filteredArticle?.info?.ro?.descriere || '';
+  const articleTitle = detectedLng === "hi" 
+    ? filteredArticle?.info?.hu?.nume 
+    : detectedLng === "id" 
+    ? filteredArticle?.info?.ru?.nume 
+    : filteredArticle?.info?.[detectedLng]?.nume || filteredArticle?.info?.ro?.nume || t("articleNotFound");
+  
+  const articleDescription = detectedLng === "hi" 
+    ? filteredArticle?.info?.hu?.descriere 
+    : detectedLng === "id" 
+    ? filteredArticle?.info?.ru?.descriere 
+    : filteredArticle?.info?.[detectedLng]?.descriere || filteredArticle?.info?.ro?.descriere || '';
 
   const handleShare = () => {
     if (navigator.share) {
@@ -167,7 +197,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
       });
     } else {
       navigator.clipboard.writeText(shareUrl);
-      alert('Link copiat în clipboard!');
+      alert(t('linkCopiedToClipboard'));
     }
   };
 
@@ -195,7 +225,11 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
         {/* Article specific meta */}
         <meta property="article:published_time" content={filteredArticle?.firstUploadTimestamp} />
         <meta property="article:author" content="Cristina Zurba" />
-        <meta property="article:section" content={filteredArticle?.categorie?.info?.ro?.nume} />
+        <meta property="article:section" content={detectedLng === "hi" 
+          ? filteredArticle?.categorie?.info?.hu?.nume 
+          : detectedLng === "id" 
+          ? filteredArticle?.categorie?.info?.ru?.nume 
+          : filteredArticle?.categorie?.info?.[detectedLng]?.nume || filteredArticle?.categorie?.info?.ro?.nume} />
         
         {/* Schema.org structured data */}
         <script
@@ -282,15 +316,19 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
             className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors duration-300"
           >
             <ArrowLeft className="w-4 h-4" />
-            Înapoi la articole
+            {t("backToArticles")}
           </button>
 
           {/* Article Category */}
-          {filteredArticle?.categorie?.info?.ro?.nume && (
+          {filteredArticle?.categorie?.info && (
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-4">
               <Tag className="w-4 h-4 text-white" />
               <span className="text-white font-medium text-sm">
-                {filteredArticle.categorie.info.ro.nume}
+                {detectedLng === "hi" 
+                  ? filteredArticle?.categorie?.info?.hu?.nume 
+                  : detectedLng === "id" 
+                  ? filteredArticle?.categorie?.info?.ru?.nume 
+                  : filteredArticle?.categorie?.info?.[detectedLng]?.nume || filteredArticle?.categorie?.info?.ro?.nume}
               </span>
             </div>
           )}
@@ -384,7 +422,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                         <BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">Despre ce vorbește articolul</h2>
+                        <h2 className="text-lg font-bold text-gray-900 mb-3">{t("whatArticleAbout")}</h2>
                         <p className="text-lg text-gray-700 leading-relaxed">
                           {articleDescription}
                         </p>
@@ -403,21 +441,29 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                         <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                           <BookOpen className="w-6 h-6 text-white" />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900">Conținutul articolului</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{t("articleContent")}</h2>
                       </div>
                       <div className="h-1 w-24 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full"></div>
                     </div>
 
                     {/* Article Content with Better Typography */}
                     <div className="prose prose-lg prose-slate max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-p:text-gray-900 prose-p:leading-relaxed prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-indigo-50 prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6">
-                      {filteredArticle?.info?.ro?.content ? (
+                      {(detectedLng === "hi" 
+                          ? filteredArticle?.info?.hu?.content 
+                          : detectedLng === "id" 
+                          ? filteredArticle?.info?.ru?.content 
+                          : filteredArticle?.info?.[detectedLng]?.content || filteredArticle?.info?.ro?.content) ? (
                         <div 
                           className="article-content"
                           style={{
                             color: '#000000'
                           }}
                           dangerouslySetInnerHTML={{ 
-                            __html: filteredArticle.info.ro.content 
+                            __html: detectedLng === "hi" 
+                              ? filteredArticle?.info?.hu?.content 
+                              : detectedLng === "id" 
+                              ? filteredArticle?.info?.ru?.content 
+                              : filteredArticle?.info?.[detectedLng]?.content || filteredArticle?.info?.ro?.content
                           }}
                         />
                       ) : (
@@ -426,7 +472,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                             <BookOpen className="w-8 h-8 text-gray-400" />
                           </div>
                           <p className="text-gray-500 text-lg">
-                            Conținutul articolului nu este disponibil momentan.
+                            {t("articleContentNotAvailable")}
                           </p>
                         </div>
                       )}
@@ -443,10 +489,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                         </svg>
                       </div>
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900">Videouri complementare</h3>
-                        <p className="text-gray-600">Conținut video pentru o înțelegere mai profundă</p>
-                      </div>
+                  
                     </div>
                     
                     <div className="grid grid-cols-1 gap-6">
@@ -462,7 +505,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                           </div>
                           <div className="mt-3 px-2">
                             <p className="text-sm text-gray-600">
-                              Video {index + 1} - Conținut complementar pentru articol
+                              {t("videoNumber") || "Video"} {index + 1} - {t("complementaryContentForArticle") || "Conținut complementar pentru articol"}
                             </p>
                           </div>
                         </div>
@@ -483,20 +526,23 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                         <BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Articole similare</h2>
-                        <p className="text-gray-600">Alte articole care te-ar putea interesa</p>
+                        <h2 className="text-2xl font-bold text-gray-900">{t("similarArticles") || "Articole similare"}</h2>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {relatedArticles.map((article) => (
-                        <div key={article.id} className="group cursor-pointer">
+                        <div key={article.id} className="group cursor-pointer" onClick={() => router.push(getArticleUrl(article))}>
                           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl border border-gray-200">
                             {article?.image?.finalUri && (
                               <div className="relative h-56 overflow-hidden">
                                 <img 
                                   src={article.image.finalUri} 
-                                  alt={article?.info?.ro?.nume || 'Articol'}
+                                  alt={detectedLng === "hi" 
+                                    ? article?.info?.hu?.nume 
+                                    : detectedLng === "id" 
+                                    ? article?.info?.ru?.nume 
+                                    : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || t("articleNotFound")}
                                   className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -504,19 +550,31 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                             )}
                             <div className="p-8">
                               {/* Category Badge */}
-                              {article?.categorie?.info?.ro?.nume && (
-                                <div className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-full mb-4">
-                                  {article.categorie.info.ro.nume}
-                                </div>
-                              )}
+                                                    {article?.categorie?.info && (
+                        <div className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-full mb-4">
+                          {detectedLng === "hi" 
+                            ? article?.categorie?.info?.hu?.nume 
+                            : detectedLng === "id" 
+                            ? article?.categorie?.info?.ru?.nume 
+                            : article?.categorie?.info?.[detectedLng]?.nume || article?.categorie?.info?.ro?.nume}
+                        </div>
+                      )}
                               
-                              <h3 className="font-bold text-gray-900 text-xl mb-3 group-hover:text-indigo-600 transition-colors duration-300 leading-tight">
-                                {article?.info?.ro?.nume || 'Titlu articol'}
-                              </h3>
-                              
-                              <p className="text-gray-600 text-base leading-relaxed mb-6 line-clamp-3">
-                                {article?.info?.ro?.descriere || 'Descriere articol'}
-                              </p>
+                                                    <h3 className="font-bold text-gray-900 text-xl mb-3 group-hover:text-indigo-600 transition-colors duration-300 leading-tight">
+                        {detectedLng === "hi" 
+                          ? article?.info?.hu?.nume 
+                          : detectedLng === "id" 
+                          ? article?.info?.ru?.nume 
+                          : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || t("articleNotFound")}
+                      </h3>
+                      
+                      <p className="text-gray-600 text-base leading-relaxed mb-6 line-clamp-3">
+                        {detectedLng === "hi" 
+                          ? article?.info?.hu?.descriere 
+                          : detectedLng === "id" 
+                          ? article?.info?.ru?.descriere 
+                          : article?.info?.[detectedLng]?.descriere || article?.info?.ro?.descriere || ''}
+                      </p>
                               
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -525,7 +583,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                                 </div>
                                 
                                 <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm group-hover:gap-3 transition-all duration-300">
-                                  <span>Citește mai mult</span>
+                                  <span>{t("readMore")}</span>
                                   <ArrowLeft className="w-4 h-4 rotate-180 transform group-hover:translate-x-1 transition-transform duration-300" />
                                 </div>
                               </div>
@@ -545,23 +603,31 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                 
                 {/* Latest Articles Widget */}
                 <div className="bg-white rounded-2xl shadow-xl p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Articole recente</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">{t("recentArticles")}</h3>
                   <div className="space-y-4">
                     {articles?.latestFiveArticles?.slice(0, 5).map((article) => (
-                      <div key={article.id} className="group cursor-pointer">
+                      <div key={article.id} className="group cursor-pointer" onClick={() => router.push(getArticleUrl(article))}>
                         <div className="flex gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-300">
                           {article?.image?.finalUri && (
                             <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden">
                               <img 
                                 src={article.image.finalUri} 
-                                alt={article?.info?.ro?.nume || 'Articol'}
+                                alt={detectedLng === "hi" 
+                                  ? article?.info?.hu?.nume 
+                                  : detectedLng === "id" 
+                                  ? article?.info?.ru?.nume 
+                                  : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || t("articleNotFound")}
                                 className="w-full h-full object-cover"
                               />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900 text-sm group-hover:text-indigo-600 transition-colors duration-300 line-clamp-2">
-                              {article?.info?.ro?.nume || 'Titlu articol'}
+                              {detectedLng === "hi" 
+                                ? article?.info?.hu?.nume 
+                                : detectedLng === "id" 
+                                ? article?.info?.ru?.nume 
+                                : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || t("articleNotFound")}
                             </h4>
                             <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
                               <CalendarDays className="w-3 h-3" />

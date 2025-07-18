@@ -543,7 +543,7 @@ export function CitirePersonalizata({ services }) {
                   boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
                 }}>
                   <Heart size={18} />
-                  Ce Simte
+                  {t("whatTheyFeel")}
                 </div>
                 
                 <h1 style={{
@@ -556,7 +556,7 @@ export function CitirePersonalizata({ services }) {
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text"
                 }}>
-                  Explorează Lumea Emoțiilor
+                  {t("exploreEmotionalWorld")}
                 </h1>
                 
                 <p style={{
@@ -566,7 +566,7 @@ export function CitirePersonalizata({ services }) {
                   margin: isDesktop ? "0" : "0 auto",
                   lineHeight: "1.6"
                 }}>
-                  Inima vorbește un limbaj pe care mintea nu îl înțelege întotdeauna. Descoperă ce simte cu adevărat persoana dragă ție.
+                  {t("heartLanguageDescription")}
                 </p>
                 </div>
 

@@ -542,7 +542,7 @@ export function CitirePersonalizata({ services }) {
                   boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
                 }}>
                   <Brain size={18} />
-                  Ce Gândește
+                  {t("whatTheyThink")}
                 </div>
                 
                 <h1 style={{
@@ -555,7 +555,7 @@ export function CitirePersonalizata({ services }) {
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text"
                 }}>
-                  Descoperă Gândurile Ascunse
+                  {t("discoverHiddenThoughts")}
                 </h1>
                 
                 <p style={{
@@ -565,7 +565,7 @@ export function CitirePersonalizata({ services }) {
                   margin: isDesktop ? "0" : "0 auto",
                   lineHeight: "1.6"
                 }}>
-                  Uneori cele mai importante răspunsuri se află în gândurile nerostite. Află ce își dorește cu adevărat inima acestei persoane.
+                  {t("hiddenThoughtsDescription")}
                 </p>
                 </div>
 

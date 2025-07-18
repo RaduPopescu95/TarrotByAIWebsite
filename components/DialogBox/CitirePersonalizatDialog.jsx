@@ -304,7 +304,7 @@ export default function CitirePersonalizatDialog({
           <div className="modern-modal-container" onClick={(e) => e.stopPropagation()}>
             {/* Custom Header */}
             <div className="modern-modal-header">
-              <h2 className="modal-title">Citire Personalizată</h2>
+              {/* <h2 className="modal-title">Citire Personalizată</h2> */}
               <button className="close-button" onClick={handleClose}>
                 ×
               </button>

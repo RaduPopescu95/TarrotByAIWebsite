@@ -21,6 +21,9 @@ const LAYOUT_TYPES = {
 };
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
+import RealtimeChat from "../Chat/RealtimeChat";
+import ChatFAB from "../Chat/ChatFAB";
+import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../utils/chatUtils";
 
 moment.locale("ro");
 
@@ -58,6 +61,10 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [timeUntilStart, setTimeUntilStart] = useState(null);
   const [adminIsPresent, setAdminIsPresent] = useState(false);
 
+  // Chat states
+  const [isChatVisible, setIsChatVisible] = useState(false);
+  const chatCleanupMonitorRef = useRef(null);
+
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -92,6 +99,29 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Chat cleanup on page unload
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (conferinta) {
+        const chatId = `conference_${conferinta.documentId}`;
+        const userId = currentUser?.uid || `guest_${Date.now()}`;
+        await setUserOfflineInChat(chatId, userId);
+      }
+      
+      // Stop chat cleanup monitoring
+      if (chatCleanupMonitorRef.current) {
+        chatCleanupMonitorRef.current();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Cleanup on component unmount
+      handleBeforeUnload();
+    };
+  }, [conferinta, currentUser]);
 
   const validateAccessAndLoadConference = async () => {
     try {
@@ -152,6 +182,14 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
       setConferinta(conferintaFound);
       setParticipant(participantFound);
+
+      // Start monitoring chat for cleanup
+      chatCleanupMonitorRef.current = monitorConferenceForChatCleanup(
+        conferintaFound.documentId,
+        (chatId) => {
+          console.log(`💬 [CHAT] Chat de conferință marcat pentru cleanup: ${chatId}`);
+        }
+      );
 
       // Verifică timingul conferinței
       checkConferenceTiming(conferintaFound);
@@ -248,6 +286,14 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
   const leaveConference = async () => {
     setIsInCall(false);
+    
+    // Set user offline in chat before leaving
+    if (conferinta) {
+      const chatId = `conference_${conferinta.documentId}`;
+      const userId = currentUser?.uid || `guest_${Date.now()}`;
+      await setUserOfflineInChat(chatId, userId);
+    }
+    
     if (conferinta && participant) {
       const accessLinkToUse = participant.uniqueAccessLink || participant.accessLink;
       if (accessLinkToUse) {
@@ -560,6 +606,23 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             </button>
           </div>
         )}
+
+        {/* Chat Components */}
+        <ChatFAB
+          meetingId={conferinta.documentId}
+          meetingType="conference"
+          onToggleChat={() => setIsChatVisible(!isChatVisible)}
+          isChatVisible={isChatVisible}
+        />
+
+        <RealtimeChat
+          meetingId={conferinta.documentId}
+          meetingType="conference"
+          participantData={participant}
+          isVisible={isChatVisible}
+          onToggle={() => setIsChatVisible(!isChatVisible)}
+          onClose={() => setIsChatVisible(false)}
+        />
       </div>
     );
   }

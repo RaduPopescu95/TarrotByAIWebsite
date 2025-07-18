@@ -540,7 +540,7 @@ export function CitirePersonalizata({ services }) {
                     boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
                   }}>
                     <Sparkles size={18} />
-                    Cartea Ta
+                    {t("yourCard")}
                   </div>
                   
                   <h1 style={{
@@ -553,7 +553,7 @@ export function CitirePersonalizata({ services }) {
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text"
                   }}>
-                    Descoperă Mesajul Tău
+                    {t("discoverYourMessage")}
                   </h1>
                   
                   <p style={{
@@ -563,7 +563,7 @@ export function CitirePersonalizata({ services }) {
                     margin: isDesktop ? "0" : "0 auto",
                     lineHeight: "1.6"
                   }}>
-                    Fiecare carte poartă un mesaj special pentru tine. Concentrează-te pe întrebarea ta și lasă intuiția să te ghideze.
+                    {t("cardMessageDescription")}
                   </p>
                 </div>
 
@@ -674,8 +674,7 @@ export function CitirePersonalizata({ services }) {
                     lineHeight: "1.6",
                     marginBottom: "0"
                   }}>
-                    Concentrează-te pe întrebarea ta și permite intuiției să te ghideze către carta potrivită. 
-                    Fiecare carte aleasă îți oferă îndrumări personalizate pentru situația ta actuală.
+                    {t("focusOnQuestionGuide")} {t("personalizedGuidanceCard")}
                   </p>
                 </div>
               )}
