@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { doctorprofileimg } from "../../imagepath";
-import { handleSignIn } from "@/utils/authUtils";
+import { handleSignIn, handleLogout } from "../../../../utils/authUtils";
 import Select from "react-select";
-import { handleLogout } from "../../../../utils/authUtils";
 import { useRouter } from "next/router";
 import { useAuth } from "../../../../context/AuthContext";
 import { onAuthStateChanged } from "firebase/auth";

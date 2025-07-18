@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/firebase"; // Asumând că auth este configurat în Firebase
+import { auth } from "../../../firebase"; // Asumând că auth este configurat în Firebase
 import Footer from "../footer";
 import Home1Header from "../home/home-1/header";
 import { authentication } from "../../../firebase";

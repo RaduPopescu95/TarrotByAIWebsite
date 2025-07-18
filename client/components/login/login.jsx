@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
-import { handleSignIn } from "@/utils/authUtils";
+import { handleSignIn } from "../../../utils/authUtils";
 import Footer from "../footer";
 import Home1Header from "../home/home-1/header";
 import { useRouter } from "next/router";

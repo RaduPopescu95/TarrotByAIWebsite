@@ -5,7 +5,7 @@ import {
   handleGetUserInfo,
   handleGetUserInfoJobs,
 } from "../utils/handleFirebaseQuery";
-import { handleGetFirestore } from "@/utils/firestoreUtils";
+import { handleGetFirestore } from "../utils/firestoreUtils";
 import { doc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();

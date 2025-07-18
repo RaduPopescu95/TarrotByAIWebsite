@@ -4,7 +4,7 @@ import {
   handleSignIn,
   handleGoogleSignIn,
   handleFacebookSignIn,
-} from "@/utils/authUtils"; // Asumând că authUtils conține metodele pentru autentificare
+} from "../../../utils/authUtils"; // Asumând că authUtils conține metodele pentru autentificare
 import Footer from "../footer";
 import Home1Header from "../home/home-1/header";
 import { useRouter } from "next/router";
