@@ -609,32 +609,40 @@ const VideoCall = () => {
                   </button>
                 )}
 
-                {/* Simple Recording Controls */}
+                {/* Simple Recording Controls - DISABLED FOR NON-ADMIN USERS */}
                 {isSessionActive && isRecordingSupported && (
                   <div style={styles.recordingControls}>
                     <button
                       style={{
                         ...styles.recordButton,
-                        backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-                        animation: isRecording ? "pulse 2s infinite" : "none",
+                        backgroundColor: "#95a5a6",
+                        cursor: "not-allowed",
+                        opacity: 0.6
                       }}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
+                      disabled={true}
+                      title="Înregistrările pot fi realizate doar de către consultant"
                     >
-                      <i className={`fas ${isRecording ? "fa-stop" : "fa-video"}`} />
+                      <i className="fas fa-video" />
                     </button>
                     
-                    {isRecording && (
-                      <div style={styles.recordingInfo}>
-                        <div style={styles.recordingIndicator}>
-                          <div style={styles.recordingDot}></div>
-                          <span>REC</span>
-                        </div>
-                        <div style={styles.recordingTime}>
-                          {formatRecordingTime(recordingDuration)}
-                        </div>
+                    {/* Info message for users */}
+                    <div style={{
+                      ...styles.recordingInfo,
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      marginTop: '8px'
+                    }}>
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6c757d',
+                        textAlign: 'center'
+                      }}>
+                        <i className="fas fa-info-circle" style={{marginRight: '4px'}}></i>
+                        Înregistrarea poate fi realizată doar de către consultant
                       </div>
-                    )}
+                    </div>
 
                     {recordingStatus && (
                       <div style={styles.recordingStatus}>

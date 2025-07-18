@@ -31,6 +31,10 @@ const AdminVideoCall = () => {
   const [recordingError, setRecordingError] = useState("");
   const [recordingPermission, setRecordingPermission] = useState(true); // Admin has default permission
   const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const recordingIntervalRef = useRef(null);
 
   // Verificarea compatibilității browserului
@@ -194,9 +198,29 @@ const AdminVideoCall = () => {
     }
   };
 
-  const stopRecording = async () => {
+  const stopRecording = () => {
+    // Show email dialog instead of stopping immediately
+    setEmailError("");
+    setRecipientEmail("");
+    setShowEmailDialog(true);
+  };
+
+  const confirmStopRecording = async () => {
+    if (!recipientEmail.trim()) {
+      setEmailError("Vă rugăm să introduceți o adresă de email validă");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail.trim())) {
+      setEmailError("Adresa de email nu este validă");
+      return;
+    }
+
     try {
-      setRecordingError("");
+      setIsSendingEmail(true);
+      setEmailError("");
       
       const response = await fetch('/api/recording/stop', {
         method: 'POST',
@@ -205,7 +229,8 @@ const AdminVideoCall = () => {
         },
         body: JSON.stringify({
           meetingCode: meetingCode,
-          duration: recordingDuration
+          duration: recordingDuration,
+          recipientEmail: recipientEmail.trim()
         }),
       });
 
@@ -215,6 +240,7 @@ const AdminVideoCall = () => {
         setIsRecording(false);
         setRecordingStartTime(null);
         setRecordingDuration(0);
+        setShowEmailDialog(false);
         
         // Clear recording timer
         if (recordingIntervalRef.current) {
@@ -230,16 +256,49 @@ const AdminVideoCall = () => {
               isRecording: false,
               endTime: Date.now(),
               status: 'completed',
-              recordingType: 'browser'
+              recordingType: 'browser',
+              recipientEmail: recipientEmail.trim()
             }
           });
         }
+
+        // Send notification email
+        await sendRecordingNotification();
+
       } else {
         setRecordingError(data.message || "Eroare la oprirea înregistrării");
       }
     } catch (error) {
       console.error("Recording stop error:", error);
       setRecordingError("Eroare la oprirea înregistrării");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const sendRecordingNotification = async () => {
+    try {
+      const response = await fetch('/api/recording/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingCode: meetingCode,
+          recipientEmail: recipientEmail.trim(),
+          duration: recordingDuration
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log("Notification email sent successfully");
+      } else {
+        console.error("Failed to send notification email:", data.message);
+      }
+    } catch (error) {
+      console.error("Error sending notification email:", error);
     }
   };
 
@@ -570,6 +629,86 @@ const AdminVideoCall = () => {
                 </button>
               </div>
             )}
+
+            {/* Email Dialog for Recording */}
+            {showEmailDialog && (
+              <div style={styles.emailDialogOverlay}>
+                <div style={styles.emailDialog}>
+                  <div style={styles.emailDialogHeader}>
+                    <h3 style={styles.emailDialogTitle}>
+                      <i className="fas fa-envelope" style={{marginRight: '8px'}}></i>
+                      Oprire înregistrare și trimitere email
+                    </h3>
+                    <button
+                      style={styles.emailDialogCloseButton}
+                      onClick={() => setShowEmailDialog(false)}
+                      disabled={isSendingEmail}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </div>
+                  
+                  <div style={styles.emailDialogBody}>
+                    <p style={styles.emailDialogDescription}>
+                      Înregistrarea va fi oprită și un email cu link-ul de descărcare va fi trimis la adresa specificată.
+                    </p>
+                    
+                    <div style={styles.emailInputContainer}>
+                      <label style={styles.emailInputLabel}>
+                        Adresa de email pentru înregistrare:
+                      </label>
+                      <input
+                        type="email"
+                        style={styles.emailInput}
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="client@example.com"
+                        disabled={isSendingEmail}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !isSendingEmail) {
+                            confirmStopRecording();
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    {emailError && (
+                      <div style={styles.emailError}>
+                        <i className="fas fa-exclamation-triangle" style={{marginRight: '8px'}}></i>
+                        {emailError}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={styles.emailDialogFooter}>
+                    <button
+                      style={styles.emailDialogCancelButton}
+                      onClick={() => setShowEmailDialog(false)}
+                      disabled={isSendingEmail}
+                    >
+                      Anulează
+                    </button>
+                    <button
+                      style={styles.emailDialogConfirmButton}
+                      onClick={confirmStopRecording}
+                      disabled={isSendingEmail || !recipientEmail.trim()}
+                    >
+                      {isSendingEmail ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin" style={{marginRight: '8px'}}></i>
+                          Se procesează...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-stop" style={{marginRight: '8px'}}></i>
+                          Oprește și trimite email
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -794,6 +933,127 @@ const styles = {
     fontSize: "24px",
     cursor: "pointer",
     marginLeft: "10px",
+  },
+  // Email Dialog Styles
+  emailDialogOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10000,
+  },
+  emailDialog: {
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    width: "90%",
+    maxWidth: "500px",
+    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+    overflow: "hidden",
+  },
+  emailDialogHeader: {
+    backgroundColor: "#667eea",
+    color: "#ffffff",
+    padding: "20px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  emailDialogTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: "600",
+    display: "flex",
+    alignItems: "center",
+  },
+  emailDialogCloseButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#ffffff",
+    fontSize: "18px",
+    cursor: "pointer",
+    width: "30px",
+    height: "30px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.8,
+    transition: "opacity 0.2s ease",
+  },
+  emailDialogBody: {
+    padding: "24px",
+  },
+  emailDialogDescription: {
+    margin: "0 0 20px 0",
+    fontSize: "14px",
+    color: "#666666",
+    lineHeight: "1.5",
+  },
+  emailInputContainer: {
+    marginBottom: "16px",
+  },
+  emailInputLabel: {
+    display: "block",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#333333",
+    marginBottom: "8px",
+  },
+  emailInput: {
+    width: "100%",
+    padding: "12px 16px",
+    border: "2px solid #e1e5e9",
+    borderRadius: "8px",
+    fontSize: "14px",
+    boxSizing: "border-box",
+    transition: "border-color 0.2s ease",
+    outline: "none",
+  },
+  emailError: {
+    color: "#e74c3c",
+    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#fdf2f2",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    border: "1px solid #fecaca",
+  },
+  emailDialogFooter: {
+    padding: "16px 24px",
+    backgroundColor: "#f8f9fa",
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+  },
+  emailDialogCancelButton: {
+    padding: "10px 20px",
+    backgroundColor: "#6c757d",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background-color 0.2s ease",
+  },
+  emailDialogConfirmButton: {
+    padding: "10px 20px",
+    backgroundColor: "#e74c3c",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background-color 0.2s ease",
+    display: "flex",
+    alignItems: "center",
   },
 };
 

@@ -69,80 +69,56 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { meetingCode, downloadURL } = req.body;
+    const { meetingCode, recipientEmail, duration } = req.body;
 
-    logWithDetails('INFO', 'Processing notification request', {
+    logWithDetails('INFO', 'Processing simple recording notification request', {
       requestId,
       meetingCode,
-      downloadURLLength: downloadURL ? downloadURL.length : 0,
-      downloadURLDomain: downloadURL ? new URL(downloadURL).hostname : 'invalid',
+      recipientEmail: recipientEmail ? recipientEmail.substring(0, 20) + '...' : 'missing',
+      duration: duration || 'unknown',
       bodySize: JSON.stringify(req.body).length
     });
 
-    if (!meetingCode || !downloadURL) {
+    if (!meetingCode || !recipientEmail) {
       logWithDetails('ERROR', 'Validation failed - missing required fields', {
         requestId,
         hasMeetingCode: !!meetingCode,
-        hasDownloadURL: !!downloadURL,
+        hasRecipientEmail: !!recipientEmail,
         receivedFields: Object.keys(req.body)
       });
       return res.status(400).json({ 
         success: false, 
-        message: 'meetingCode and downloadURL are required' 
+        message: 'meetingCode and recipientEmail are required' 
       });
     }
 
-    // Validate URL format
-    try {
-      new URL(downloadURL);
-    } catch (urlError) {
-      logWithDetails('ERROR', 'Invalid download URL format', {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      logWithDetails('ERROR', 'Invalid email format', {
         requestId,
-        downloadURL: downloadURL.substring(0, 100) + '...', // Log only first 100 chars
-        urlError: urlError.message
+        recipientEmail: recipientEmail.substring(0, 20) + '...'
       });
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid download URL format' 
+        message: 'Invalid email format' 
       });
     }
 
-    logWithDetails('INFO', 'Validation passed, starting notification process', {
+    logWithDetails('INFO', 'Validation passed, starting simple notification process', {
       requestId,
-      meetingCode
+      meetingCode,
+      duration
     });
 
-    // Get meeting details from Firestore
-    logWithDetails('INFO', 'Fetching meeting details from Firestore', {
+    // Send email notification directly with provided email
+    logWithDetails('INFO', 'Starting simple email notification process', {
       requestId,
-      meetingCode
+      meetingCode,
+      recipientEmail: recipientEmail.substring(0, 20) + '...'
     });
 
-    const meetingDetails = await getMeetingDetails(meetingCode, requestId);
-    
-    if (!meetingDetails) {
-      logWithDetails('WARNING', 'Meeting details not found, proceeding with generic notification', {
-        requestId,
-        meetingCode
-      });
-    } else {
-      logWithDetails('SUCCESS', 'Meeting details found', {
-        requestId,
-        meetingCode,
-        hasClientEmail: !!(meetingDetails.clientEmail || meetingDetails.email || meetingDetails.participantEmail),
-        hasDate: !!meetingDetails.data,
-        hasTime: !!meetingDetails.ora,
-        hasName: !!meetingDetails.nume
-      });
-    }
-
-    // Send email notification
-    logWithDetails('INFO', 'Starting email notification process', {
-      requestId,
-      meetingCode
-    });
-
-    const emailResult = await sendRecordingEmail(meetingCode, downloadURL, meetingDetails, requestId);
+    const emailResult = await sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, requestId);
 
     const processingTime = Date.now() - requestStartTime;
 
@@ -461,6 +437,131 @@ Echipa Cristina Zurba
       error: error.message,
       errorCode: error.code,
       errorStack: error.stack,
+      smtpResponse: error.response,
+      smtpCommand: error.command,
+      recipientEmail: recipientEmail ? recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2') : 'unknown'
+    });
+    return { success: false, error: error.message };
+  }
+}
+
+async function sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, requestId) {
+  try {
+    logWithDetails('INFO', 'Preparing simple recording email', {
+      requestId,
+      meetingCode,
+      recipientEmail: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      duration
+    });
+
+    const formatDuration = (seconds) => {
+      if (!seconds) return 'N/A';
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins} min ${secs} sec`;
+    };
+
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
+        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #667eea; margin: 0; font-size: 28px;">🎥 Înregistrare Consultație</h1>
+            <div style="width: 60px; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 15px auto; border-radius: 2px;"></div>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="margin: 0 0 10px 0; font-size: 20px;">Consultația dvs. a fost înregistrată</h2>
+            <p style="margin: 0; opacity: 0.9;">Înregistrarea este acum disponibilă pentru descărcare</p>
+          </div>
+
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h3 style="color: #333; margin-top: 0; font-size: 16px;">📋 Detalii înregistrare:</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: 600;">Cod Meeting:</td>
+                <td style="padding: 8px 0; color: #333;">${meetingCode}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: 600;">Durată:</td>
+                <td style="padding: 8px 0; color: #333;">${formatDuration(duration)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: 600;">Data înregistrării:</td>
+                <td style="padding: 8px 0; color: #333;">${new Date().toLocaleDateString('ro-RO')}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin-bottom: 25px;">
+            <h3 style="color: #1976d2; margin-top: 0; font-size: 16px;">📥 Descărcare înregistrare</h3>
+            <p style="color: #333; margin: 10px 0; line-height: 1.6;">
+              Înregistrarea va fi disponibilă pentru descărcare în aproximativ <strong>10-15 minute</strong> 
+              după finalizarea consultației. Procesarea este în curs...
+            </p>
+            <p style="color: #666; margin: 0; font-size: 14px;">
+              Veți primi un email suplimentar cu link-ul direct de descărcare când procesarea va fi completă.
+            </p>
+          </div>
+
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 25px;">
+            <h4 style="color: #856404; margin-top: 0; font-size: 14px;">🔒 Confidențialitate și Securitate</h4>
+            <ul style="color: #856404; margin: 0; padding-left: 20px; line-height: 1.6;">
+              <li>Înregistrarea este stocată securizat și criptat</li>
+              <li>Accesul este disponibil doar pentru participanții autorizați</li>
+              <li>Link-ul de descărcare va fi valid timp de <strong>30 de zile</strong></li>
+              <li>După această perioadă, înregistrarea va fi ștearsă automat</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">
+              Dacă aveți întrebări, nu ezitați să ne contactați.
+            </p>
+            <p style="color: #667eea; margin: 0; font-weight: 600;">
+              Echipa Tarot by AI ✨
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: `"Tarot by AI - Înregistrări" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: '🎥 Înregistrarea consultației dvs. este pregătită',
+      html: emailContent
+    };
+
+    logWithDetails('INFO', 'Sending simple recording email via SMTP', {
+      requestId,
+      to: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      from: process.env.EMAIL_USER ? process.env.EMAIL_USER.replace(/(.{3}).*(@.*)/, '$1***$2') : 'not_configured',
+      subject: mailOptions.subject
+    });
+
+    const smtpStartTime = Date.now();
+    const result = await transporter.sendMail(mailOptions);
+    const smtpTime = Date.now() - smtpStartTime;
+
+    logWithDetails('SUCCESS', 'Simple recording email sent successfully', {
+      requestId,
+      messageId: result.messageId,
+      recipientEmail: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      smtpTime: `${smtpTime}ms`,
+      emailSize: emailContent.length
+    });
+
+    return { 
+      success: true, 
+      messageId: result.messageId,
+      recipientEmail: recipientEmail
+    };
+
+  } catch (error) {
+    logWithDetails('ERROR', 'Failed to send simple recording email', {
+      requestId,
+      error: error.message,
+      errorCode: error.code,
       smtpResponse: error.response,
       smtpCommand: error.command,
       recipientEmail: recipientEmail ? recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2') : 'unknown'
