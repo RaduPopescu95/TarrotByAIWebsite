@@ -20,8 +20,10 @@ module.exports = {
       "es", // Spanish
       // Adaugă aici alte locale
     ],
+    localeDetection: true,
   },
   localePath: path.resolve("./public/locales"),
-  ssg: false,
-  localeSubpaths: false,
+  ssg: true,
+  localeSubpaths: true,
+  reloadOnPrerender: true,
 };
