@@ -1,0 +1,29 @@
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .articles-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .latest-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr !important;
+  }
+} 

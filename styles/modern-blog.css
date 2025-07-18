@@ -1,0 +1,419 @@
+/* Modern Blog CSS Animations and Effects */
+
+/* Keyframe Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Premium Showcase Cards */
+.premium-featured {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.premium-featured:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 25px 80px rgba(102, 126, 234, 0.2);
+}
+
+.premium-medium {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-medium:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.15);
+}
+
+.premium-small {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-small:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.12);
+}
+
+/* Dynamic Article Cards */
+.article-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.article-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.12);
+}
+
+/* Large Featured Cards */
+.article-card-large {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.article-card-large:hover {
+  transform: translateY(-12px) scale(1.01);
+  box-shadow: 0 25px 80px rgba(102, 126, 234, 0.18);
+}
+
+/* Medium Cards */
+.article-card-medium {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.article-card-medium:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.15);
+}
+
+/* Wide Cards */
+.article-card-wide {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.article-card-wide:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 54px rgba(102, 126, 234, 0.14);
+}
+
+/* Normal Cards */
+.article-card-normal {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.article-card-normal:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.12);
+}
+
+/* Pagination Buttons */
+.pagination-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.pagination-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.pagination-btn:hover::before {
+  left: 100%;
+}
+
+/* Enhanced Sidebar Cards */
+.sidebar-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-card:hover::before {
+  transform: scaleX(1);
+}
+
+/* Dynamic Masonry Grid for Articles */
+.articles-masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  align-items: start;
+  grid-auto-flow: dense; /* Fills gaps intelligently */
+}
+
+@media (max-width: 1200px) {
+  .articles-masonry {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.8rem;
+  }
+  
+  /* Disable spanning on medium screens */
+  .article-card-large,
+  .article-card-wide {
+    grid-column: span 1 !important;
+  }
+  
+  .article-card-large,
+  .article-card-medium {
+    grid-row: span 1 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .articles-masonry {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  /* Reset all spanning on mobile */
+  .article-card-large,
+  .article-card-medium,
+  .article-card-wide {
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
+  }
+}
+
+/* Staggered Animation for Dynamic Cards */
+.article-card-large {
+  animation-delay: 0s;
+}
+
+.article-card-medium {
+  animation-delay: 0.1s;
+}
+
+.article-card-wide {
+  animation-delay: 0.2s;
+}
+
+.article-card-normal:nth-child(4n+1) {
+  animation-delay: 0.3s;
+}
+
+.article-card-normal:nth-child(4n+2) {
+  animation-delay: 0.4s;
+}
+
+.article-card-normal:nth-child(4n+3) {
+  animation-delay: 0.5s;
+}
+
+.article-card-normal:nth-child(4n+4) {
+  animation-delay: 0.6s;
+}
+
+/* Enhanced Filter Effects */
+.filter-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.filter-item:hover {
+  transform: translateY(-2px);
+}
+
+.filter-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
+}
+
+/* Loading Animations */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Scroll Reveal Animations */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Enhanced Typography */
+.blog-title-gradient {
+  background: linear-gradient(135deg, #1a202c 0%, #667eea 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Interactive Elements */
+.interactive-element {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.interactive-element:hover {
+  transform: translateY(-2px);
+}
+
+/* Enhanced Shadows */
+.elevated-shadow {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.elevated-shadow:hover {
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+/* Responsive Design Enhancements */
+@media (max-width: 1200px) {
+  .blog-layout {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .sidebar-container {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .showcase-title {
+    font-size: 2rem !important;
+  }
+  
+  .blog-title {
+    font-size: 1.75rem !important;
+  }
+  
+  .articles-stats {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  .blog-header-top {
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* Focus Accessibility */
+.focusable:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Print Styles */
+@media print {
+  .pagination-section,
+  .sidebar-container,
+  .newsletter-section {
+    display: none !important;
+  }
+  
+  .article-card {
+    break-inside: avoid;
+    margin-bottom: 2rem;
+  }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+  .blog-section {
+    background: #1a202c !important;
+    color: #e2e8f0 !important;
+  }
+  
+  .sidebar-card {
+    background: #2d3748 !important;
+    border-color: rgba(102, 126, 234, 0.2) !important;
+  }
+  
+  .empty-container {
+    background: #2d3748 !important;
+  }
+} 

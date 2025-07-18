@@ -1,0 +1,26 @@
+.headline-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.headline-card:hover .headline-image {
+  transform: scale(1.05);
+}
+
+.headline-card:hover .read-more {
+  color: #764ba2;
+}
+
+@media (max-width: 768px) {
+  .headline-content {
+    padding: 1.5rem !important;
+  }
+  
+  .headline-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .headline-image-container {
+    height: 450px !important;
+  }
+} 

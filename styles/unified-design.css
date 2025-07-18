@@ -1,0 +1,347 @@
+/* Unified Design CSS for /consultatii style compatibility */
+
+/* Global animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button hover effects */
+.btn-primary-unified {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary-unified:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  color: white;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  text-decoration: none;
+}
+
+.btn-secondary-unified {
+  background: transparent;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 10px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary-unified:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  text-decoration: none;
+}
+
+/* Card styles */
+.card-unified {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.card-unified:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Form styles */
+.form-control-unified {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-control-unified:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Section styles */
+.section-unified {
+  padding: 4rem 0;
+  background: #f8f9fa;
+}
+
+.section-title-unified {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.section-subtitle-unified {
+  font-size: 1.1rem;
+  color: #666;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+/* Modal styles */
+.modal-overlay-unified {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content-unified {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+  animation: slideInUp 0.4s ease-out;
+}
+
+/* Icon styles */
+.icon-unified {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: white;
+  font-size: 2rem;
+}
+
+/* Loading styles */
+.loading-unified {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.spinner-unified {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #e9ecef;
+  border-top: 6px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+/* Responsive grid system */
+.grid-unified {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -15px;
+}
+
+.col-unified {
+  padding: 0 15px;
+}
+
+.col-1-unified { width: 8.33%; }
+.col-2-unified { width: 16.66%; }
+.col-3-unified { width: 25%; }
+.col-4-unified { width: 33.33%; }
+.col-5-unified { width: 41.66%; }
+.col-6-unified { width: 50%; }
+.col-7-unified { width: 58.33%; }
+.col-8-unified { width: 66.66%; }
+.col-9-unified { width: 75%; }
+.col-10-unified { width: 83.33%; }
+.col-11-unified { width: 91.66%; }
+.col-12-unified { width: 100%; }
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .section-title-unified {
+    font-size: 2rem;
+  }
+  
+  .col-md-6-unified,
+  .col-md-4-unified,
+  .col-md-8-unified {
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+  
+  .modal-content-unified {
+    margin: 20px;
+    padding: 1.5rem;
+  }
+  
+  .btn-primary-unified,
+  .btn-secondary-unified {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-title-unified {
+    font-size: 1.8rem;
+  }
+  
+  .section-subtitle-unified {
+    font-size: 1rem;
+  }
+  
+  .card-unified {
+    padding: 1.5rem;
+  }
+  
+  .btn-primary-unified,
+  .btn-secondary-unified {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}
+
+/* Utility classes */
+.text-center-unified { text-align: center; }
+.text-left-unified { text-align: left; }
+.text-right-unified { text-align: right; }
+
+.mt-1-unified { margin-top: 0.5rem; }
+.mt-2-unified { margin-top: 1rem; }
+.mt-3-unified { margin-top: 1.5rem; }
+.mt-4-unified { margin-top: 2rem; }
+.mt-5-unified { margin-top: 3rem; }
+
+.mb-1-unified { margin-bottom: 0.5rem; }
+.mb-2-unified { margin-bottom: 1rem; }
+.mb-3-unified { margin-bottom: 1.5rem; }
+.mb-4-unified { margin-bottom: 2rem; }
+.mb-5-unified { margin-bottom: 3rem; }
+
+.p-1-unified { padding: 0.5rem; }
+.p-2-unified { padding: 1rem; }
+.p-3-unified { padding: 1.5rem; }
+.p-4-unified { padding: 2rem; }
+.p-5-unified { padding: 3rem; }
+
+/* Background utilities */
+.bg-white-unified { background-color: white; }
+.bg-light-unified { background-color: #f8f9fa; }
+.bg-primary-unified { 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* Text utilities */
+.text-primary-unified { color: #667eea; }
+.text-secondary-unified { color: #764ba2; }
+.text-muted-unified { color: #666; }
+.text-dark-unified { color: #333; }
+
+/* Animation utilities */
+.fade-in-unified { animation: fadeIn 0.6s ease-out; }
+.slide-in-up-unified { animation: slideInUp 0.6s ease-out; }
+
+/* Hover effects */
+.hover-lift-unified {
+  transition: transform 0.3s ease;
+}
+
+.hover-lift-unified:hover {
+  transform: translateY(-5px);
+}
+
+/* Focus styles for accessibility */
+.btn-primary-unified:focus,
+.btn-secondary-unified:focus,
+.form-control-unified:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar-unified {
+  scrollbar-width: thin;
+  scrollbar-color: #667eea #f1f1f1;
+}
+
+.custom-scrollbar-unified::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar-unified::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar-unified::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar-unified::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+} 
