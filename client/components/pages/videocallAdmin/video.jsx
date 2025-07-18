@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebase";
+import { SimpleVideoRecorder } from "../../../../utils/mediaRecorder";
 
 // Funcție pentru a obține timpul curent
 const getCurrentTime = () => Math.floor(Date.now() / 1000);
@@ -29,6 +30,7 @@ const AdminVideoCall = () => {
   const [recordingStartTime, setRecordingStartTime] = useState(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [recordingError, setRecordingError] = useState("");
+  const [recordingStatus, setRecordingStatus] = useState("");
   const [recordingPermission, setRecordingPermission] = useState(true); // Admin has default permission
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
@@ -36,6 +38,71 @@ const AdminVideoCall = () => {
   const [emailError, setEmailError] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const recordingIntervalRef = useRef(null);
+
+  // Initialize SimpleVideoRecorder for admin
+  const [recorder] = useState(() => {
+    return new SimpleVideoRecorder({
+      onProgress: (message) => {
+        console.log('🎥 [ADMIN RECORDING] Progress:', message);
+        setRecordingStatus(message);
+      },
+      onComplete: (data) => {
+        console.log('🎉 [ADMIN RECORDING] Completed:', data);
+        setRecordingStatus('Înregistrare completă! Pregătire email...');
+        setIsRecording(false);
+        setRecordingDuration(0);
+        
+        // Clear recording timer
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+
+        // Update Firestore with recording completion
+        if (documentId) {
+          updateDoc(doc(db, "RezervariConsultatii", documentId), {
+            recording: {
+              isRecording: false,
+              endTime: Date.now(),
+              status: 'completed',
+              recordingType: 'browser',
+              downloadURL: data.downloadURL,
+              fileName: data.fileName,
+              fileSize: data.size,
+              duration: data.duration
+            }
+          }).catch(error => {
+            console.error('Error updating Firestore:', error);
+          });
+        }
+      },
+      onError: (error) => {
+        console.error('❌ [ADMIN RECORDING] Error:', error);
+        setRecordingError('Eroare la înregistrare: ' + error.message);
+        setIsRecording(false);
+        setRecordingStatus('');
+        
+        // Clear recording timer
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+      }
+    });
+  });
+
+  // Check browser recording support
+  const isRecordingSupported = SimpleVideoRecorder.isSupported();
+  
+  // Log recording capabilities
+  useEffect(() => {
+    console.log('🎥 [ADMIN] Recording capabilities:', {
+      isSupported: isRecordingSupported,
+      supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes(),
+      meetingCode,
+      userAgent: navigator.userAgent
+    });
+  }, [isRecordingSupported, meetingCode]);
 
   // Verificarea compatibilității browserului
   useEffect(() => {
@@ -150,51 +217,55 @@ const AdminVideoCall = () => {
     }
   }, [meetingCode]);
 
-  // Recording functionality (Simple Browser Recording)
+  // Recording functionality (Simple Browser Recording with Firebase Storage)
   const startRecording = async () => {
     try {
       setRecordingError("");
+      setRecordingStatus("Pregătire înregistrare...");
 
-      const response = await fetch('/api/recording/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode: meetingCode,
-          userRole: 'admin'
-        }),
-      });
+      // Check browser support
+      if (!SimpleVideoRecorder.isSupported()) {
+        setRecordingError("Browser-ul nu suportă înregistrarea video");
+        return;
+      }
 
-      const data = await response.json();
+      console.log('🎬 [ADMIN] Starting recording process for meeting:', meetingCode);
+
+      // Start recording using SimpleVideoRecorder
+      const result = await recorder.startRecording();
       
-      if (data.success) {
+      if (result.success) {
         setIsRecording(true);
         setRecordingStartTime(Date.now());
+        setRecordingStatus('Înregistrare activă');
         
         // Start recording duration timer
         recordingIntervalRef.current = setInterval(() => {
           setRecordingDuration((prev) => prev + 1);
         }, 1000);
 
-        // Update recording status in Firebase (Simple Browser Recording)
+        // Update recording status in Firebase
         if (documentId) {
           const docRef = doc(db, "RezervariConsultatii", documentId);
           await updateDoc(docRef, {
             recording: {
               isRecording: true,
               startTime: Date.now(),
-              sessionId: data.sessionId,
-              recordingType: 'browser'
+              recordingType: 'browser',
+              status: 'recording'
             }
           });
         }
+
+        console.log('✅ [ADMIN] Recording started successfully');
       } else {
-        setRecordingError(data.message || "Eroare la pornirea înregistrării");
+        setRecordingError(result.message || "Eroare la pornirea înregistrării");
+        setRecordingStatus("");
       }
     } catch (error) {
-      console.error("Recording start error:", error);
+      console.error("❌ [ADMIN] Recording start error:", error);
       setRecordingError("Eroare la pornirea înregistrării");
+      setRecordingStatus("");
     }
   };
 
@@ -221,55 +292,32 @@ const AdminVideoCall = () => {
     try {
       setIsSendingEmail(true);
       setEmailError("");
+      setRecordingStatus("Oprire înregistrare...");
       
-      const response = await fetch('/api/recording/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode: meetingCode,
-          duration: recordingDuration,
-          recipientEmail: recipientEmail.trim()
-        }),
-      });
-
-      const data = await response.json();
+      console.log('🛑 [ADMIN] Stopping recording for meeting:', meetingCode);
+      console.log('📧 [ADMIN] Recipient email:', recipientEmail.trim());
       
-      if (data.success) {
-        setIsRecording(false);
-        setRecordingStartTime(null);
-        setRecordingDuration(0);
-        setShowEmailDialog(false);
-        
-        // Clear recording timer
-        if (recordingIntervalRef.current) {
-          clearInterval(recordingIntervalRef.current);
-          recordingIntervalRef.current = null;
-        }
+      // Stop recording using SimpleVideoRecorder
+      // The onComplete callback will handle Firebase updates and file upload
+      await recorder.stopRecording();
+      
+      // Close email dialog
+      setShowEmailDialog(false);
+      
+      // The SimpleVideoRecorder will handle:
+      // 1. Processing and uploading the video to Firebase Storage
+      // 2. Updating Firestore with completion status
+      // 3. Getting download URL
+      
+      // After recording completes, send notification email with the download URL
+      // This will be triggered from the onComplete callback
+      console.log('✅ [ADMIN] Recording stop process initiated');
+      
+      // Send notification email with recipient
+      await sendRecordingNotification();
 
-        // Update recording status in Firebase (Simple Browser Recording)
-        if (documentId) {
-          const docRef = doc(db, "RezervariConsultatii", documentId);
-          await updateDoc(docRef, {
-            recording: {
-              isRecording: false,
-              endTime: Date.now(),
-              status: 'completed',
-              recordingType: 'browser',
-              recipientEmail: recipientEmail.trim()
-            }
-          });
-        }
-
-        // Send notification email
-        await sendRecordingNotification();
-
-      } else {
-        setRecordingError(data.message || "Eroare la oprirea înregistrării");
-      }
     } catch (error) {
-      console.error("Recording stop error:", error);
+      console.error("❌ [ADMIN] Recording stop error:", error);
       setRecordingError("Eroare la oprirea înregistrării");
     } finally {
       setIsSendingEmail(false);
@@ -448,31 +496,45 @@ const AdminVideoCall = () => {
                 )}
 
                 {/* Recording Controls */}
-                <div style={styles.recordingControls}>
-                  <button
-                    style={{
-                      ...styles.recordButton,
-                      backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-                      animation: isRecording ? "pulse 2s infinite" : "none",
-                    }}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
-                  >
-                    <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
-                  </button>
-                  
-                  {isRecording && (
-                    <div style={styles.recordingInfo}>
-                      <div style={styles.recordingIndicator}>
-                        <div style={styles.recordingDot}></div>
-                        <span>REC</span>
+                {isRecordingSupported ? (
+                  <div style={styles.recordingControls}>
+                    <button
+                      style={{
+                        ...styles.recordButton,
+                        backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
+                        animation: isRecording ? "pulse 2s infinite" : "none",
+                      }}
+                      onClick={isRecording ? stopRecording : startRecording}
+                      title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
+                    >
+                      <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
+                    </button>
+                    
+                    {isRecording && (
+                      <div style={styles.recordingInfo}>
+                        <div style={styles.recordingIndicator}>
+                          <div style={styles.recordingDot}></div>
+                          <span>REC</span>
+                        </div>
+                        <div style={styles.recordingTime}>
+                          {formatRecordingTime(recordingDuration)}
+                        </div>
                       </div>
-                      <div style={styles.recordingTime}>
-                        {formatRecordingTime(recordingDuration)}
+                    )}
+
+                    {recordingStatus && (
+                      <div style={styles.recordingStatus}>
+                        <i className="fas fa-info-circle" style={{marginRight: '8px'}}></i>
+                        {recordingStatus}
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={styles.recordingUnsupported}>
+                    <i className="fas fa-exclamation-triangle" style={{marginRight: '8px', color: '#ff6b6b'}}></i>
+                    <span>Înregistrarea nu este suportată în acest browser</span>
+                  </div>
+                )}
 
                 <AgoraUIKit
                   rtcProps={{
@@ -1054,6 +1116,34 @@ const styles = {
     transition: "background-color 0.2s ease",
     display: "flex",
     alignItems: "center",
+  },
+  recordingStatus: {
+    backgroundColor: '#e3f2fd',
+    color: '#1976d2',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    marginTop: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #bbdefb',
+    textAlign: 'center',
+  },
+  recordingUnsupported: {
+    backgroundColor: '#fff3cd',
+    color: '#856404',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #ffeaa7',
+    textAlign: 'center',
+    marginBottom: '10px',
   },
 };
 
