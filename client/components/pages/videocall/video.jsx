@@ -5,8 +5,8 @@ import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebase";
-import RealtimeChat from "../../../Chat/RealtimeChat";
-import ChatFAB from "../../../Chat/ChatFAB";
+import RealtimeChat from "../../../../components/Chat/RealtimeChat";
+import ChatFAB from "../../../../components/Chat/ChatFAB";
 import { setUserOfflineInChat, monitorConsultationForChatCleanup } from "../../../../utils/chatUtils";
 
 // Funcție pentru a obține timpul curent

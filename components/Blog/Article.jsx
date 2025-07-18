@@ -44,7 +44,9 @@ function Article({ filteredArticles }) {
 
   // Asigură-te că youtubeLinks este tratat ca un array chiar dacă este unul singur
   const youtubeEmbedLinks = filteredArticles?.youtubeLinks
-    ? filteredArticles?.youtubeLinks.map((link) => getYoutubeEmbedUrl(link))
+    ? filteredArticles?.youtubeLinks
+        .map((link) => getYoutubeEmbedUrl(link))
+        .filter(Boolean) // Elimină link-urile invalide
     : [];
 
   return (

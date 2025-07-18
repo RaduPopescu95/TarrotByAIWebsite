@@ -21,9 +21,9 @@ const LAYOUT_TYPES = {
 };
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
-import RealtimeChat from "../Chat/RealtimeChat";
-import ChatFAB from "../Chat/ChatFAB";
-import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../utils/chatUtils";
+import RealtimeChat from "../../../components/Chat/RealtimeChat";
+import ChatFAB from "../../../components/Chat/ChatFAB";
+import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../../utils/chatUtils";
 
 moment.locale("ro");
 

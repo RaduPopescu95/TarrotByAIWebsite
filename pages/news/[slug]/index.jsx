@@ -12,6 +12,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import languageDetector from "../../../lib/languageDetector";
 import { toUrlSlug } from "../../../utils/commonUtils";
+import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
 
 export async function getServerSideProps(context) {
   try {
@@ -482,6 +483,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
 
                 {/* YouTube Videos - Enhanced Design */}
                 {filteredArticle?.youtubeLinks && filteredArticle.youtubeLinks.length > 0 && (
+                  console.log('YouTube Links Found:', filteredArticle.youtubeLinks) || true
+                ) && (
                   <div className="bg-white rounded-3xl shadow-xl p-8">
                     <div className="flex items-center gap-3 mb-8">
                       <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -493,23 +496,42 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-6">
-                      {filteredArticle.youtubeLinks.map((link, index) => (
-                        <div key={index} className="group">
-                          <div className="relative aspect-video rounded-2xl overflow-hidden shadow-lg bg-gray-100">
-                            <iframe
-                              src={`https://www.youtube.com/embed/${link.split('v=')[1]?.split('&')[0]}`}
-                              title={`Video ${index + 1} - ${articleTitle}`}
-                              className="w-full h-full"
-                              allowFullScreen
-                            />
+                      {filteredArticle.youtubeLinks.map((link, index) => {
+                        // Debug: log original link
+                        console.log(`Processing YouTube link ${index + 1}:`, link);
+                        
+                        // Curăță link-ul de prefixul @ și alte caractere nedorite
+                        const cleanLink = link.replace(/^@+/, '').trim();
+                        console.log(`Cleaned link:`, cleanLink);
+                        
+                        const embedUrl = getYoutubeEmbedUrl(cleanLink);
+                        console.log(`Generated embed URL:`, embedUrl);
+                        
+                        // Verifică dacă avem un URL valid de embed
+                        if (!embedUrl) {
+                          console.warn(`Invalid YouTube link: ${link} -> ${cleanLink}`);
+                          return null;
+                        }
+                        
+                        return (
+                          <div key={index} className="group">
+                            <div className="relative aspect-video rounded-2xl overflow-hidden shadow-lg bg-gray-100">
+                              <iframe
+                                src={embedUrl}
+                                title={`Video ${index + 1} - ${articleTitle}`}
+                                className="w-full h-full"
+                                allowFullScreen
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              />
+                            </div>
+                            <div className="mt-3 px-2">
+                              <p className="text-sm text-gray-600">
+                                {t("videoNumber") || "Video"} {index + 1} - {t("complementaryContentForArticle") || "Conținut complementar pentru articol"}
+                              </p>
+                            </div>
                           </div>
-                          <div className="mt-3 px-2">
-                            <p className="text-sm text-gray-600">
-                              {t("videoNumber") || "Video"} {index + 1} - {t("complementaryContentForArticle") || "Conținut complementar pentru articol"}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      }).filter(Boolean)}
                     </div>
                   </div>
                 )}
