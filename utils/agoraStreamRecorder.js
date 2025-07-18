@@ -127,8 +127,8 @@ export class AgoraStreamRecorder {
       
       // Check if we have any video streams
       if (this.streams.size === 0) {
-        this.logger.warning('⚠️ No video streams available for recording');
-        throw new Error('No video streams available for recording');
+        this.logger.warning('⚠️ No video streams available initially - will wait for participants to join');
+        // Don't throw error - allow recording to start and wait for streams via callbacks
       }
 
       // Get canvas stream
@@ -283,16 +283,35 @@ export class AgoraStreamRecorder {
   }
 
   drawPlaceholder() {
-    this.canvasContext.fillStyle = '#333333';
+    this.canvasContext.fillStyle = '#1a1a2e';
     this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    this.canvasContext.fillStyle = '#ffffff';
-    this.canvasContext.font = '48px Arial';
+    // Title
+    this.canvasContext.fillStyle = '#667eea';
+    this.canvasContext.font = 'bold 48px Arial';
     this.canvasContext.textAlign = 'center';
     this.canvasContext.fillText(
-      'Waiting for participants...',
+      'Tarot by AI - Recording Active',
       this.canvas.width / 2,
-      this.canvas.height / 2
+      this.canvas.height / 2 - 60
+    );
+    
+    // Subtitle
+    this.canvasContext.fillStyle = '#ffffff';
+    this.canvasContext.font = '32px Arial';
+    this.canvasContext.fillText(
+      'Waiting for participants to join...',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 20
+    );
+    
+    // Timestamp
+    this.canvasContext.fillStyle = '#aaaaaa';
+    this.canvasContext.font = '24px Arial';
+    this.canvasContext.fillText(
+      new Date().toLocaleTimeString('ro-RO'),
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 80
     );
   }
 

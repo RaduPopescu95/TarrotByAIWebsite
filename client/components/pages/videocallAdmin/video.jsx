@@ -217,6 +217,53 @@ const AdminVideoCall = () => {
     }
   }, [meetingCode]);
 
+  // Function to capture existing Agora video streams from DOM
+  const captureExistingAgoraStreams = async () => {
+    try {
+      console.log('🔍 [ADMIN] Searching for existing Agora video streams in DOM...');
+      
+      // Find all video elements created by AgoraUIKit
+      const videoElements = document.querySelectorAll('video');
+      let streamsCaptured = 0;
+      
+      for (const videoElement of videoElements) {
+        if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
+          const stream = videoElement.srcObject;
+          const videoTracks = stream.getVideoTracks();
+          
+          if (videoTracks.length > 0) {
+            // Generate a unique ID for this stream
+            const streamId = `agora_stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            console.log('📹 [ADMIN] Found video stream:', {
+              streamId,
+              videoTracks: videoTracks.length,
+              audioTracks: stream.getAudioTracks().length,
+              videoElement: {
+                width: videoElement.videoWidth,
+                height: videoElement.videoHeight,
+                readyState: videoElement.readyState
+              }
+            });
+            
+            // Add stream to recorder
+            recorder.addVideoStream(streamId, stream);
+            streamsCaptured++;
+            
+            console.log(`✅ [ADMIN] Added stream ${streamId} to recorder`);
+          }
+        }
+      }
+      
+      console.log(`🎯 [ADMIN] Captured ${streamsCaptured} video streams from DOM`);
+      return streamsCaptured;
+      
+    } catch (error) {
+      console.error('❌ [ADMIN] Error capturing existing streams:', error);
+      return 0;
+    }
+  };
+
   // Recording functionality (Simple Browser Recording with Firebase Storage)
   const startRecording = async () => {
     try {
@@ -230,6 +277,15 @@ const AdminVideoCall = () => {
       }
 
       console.log('🎬 [ADMIN] Starting recording process for meeting:', meetingCode);
+
+      // First, capture existing video streams from Agora DOM elements
+      const streamsCaptured = await captureExistingAgoraStreams();
+      
+      if (streamsCaptured === 0) {
+        console.warn('⚠️ [ADMIN] No video streams found, waiting for participants...');
+        setRecordingStatus("Așteptare participanți cu video...");
+        // Continue anyway - streams might be added during recording via callbacks
+      }
 
       // Start recording using AgoraStreamRecorder (no screen share dialog!)
       const result = await recorder.startRecording();
