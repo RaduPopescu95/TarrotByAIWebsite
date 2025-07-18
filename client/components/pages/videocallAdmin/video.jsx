@@ -242,9 +242,48 @@ const AdminVideoCall = () => {
               videoElement: {
                 width: videoElement.videoWidth,
                 height: videoElement.videoHeight,
-                readyState: videoElement.readyState
+                readyState: videoElement.readyState,
+                videoWidth: videoElement.videoWidth,
+                videoHeight: videoElement.videoHeight,
+                currentTime: videoElement.currentTime,
+                duration: videoElement.duration,
+                paused: videoElement.paused,
+                muted: videoElement.muted,
+                className: videoElement.className,
+                id: videoElement.id
               }
             });
+            
+            // Wait for video to be ready before adding to recorder
+            if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
+              console.log('✅ [ADMIN] Video element is ready for recording');
+            } else {
+              console.log('⏳ [ADMIN] Video element not ready, waiting...', {
+                readyState: videoElement.readyState,
+                expectedMinimum: 2
+              });
+              
+              // Wait for video to load
+              await new Promise((resolve) => {
+                if (videoElement.readyState >= 2) {
+                  resolve();
+                } else {
+                  const onLoadedData = () => {
+                    console.log('📺 [ADMIN] Video element loaded data');
+                    videoElement.removeEventListener('loadeddata', onLoadedData);
+                    resolve();
+                  };
+                  videoElement.addEventListener('loadeddata', onLoadedData);
+                  
+                  // Timeout fallback
+                  setTimeout(() => {
+                    console.log('⏰ [ADMIN] Video load timeout, proceeding anyway');
+                    videoElement.removeEventListener('loadeddata', onLoadedData);
+                    resolve();
+                  }, 2000);
+                }
+              });
+            }
             
             // Add stream to recorder
             recorder.addVideoStream(streamId, stream);
@@ -295,10 +334,19 @@ const AdminVideoCall = () => {
         setRecordingStartTime(Date.now());
         setRecordingStatus('Înregistrare activă - capturează streamuri video');
         
-        // Start recording duration timer
-        recordingIntervalRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
+              // Start recording duration timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration((prev) => {
+          const newDuration = prev + 1;
+          
+          // Log recording progress every 10 seconds
+          if (newDuration % 10 === 0) {
+            console.log(`🎥 [ADMIN] Recording duration: ${newDuration} seconds`);
+          }
+          
+          return newDuration;
+        });
+      }, 1000);
 
         // Update recording status in Firebase
         if (documentId) {

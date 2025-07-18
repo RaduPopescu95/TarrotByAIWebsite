@@ -137,7 +137,28 @@ export class AgoraStreamRecorder {
       this.logger.info('📺 Canvas stream captured', {
         streamId: canvasStream.id,
         tracks: canvasStream.getTracks().length,
-        frameRate: this.options.frameRate
+        frameRate: this.options.frameRate,
+        videoTracks: canvasStream.getVideoTracks().length,
+        audioTracks: canvasStream.getAudioTracks().length
+      });
+
+      // Verify canvas stream has video tracks
+      const canvasVideoTracks = canvasStream.getVideoTracks();
+      if (canvasVideoTracks.length === 0) {
+        this.logger.error('❌ Canvas stream has no video tracks');
+        throw new Error('Canvas stream has no video tracks');
+      }
+
+      // Log canvas track details
+      canvasVideoTracks.forEach((track, index) => {
+        this.logger.info(`📹 Canvas video track ${index}`, {
+          id: track.id,
+          kind: track.kind,
+          label: track.label,
+          enabled: track.enabled,
+          readyState: track.readyState,
+          settings: track.getSettings()
+        });
       });
 
       // Add audio tracks from Agora streams
@@ -215,6 +236,21 @@ export class AgoraStreamRecorder {
       // Start the drawing loop
       this.startDrawingLoop();
       
+      // Add debug helper to canvas (temporarily visible for testing)
+      if (typeof window !== 'undefined') {
+        // Make canvas visible for debugging
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '10px';
+        this.canvas.style.right = '10px';
+        this.canvas.style.width = '200px';
+        this.canvas.style.height = '150px';
+        this.canvas.style.border = '2px solid red';
+        this.canvas.style.zIndex = '10000';
+        document.body.appendChild(this.canvas);
+        
+        this.logger.info('🔍 Debug canvas added to page (top-right corner)');
+      }
+      
       // Start recording
       this.mediaRecorder.start(1000);
       
@@ -247,18 +283,31 @@ export class AgoraStreamRecorder {
 
   // Drawing loop to render video streams on canvas
   startDrawingLoop() {
+    let frameCount = 0;
     const drawFrame = () => {
       if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
         return; // Stop drawing if not recording
       }
 
+      frameCount++;
+
       // Clear canvas
-      this.canvasContext.fillStyle = '#000000';
+      this.canvasContext.fillStyle = '#1a1a2e';
       this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
       // Draw video streams
       const participants = Array.from(this.videoElements.entries());
       const participantCount = participants.length;
+
+      // Log drawing status every 30 frames (1 second at 30fps)
+      if (frameCount % 30 === 0) {
+        this.logger.debug('🎨 Drawing frame', {
+          frameNumber: frameCount,
+          participantCount,
+          recordingState: this.mediaRecorder.state,
+          canvasSize: `${this.canvas.width}x${this.canvas.height}`
+        });
+      }
 
       if (participantCount === 0) {
         // No participants - draw placeholder
@@ -317,11 +366,45 @@ export class AgoraStreamRecorder {
 
   drawSingleParticipant([userId, videoElement]) {
     if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-      this.canvasContext.drawImage(
-        videoElement,
-        0, 0,
-        this.canvas.width,
-        this.canvas.height
+      try {
+        this.canvasContext.drawImage(
+          videoElement,
+          0, 0,
+          this.canvas.width,
+          this.canvas.height
+        );
+        
+        // Log successful draw occasionally
+        if (Math.random() < 0.01) { // 1% chance to avoid spam
+          this.logger.debug('✅ Drew single participant', {
+            userId,
+            videoSize: `${videoElement.videoWidth}x${videoElement.videoHeight}`,
+            canvasSize: `${this.canvas.width}x${this.canvas.height}`,
+            readyState: videoElement.readyState
+          });
+        }
+      } catch (error) {
+        this.logger.error('❌ Error drawing single participant', {
+          userId,
+          error: error.message,
+          videoElement: {
+            readyState: videoElement.readyState,
+            videoWidth: videoElement.videoWidth,
+            videoHeight: videoElement.videoHeight
+          }
+        });
+      }
+    } else {
+      // Draw placeholder for unready video
+      this.canvasContext.fillStyle = '#333333';
+      this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.canvasContext.fillStyle = '#ffffff';
+      this.canvasContext.font = '32px Arial';
+      this.canvasContext.textAlign = 'center';
+      this.canvasContext.fillText(
+        `Loading ${userId}...`,
+        this.canvas.width / 2,
+        this.canvas.height / 2
       );
     }
   }
@@ -384,9 +467,24 @@ export class AgoraStreamRecorder {
 
   async onRecordingStopped() {
     try {
-      this.logger.info('🔄 Processing Agora stream recording');
+      this.logger.info('🔄 Processing Agora stream recording', {
+        chunksReceived: this.recordedChunks.length,
+        totalDataSize: this.recordedChunks.reduce((sum, chunk) => sum + chunk.size, 0),
+        recordingDuration: this.startTime ? Date.now() - this.startTime : 0,
+        mediaRecorderState: this.mediaRecorder?.state,
+        streamsCount: this.streams.size,
+        videoElementsCount: this.videoElements.size
+      });
 
       if (this.recordedChunks.length === 0) {
+        this.logger.error('❌ No recording chunks available', {
+          mediaRecorderState: this.mediaRecorder?.state,
+          streamsActive: this.streams.size,
+          videoElementsActive: this.videoElements.size,
+          canvasSize: `${this.canvas.width}x${this.canvas.height}`,
+          startTime: this.startTime,
+          recordingDuration: this.startTime ? Date.now() - this.startTime : 0
+        });
         throw new Error('No recorded data available');
       }
 
