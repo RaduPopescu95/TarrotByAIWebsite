@@ -265,7 +265,7 @@ export class AgoraStreamRecorder {
       if (typeof window !== 'undefined') {
         // Make canvas visible for debugging
         this.canvas.style.position = 'fixed';
-        this.canvas.style.top = '10px';
+        this.canvas.style.top = '80px';
         this.canvas.style.right = '10px';
         this.canvas.style.width = '200px';
         this.canvas.style.height = '150px';

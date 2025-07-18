@@ -542,6 +542,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             token: null,
             role: "host",
           }}
+          rtmProps={{ username: currentUser?.displayName || 'Admin', displayUsername: true }}
           styleProps={{
             UIKitContainer: {
               width: '100vw',
