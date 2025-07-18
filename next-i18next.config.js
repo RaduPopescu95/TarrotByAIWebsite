@@ -23,7 +23,5 @@ module.exports = {
     localeDetection: true,
   },
   localePath: path.resolve("./public/locales"),
-  ssg: true,
-  localeSubpaths: true,
-  reloadOnPrerender: true,
+  reloadOnPrerender: false,
 };

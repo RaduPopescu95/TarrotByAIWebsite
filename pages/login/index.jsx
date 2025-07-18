@@ -10,7 +10,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { authentication } from "../../firebase";
 import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "next-i18next";
 import Head from "next/head";
 
 function Copyright(props) {

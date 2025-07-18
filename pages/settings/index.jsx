@@ -12,7 +12,7 @@ import PasswordDialog from "../../components/PasswordDialog/PasswordDialog";
 import { handleUpdateFirestore } from "../../utils/firestoreUtils";
 import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "next-i18next";
 import Head from "next/head";
 
 function Copyright(props) {
