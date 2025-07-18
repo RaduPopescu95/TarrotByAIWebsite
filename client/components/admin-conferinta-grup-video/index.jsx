@@ -348,7 +348,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     setFullscreen(!isFullscreen);
   };
 
-  // Recording functions (adapted from one-to-one videocall for admin)
+  // Recording functions (Simple Browser Recording for group conferences)
   const startRecording = async () => {
     try {
       setRecordingError("");
@@ -359,7 +359,6 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          channelId: conferinta.documentId,
           meetingCode: `group_${conferinta.documentId}`,
           userRole: 'admin'
         }),
@@ -376,15 +375,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           setRecordingDuration((prev) => prev + 1);
         }, 1000);
 
-        // Update recording status in Firebase (ConferinteGrup instead of RezervariConsultatii)
+        // Update recording status in Firebase (Simple Browser Recording)
         if (conferinta.documentId) {
           const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
           await updateDoc(docRef, {
             recording: {
               isRecording: true,
               startTime: Date.now(),
-              resourceId: data.resourceId,
-              sid: data.sid
+              sessionId: data.sessionId,
+              recordingType: 'browser'
             }
           });
         }
@@ -407,9 +406,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          channelId: conferinta.documentId,
           meetingCode: `group_${conferinta.documentId}`,
-          userRole: 'admin'
+          duration: recordingDuration
         }),
       });
 
@@ -426,14 +424,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           recordingIntervalRef.current = null;
         }
 
-        // Update recording status in Firebase
+        // Update recording status in Firebase (Simple Browser Recording)
         if (conferinta.documentId) {
           const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
           await updateDoc(docRef, {
             recording: {
               isRecording: false,
               endTime: Date.now(),
-              processingStatus: 'processing'
+              status: 'completed',
+              recordingType: 'browser'
             }
           });
         }

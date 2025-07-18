@@ -146,7 +146,7 @@ const AdminVideoCall = () => {
     }
   }, [meetingCode]);
 
-  // Recording functionality
+  // Recording functionality (Simple Browser Recording)
   const startRecording = async () => {
     try {
       setRecordingError("");
@@ -157,7 +157,6 @@ const AdminVideoCall = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          channelId: documentId,
           meetingCode: meetingCode,
           userRole: 'admin'
         }),
@@ -174,15 +173,15 @@ const AdminVideoCall = () => {
           setRecordingDuration((prev) => prev + 1);
         }, 1000);
 
-        // Update recording status in Firebase
+        // Update recording status in Firebase (Simple Browser Recording)
         if (documentId) {
           const docRef = doc(db, "RezervariConsultatii", documentId);
           await updateDoc(docRef, {
             recording: {
               isRecording: true,
               startTime: Date.now(),
-              resourceId: data.resourceId,
-              sid: data.sid
+              sessionId: data.sessionId,
+              recordingType: 'browser'
             }
           });
         }
@@ -205,9 +204,8 @@ const AdminVideoCall = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          channelId: documentId,
           meetingCode: meetingCode,
-          userRole: 'admin'
+          duration: recordingDuration
         }),
       });
 
@@ -224,14 +222,15 @@ const AdminVideoCall = () => {
           recordingIntervalRef.current = null;
         }
 
-        // Update recording status in Firebase
+        // Update recording status in Firebase (Simple Browser Recording)
         if (documentId) {
           const docRef = doc(db, "RezervariConsultatii", documentId);
           await updateDoc(docRef, {
             recording: {
               isRecording: false,
               endTime: Date.now(),
-              processingStatus: 'processing'
+              status: 'completed',
+              recordingType: 'browser'
             }
           });
         }
