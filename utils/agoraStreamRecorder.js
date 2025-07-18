@@ -579,4 +579,16 @@ export class AgoraStreamRecorder {
               window.MediaRecorder &&
               MediaRecorder.isTypeSupported('video/webm'));
   }
+
+  // Get supported mime types
+  static getSupportedMimeTypes() {
+    const types = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4'
+    ];
+    
+    return types.filter(type => MediaRecorder.isTypeSupported(type));
+  }
 } 

@@ -98,7 +98,7 @@ const AdminVideoCall = () => {
   useEffect(() => {
     console.log('🎥 [ADMIN] Recording capabilities:', {
       isSupported: isRecordingSupported,
-      supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes(),
+      supportedMimeTypes: AgoraStreamRecorder.getSupportedMimeTypes(),
       meetingCode,
       userAgent: navigator.userAgent
     });
@@ -224,7 +224,7 @@ const AdminVideoCall = () => {
       setRecordingStatus("Pregătire înregistrare...");
 
       // Check browser support
-      if (!SimpleVideoRecorder.isSupported()) {
+              if (!AgoraStreamRecorder.isSupported()) {
         setRecordingError("Browser-ul nu suportă înregistrarea video");
         return;
       }
@@ -297,14 +297,14 @@ const AdminVideoCall = () => {
       console.log('🛑 [ADMIN] Stopping recording for meeting:', meetingCode);
       console.log('📧 [ADMIN] Recipient email:', recipientEmail.trim());
       
-      // Stop recording using SimpleVideoRecorder
+              // Stop recording using AgoraStreamRecorder
       // The onComplete callback will handle Firebase updates and file upload
       await recorder.stopRecording();
       
       // Close email dialog
       setShowEmailDialog(false);
       
-      // The SimpleVideoRecorder will handle:
+              // The AgoraStreamRecorder will handle:
       // 1. Processing and uploading the video to Firebase Storage
       // 2. Updating Firestore with completion status
       // 3. Getting download URL
