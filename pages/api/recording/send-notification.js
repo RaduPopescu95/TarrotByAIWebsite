@@ -69,13 +69,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { meetingCode, recipientEmail, duration } = req.body;
+    const { meetingCode, recipientEmail, duration, downloadURL } = req.body;
 
-    logWithDetails('INFO', 'Processing simple recording notification request', {
+    logWithDetails('INFO', 'Processing recording notification request', {
       requestId,
       meetingCode,
       recipientEmail: recipientEmail ? recipientEmail.substring(0, 20) + '...' : 'missing',
       duration: duration || 'unknown',
+      hasDownloadURL: !!downloadURL,
       bodySize: JSON.stringify(req.body).length
     });
 
@@ -105,20 +106,35 @@ export default async function handler(req, res) {
       });
     }
 
-    logWithDetails('INFO', 'Validation passed, starting simple notification process', {
+    logWithDetails('INFO', 'Validation passed, starting notification process', {
       requestId,
       meetingCode,
       duration
     });
 
-    // Send email notification directly with provided email
-    logWithDetails('INFO', 'Starting simple email notification process', {
-      requestId,
-      meetingCode,
-      recipientEmail: recipientEmail.substring(0, 20) + '...'
-    });
+    let emailResult;
+    if (downloadURL) {
+      // Send final email with download link
+      logWithDetails('INFO', 'Sending final recording email with download link', {
+        requestId,
+        meetingCode,
+        recipientEmail: recipientEmail.substring(0, 20) + '...',
+        downloadURLDomain: new URL(downloadURL).hostname
+      });
 
-    const emailResult = await sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, requestId);
+      // Try to fetch meeting details for nicer email (not mandatory)
+      const meetingDetails = await getMeetingDetails(meetingCode, requestId);
+      emailResult = await sendRecordingEmail(meetingCode, downloadURL, meetingDetails, requestId);
+    } else {
+      // Send initial processing email
+      logWithDetails('INFO', 'Starting simple email notification process', {
+        requestId,
+        meetingCode,
+        recipientEmail: recipientEmail.substring(0, 20) + '...'
+      });
+
+      emailResult = await sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, requestId);
+    }
 
     const processingTime = Date.now() - requestStartTime;
 

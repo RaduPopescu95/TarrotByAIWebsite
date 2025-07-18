@@ -427,7 +427,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         setShowRecordingModal(true);
         return;
       }
-      
+
       // Check browser support before starting
       if (!SimpleVideoRecorder.isSupported()) {
         componentLogger.error('❌ Browser does not support group recording', {
@@ -440,7 +440,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       componentLogger.info('✅ Browser support confirmed, proceeding with group recording', {
         supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes()
       });
-      
+
       const result = await recorder.startRecording();
       
       if (result.success) {
@@ -453,7 +453,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         setIsRecording(true);
         setRecordingStatus('Înregistrare activă');
         startRecordingTimer();
-        
+
         // Update recording status in Firebase
         if (conferinta?.documentId) {
           componentLogger.info('💾 Updating Firestore with group recording start', {
@@ -512,15 +512,15 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
       setRecordingStatus('Oprire înregistrare...');
       recorder.stopRecording();
-      
+        
       // Timer se va opri automat în useEffect când isRecording devine false
-      if (recordingIntervalRef.current) {
+        if (recordingIntervalRef.current) {
         componentLogger.debug('⏰ Clearing group recording timer', {
           timerId: recordingIntervalRef.current
         });
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
 
       componentLogger.success('✅ Group recording stop initiated successfully', {
         accessLink: accessLink || 'unknown',
@@ -667,35 +667,35 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         
         {/* Simple Recording Controls */}
         {isRecordingSupported ? (
-          <div style={recordingControlsStyle}>
-            <button
-              style={{
-                ...recordButtonStyle,
-                backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-                animation: isRecording ? "pulse 2s infinite" : "none",
-              }}
-              onClick={isRecording ? stopRecording : startRecording}
-              title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
-            >
+        <div style={recordingControlsStyle}>
+          <button
+            style={{
+              ...recordButtonStyle,
+              backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
+              animation: isRecording ? "pulse 2s infinite" : "none",
+            }}
+            onClick={isRecording ? stopRecording : startRecording}
+            title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
+          >
               <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-video"}`} />
-            </button>
-            
-            {isRecording && (
-              <div style={recordingInfoStyle}>
-                <div style={recordingIndicatorStyle}>
-                  <div style={recordingDotStyle}></div>
-                  <span>REC</span>
-                </div>
-                <div style={recordingTimeStyle}>
-                  {formatRecordingTime(recordingDuration)}
-                </div>
+          </button>
+          
+          {isRecording && (
+            <div style={recordingInfoStyle}>
+              <div style={recordingIndicatorStyle}>
+                <div style={recordingDotStyle}></div>
+                <span>REC</span>
               </div>
-            )}
+              <div style={recordingTimeStyle}>
+                {formatRecordingTime(recordingDuration)}
+              </div>
+            </div>
+          )}
 
             {recordingStatus && (
               <div style={recordingStatusStyle}>
                 {recordingStatus}
-              </div>
+        </div>
             )}
             
             {recordingError && (

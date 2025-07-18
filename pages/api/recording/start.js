@@ -26,8 +26,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ 
         message: 'Meeting code is required',
         success: false 
-      });
-    }
+    });
+  }
 
     console.log('🎬 [RECORDING START] Starting simple browser recording for:', meetingCode);
 

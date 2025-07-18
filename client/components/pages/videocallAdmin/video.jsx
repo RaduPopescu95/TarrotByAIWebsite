@@ -58,6 +58,29 @@ const AdminVideoCall = () => {
           recordingIntervalRef.current = null;
         }
 
+        // Send final email with download link
+        if (recipientEmail.trim()) {
+          fetch('/api/recording/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              meetingCode: meetingCode,
+              recipientEmail: recipientEmail.trim(),
+              downloadURL: data.downloadURL,
+              duration: data.duration
+            })
+          })
+          .then(res => res.json())
+          .then(resp => {
+            if (resp.success) {
+              console.log('✅ Final download email sent');
+            } else {
+              console.error('Failed to send final email:', resp.message);
+            }
+          })
+          .catch(err => console.error('Error sending final email:', err));
+        }
+
         // Update Firestore with recording completion
         if (documentId) {
           updateDoc(doc(db, "RezervariConsultatii", documentId), {
@@ -286,7 +309,7 @@ const AdminVideoCall = () => {
             }
             
             // Add stream to recorder
-            recorder.addVideoStream(streamId, stream);
+            recorder.addVideoStream(streamId, stream, videoElement);
             streamsCaptured++;
             
             console.log(`✅ [ADMIN] Added stream ${streamId} to recorder`);

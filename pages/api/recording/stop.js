@@ -42,20 +42,20 @@ export default async function handler(req, res) {
         .where('status', '==', 'started')
         .limit(1)
         .get();
-      
+    
       if (query.empty) {
         return res.status(404).json({
           success: false,
           message: 'No active recording session found'
         });
-      }
-      
+    }
+
       recordingRef = query.docs[0].ref;
     }
 
     // Update recording session with stop information
     const updateData = {
-      status: 'stopped',
+        status: 'stopped',
       endTime: new Date(),
       endTimestamp: Date.now(),
       updatedAt: new Date()
@@ -69,13 +69,13 @@ export default async function handler(req, res) {
 
     console.log('✅ [RECORDING STOP] Recording session stopped successfully');
 
-    res.status(200).json({
-      success: true,
+      res.status(200).json({
+        success: true,
       sessionId: sessionId,
       meetingCode: meetingCode,
       endTime: updateData.endTime,
       message: 'Browser recording session stopped successfully'
-    });
+      });
 
   } catch (error) {
     console.error('❌ [RECORDING STOP] Error:', error);

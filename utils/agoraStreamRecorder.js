@@ -42,8 +42,10 @@ export class AgoraStreamRecorder {
     try {
       // Create canvas element for recording
       this.canvas = document.createElement('canvas');
-      this.canvas.width = this.options.width;
-      this.canvas.height = this.options.height;
+      const defaultWidth = 1280;
+      const defaultHeight = 720;
+      this.canvas.width = this.options.width || defaultWidth;
+      this.canvas.height = this.options.height || defaultHeight;
       this.canvasContext = this.canvas.getContext('2d');
       
       // Set canvas styles for better rendering
@@ -65,7 +67,7 @@ export class AgoraStreamRecorder {
   }
 
   // Add video stream from Agora participant
-  addVideoStream(userId, stream) {
+  addVideoStream(userId, stream, existingVideoElement = null) {
     try {
       this.logger.info('➕ Adding video stream', {
         userId,
@@ -75,12 +77,35 @@ export class AgoraStreamRecorder {
         audioTracks: stream.getAudioTracks().length
       });
 
-      // Create video element for this stream
-      const videoElement = document.createElement('video');
-      videoElement.srcObject = stream;
-      videoElement.autoplay = true;
-      videoElement.muted = true; // Muted to avoid echo in recording
-      videoElement.playsInline = true;
+      let videoElement;
+      if (existingVideoElement) {
+        videoElement = existingVideoElement;
+        this.logger.info('📺 Using existing video element for stream');
+        if (videoElement.paused) {
+          videoElement.play().catch(err => {
+            this.logger.warning('⚠️ Existing video element play() failed', {
+              error: err?.message || err
+            });
+          });
+        }
+      } else {
+        // Create hidden video element for this stream
+        videoElement = document.createElement('video');
+        videoElement.style.display = 'none';
+        videoElement.srcObject = stream;
+        document.body.appendChild(videoElement);
+
+        videoElement.autoplay = true;
+        videoElement.muted = true; // Muted to avoid echo in recording
+        videoElement.playsInline = true;
+
+        // Ensure playback starts even though element isn't in the DOM
+        videoElement.play().catch(err => {
+          this.logger.warning('⚠️ Video element play() failed (likely autoplay policy)', {
+            error: err?.message || err
+          });
+        });
+      }
       
       // Store video element and stream
       this.videoElements.set(userId, videoElement);
@@ -285,8 +310,12 @@ export class AgoraStreamRecorder {
   startDrawingLoop() {
     let frameCount = 0;
     const drawFrame = () => {
+      // Always schedule next frame first to keep the loop alive
+      this.animationFrame = requestAnimationFrame(drawFrame);
+
+      // Skip drawing until recorder is actively recording
       if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
-        return; // Stop drawing if not recording
+        return;
       }
 
       frameCount++;
@@ -299,7 +328,7 @@ export class AgoraStreamRecorder {
       const participants = Array.from(this.videoElements.entries());
       const participantCount = participants.length;
 
-      // Log drawing status every 30 frames (1 second at 30fps)
+      // Log drawing status every 30 frames (≈1 s @30 fps)
       if (frameCount % 30 === 0) {
         this.logger.debug('🎨 Drawing frame', {
           frameNumber: frameCount,
@@ -310,23 +339,17 @@ export class AgoraStreamRecorder {
       }
 
       if (participantCount === 0) {
-        // No participants - draw placeholder
         this.drawPlaceholder();
       } else if (participantCount === 1) {
-        // Single participant - full screen
         this.drawSingleParticipant(participants[0]);
       } else if (participantCount === 2) {
-        // Two participants - side by side
         this.drawTwoParticipants(participants);
       } else {
-        // Multiple participants - grid layout
         this.drawGridLayout(participants);
       }
-
-      // Continue drawing loop
-      this.animationFrame = requestAnimationFrame(drawFrame);
     };
 
+    // Kick off the loop
     drawFrame();
     this.logger.info('🎨 Canvas drawing loop started');
   }
@@ -583,9 +606,8 @@ export class AgoraStreamRecorder {
               
               this.logger.success('🎊 Agora recording upload completed', recordingData);
 
-              // Save metadata and send notification
+              // Save metadata. Notification email will be triggered from the caller component
               await this.saveRecordingMetadata(recordingData);
-              await this.sendRecordingNotification(meetingCode, downloadURL);
 
               this.onComplete(recordingData);
               resolve(recordingData);

@@ -310,7 +310,7 @@ const VideoCall = () => {
         setShowRecordingModal(true);
         return;
       }
-      
+
       // Check browser support before starting
       if (!SimpleVideoRecorder.isSupported()) {
         componentLogger.error('❌ Browser does not support recording', {
@@ -323,7 +323,7 @@ const VideoCall = () => {
       componentLogger.info('✅ Browser support confirmed, proceeding with recording', {
         supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes()
       });
-      
+
       const result = await recorder.startRecording();
       
       if (result.success) {
@@ -335,7 +335,7 @@ const VideoCall = () => {
         setIsRecording(true);
         setRecordingStatus('Înregistrare activă');
         startRecordingTimer();
-        
+
         // Update recording status in Firebase
         if (documentId) {
           componentLogger.info('💾 Updating Firestore with recording start', {
@@ -392,15 +392,15 @@ const VideoCall = () => {
 
       setRecordingStatus('Oprire înregistrare...');
       recorder.stopRecording();
-      
+        
       // Timer se va opri automat în useEffect când isRecording devine false
-      if (recordingIntervalRef.current) {
+        if (recordingIntervalRef.current) {
         componentLogger.debug('⏰ Clearing recording timer', {
           timerId: recordingIntervalRef.current
         });
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
 
       componentLogger.success('✅ Recording stop initiated successfully', {
         meetingCode: meetingCode || 'unknown'
@@ -641,8 +641,8 @@ const VideoCall = () => {
                       }}>
                         <i className="fas fa-info-circle" style={{marginRight: '4px'}}></i>
                         Înregistrarea poate fi realizată doar de către consultant
-                      </div>
-                    </div>
+                        </div>
+                        </div>
 
                     {recordingStatus && (
                       <div style={styles.recordingStatus}>

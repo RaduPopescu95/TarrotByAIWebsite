@@ -6,6 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
 import dynamic from "next/dynamic";
+import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
 
 // Import dinamic pentru AgoraUIKit pentru a evita SSR issues
 const AgoraUIKit = dynamic(() => import("agora-react-uikit"), { 
@@ -53,7 +54,110 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [recordingError, setRecordingError] = useState("");
   const [recordingPermission, setRecordingPermission] = useState(true); // Admin has default permission
   const [showRecordingModal, setShowRecordingModal] = useState(false);
+  // Email dialog states for multi-recipient notification
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailInput, setEmailInput] = useState(""); // current text in input
+  const [emailList, setEmailList] = useState([]); // array of validated emails
+  const [emailError, setEmailError] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const recordingIntervalRef = useRef(null);
+
+  /* ---------------- AgoraStreamRecorder initializare ---------------- */
+  const [recorder] = useState(() => new AgoraStreamRecorder({
+    onProgress: (msg) => setRecordingStatus(msg),
+    onComplete: (data) => {
+      // trimite email pentru fiecare destinatar
+      emailList.forEach(async (dest) => {
+        try {
+          const res = await fetch('/api/recording/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              meetingCode: `group_${conferinta?.documentId || 'unknown'}`,
+              recipientEmail: dest,
+              downloadURL: data.downloadURL,
+              duration: data.duration
+            })
+          });
+          const jr = await res.json();
+          console.log('📧 Email result for', dest, jr);
+        } catch (err) {
+          console.error('Email send error', dest, err);
+        }
+      });
+
+      setIsRecording(false);
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    },
+    onError: (err) => {
+      console.error('Recorder error', err);
+      setRecordingError(err.message);
+      setIsRecording(false);
+    }
+  }));
+
+  const isRecordingSupported = AgoraStreamRecorder.isSupported();
+  const [recordingStatus, setRecordingStatus] = useState("");
+
+  /* ---------- helper: capture existing video elements ---------- */
+  const captureExistingAgoraStreams = async () => {
+    const vids = document.querySelectorAll('video');
+    let captured = 0;
+    for (const vid of vids) {
+      if (vid.srcObject instanceof MediaStream && vid.srcObject.getVideoTracks().length) {
+        const id = `agora_stream_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+        recorder.addVideoStream(id, vid.srcObject, vid);
+        captured++;
+      }
+    }
+    console.log('Captured streams', captured);
+    return captured;
+  };
+
+  /* ---------- Recording controls ---------- */
+  const startRecording = async () => {
+    try {
+      setRecordingError("");
+      if (!isRecordingSupported) {
+        setRecordingError('Browser-ul nu suportă înregistrarea');
+        return;
+      }
+      await captureExistingAgoraStreams();
+      const res = await recorder.startRecording();
+      if (res.success) {
+        setIsRecording(true);
+        setRecordingDuration(0);
+        recordingIntervalRef.current = setInterval(() => setRecordingDuration(prev=>prev+1), 1000);
+      } else {
+        setRecordingError(res.message);
+      }
+    } catch(e) { setRecordingError(e.message);}  };
+
+  const stopRecording = () => {
+    // deschide dialog emailuri pre-populate
+    const preEmails = participantsOnline.map(p=>p.email).filter(Boolean);
+    setEmailList(preEmails);
+    setShowEmailDialog(true);
+  };
+
+  const validateEmail = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+
+  const addEmailFromInput = () => {
+    const parts = emailInput.split(',').map(e=>e.trim()).filter(Boolean);
+    const invalid = parts.find(p=>!validateEmail(p));
+    if (invalid) { setEmailError(`Email invalid: ${invalid}`); return; }
+    setEmailList(prev=>[...prev, ...parts.filter(p=>!prev.includes(p))]);
+    setEmailInput(''); setEmailError('');
+  };
+
+  const confirmStopRecording = async () => {
+    if (!emailList.length) { setEmailError('Adaugă cel puțin un email'); return; }
+    setIsSendingEmail(true);
+    await recorder.stopRecording(); // onComplete va trimite emailuri
+    setShowEmailDialog(false);
+    setIsSendingEmail(false);
+  };
 
   // Clean Agora UIKit implementation
 
@@ -348,102 +452,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     setFullscreen(!isFullscreen);
   };
 
-  // Recording functions (Simple Browser Recording for group conferences)
-  const startRecording = async () => {
-    try {
-      setRecordingError("");
-
-      const response = await fetch('/api/recording/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode: `group_${conferinta.documentId}`,
-          userRole: 'admin'
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setIsRecording(true);
-        setRecordingStartTime(Date.now());
-        
-        // Start recording duration timer
-        recordingIntervalRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
-
-        // Update recording status in Firebase (Simple Browser Recording)
-        if (conferinta.documentId) {
-          const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
-          await updateDoc(docRef, {
-            recording: {
-              isRecording: true,
-              startTime: Date.now(),
-              sessionId: data.sessionId,
-              recordingType: 'browser'
-            }
-          });
-        }
-      } else {
-        setRecordingError(data.message || "Eroare la pornirea înregistrării");
-      }
-    } catch (error) {
-      console.error("Recording start error:", error);
-      setRecordingError("Eroare la pornirea înregistrării");
-    }
-  };
-
-  const stopRecording = async () => {
-    try {
-      setRecordingError("");
-      
-      const response = await fetch('/api/recording/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode: `group_${conferinta.documentId}`,
-          duration: recordingDuration
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setIsRecording(false);
-        setRecordingStartTime(null);
-        setRecordingDuration(0);
-        
-        // Clear recording timer
-        if (recordingIntervalRef.current) {
-          clearInterval(recordingIntervalRef.current);
-          recordingIntervalRef.current = null;
-        }
-
-        // Update recording status in Firebase (Simple Browser Recording)
-        if (conferinta.documentId) {
-          const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
-          await updateDoc(docRef, {
-            recording: {
-              isRecording: false,
-              endTime: Date.now(),
-              status: 'completed',
-              recordingType: 'browser'
-            }
-          });
-        }
-      } else {
-        setRecordingError(data.message || "Eroare la oprirea înregistrării");
-      }
-    } catch (error) {
-      console.error("Recording stop error:", error);
-      setRecordingError("Eroare la oprirea înregistrării");
-    }
-  };
+  // (vechea implementare API start/stop a fost înlocuită)
 
   const formatRecordingTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -570,6 +579,45 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             </div>
           )}
         </div>
+
+        {/* Email Dialog */}
+        {showEmailDialog && (
+          <div style={emailDialogOverlayStyle}>
+            <div style={emailDialogStyle}>
+              <h3 style={{marginTop:0}}>Trimite înregistrarea</h3>
+              <p>Introduceți una sau mai multe adrese de email separate prin virgule sau Enter.</p>
+
+              <div style={chipContainerStyle}>
+                {emailList.map((mail)=>(
+                  <span key={mail} style={chipStyle}>
+                    {mail}
+                    <button
+                      onClick={()=>setEmailList(list=>list.filter(e=>e!==mail))}
+                      style={chipRemoveBtnStyle}
+                    >×</button>
+                  </span>
+                ))}
+              </div>
+
+              <input
+                style={emailInputStyle}
+                placeholder="email@example.com"
+                value={emailInput}
+                onChange={e=>setEmailInput(e.target.value)}
+                onKeyDown={e=>{
+                  if(e.key==='Enter' || e.key===',') { e.preventDefault(); addEmailFromInput(); }
+                }}
+              />
+
+              {emailError && <div style={emailErrorStyle}>{emailError}</div>}
+
+              <div style={emailDialogFooterStyle}>
+                <button onClick={()=>setShowEmailDialog(false)} disabled={isSendingEmail}>Anulează</button>
+                <button onClick={confirmStopRecording} disabled={isSendingEmail||!emailList.length}>Trimite</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recording Error Notification */}
         {recordingError && (
@@ -790,6 +838,79 @@ const errorCloseButtonStyle = {
   fontSize: "18px",
   cursor: "pointer",
   marginLeft: "10px",
+};
+
+// Email Dialog Styles
+const emailDialogOverlayStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  background: 'rgba(0, 0, 0, 0.7)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 3000,
+};
+
+const emailDialogStyle = {
+  background: '#fff',
+  padding: '30px',
+  borderRadius: '10px',
+  boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+  width: '90%',
+  maxWidth: '500px',
+  textAlign: 'center',
+};
+
+const chipContainerStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '8px',
+  marginBottom: '15px',
+  justifyContent: 'center',
+};
+
+const chipStyle = {
+  background: '#e0e0e0',
+  borderRadius: '20px',
+  padding: '5px 10px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  fontSize: '0.9em',
+  color: '#333',
+};
+
+const chipRemoveBtnStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#f00',
+  fontSize: '1.2em',
+  cursor: 'pointer',
+  padding: '0 5px',
+};
+
+const emailInputStyle = {
+  width: '100%',
+  padding: '10px',
+  marginBottom: '15px',
+  border: '1px solid #ccc',
+  borderRadius: '8px',
+  fontSize: '1em',
+};
+
+const emailErrorStyle = {
+  color: '#f00',
+  fontSize: '0.9em',
+  marginTop: '10px',
+};
+
+const emailDialogFooterStyle = {
+  display: 'flex',
+  justifyContent: 'space-around',
+  gap: '10px',
 };
 
 export default AdminConferintaGrupVideo; 
