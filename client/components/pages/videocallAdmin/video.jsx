@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebase";
-import { SimpleVideoRecorder } from "../../../../utils/mediaRecorder";
+import { AgoraStreamRecorder } from "../../../../utils/agoraStreamRecorder";
 
 // Funcție pentru a obține timpul curent
 const getCurrentTime = () => Math.floor(Date.now() / 1000);
@@ -39,9 +39,9 @@ const AdminVideoCall = () => {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const recordingIntervalRef = useRef(null);
 
-  // Initialize SimpleVideoRecorder for admin
+  // Initialize AgoraStreamRecorder for admin (no screen share dialog!)
   const [recorder] = useState(() => {
-    return new SimpleVideoRecorder({
+    return new AgoraStreamRecorder({
       onProgress: (message) => {
         console.log('🎥 [ADMIN RECORDING] Progress:', message);
         setRecordingStatus(message);
@@ -92,7 +92,7 @@ const AdminVideoCall = () => {
   });
 
   // Check browser recording support
-  const isRecordingSupported = SimpleVideoRecorder.isSupported();
+  const isRecordingSupported = AgoraStreamRecorder.isSupported();
   
   // Log recording capabilities
   useEffect(() => {
@@ -231,13 +231,13 @@ const AdminVideoCall = () => {
 
       console.log('🎬 [ADMIN] Starting recording process for meeting:', meetingCode);
 
-      // Start recording using SimpleVideoRecorder
+      // Start recording using AgoraStreamRecorder (no screen share dialog!)
       const result = await recorder.startRecording();
       
       if (result.success) {
         setIsRecording(true);
         setRecordingStartTime(Date.now());
-        setRecordingStatus('Înregistrare activă');
+        setRecordingStatus('Înregistrare activă - capturează streamuri video');
         
         // Start recording duration timer
         recordingIntervalRef.current = setInterval(() => {
@@ -393,6 +393,18 @@ const AdminVideoCall = () => {
         intervalRef.current = null;
       }
 
+      // Cleanup pentru recording dacă este activ
+      if (isRecording) {
+        console.log('🎥 Stopping recording due to call end');
+        recorder.stopRecording();
+        setIsRecording(false);
+      }
+      
+      // Cleanup recorder resources
+      if (recorder) {
+        recorder.cleanup();
+      }
+
       // Setăm prezența adminului și a clientului la false în baza de date
       await updateDoc(docRef, {
         "presence.admin": false,
@@ -532,7 +544,7 @@ const AdminVideoCall = () => {
                 ) : (
                   <div style={styles.recordingUnsupported}>
                     <i className="fas fa-exclamation-triangle" style={{marginRight: '8px', color: '#ff6b6b'}}></i>
-                    <span>Înregistrarea nu este suportată în acest browser</span>
+                    <span>Înregistrarea video nu este suportată în acest browser</span>
                   </div>
                 )}
 
@@ -553,6 +565,46 @@ const AdminVideoCall = () => {
                   callbacks={{
                     EndCall: () => {
                       handleEndCall();
+                    },
+                    'user-joined': (user) => {
+                      console.log('👥 User joined:', user.uid);
+                      // Add user's video stream to recorder when available
+                      if (isRecording && user.videoTrack) {
+                        const stream = new MediaStream([user.videoTrack.getMediaStreamTrack()]);
+                        if (user.audioTrack) {
+                          stream.addTrack(user.audioTrack.getMediaStreamTrack());
+                        }
+                        recorder.addVideoStream(user.uid, stream);
+                        console.log('🎥 Added stream to recorder for user:', user.uid);
+                      }
+                    },
+                    'user-left': (user) => {
+                      console.log('👥 User left:', user.uid);
+                      // Remove user's video stream from recorder
+                      if (isRecording) {
+                        recorder.removeVideoStream(user.uid);
+                        console.log('🎥 Removed stream from recorder for user:', user.uid);
+                      }
+                    },
+                    'user-published': (user, mediaType) => {
+                      console.log('📡 User published:', user.uid, mediaType);
+                      // Handle when user starts sharing video/audio
+                      if (isRecording && mediaType === 'video' && user.videoTrack) {
+                        const stream = new MediaStream([user.videoTrack.getMediaStreamTrack()]);
+                        if (user.audioTrack) {
+                          stream.addTrack(user.audioTrack.getMediaStreamTrack());
+                        }
+                        recorder.addVideoStream(user.uid, stream);
+                        console.log('🎥 Added published stream to recorder for user:', user.uid);
+                      }
+                    },
+                    'user-unpublished': (user, mediaType) => {
+                      console.log('📡 User unpublished:', user.uid, mediaType);
+                      // Handle when user stops sharing video/audio
+                      if (isRecording && mediaType === 'video') {
+                        recorder.removeVideoStream(user.uid);
+                        console.log('🎥 Removed unpublished stream from recorder for user:', user.uid);
+                      }
                     },
                   }}
                   styleProps={{
