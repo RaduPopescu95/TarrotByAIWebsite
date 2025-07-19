@@ -12,17 +12,14 @@ import { DatabaseProvider } from "../context/DatabaseContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
-import "../node_modules/bootstrap/dist/css/bootstrap.min.css"; // Importă doar CSS-ul pe server
+import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 
-import dynamic from "next/dynamic";
-
-// Încarcă dinamica JavaScript-ul Bootstrap doar pe client
-
-// Încarcă dinamica JavaScript-ul Bootstrap doar pe client
+// Load Bootstrap JavaScript only on client
 if (typeof window !== "undefined") {
   require("bootstrap/dist/js/bootstrap");
 }
 
+// Import all required CSS
 require("../client/assets/icons/fontawesome/css/fontawesome.min.css");
 require("../client/assets/icons/fontawesome/css/all.min.css");
 require("../client/assets/icons/feather/css/iconfont.css");
@@ -36,130 +33,60 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
 
-  // Log i18n initialization
-  console.log('🚀 [CLIENT] MyApp initialized:', {
-    currentLocale: router.locale,
-    routerReady: router.isReady,
-    i18nLanguage: i18n?.language,
-    i18nIsInitialized: i18n?.isInitialized,
-    hasTranslations: !!t('hello'),
-    testTranslation: t('hello'),
-    testServices: t('Services'),
-    testExploreServices: t('exploreServices'),
-    detectedLanguage: typeof window !== 'undefined' ? languageDetector.detect() : 'SSR',
-    i18nResources: i18n?.options?.resources,
-    loadedNamespaces: i18n?.options?.ns,
-    // Detailed resource inspection
-    availableLanguages: i18n?.options?.resources ? Object.keys(i18n.options.resources) : 'none',
-    currentLangResources: i18n?.options?.resources?.[i18n?.language || router.locale],
-    routerLangResources: i18n?.options?.resources?.[router.locale],
-    timestamp: new Date().toISOString(),
-    // Additional debugging for Vercel
-    isVercel: process.env.VERCEL === '1',
-    nodeEnv: process.env.NODE_ENV,
-    pagePropsKeys: Object.keys(pageProps || {}),
-    hasI18nInPageProps: !!pageProps?._nextI18Next
-  });
+  // Debug logging only in development or when explicitly enabled
+  const shouldLog = process.env.NODE_ENV === 'development' || process.env.ENABLE_I18N_LOGS === 'true';
+
+  if (shouldLog) {
+    console.log('🚀 [CLIENT] MyApp initialized:', {
+      currentLocale: router.locale,
+      routerReady: router.isReady,
+      i18nLanguage: i18n?.language,
+      i18nIsInitialized: i18n?.isInitialized,
+      hasTranslations: !!t('hello'),
+      testTranslation: t('hello'),
+      availableLanguages: i18n?.options?.resources ? Object.keys(i18n.options.resources) : 'none',
+      timestamp: new Date().toISOString(),
+      isVercel: !!process.env.VERCEL,
+      environment: process.env.NODE_ENV
+    });
+  }
 
   useEffect(() => {
-    console.log('🔄 [CLIENT] useEffect triggered:', {
-      routerReady: router.isReady,
-      currentLocale: router.locale,
-      windowDefined: typeof window !== 'undefined',
-      i18nReady: i18n?.isInitialized,
-      i18nLanguage: i18n?.language
-    });
-
-    // Only run on client-side to avoid hydration issues on Vercel
-    if (typeof window === 'undefined') return;
-    
-    // If i18n is not initialized or resources are missing, try to initialize
-    if (!i18n?.isInitialized || !i18n?.options?.resources) {
-      console.log('⚠️ [CLIENT] i18n not properly initialized, attempting fix...');
-      
-      // Force i18n initialization with router locale
-      if (i18n && router.locale) {
-        try {
-          i18n.changeLanguage(router.locale);
-          console.log('✅ [CLIENT] i18n forced initialization successful');
-        } catch (error) {
-          console.error('❌ [CLIENT] Failed to force i18n initialization:', error);
-        }
-      }
-      return;
-    }
+    // Only run on client-side to avoid hydration issues
+    if (typeof window === 'undefined' || !router.isReady) return;
     
     try {
-      // Verificăm dacă există o limbă salvată în localStorage
-      const savedLocale = localStorage.getItem("locale");
+      // Simple language synchronization
+      const currentLocale = router.locale;
       const detectedLng = languageDetector.detect();
 
-      console.log('🌐 [CLIENT] Language detection:', {
-        savedLocale,
-        detectedLng,
-        routerLocale: router.locale,
-        routerReady: router.isReady,
-        i18nCurrentLang: i18n?.language,
-        shouldRedirect: savedLocale && savedLocale !== router.locale && router.isReady,
-        needsI18nSync: i18n?.language && i18n.language !== router.locale
-      });
-
-      // Force i18n to sync with router locale if they differ
-      if (i18n?.language && i18n.language !== router.locale && router.isReady) {
-        console.log('🔄 [CLIENT] Syncing i18n language with router:', {
-          from: i18n.language,
-          to: router.locale,
+      if (shouldLog) {
+        console.log('🔄 [CLIENT] Language sync:', {
+          routerLocale: currentLocale,
           detectedLng,
-          routerLocale: router.locale
+          i18nLanguage: i18n?.language,
+          needsSync: i18n?.language && i18n.language !== currentLocale
         });
-        
-        try {
-          i18n.changeLanguage(router.locale);
-          console.log('✅ [CLIENT] i18n language synced successfully');
-        } catch (error) {
-          console.error('❌ [CLIENT] Failed to sync i18n language:', error);
-        }
       }
 
-      // Override detected language with router locale to prevent conflicts
-      if (detectedLng !== router.locale && router.isReady && i18n?.isInitialized) {
-        console.log('🔧 [CLIENT] Overriding detected language with router locale:', {
-          detected: detectedLng,
-          router: router.locale,
-          forcing: true
-        });
-        
-        try {
-          i18n.changeLanguage(router.locale);
-          // Also cache the correct language
-          languageDetector.cache(router.locale);
-        } catch (error) {
-          console.error('❌ [CLIENT] Failed to override language:', error);
-        }
+      // Ensure i18n is synced with router locale
+      if (i18n?.language && i18n.language !== currentLocale && i18n.changeLanguage) {
+        i18n.changeLanguage(currentLocale);
+        languageDetector.cache(currentLocale);
       }
 
-      if (savedLocale && savedLocale !== router.locale && router.isReady) {
-        console.log('🔄 [CLIENT] Redirecting to saved locale:', {
-          from: router.locale,
-          to: savedLocale,
-          pathname: router.pathname
-        });
-
-        // Dacă există o limbă salvată și este diferită de limba curentă a routerului,
-        // actualizăm routerul pentru a folosi limba salvată
-        const { pathname, asPath, query } = router;
-        router.push({ pathname, query }, asPath, {
-          locale: savedLocale,
-          shallow: true,
-        });
-        // Actualizează limba în i18n
-        // i18n.changeLanguage(savedLocale);
-        // languageDetector.cache(savedLocale);
+      // Save current locale for consistency
+      if (currentLocale) {
+        localStorage.setItem("locale", currentLocale);
+        languageDetector.cache(currentLocale);
       }
+
     } catch (error) {
-      console.error('❌ [CLIENT] Language detection from localStorage failed:', error);
+      if (shouldLog) {
+        console.error('❌ [CLIENT] Language sync failed:', error);
+      }
     }
-  }, [router.isReady, router.locale, i18n?.isInitialized]); // Add i18n.isInitialized to dependencies
+  }, [router.isReady, router.locale, i18n]); // Simplified dependencies
 
   return (
     <DatabaseProvider>

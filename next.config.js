@@ -3,49 +3,55 @@ const { i18n } = require("./next-i18next.config");
 
 const nextConfig = { 
   i18n,
-  // Optimize for Vercel deployment
-  experimental: {
-    // Improve i18n performance on Vercel
-    optimizeCss: true,
-    serverComponentsExternalPackages: ['next-i18next'],
+  // Important for Vercel: ensure proper builds
+  poweredByHeader: false,
+  // Important: ensure proper static optimization
+  reactStrictMode: true,
+  // Important: ensure proper image optimization
+  images: {
+    domains: ['firebasestorage.googleapis.com'],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60
   },
-  // Ensure proper static file serving for locales
-  async rewrites() {
-    return [
-      {
-        source: '/locales/:path*',
-        destination: '/public/locales/:path*',
-      },
-    ];
+  // Important: ensure proper compilation
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn']
+    } : false
   },
-  // Add headers for better caching of translation files
+  // Important: ensure proper webpack configuration
+  webpack: (config, { dev, isServer }) => {
+    // Optimize for production
+    if (!dev && !isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@': __dirname,
+      };
+    }
+    return config;
+  },
+  // Important: ensure proper environment variables
+  env: {
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
+  // Important: ensure proper redirects if needed
+  async redirects() {
+    return [];
+  },
+  // Important: ensure proper headers for i18n
   async headers() {
     return [
       {
-        source: '/locales/(.*)',
+        source: '/locales/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=3600, s-maxage=3600',
-          },
-        ],
-      },
+            value: 'public, max-age=3600, must-revalidate'
+          }
+        ]
+      }
     ];
-  },
-  // Ensure webpack handles i18n correctly
-  webpack: (config, { isServer, dev }) => {
-    // Only optimize in production
-    if (!dev && !isServer) {
-      // Optimize i18n bundle
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        // Ensure consistent path resolution for translations
-        '@/locales': require('path').resolve(__dirname, 'public/locales'),
-      };
-    }
-    
-    return config;
-  },
+  }
 };
 
 module.exports = nextConfig;

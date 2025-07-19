@@ -2,7 +2,6 @@ import React from "react";
 import Link from "next/link";
 import DropdownMenu from "./dropdownMenu";
 import { useTranslation } from "next-i18next";
-import { useI18nFallback } from "../../../lib/useI18nFallback";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiData } from "../../../context/ApiContext";
 import { useRouter } from "next/router";
@@ -102,13 +101,7 @@ function NavBar({ fixed, style, fontSize, isMobile }) {
     router.pathname === "/citire-viitor" ||
     router.pathname === "/citire-personalizata";
 
-  // Use fallback hook for better Vercel compatibility
-  const { t: tf, i18n, isReady } = useI18nFallback();
-  // Keep original hook as backup
-  const { t: originalT } = useTranslation("common");
-  
-  // Use enhanced translation function that handles fallbacks
-  const t = isReady ? originalT : tf;
+  const { t, i18n } = useTranslation("common");
 
   const handleStyleIconClick = () => {
     updateNumber(1);
