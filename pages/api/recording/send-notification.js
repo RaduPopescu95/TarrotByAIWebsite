@@ -112,29 +112,17 @@ export default async function handler(req, res) {
       duration
     });
 
-    let emailResult;
-    if (downloadURL) {
-      // Send final email with download link
-      logWithDetails('INFO', 'Sending final recording email with download link', {
-        requestId,
-        meetingCode,
-        recipientEmail: recipientEmail.substring(0, 20) + '...',
-        downloadURLDomain: new URL(downloadURL).hostname
-      });
+    // Always send email with link to public recordings access page
+    logWithDetails('INFO', 'Sending recording access email with public page link', {
+      requestId,
+      meetingCode,
+      recipientEmail: recipientEmail.substring(0, 20) + '...',
+      hasDownloadURL: !!downloadURL
+    });
 
-      // Try to fetch meeting details for nicer email (not mandatory)
-      const meetingDetails = await getMeetingDetails(meetingCode, requestId);
-      emailResult = await sendRecordingEmail(meetingCode, downloadURL, meetingDetails, requestId);
-    } else {
-      // Send initial processing email
-      logWithDetails('INFO', 'Starting simple email notification process', {
-        requestId,
-        meetingCode,
-        recipientEmail: recipientEmail.substring(0, 20) + '...'
-      });
-
-      emailResult = await sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, requestId);
-    }
+    // Try to fetch meeting details for nicer email (not mandatory)
+    const meetingDetails = await getMeetingDetails(meetingCode, requestId);
+    const emailResult = await sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDetails, requestId);
 
     const processingTime = Date.now() - requestStartTime;
 
@@ -575,6 +563,185 @@ async function sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, r
 
   } catch (error) {
     logWithDetails('ERROR', 'Failed to send simple recording email', {
+      requestId,
+      error: error.message,
+      errorCode: error.code,
+      smtpResponse: error.response,
+      smtpCommand: error.command,
+      recipientEmail: recipientEmail ? recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2') : 'unknown'
+    });
+    return { success: false, error: error.message };
+  }
+}
+
+async function sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDetails, requestId) {
+  try {
+    logWithDetails('INFO', 'Preparing recording access email', {
+      requestId,
+      meetingCode,
+      recipientEmail: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      hasMeetingDetails: !!meetingDetails
+    });
+
+    // Create access link to public page with email parameter
+    const accessLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com'}/inregistrari-acces?email=${encodeURIComponent(recipientEmail)}`;
+    
+    // Determine meeting type
+    const isGroupConference = meetingCode.startsWith('group_');
+    const meetingType = isGroupConference ? 'Conferință de Grup' : 'Consultație Individuală';
+    
+    // Get meeting title/name
+    let meetingTitle = 'Sesiunea dvs.';
+    if (meetingDetails) {
+      if (isGroupConference) {
+        meetingTitle = meetingDetails.titlu || 'Conferința de grup';
+      } else {
+        meetingTitle = `Consultația cu ${meetingDetails.nume || 'Cristina'}`;
+      }
+    }
+
+    // Prepare email content
+    const emailHTML = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; line-height: 1.6;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 600;">🎉 Înregistrarea este gata!</h1>
+          <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Înregistrarea pentru ${meetingTitle} este disponibilă pentru descărcare</p>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <!-- Meeting Info -->
+          <div style="background-color: #f8f9ff; padding: 25px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #667eea;">
+            <h3 style="color: #667eea; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; font-size: 18px;">
+              📅 Detalii sesiune
+            </h3>
+            <div style="display: grid; gap: 8px;">
+              <p style="margin: 0; color: #333;"><strong>Tip:</strong> ${meetingType}</p>
+              <p style="margin: 0; color: #333;"><strong>Titlu:</strong> ${meetingTitle}</p>
+              ${meetingDetails?.data ? `<p style="margin: 0; color: #333;"><strong>Data:</strong> ${new Date(meetingDetails.data).toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
+              ${meetingDetails?.ora ? `<p style="margin: 0; color: #333;"><strong>Ora:</strong> ${meetingDetails.ora}</p>` : ''}
+            </div>
+          </div>
+
+          <!-- Access Instructions -->
+          <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 22px;">📥 Accesați înregistrarea</h3>
+            <p style="margin: 0 0 25px 0; opacity: 0.95; font-size: 16px;">
+              Pentru a descărca înregistrarea, accesați pagina de mai jos și introduceți adresa dvs. de email.
+            </p>
+            
+            <a href="${accessLink}" 
+               style="display: inline-block; background-color: rgba(255,255,255,0.2); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; border: 2px solid rgba(255,255,255,0.3); transition: all 0.3s ease;">
+              🔗 Accesează Înregistrările
+            </a>
+          </div>
+
+          <!-- Email Pre-filled Info -->
+          <div style="background-color: #e3f2fd; border: 1px solid #bbdefb; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <div style="width: 24px; height: 24px; background-color: #2196f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+                <span style="color: white; font-size: 12px; font-weight: bold;">ℹ</span>
+              </div>
+              <h4 style="margin: 0; color: #1976d2; font-size: 16px;">Instrucțiuni de acces</h4>
+            </div>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1565c0;">
+              <li style="margin-bottom: 8px;">Faceți click pe butonul de mai sus pentru a accesa pagina de înregistrări</li>
+              <li style="margin-bottom: 8px;">Introduceți adresa de email: <strong>${recipientEmail}</strong></li>
+              <li style="margin-bottom: 8px;">Veți vedea toate înregistrările disponibile pentru această adresă</li>
+              <li style="margin-bottom: 0;">Faceți click pe "Descarcă" pentru fiecare înregistrare dorită</li>
+            </ul>
+          </div>
+
+          <!-- Processing Info -->
+          <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <div style="width: 24px; height: 24px; background-color: #ffc107; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+                <span style="color: white; font-size: 12px; font-weight: bold;">⏳</span>
+              </div>
+              <h4 style="margin: 0; color: #856404; font-size: 16px;">Timp de procesare</h4>
+            </div>
+            <p style="margin: 10px 0 0 0; color: #856404; font-size: 14px;">
+              Dacă înregistrarea încă se procesează, aceasta va fi disponibilă în câteva minute. 
+              Reîmprospătați pagina pentru a verifica statusul actualizat.
+            </p>
+          </div>
+
+          <!-- Support Section -->
+          <div style="text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid #eee;">
+            <h4 style="color: #555; margin-bottom: 10px;">Aveți întrebări?</h4>
+            <p style="color: #777; margin: 0; font-size: 14px;">
+              Pentru suport tehnic, răspundeți la acest email sau contactați-ne direct.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+          <p style="margin: 0; color: #6c757d; font-size: 14px;">
+            © ${new Date().getFullYear()} Cristina Zurba. Toate drepturile rezervate.
+          </p>
+          <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 12px;">
+            Acest email a fost trimis automat. Vă rugăm să nu răspundeți direct.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const emailText = `
+Înregistrarea este gata!
+
+Înregistrarea pentru ${meetingTitle} este disponibilă pentru descărcare.
+
+Pentru a accesa înregistrarea:
+1. Accesați: ${accessLink}
+2. Introduceți adresa de email: ${recipientEmail}
+3. Veți vedea toate înregistrările disponibile
+4. Faceți click pe "Descarcă" pentru fiecare înregistrare
+
+Dacă înregistrarea încă se procesează, aceasta va fi disponibilă în câteva minute.
+
+© ${new Date().getFullYear()} Cristina Zurba
+    `;
+
+    const mailOptions = {
+      from: `"Cristina Zurba - Înregistrări" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: `🎥 Înregistrarea pentru ${meetingTitle} este gata!`,
+      text: emailText,
+      html: emailHTML,
+      priority: 'normal',
+      headers: {
+        'X-Recording-Type': meetingType,
+        'X-Meeting-Code': meetingCode,
+        'X-Request-ID': requestId
+      }
+    };
+
+    logWithDetails('INFO', 'Sending recording access email via SMTP', {
+      requestId,
+      emailSize: emailHTML.length,
+      subjectLength: mailOptions.subject.length,
+      recipientEmail: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2')
+    });
+
+    const info = await transporter.sendMail(mailOptions);
+
+    logWithDetails('SUCCESS', 'Recording access email sent successfully', {
+      requestId,
+      messageId: info.messageId,
+      recipientEmail: recipientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+      smtpResponse: info.response
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      recipientEmail: recipientEmail
+    };
+
+  } catch (error) {
+    logWithDetails('ERROR', 'Failed to send recording access email', {
       requestId,
       error: error.message,
       errorCode: error.code,

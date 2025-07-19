@@ -70,7 +70,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [recorder] = useState(() => new AgoraStreamRecorder({
     onProgress: (msg) => setRecordingStatus(msg),
     onComplete: (data) => {
-      // trimite email pentru fiecare destinatar
+      // trimite email pentru fiecare destinatar cu link către pagina publică de acces
       emailList.forEach(async (dest) => {
         try {
           const res = await fetch('/api/recording/send-notification', {
@@ -79,12 +79,12 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             body: JSON.stringify({
               meetingCode: `group_${conferinta?.documentId || 'unknown'}`,
               recipientEmail: dest,
-              downloadURL: data.downloadURL,
+              // No downloadURL - email will contain link to public access page only
               duration: data.duration
             })
           });
           const jr = await res.json();
-          console.log('📧 Email result for', dest, jr);
+          console.log('📧 Email access page sent to', dest, jr.success ? '✅' : '❌');
         } catch (err) {
           console.error('Email send error', dest, err);
         }

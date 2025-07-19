@@ -13,6 +13,7 @@ export class AgoraStreamRecorder {
     this.startTime = null;
     this.streams = new Map(); // Store participant video streams
     this.videoElements = new Map(); // Store video elements for each stream
+    this.isUploading = false; // Track upload state
     
     this.options = {
       width: 1280,
@@ -36,6 +37,7 @@ export class AgoraStreamRecorder {
     });
     
     this.setupCanvas();
+    this.setupBrowserWarnings();
   }
 
   setupCanvas() {
@@ -63,6 +65,24 @@ export class AgoraStreamRecorder {
         errorStack: error.stack
       });
       throw error;
+    }
+  }
+
+  setupBrowserWarnings() {
+    // Warn user before closing browser during upload
+    this.beforeUnloadHandler = (event) => {
+      if (this.isUploading) {
+        const message = 'Înregistrarea se încarcă pe server. Dacă închideți browser-ul, procesul va continua pe server.';
+        event.preventDefault();
+        event.returnValue = message;
+        return message;
+      }
+    };
+
+    // Add event listener
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', this.beforeUnloadHandler);
+      this.logger.info('🛡️ Browser close warning configured');
     }
   }
 
@@ -538,97 +558,90 @@ export class AgoraStreamRecorder {
     }
   }
 
-  // Use the same upload logic as SimpleVideoRecorder
+  // Use server-side upload for better reliability
   async uploadToFirebase(videoBlob, duration) {
     const uploadStartTime = Date.now();
     
     try {
-      this.logger.info('🔥 Starting Firebase upload for Agora recording');
+      this.logger.info('🔥 Starting server-side upload for Agora recording');
+      this.isUploading = true; // Set upload state to true
 
-      // Dynamic import to avoid SSR issues
-      const { getStorage, ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-      const { getAuth } = await import('firebase/auth');
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('videoFile', videoBlob, `agora_recording_${Date.now()}.webm`);
+      formData.append('meetingCode', this.getMeetingCode());
+      formData.append('duration', duration.toString());
       
-      const storage = getStorage();
-      const auth = getAuth();
+      // Get user email if available
+      try {
+        const { getAuth } = await import('firebase/auth');
+        const auth = getAuth();
+        if (auth.currentUser?.email) {
+          formData.append('userEmail', auth.currentUser.email);
+        }
+      } catch (authError) {
+        this.logger.warning('⚠️ Could not get user email', { error: authError.message });
+      }
       
-      // Generate filename
-      const timestamp = Date.now();
-      const meetingCode = this.getMeetingCode();
-      const extension = this.getFileExtension();
-      const fileName = `agora_recording_${timestamp}.${extension}`;
-      
-      // Create storage reference
-      const storagePath = `recordings/${meetingCode}/${fileName}`;
-      const storageRef = ref(storage, storagePath);
-      
-      this.logger.info('📤 Starting Firebase upload', {
-        storagePath,
-        fileName,
-        meetingCode,
-        fileSize: videoBlob.size
+      this.logger.info('📤 Sending video to server for processing', {
+        videoSize: videoBlob.size,
+        meetingCode: this.getMeetingCode(),
+        duration
       });
       
-      this.onProgress('Uploading recording...');
+      this.onProgress('Sending to server...');
       
-      // Upload with progress tracking
-      const uploadTask = uploadBytesResumable(storageRef, videoBlob);
-      
-      return new Promise((resolve, reject) => {
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            this.onProgress(`Uploading: ${progress.toFixed(0)}%`);
-          },
-          (error) => {
-            this.logger.error('💥 Firebase upload failed', {
-              error: error.message,
-              errorCode: error.code
-            });
-            this.onError(error);
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              
-              const recordingData = {
-                meetingCode,
-                fileName,
-                downloadURL,
-                size: videoBlob.size,
-                duration,
-                uploadTime: timestamp,
-                userEmail: auth.currentUser?.email || 'unknown',
-                status: 'completed',
-                recordingType: 'agora_streams'
-              };
-              
-              this.logger.success('🎊 Agora recording upload completed', recordingData);
-
-              // Save metadata. Notification email will be triggered from the caller component
-              await this.saveRecordingMetadata(recordingData);
-
-              this.onComplete(recordingData);
-              resolve(recordingData);
-              
-            } catch (error) {
-              this.logger.error('💥 Post-upload processing failed', {
-                error: error.message
-              });
-              this.onError(error);
-              reject(error);
-            }
-          }
-        );
+      // Upload to server with progress tracking
+      const response = await fetch('/api/recording/upload-chunks', {
+        method: 'POST',
+        body: formData
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Server upload failed');
+      }
+
+      const uploadTime = Date.now() - uploadStartTime;
+      
+      this.logger.success('🎊 Server-side upload completed successfully', {
+        uploadTime: `${uploadTime}ms`,
+        fileSize: videoBlob.size,
+        downloadURL: result.data.downloadURL?.substring(0, 100) + '...',
+        recordingType: result.data.recordingType
+      });
+
+      // Return the same format as before for compatibility
+      const recordingData = {
+        meetingCode: this.getMeetingCode(),
+        fileName: result.data.fileName,
+        downloadURL: result.data.downloadURL,
+        size: videoBlob.size,
+        duration,
+        uploadTime: result.data.uploadTime,
+        userEmail: result.data.userEmail,
+        status: 'completed',
+        recordingType: 'server_processed'
+      };
+
+      this.onComplete(recordingData);
+      return recordingData;
       
     } catch (error) {
-      this.logger.error('💥 Firebase upload initialization failed', {
-        error: error.message
+      this.logger.error('💥 Server-side upload failed', {
+        error: error.message,
+        uploadTime: Date.now() - uploadStartTime
       });
       this.onError(error);
       throw error;
+    } finally {
+      this.isUploading = false; // Reset upload state
     }
   }
 
@@ -708,6 +721,12 @@ export class AgoraStreamRecorder {
     
     this.videoElements.clear();
     this.streams.clear();
+    
+    // Remove browser warning event listener
+    if (typeof window !== 'undefined' && this.beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+      this.logger.info('🛡️ Browser warning event listener removed');
+    }
     
     this.logger.info('🧹 AgoraStreamRecorder cleanup completed');
   }

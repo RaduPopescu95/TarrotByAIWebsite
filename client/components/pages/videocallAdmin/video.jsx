@@ -58,7 +58,7 @@ const AdminVideoCall = () => {
           recordingIntervalRef.current = null;
         }
 
-        // Send final email with download link
+        // Send email with access link to public recordings page
         if (recipientEmail.trim()) {
           fetch('/api/recording/send-notification', {
             method: 'POST',
@@ -66,19 +66,19 @@ const AdminVideoCall = () => {
             body: JSON.stringify({
               meetingCode: meetingCode,
               recipientEmail: recipientEmail.trim(),
-              downloadURL: data.downloadURL,
+              // No downloadURL - email will contain link to public access page only
               duration: data.duration
             })
           })
           .then(res => res.json())
           .then(resp => {
             if (resp.success) {
-              console.log('✅ Final download email sent');
+              console.log('✅ Recording access email sent to:', recipientEmail.trim());
             } else {
-              console.error('Failed to send final email:', resp.message);
+              console.error('Failed to send access email:', resp.message);
             }
           })
-          .catch(err => console.error('Error sending final email:', err));
+          .catch(err => console.error('Error sending access email:', err));
         }
 
         // Update Firestore with recording completion
