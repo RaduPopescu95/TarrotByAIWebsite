@@ -21,13 +21,42 @@ import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";
 import { Sparkles } from "lucide-react";
+import { logI18nStatus, testTranslations } from "../../utils/i18nLogger";
 
 export async function getServerSideProps({ locale }) {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale, ["common"])),
-    },
-  };
+  console.log('📄 [SSR] CitirePersonalizata getServerSideProps:', {
+    locale,
+    timestamp: new Date().toISOString()
+  });
+
+  try {
+    const translations = await serverSideTranslations(locale, ["common"]);
+    console.log('✅ [SSR] CitirePersonalizata translations loaded:', {
+      locale,
+      keysLoaded: Object.keys(translations._nextI18Next?.initialI18nStore?.[locale]?.common || {}).length
+    });
+
+    return {
+      props: {
+        ...translations,
+      },
+    };
+  } catch (error) {
+    console.error('❌ [SSR] CitirePersonalizata serverSideTranslations failed:', {
+      locale,
+      error: error.message
+    });
+    
+    return {
+      props: {
+        _nextI18Next: {
+          initialI18nStore: {},
+          initialLocale: locale,
+          userConfig: null
+        }
+      },
+    };
+  }
 }
 
 const MediaCardConstantService = ({
@@ -253,7 +282,7 @@ export function CitirePersonalizata({ services }) {
     setLoading,
   } = useApiData();
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const { currentNumber, updateNumber } = useNumberContext();
 
   const [flipAllCards, setFlipAllCards] = React.useState(false);
@@ -262,6 +291,17 @@ export function CitirePersonalizata({ services }) {
   const [isMobile, setIsMobile] = React.useState(false);
 
   const router = useRouter();
+
+  // Debug i18n status in this component
+  React.useEffect(() => {
+    logI18nStatus('CitirePersonalizata', { 
+      t, 
+      i18n, 
+      router, 
+      additionalInfo: { currentUser: !!currentUser, isGuestUser } 
+    });
+    testTranslations(t, ['hello', 'Services', 'readingPersonalized', 'selectCard']);
+  }, [t, i18n, router.locale, router.isReady]);
 
   // Check if mobile
   React.useEffect(() => {

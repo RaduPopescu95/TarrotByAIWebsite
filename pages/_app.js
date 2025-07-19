@@ -37,23 +37,62 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
 
-  useEffect(() => {
-    // Verificăm dacă există o limbă salvată în localStorage
-    const savedLocale = localStorage.getItem("locale");
+  // Log i18n initialization
+  console.log('🚀 [CLIENT] MyApp initialized:', {
+    currentLocale: router.locale,
+    routerReady: router.isReady,
+    i18nLanguage: i18n?.language,
+    i18nIsInitialized: i18n?.isInitialized,
+    hasTranslations: !!t('hello'),
+    detectedLanguage: typeof window !== 'undefined' ? languageDetector.detect() : 'SSR',
+    timestamp: new Date().toISOString()
+  });
 
-    if (savedLocale && savedLocale !== router.locale) {
-      // Dacă există o limbă salvată și este diferită de limba curentă a routerului,
-      // actualizăm routerul pentru a folosi limba salvată
-      const { pathname, asPath, query } = router;
-      router.push({ pathname, query }, asPath, {
-        locale: savedLocale,
-        shallow: true,
+  useEffect(() => {
+    console.log('🔄 [CLIENT] useEffect triggered:', {
+      routerReady: router.isReady,
+      currentLocale: router.locale,
+      windowDefined: typeof window !== 'undefined'
+    });
+
+    // Only run on client-side to avoid hydration issues on Vercel
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Verificăm dacă există o limbă salvată în localStorage
+      const savedLocale = localStorage.getItem("locale");
+      const detectedLng = languageDetector.detect();
+
+      console.log('🌐 [CLIENT] Language detection:', {
+        savedLocale,
+        detectedLng,
+        routerLocale: router.locale,
+        routerReady: router.isReady,
+        shouldRedirect: savedLocale && savedLocale !== router.locale && router.isReady
       });
-      // Actualizează limba în i18n
-      // i18n.changeLanguage(savedLocale);
-      // languageDetector.cache(savedLocale);
+
+      if (savedLocale && savedLocale !== router.locale && router.isReady) {
+        console.log('🔄 [CLIENT] Redirecting to saved locale:', {
+          from: router.locale,
+          to: savedLocale,
+          pathname: router.pathname
+        });
+
+        // Dacă există o limbă salvată și este diferită de limba curentă a routerului,
+        // actualizăm routerul pentru a folosi limba salvată
+        const { pathname, asPath, query } = router;
+        router.push({ pathname, query }, asPath, {
+          locale: savedLocale,
+          shallow: true,
+        });
+        // Actualizează limba în i18n
+        // i18n.changeLanguage(savedLocale);
+        // languageDetector.cache(savedLocale);
+      }
+    } catch (error) {
+      console.error('❌ [CLIENT] Language detection from localStorage failed:', error);
     }
-  }, []); // Dependințele goale înseamnă că efectul va rula o singură dată la încărcarea componentei
+  }, [router.isReady, router.locale]); // Wait for router to be ready
 
   return (
     <DatabaseProvider>
@@ -74,11 +113,44 @@ function MyApp({ Component, pageProps }) {
 }
 
 export async function getServerSideProps({ locale }) {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale, ["common", "services"])),
-    },
-  };
+  console.log('🌍 [SSR] _app.js getServerSideProps:', {
+    locale,
+    env: process.env.NODE_ENV,
+    isVercel: !!process.env.VERCEL,
+    timestamp: new Date().toISOString()
+  });
+
+  try {
+    const translations = await serverSideTranslations(locale, ["common"]);
+    console.log('✅ [SSR] serverSideTranslations success:', {
+      locale,
+      namespaces: ["common"],
+      keysLoaded: Object.keys(translations._nextI18Next?.initialI18nStore?.[locale]?.common || {}).length
+    });
+    
+    return {
+      props: {
+        ...translations,
+      },
+    };
+  } catch (error) {
+    console.error('❌ [SSR] serverSideTranslations failed:', {
+      locale,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    // Fallback to empty translations
+    return {
+      props: {
+        _nextI18Next: {
+          initialI18nStore: {},
+          initialLocale: locale,
+          userConfig: null
+        }
+      },
+    };
+  }
 }
 
 export default appWithTranslation(MyApp);
