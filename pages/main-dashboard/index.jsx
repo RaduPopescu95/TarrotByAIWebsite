@@ -89,7 +89,7 @@ export function Landing({ services }) {
     fetchData,
     zilnicCitateMotivationale,
   } = useApiData();
-  const { t } = useTranslation("common", "services");
+  const { t } = useTranslation("common");
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {

@@ -44,7 +44,7 @@ import { db } from "../../firebase";
 export async function getServerSideProps({ locale }) {
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common", "services"])),
+      ...(await serverSideTranslations(locale, ["common"])),
     },
   };
 }
@@ -53,7 +53,7 @@ export async function getServerSideProps({ locale }) {
 
 export function CitateMotivationale() {
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common", "services");
+  const { t } = useTranslation("common");
   const { classes, cx } = useSpacing();
   const { oreNorocoase } = useApiData();
   const detectedLng = languageDetector.detect();

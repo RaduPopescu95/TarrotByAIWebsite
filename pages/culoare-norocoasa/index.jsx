@@ -45,7 +45,7 @@ import { db } from "../../firebase";
 export async function getServerSideProps({ locale }) {
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common", "services"])),
+      ...(await serverSideTranslations(locale, ["common"])),
     },
   };
 }
@@ -54,7 +54,7 @@ export async function getServerSideProps({ locale }) {
 
 export function NumarNorocos() {
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common", "services");
+  const { t } = useTranslation("common");
   const { classes, cx } = useSpacing();
   const { culoriNorocoase } = useApiData();
   const [zilnicCuloriNorocoase, setZilnicCuloriNorocoase] = React.useState({});

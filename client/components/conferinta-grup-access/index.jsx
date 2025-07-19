@@ -7,9 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
 import dynamic from "next/dynamic";
-import { SimpleVideoRecorder } from "../../../utils/mediaRecorder";
-import { createRecordingLogger } from "../../../utils/recordingLogger";
-import RecordingDebugPanel from "../../../components/RecordingDebugPanel";
+
 
 // Import dinamic pentru AgoraUIKit pentru a evita SSR issues
 const AgoraUIKit = dynamic(() => import("agora-react-uikit"), { 
@@ -49,77 +47,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [isMobile, setIsMobile] = useState(false);
   const videoContainerRef = useRef(null);
 
-  // Simple Recording states (updated for new system with detailed logging)
-  const [recorder] = useState(() => {
-    const componentLogger = createRecordingLogger('ConferenceGroup-Recording');
-    
-    return new SimpleVideoRecorder({
-      onProgress: (message) => {
-        componentLogger.progress('📊 Group recording progress update', { 
-          status: message,
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown',
-          component: 'conferinta-grup-access/index.jsx'
-        });
-        setRecordingStatus(message);
-      },
-      onComplete: (data) => {
-        componentLogger.success('🎉 Group recording completed successfully', {
-          meetingCode: data.meetingCode,
-          fileName: data.fileName,
-          fileSize: data.size,
-          duration: data.duration,
-          downloadURL: data.downloadURL ? '[PROVIDED]' : '[MISSING]',
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown',
-          component: 'conferinta-grup-access/index.jsx'
-        });
-        setRecordingStatus('Înregistrare completă! Email trimis.');
-        setIsRecording(false);
-        setRecordingDuration(0);
-        // Update Firestore with recording completion
-        if (conferinta?.documentId) {
-          componentLogger.info('💾 Updating Firestore with group recording completion', {
-            documentId: conferinta.documentId,
-            collection: 'ConferinteGrup'
-          });
-          updateDoc(doc(db, "ConferinteGrup", conferinta.documentId), {
-            recording: {
-              isRecording: false,
-              endTime: Date.now(),
-              status: 'completed',
-              downloadURL: data.downloadURL,
-              fileName: data.fileName
-            }
-          }).catch(error => {
-            componentLogger.error('❌ Failed to update Firestore after group recording completion', {
-              error: error.message,
-              documentId: conferinta.documentId
-            });
-          });
-        }
-      },
-      onError: (error) => {
-        componentLogger.error('💥 Group recording failed in component', {
-          error: error.message,
-          errorName: error.name,
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown',
-          component: 'conferinta-grup-access/index.jsx'
-        });
-        setRecordingError(error.message || 'Eroare la înregistrare');
-        setIsRecording(false);
-      }
-    });
-  });
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingStatus, setRecordingStatus] = useState('');
-  const [recordingError, setRecordingError] = useState("");
-  const [recordingPermission, setRecordingPermission] = useState(false);
-  const [showRecordingModal, setShowRecordingModal] = useState(false);
-  const recordingIntervalRef = useRef(null);
 
   // Conference timing
   const [conferenceStarted, setConferenceStarted] = useState(false);
@@ -129,21 +57,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   // Chat functionality replaced with custom chat
   const chatCleanupMonitorRef = useRef(null);
 
-  // Check browser recording support with logging
-  const isRecordingSupported = SimpleVideoRecorder.isSupported();
-  
-  // Component initialization logging
-  useEffect(() => {
-    const componentLogger = createRecordingLogger('ConferenceGroup-Init');
-    componentLogger.info('🎬 Conference Group component initialized', {
-      accessLink: accessLink || 'unknown',
-      conferenceId: conferinta?.documentId || 'unknown',
-      isRecordingSupported,
-      supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes(),
-      userAgent: navigator.userAgent,
-      component: 'conferinta-grup-access/index.jsx'
-    });
-  }, [accessLink, conferinta]);
+
 
   // Încarcă CSS-ul Agora doar pe client
   useEffect(() => {
@@ -933,184 +847,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     );
   };
 
-  // Simple Recording functions (Browser-based)
-  const startRecording = async () => {
-    const componentLogger = createRecordingLogger('ConferenceGroup-Start');
-    
-    try {
-      componentLogger.info('🎬 Starting recording process in group conference', {
-        accessLink: accessLink || 'unknown',
-        conferenceId: conferinta?.documentId || 'unknown',
-        hasPermission: recordingPermission,
-        userAgent: navigator.userAgent,
-        component: 'conferinta-grup-access/index.jsx'
-      });
 
-      setRecordingError('');
-      setRecordingStatus('Pregătire înregistrare...');
-      
-      // Check if participant consented to recording
-      if (!recordingPermission) {
-        componentLogger.warning('⚠️ Group recording permission not granted, showing modal', {
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown'
-        });
-        setShowRecordingModal(true);
-        return;
-      }
-
-      // Check browser support before starting
-      if (!SimpleVideoRecorder.isSupported()) {
-        componentLogger.error('❌ Browser does not support group recording', {
-          userAgent: navigator.userAgent,
-          supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes()
-        });
-        throw new Error('Browser nu suportă înregistrarea video');
-      }
-      
-      componentLogger.info('✅ Browser support confirmed, proceeding with group recording', {
-        supportedMimeTypes: SimpleVideoRecorder.getSupportedMimeTypes()
-      });
-
-      const result = await recorder.startRecording();
-      
-      if (result.success) {
-        componentLogger.success('▶️ Group recording started successfully', {
-          mimeType: result.mimeType,
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown'
-        });
-
-        setIsRecording(true);
-        setRecordingStatus('Înregistrare activă');
-        startRecordingTimer();
-
-        // Update recording status in Firebase
-        if (conferinta?.documentId) {
-          componentLogger.info('💾 Updating Firestore with group recording start', {
-            documentId: conferinta.documentId,
-            collection: 'ConferinteGrup',
-            format: result.mimeType
-          });
-
-          const docRef = doc(db, "ConferinteGrup", conferinta.documentId);
-          await updateDoc(docRef, {
-            recording: {
-              isRecording: true,
-              startTime: Date.now(),
-              status: 'recording',
-              type: 'browser_simple',
-              format: result.mimeType
-            }
-          });
-
-          componentLogger.success('✅ Firestore updated with group recording start', {
-            documentId: conferinta.documentId
-          });
-        }
-      } else {
-        componentLogger.error('❌ Failed to start group recording', {
-          message: result.message,
-          accessLink: accessLink || 'unknown',
-          conferenceId: conferinta?.documentId || 'unknown'
-        });
-        setRecordingError(result.message);
-        setRecordingStatus('');
-      }
-    } catch (error) {
-      componentLogger.error('💥 Critical error starting group recording', {
-        error: error.message,
-        errorStack: error.stack,
-        accessLink: accessLink || 'unknown',
-        conferenceId: conferinta?.documentId || 'unknown',
-        userAgent: navigator.userAgent
-      });
-      setRecordingError('Eroare la pornirea înregistrării');
-      setRecordingStatus('');
-    }
-  };
-
-  const stopRecording = () => {
-    const componentLogger = createRecordingLogger('ConferenceGroup-Stop');
-    
-    try {
-      componentLogger.info('⏹️ Stopping group recording', {
-        accessLink: accessLink || 'unknown',
-        conferenceId: conferinta?.documentId || 'unknown',
-        recordingDuration,
-        component: 'conferinta-grup-access/index.jsx'
-      });
-
-      setRecordingStatus('Oprire înregistrare...');
-      recorder.stopRecording();
-        
-      // Timer se va opri automat în useEffect când isRecording devine false
-        if (recordingIntervalRef.current) {
-        componentLogger.debug('⏰ Clearing group recording timer', {
-          timerId: recordingIntervalRef.current
-        });
-          clearInterval(recordingIntervalRef.current);
-          recordingIntervalRef.current = null;
-        }
-
-      componentLogger.success('✅ Group recording stop initiated successfully', {
-        accessLink: accessLink || 'unknown',
-        conferenceId: conferinta?.documentId || 'unknown'
-      });
-    } catch (error) {
-      componentLogger.error('💥 Error stopping group recording', {
-        error: error.message,
-        errorStack: error.stack,
-        accessLink: accessLink || 'unknown',
-        conferenceId: conferinta?.documentId || 'unknown'
-      });
-      setRecordingError('Eroare la oprirea înregistrării');
-    }
-  };
-
-  const startRecordingTimer = () => {
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current);
-    }
-    
-    recordingIntervalRef.current = setInterval(() => {
-      setRecordingDuration(prev => prev + 1);
-    }, 1000);
-  };
-
-  const formatRecordingTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleRecordingPermission = (granted) => {
-    setRecordingPermission(granted);
-    setShowRecordingModal(false);
-    if (granted) {
-      startRecording();
-    }
-  };
-
-  // Cleanup pe unmount pentru recording
-  useEffect(() => {
-    return () => {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-      if (recorder && isRecording) {
-        recorder.stopRecording();
-      }
-    };
-  }, []);
-
-  // Oprește timer-ul când recording se oprește
-  useEffect(() => {
-    if (!isRecording && recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current);
-      recordingIntervalRef.current = null;
-    }
-  }, [isRecording]);
 
   const formatDataDisplay = (conferinta) => {
     if (conferinta.tipConferinta === "course") {
@@ -1174,7 +911,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
   const displayInfo = formatDataDisplay(conferinta);
 
-  // Conference in progress - show Agora UIKit interface with recording controls
+  // Conference in progress - show Agora UIKit interface
   if (isInCall && conferenceStarted) {
     return (
       <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
@@ -1197,106 +934,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           }}
         />
         
-        {/* Simple Recording Controls */}
-        {isRecordingSupported ? (
-        <div style={recordingControlsStyle}>
-          <button
-            style={{
-              ...recordButtonStyle,
-              backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-              animation: isRecording ? "pulse 2s infinite" : "none",
-            }}
-            onClick={isRecording ? stopRecording : startRecording}
-            title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
-          >
-              <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-video"}`} />
-          </button>
-          
-          {isRecording && (
-            <div style={recordingInfoStyle}>
-              <div style={recordingIndicatorStyle}>
-                <div style={recordingDotStyle}></div>
-                <span>REC</span>
-              </div>
-              <div style={recordingTimeStyle}>
-                {formatRecordingTime(recordingDuration)}
-              </div>
-            </div>
-          )}
 
-            {recordingStatus && (
-              <div style={recordingStatusStyle}>
-                {recordingStatus}
-        </div>
-            )}
-            
-            {recordingError && (
-              <div style={recordingErrorInlineStyle}>
-                ❌ {recordingError}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={recordingUnsupportedStyle}>
-            ⚠️ Browserul nu suportă înregistrarea video
-          </div>
-        )}
-
-        {/* Recording Permission Modal */}
-        {showRecordingModal && (
-          <div style={modalOverlayStyle}>
-            <div style={modalStyle}>
-              <div style={modalHeaderStyle}>
-                <h3>Consimțământ pentru înregistrare</h3>
-                <i className="fas fa-video" style={modalIconStyle}></i>
-              </div>
-              <div style={modalContentStyle}>
-                <p>
-                  Această conferință va fi înregistrată pentru scopuri de documentare și pentru a putea fi revizuită ulterior.
-                </p>
-                <p>
-                  <strong>Înregistrarea va conține:</strong>
-                </p>
-                <ul style={modalListStyle}>
-                  <li>Video și audio din întreaga conversație</li>
-                  <li>Ecranul partajat (dacă este cazul)</li>
-                  <li>Toate interacțiunile din timpul conferinței</li>
-                </ul>
-                <p>
-                  <strong>Confidențialitate:</strong> Înregistrarea va fi stocată securizat și va fi accesibilă doar participanților la conferință.
-                </p>
-              </div>
-              <div style={modalFooterStyle}>
-                <button
-                  style={modalButtonDeclineStyle}
-                  onClick={() => handleRecordingPermission(false)}
-                >
-                  Nu permit înregistrarea
-                </button>
-                <button
-                  style={modalButtonAcceptStyle}
-                  onClick={() => handleRecordingPermission(true)}
-                >
-                  Sunt de acord cu înregistrarea
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Recording Error Notification */}
-        {recordingError && (
-          <div style={errorNotificationStyle}>
-            <i className="fas fa-exclamation-triangle"></i>
-            <span>{recordingError}</span>
-            <button
-              style={errorCloseButtonStyle}
-              onClick={() => setRecordingError("")}
-            >
-              ✕
-            </button>
-          </div>
-        )}
 
         {/* CUSTOM USER CHAT */}
         {conferinta?.documentId && participant && (
@@ -1306,11 +944,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           />
         )}
 
-        {/* Recording Debug Panel - Only show in development or when debug=true */}
-        <RecordingDebugPanel 
-          show={isRecordingSupported && (process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && window.location.search.includes('debug=true'))} 
-          maxLogs={30} 
-        />
+
       </div>
     );
   }
@@ -1457,196 +1091,6 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   );
 };
 
-// Recording styles - positioned top-right
-const recordingControlsStyle = {
-  position: "absolute",
-  top: "20px",
-  right: "20px",
-  display: "flex",
-  alignItems: "center",
-  backgroundColor: "rgba(0, 0, 0, 0.7)",
-  borderRadius: "25px",
-  padding: "10px 20px",
-  zIndex: 1000,
-  color: "#ffffff",
-};
 
-const recordButtonStyle = {
-  backgroundColor: "#e74c3c",
-  color: "#ffffff",
-  border: "none",
-  borderRadius: "50%",
-  width: "50px",
-  height: "50px",
-  fontSize: "18px",
-  cursor: "pointer",
-  marginRight: "15px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.3s ease",
-};
-
-const recordingInfoStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-};
-
-const recordingIndicatorStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "5px",
-  color: "#ffffff",
-  fontSize: "14px",
-  fontWeight: "bold",
-};
-
-const recordingDotStyle = {
-  width: "8px",
-  height: "8px",
-  borderRadius: "50%",
-  backgroundColor: "#ff4757",
-  animation: "blink 1s infinite",
-};
-
-const recordingTimeStyle = {
-  fontSize: "16px",
-  fontWeight: "bold",
-  color: "#ffffff",
-};
-
-const recordingStatusStyle = {
-  backgroundColor: "rgba(52, 152, 219, 0.9)",
-  color: "#ffffff",
-  padding: "8px 12px",
-  borderRadius: "15px",
-  fontSize: "12px",
-  textAlign: "center",
-  maxWidth: "200px",
-  marginTop: "5px",
-};
-
-const recordingErrorInlineStyle = {
-  backgroundColor: "rgba(231, 76, 60, 0.9)",
-  color: "#ffffff",
-  padding: "8px 12px",
-  borderRadius: "15px",
-  fontSize: "12px",
-  textAlign: "center",
-  maxWidth: "200px",
-  marginTop: "5px",
-};
-
-const recordingUnsupportedStyle = {
-  position: "absolute",
-  top: "20px",
-  right: "20px",
-  backgroundColor: "rgba(230, 126, 34, 0.9)",
-  color: "#ffffff",
-  padding: "10px 15px",
-  borderRadius: "15px",
-  fontSize: "12px",
-  zIndex: 1000,
-};
-
-const modalOverlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  backgroundColor: "rgba(0, 0, 0, 0.7)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 2000,
-};
-
-const modalStyle = {
-  backgroundColor: "#ffffff",
-  padding: "30px",
-  borderRadius: "12px",
-  maxWidth: "500px",
-  width: "90%",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-};
-
-const modalHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: "20px",
-  borderBottom: "2px solid #f0f0f0",
-  paddingBottom: "15px",
-};
-
-const modalIconStyle = {
-  fontSize: "28px",
-  marginRight: "15px",
-  color: "#e74c3c",
-};
-
-const modalContentStyle = {
-  marginBottom: "25px",
-  lineHeight: "1.6",
-};
-
-const modalListStyle = {
-  listStyleType: "disc",
-  paddingLeft: "20px",
-  margin: "15px 0",
-};
-
-const modalFooterStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "15px",
-};
-
-const modalButtonDeclineStyle = {
-  backgroundColor: "#6c757d",
-  color: "#ffffff",
-  border: "none",
-  borderRadius: "6px",
-  padding: "12px 24px",
-  cursor: "pointer",
-  fontSize: "16px",
-  flex: 1,
-};
-
-const modalButtonAcceptStyle = {
-  backgroundColor: "#28a745",
-  color: "#ffffff",
-  border: "none",
-  borderRadius: "6px",
-  padding: "12px 24px",
-  cursor: "pointer",
-  fontSize: "16px",
-  flex: 1,
-};
-
-const errorNotificationStyle = {
-  position: "fixed",
-  top: "20px",
-  right: "20px",
-  backgroundColor: "#ff4757",
-  color: "#ffffff",
-  padding: "15px 20px",
-  borderRadius: "8px",
-  zIndex: 2000,
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  maxWidth: "400px",
-};
-
-const errorCloseButtonStyle = {
-  backgroundColor: "transparent",
-  border: "none",
-  color: "#ffffff",
-  fontSize: "18px",
-  cursor: "pointer",
-  marginLeft: "10px",
-};
 
 export default ConferintaGrupAccess; 

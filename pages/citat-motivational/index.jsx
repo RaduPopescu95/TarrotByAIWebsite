@@ -53,7 +53,7 @@ export async function getServerSideProps({ locale }) {
 
 export function NumarNorocos() {
   const { currentUser, isGuestUser } = useAuth();
-  const { t } = useTranslation("common", "services");
+  const { t } = useTranslation("common");
   const { classes, cx } = useSpacing();
   const detectedLng = languageDetector.detect();
   const [flipAllCards, setFlipAllCards] = React.useState(false);
