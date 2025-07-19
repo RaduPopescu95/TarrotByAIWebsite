@@ -7,7 +7,6 @@ import { AuthProvider } from "../context/AuthContext";
 import ApiDataProvider from "../context/ApiContext";
 import { NumberProvider } from "../context/NumberContext";
 import { appWithTranslation, useTranslation } from "next-i18next";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import "./globals.css";
 import { DatabaseProvider } from "../context/DatabaseContext";
 import { useRouter } from "next/router";
@@ -155,53 +154,6 @@ function MyApp({ Component, pageProps }) {
       </AuthProvider>
     </DatabaseProvider>
   );
-}
-
-export async function getServerSideProps({ locale }) {
-  console.log('🌍 [SSR] _app.js getServerSideProps:', {
-    locale,
-    env: process.env.NODE_ENV,
-    isVercel: !!process.env.VERCEL,
-    timestamp: new Date().toISOString()
-  });
-
-  try {
-    const translations = await serverSideTranslations(locale, ["common"]);
-    const loadedKeys = Object.keys(translations._nextI18Next?.initialI18nStore?.[locale]?.common || {});
-    console.log('✅ [SSR] serverSideTranslations success:', {
-      locale,
-      namespaces: ["common"],
-      keysLoaded: loadedKeys.length,
-      sampleKeys: loadedKeys.slice(0, 10),
-      hasHello: loadedKeys.includes('hello'),
-      hasServices: loadedKeys.includes('Services'),
-      hasExploreServices: loadedKeys.includes('exploreServices'),
-      allLocalesLoaded: Object.keys(translations._nextI18Next?.initialI18nStore || {})
-    });
-    
-    return {
-      props: {
-        ...translations,
-      },
-    };
-  } catch (error) {
-    console.error('❌ [SSR] serverSideTranslations failed:', {
-      locale,
-      error: error.message,
-      stack: error.stack
-    });
-    
-    // Fallback to empty translations
-    return {
-      props: {
-        _nextI18Next: {
-          initialI18nStore: {},
-          initialLocale: locale,
-          userConfig: null
-        }
-      },
-    };
-  }
 }
 
 export default appWithTranslation(MyApp);
