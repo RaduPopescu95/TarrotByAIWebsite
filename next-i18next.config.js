@@ -1,43 +1,25 @@
 const path = require("path");
-const fs = require("fs");
 
-const localePath = path.resolve("./public/locales");
-
-console.log('⚙️ [CONFIG] next-i18next.config.js loading:', {
-  localePath,
-  localePathExists: fs.existsSync(localePath),
-  env: process.env.NODE_ENV,
-  isVercel: !!process.env.VERCEL,
-  cwd: process.cwd()
-});
-
-// Check if locale files exist
-const locales = [
-  "en", "ro", "bg", "hr", "cs", "fr", "de", "el", "hi", "id", "it", "pl", "sk", "es"
-];
-
-locales.forEach(locale => {
-  const localeDir = path.join(localePath, locale);
-  const commonFile = path.join(localeDir, "common.json");
-  
-  console.log(`📁 [CONFIG] Checking locale ${locale}:`, {
-    localeDir,
-    dirExists: fs.existsSync(localeDir),
-    commonExists: fs.existsSync(commonFile),
-    files: fs.existsSync(localeDir) ? fs.readdirSync(localeDir) : []
-  });
-});
-
+// Simple config without fs operations (fs not available in client build)
 const config = {
   i18n: {
-    localePath,
     defaultLocale: "ro", 
-    locales,
+    locales: [
+      "en", "ro", "bg", "hr", "cs", "fr", "de", "el", "hi", "id", "it", "pl", "sk", "es"
+    ],
   },
+  localePath: path.resolve("./public/locales"),
   ssg: false,
   localeSubpaths: false,
 };
 
-console.log('✅ [CONFIG] Final next-i18next config:', config);
+// Only log in development and avoid fs operations
+if (process.env.NODE_ENV === 'development') {
+  console.log('⚙️ [CONFIG] next-i18next.config.js loaded:', {
+    defaultLocale: config.i18n.defaultLocale,
+    locales: config.i18n.locales,
+    localePath: config.localePath
+  });
+}
 
 module.exports = config;
