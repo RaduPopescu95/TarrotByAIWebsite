@@ -38,6 +38,11 @@ next-env.d.ts
 
 # Google Cloud credentials and other sensitive files
 *.json
+# Re-include essential project JSON files
+!package.json
+!package-lock.json
+!public/locales/**/*.json
+
 tarrot-590ee-*.json
 *-credentials.json
 service-account-*.json
