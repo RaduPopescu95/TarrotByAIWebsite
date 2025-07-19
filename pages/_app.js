@@ -50,6 +50,10 @@ function MyApp({ Component, pageProps }) {
     detectedLanguage: typeof window !== 'undefined' ? languageDetector.detect() : 'SSR',
     i18nResources: i18n?.options?.resources,
     loadedNamespaces: i18n?.options?.ns,
+    // Detailed resource inspection
+    availableLanguages: i18n?.options?.resources ? Object.keys(i18n.options.resources) : 'none',
+    currentLangResources: i18n?.options?.resources?.[i18n?.language || router.locale],
+    routerLangResources: i18n?.options?.resources?.[router.locale],
     timestamp: new Date().toISOString()
   });
 
@@ -82,13 +86,33 @@ function MyApp({ Component, pageProps }) {
       if (i18n?.language && i18n.language !== router.locale && router.isReady) {
         console.log('🔄 [CLIENT] Syncing i18n language with router:', {
           from: i18n.language,
-          to: router.locale
+          to: router.locale,
+          detectedLng,
+          routerLocale: router.locale
         });
         
         try {
           i18n.changeLanguage(router.locale);
+          console.log('✅ [CLIENT] i18n language synced successfully');
         } catch (error) {
           console.error('❌ [CLIENT] Failed to sync i18n language:', error);
+        }
+      }
+
+      // Override detected language with router locale to prevent conflicts
+      if (detectedLng !== router.locale && router.isReady && i18n?.isInitialized) {
+        console.log('🔧 [CLIENT] Overriding detected language with router locale:', {
+          detected: detectedLng,
+          router: router.locale,
+          forcing: true
+        });
+        
+        try {
+          i18n.changeLanguage(router.locale);
+          // Also cache the correct language
+          languageDetector.cache(router.locale);
+        } catch (error) {
+          console.error('❌ [CLIENT] Failed to override language:', error);
         }
       }
 
