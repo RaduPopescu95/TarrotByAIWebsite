@@ -1,8 +1,5 @@
-const path = require("path");
-
 module.exports = {
   i18n: {
-    localePath: path.resolve("./public/locales"),
     defaultLocale: "ro",
     locales: [
       "en", // English
@@ -19,9 +16,13 @@ module.exports = {
       "pl", // Polish
       "sk", // Slovak
       "es", // Spanish
-      // Adaugă aici alte locale
     ],
   },
-  ssg: false,
-  localeSubpaths: false,
+  fallbackLng: {
+    default: ['ro'],
+  },
+  debug: process.env.NODE_ENV === 'development',
+  reloadOnPrerender: process.env.NODE_ENV === 'development',
+  // Remove localePath to let next-i18next use default path resolution
+  // This is more Vercel-compatible
 };
