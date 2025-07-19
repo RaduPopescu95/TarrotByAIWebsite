@@ -24,9 +24,10 @@ const LAYOUT_TYPES = {
 };
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
-import RealtimeChat from "../../../components/Chat/RealtimeChat";
-import ChatFAB from "../../../components/Chat/ChatFAB";
+// Chat imports removed - using custom chat implementation
 import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../../utils/chatUtils";
+import { ref, push, onValue, off, serverTimestamp, set, update } from 'firebase/database';
+import { database } from "../../../firebase";
 
 moment.locale("ro");
 
@@ -125,8 +126,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   const [timeUntilStart, setTimeUntilStart] = useState(null);
   const [adminIsPresent, setAdminIsPresent] = useState(false);
 
-  // Chat states
-  const [isChatVisible, setIsChatVisible] = useState(false);
+  // Chat functionality replaced with custom chat
   const chatCleanupMonitorRef = useRef(null);
 
   // Check browser recording support with logging
@@ -402,6 +402,537 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     setFullscreen(!isFullscreen);
   };
 
+  // CUSTOM CHAT COMPONENT FOR CLIENTS
+  const CustomUserChat = ({ meetingId, participantData }) => {
+    const [messages, setMessages] = useState([]);
+    const [inputText, setInputText] = useState('');
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [participants, setParticipants] = useState({});
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [isNearBottom, setIsNearBottom] = useState(true);
+    
+    const messagesEndRef = useRef(null);
+    const messagesContainerRef = useRef(null);
+    
+    const chatRoomId = `conference_${meetingId}`;
+    // Fix userId stability for guest users
+    const [stableUserId] = useState(() => {
+      if (currentUser?.uid) {
+        return currentUser.uid;
+      }
+      // For guest users, create a stable ID based on participant data
+      if (participantData?.uniqueAccessLink) {
+        return `guest_${participantData.uniqueAccessLink.slice(-8)}`;
+      }
+      if (participantData?.accessLink) {
+        return `guest_${participantData.accessLink.slice(-8)}`;
+      }
+      return `guest_${Date.now()}`;
+    });
+    
+    console.log("🚀 [USER CUSTOM CHAT] Initializing with:", {
+      meetingId,
+      chatRoomId,
+      userId: stableUserId,
+      currentUser: currentUser ? "LOGGED_IN" : "GUEST",
+      participantData: participantData ? "PROVIDED" : "MISSING",
+      accessLink: participantData?.uniqueAccessLink || participantData?.accessLink
+    });
+
+    useEffect(() => {
+      if (!meetingId) return;
+
+      const initUserChat = async () => {
+        try {
+                  console.log("🔗 [USER CUSTOM CHAT] Connecting to Firebase...");
+        console.log("🔧 [USER CUSTOM CHAT] Database object:", database);
+        console.log("🔧 [USER CUSTOM CHAT] Database app:", database.app);
+        
+        // Test Firebase connection
+        console.log("🧪 [USER CUSTOM CHAT] Testing Firebase write access...");
+        const testRef = ref(database, `test/${Date.now()}`);
+        await set(testRef, { test: true, timestamp: Date.now(), userId: stableUserId });
+        console.log("✅ [USER CUSTOM CHAT] Firebase write test successful!");
+        
+        // Setup participants listener
+          const participantsRef = ref(database, `chats/${chatRoomId}/participants`);
+          onValue(participantsRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("👥 [USER CUSTOM CHAT] Participants update:", data);
+            setParticipants(data || {});
+          });
+
+          // Setup messages listener
+          const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
+          onValue(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("💬 [USER CUSTOM CHAT] Messages update:", data);
+            if (data) {
+              const messagesList = Object.entries(data)
+                .map(([key, value]) => ({ id: key, ...value }))
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+              setMessages(messagesList);
+            } else {
+              setMessages([]);
+            }
+          });
+
+          // Set user as participant
+          const userName = participantData?.nume && participantData?.prenume 
+            ? `${participantData.nume} ${participantData.prenume}`.trim()
+            : participantData?.name || "Participant";
+            
+          const userParticipantRef = ref(database, `chats/${chatRoomId}/participants/${stableUserId}`);
+          await set(userParticipantRef, {
+            name: userName,
+            role: "participant",
+            isOnline: true,
+            lastSeen: serverTimestamp(),
+            isGuest: participantData?.isGuestUser || false
+          });
+
+          console.log("✅ [USER CUSTOM CHAT] Connected successfully as:", userName);
+
+        } catch (error) {
+          console.error("💥 [USER CUSTOM CHAT] Connection error:", error);
+        }
+      };
+
+      initUserChat();
+
+      // Cleanup
+      return () => {
+        console.log("🧹 [USER CUSTOM CHAT] Cleaning up...");
+        const chatRef = ref(database, `chats/${chatRoomId}`);
+        off(chatRef);
+        
+        // Set user offline
+        const userParticipantRef = ref(database, `chats/${chatRoomId}/participants/${stableUserId}`);
+        update(userParticipantRef, {
+          isOnline: false,
+          lastSeen: serverTimestamp()
+        }).catch(console.error);
+      };
+          }, [meetingId, chatRoomId, stableUserId]);
+
+    const sendMessage = async () => {
+      if (!inputText.trim()) {
+        console.log("⚠️ [USER CUSTOM CHAT] Empty message, not sending");
+        return;
+      }
+
+      try {
+        // Get current participant name from Firebase or default
+        const currentParticipant = participants[stableUserId];
+        const userName = currentParticipant?.name || 
+          (participantData?.nume && participantData?.prenume 
+            ? `${participantData.nume} ${participantData.prenume}`.trim()
+            : participantData?.name || "Participant");
+        
+        const messageData = {
+          senderId: stableUserId,
+          senderName: userName,
+          message: inputText.trim(),
+          timestamp: serverTimestamp(),
+          type: 'text'
+        };
+
+        console.log("📤 [USER CUSTOM CHAT] Attempting to send message:", {
+          chatRoomId,
+          userId: stableUserId,
+          userName,
+          messageText: inputText.trim(),
+          messageData,
+          databaseRef: `chats/${chatRoomId}/messages`
+        });
+        
+        const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
+        console.log("🔗 [USER CUSTOM CHAT] Messages ref created:", messagesRef);
+        console.log("🗂️ [USER CUSTOM CHAT] Full Firebase path:", `chats/${chatRoomId}/messages`);
+        
+        const result = await push(messagesRef, messageData);
+        console.log("✅ [USER CUSTOM CHAT] Push result:", result);
+
+        // Update last activity
+        const metadataRef = ref(database, `chats/${chatRoomId}/metadata`);
+        await update(metadataRef, {
+          lastActivity: serverTimestamp()
+        });
+
+        setInputText('');
+        scrollToBottomAfterSend();
+        console.log("🎉 [USER CUSTOM CHAT] Message sent successfully!");
+      } catch (error) {
+        console.error("💥 [USER CUSTOM CHAT] Send error details:", {
+          error: error.message,
+          errorCode: error.code,
+          errorStack: error.stack,
+          chatRoomId,
+          userId: stableUserId
+        });
+      }
+    };
+
+    const startEditingName = () => {
+      const currentParticipant = participants[stableUserId];
+      const currentName = currentParticipant?.name || 
+        (participantData?.nume && participantData?.prenume 
+          ? `${participantData.nume} ${participantData.prenume}`.trim()
+          : participantData?.name || "Participant");
+      setEditedName(currentName);
+      setIsEditingName(true);
+    };
+
+    const saveEditedName = async () => {
+      if (!editedName.trim()) return;
+
+      try {
+        console.log("✏️ [USER CUSTOM CHAT] Updating name to:", editedName.trim());
+        
+        const userParticipantRef = ref(database, `chats/${chatRoomId}/participants/${stableUserId}`);
+        await update(userParticipantRef, {
+          name: editedName.trim(),
+          lastSeen: serverTimestamp()
+        });
+
+        setIsEditingName(false);
+        console.log("✅ [USER CUSTOM CHAT] Name updated successfully");
+      } catch (error) {
+        console.error("💥 [USER CUSTOM CHAT] Error updating name:", error);
+      }
+    };
+
+    const cancelEditingName = () => {
+      setIsEditingName(false);
+      setEditedName('');
+    };
+
+    // Auto-scroll functions
+    const scrollToBottom = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const checkIfNearBottom = () => {
+      if (!messagesContainerRef.current) return true;
+      
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const threshold = 100; // pixels from bottom
+      return scrollHeight - scrollTop - clientHeight < threshold;
+    };
+
+    const handleScroll = () => {
+      setIsNearBottom(checkIfNearBottom());
+    };
+
+    // Auto-scroll when messages change
+    useEffect(() => {
+      if (isNearBottom) {
+        scrollToBottom();
+      }
+    }, [messages, isNearBottom]);
+
+    // Always scroll to bottom when sending a message
+    const scrollToBottomAfterSend = () => {
+      setIsNearBottom(true);
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    };
+
+    const onlineCount = Object.values(participants).filter(p => p.isOnline).length;
+
+    return (
+      <>
+        {/* Chat FAB */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10%',
+          right: '20px',
+          zIndex: 11000
+        }}>
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: isChatOpen ? '#dc2626' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              position: 'relative'
+            }}
+          >
+            {isChatOpen ? '✕' : '💬'}
+            {onlineCount > 1 && !isChatOpen && (
+              <span style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: '#f59e0b',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {onlineCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Chat Panel */}
+        {isChatOpen && (
+          <div style={{
+            position: 'absolute',
+            bottom: 'calc(15% + 40px)',
+            right: '20px',
+            width: '350px',
+            height: '500px',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 11001
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              padding: '16px',
+              borderRadius: '16px 16px 0 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') saveEditedName();
+                        if (e.key === 'Escape') cancelEditingName();
+                      }}
+                      onBlur={saveEditedName}
+                      autoFocus
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        outline: 'none',
+                        minWidth: '120px'
+                      }}
+                      placeholder="Numele tău"
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '600', fontSize: '14px' }}>
+                        {participants[stableUserId]?.name || 
+                          (participantData?.nume && participantData?.prenume 
+                            ? `${participantData.nume} ${participantData.prenume}`.trim()
+                            : participantData?.name || "Participant")}
+                      </span>
+                      <button
+                        onClick={startEditingName}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          opacity: '0.7',
+                          padding: '2px'
+                        }}
+                        title="Editează numele"
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  )}
+                  <span style={{
+                    fontSize: '10px',
+                    opacity: '0.8',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    padding: '2px 6px',
+                    borderRadius: '8px'
+                  }}>
+                    {currentUser ? 'USER' : 'GUEST'}
+                  </span>
+                </div>
+                <span style={{ fontSize: '12px', opacity: '0.9' }}>
+                  👥 {onlineCount} online
+                </span>
+              </div>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '18px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div 
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              {messages.map((message) => (
+                <div key={message.id} style={{
+                  alignSelf: message.senderId === stableUserId ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%'
+                }}>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '4px'
+                  }}>
+                    {message.senderName}
+                  </div>
+                  <div style={{
+                    background: message.senderId === stableUserId 
+                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                      : '#f1f5f9',
+                    color: message.senderId === stableUserId ? 'white' : '#374151',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    wordWrap: 'break-word'
+                  }}>
+                    {message.message}
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+              
+              {/* Scroll to bottom indicator */}
+              {!isNearBottom && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '80px',
+                  right: '50%',
+                  transform: 'translateX(50%)',
+                  zIndex: 1000
+                }}>
+                  <button
+                    onClick={() => {
+                      setIsNearBottom(true);
+                      scrollToBottom();
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    ↓ Mesaje noi
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div style={{
+              padding: '16px',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'flex-end'
+            }}>
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Scrie un mesaj..."
+                style={{
+                  flex: 1,
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={() => {
+                  setInputText('TEST mesaj de la client');
+                  setTimeout(() => sendMessage(), 100);
+                }}
+                style={{
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                🧪
+              </button>
+              <button
+                onClick={sendMessage}
+                disabled={!inputText.trim()}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: inputText.trim() ? 'pointer' : 'not-allowed',
+                  opacity: inputText.trim() ? 1 : 0.5
+                }}
+              >
+                📤
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
   // Simple Recording functions (Browser-based)
   const startRecording = async () => {
     const componentLogger = createRecordingLogger('ConferenceGroup-Start');
@@ -654,6 +1185,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             token: null,
             role: "host",
           }}
+          rtmProps={{ username: participant?.nume || 'Participant', displayUsername: true }}
           styleProps={{
             UIKitContainer: {
               width: '100vw',
@@ -766,22 +1298,13 @@ const ConferintaGrupAccess = ({ accessLink }) => {
           </div>
         )}
 
-        {/* Chat Components */}
-        <ChatFAB
-          meetingId={conferinta.documentId}
-          meetingType="conference"
-          onToggleChat={() => setIsChatVisible(!isChatVisible)}
-          isChatVisible={isChatVisible}
-        />
-
-        <RealtimeChat
-          meetingId={conferinta.documentId}
-          meetingType="conference"
-          participantData={participant}
-          isVisible={isChatVisible}
-          onToggle={() => setIsChatVisible(!isChatVisible)}
-          onClose={() => setIsChatVisible(false)}
-        />
+        {/* CUSTOM USER CHAT */}
+        {conferinta?.documentId && participant && (
+          <CustomUserChat 
+            meetingId={conferinta.documentId}
+            participantData={participant}
+          />
+        )}
 
         {/* Recording Debug Panel - Only show in development or when debug=true */}
         <RecordingDebugPanel 
@@ -917,6 +1440,15 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                   Înapoi la Conferințe
                 </Link>
               </div>
+
+              {/* Chat in Waiting Room */}
+              {conferinta?.documentId && participant && (
+                <CustomUserChat 
+                  meetingId={conferinta.documentId}
+                  participantData={participant}
+                />
+              )}
+
             </div>
           </div>
         </div>

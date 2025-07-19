@@ -7,6 +7,10 @@ import moment from "moment";
 import "moment/locale/ro";
 import dynamic from "next/dynamic";
 import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
+// Old chat imports removed - using custom chat implementation
+import { setUserOfflineInChat } from "../../../utils/chatUtils";
+import { ref, push, onValue, off, serverTimestamp, set, update } from 'firebase/database';
+import { database } from "../../../firebase";
 
 // Import dinamic pentru AgoraUIKit pentru a evita SSR issues
 const AgoraUIKit = dynamic(() => import("agora-react-uikit"), { 
@@ -136,7 +140,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
   const stopRecording = () => {
     // deschide dialog emailuri pre-populate
-    const preEmails = participantsOnline.map(p=>p.email).filter(Boolean);
+    const preEmails = participantsOnline.filter(p=>p && p.email).map(p=>p.email);
     setEmailList(preEmails);
     setShowEmailDialog(true);
   };
@@ -428,6 +432,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     if (conferinta) {
       await updateAdminPresence(conferinta.documentId, false);
     }
+    const chatId = `conference_${conferinta.documentId}`;
+    await setUserOfflineInChat(chatId, currentUser?.uid || 'admin');
     // Redirecționez înapoi la panoul de administrare
     router.push("/admin-conferinte-grup");
   };
@@ -450,6 +456,455 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       }
     }
     setFullscreen(!isFullscreen);
+  };
+
+  // ADMIN CUSTOM CHAT COMPONENT
+  const AdminCustomChat = ({ meetingId, adminData }) => {
+    const [messages, setMessages] = useState([]);
+    const [inputText, setInputText] = useState('');
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [participants, setParticipants] = useState({});
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [isNearBottom, setIsNearBottom] = useState(true);
+    
+    const messagesEndRef = useRef(null);
+    const messagesContainerRef = useRef(null);
+    
+    const chatRoomId = `conference_${meetingId}`;
+    const adminUserId = currentUser?.uid || 'admin';
+    
+    console.log("🚀 [ADMIN CUSTOM CHAT] Initializing with:", {
+      meetingId,
+      chatRoomId,
+      adminUserId,
+      adminData
+    });
+
+    useEffect(() => {
+      if (!meetingId) return;
+
+      const initAdminChat = async () => {
+        try {
+          console.log("🔗 [ADMIN CUSTOM CHAT] Connecting to Firebase...");
+          
+          // Setup participants listener
+          const participantsRef = ref(database, `chats/${chatRoomId}/participants`);
+          onValue(participantsRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("👥 [ADMIN CUSTOM CHAT] Participants update:", data);
+            setParticipants(data || {});
+          });
+
+          // Setup messages listener
+          const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
+          onValue(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("💬 [ADMIN CUSTOM CHAT] Messages update:", data);
+            if (data) {
+              const messagesList = Object.entries(data)
+                .map(([key, value]) => ({ id: key, ...value }))
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+              setMessages(messagesList);
+            } else {
+              setMessages([]);
+            }
+          });
+
+          // Set admin as participant
+          const adminParticipantRef = ref(database, `chats/${chatRoomId}/participants/${adminUserId}`);
+          await set(adminParticipantRef, {
+            name: `${adminData.nume} ${adminData.prenume}`.trim() || "Admin",
+            role: "admin",
+            isOnline: true,
+            lastSeen: serverTimestamp(),
+            isGuest: false
+          });
+
+          console.log("✅ [ADMIN CUSTOM CHAT] Connected successfully");
+
+        } catch (error) {
+          console.error("💥 [ADMIN CUSTOM CHAT] Connection error:", error);
+        }
+      };
+
+      initAdminChat();
+
+      // Cleanup
+      return () => {
+        console.log("🧹 [ADMIN CUSTOM CHAT] Cleaning up...");
+        const chatRef = ref(database, `chats/${chatRoomId}`);
+        off(chatRef);
+      };
+    }, [meetingId, chatRoomId, adminUserId]);
+
+    const sendMessage = async () => {
+      if (!inputText.trim()) return;
+
+      try {
+        console.log("📤 [ADMIN CUSTOM CHAT] Sending message:", inputText);
+        
+        // Get current participant name
+        const currentParticipant = participants[adminUserId];
+        const senderName = currentParticipant?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin";
+        
+        const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
+        await push(messagesRef, {
+          senderId: adminUserId,
+          senderName: senderName,
+          message: inputText.trim(),
+          timestamp: serverTimestamp(),
+          type: 'text'
+        });
+
+        // Update last activity
+        const metadataRef = ref(database, `chats/${chatRoomId}/metadata`);
+        await update(metadataRef, {
+          lastActivity: serverTimestamp()
+        });
+
+        setInputText('');
+        scrollToBottomAfterSend();
+        console.log("✅ [ADMIN CUSTOM CHAT] Message sent");
+      } catch (error) {
+        console.error("💥 [ADMIN CUSTOM CHAT] Send error:", error);
+      }
+    };
+
+    const startEditingName = () => {
+      const currentParticipant = participants[adminUserId];
+      const currentName = currentParticipant?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin";
+      setEditedName(currentName);
+      setIsEditingName(true);
+    };
+
+    const saveEditedName = async () => {
+      if (!editedName.trim()) return;
+
+      try {
+        console.log("✏️ [ADMIN CUSTOM CHAT] Updating name to:", editedName.trim());
+        
+        const adminParticipantRef = ref(database, `chats/${chatRoomId}/participants/${adminUserId}`);
+        await update(adminParticipantRef, {
+          name: editedName.trim(),
+          lastSeen: serverTimestamp()
+        });
+
+        setIsEditingName(false);
+        console.log("✅ [ADMIN CUSTOM CHAT] Name updated successfully");
+      } catch (error) {
+        console.error("💥 [ADMIN CUSTOM CHAT] Error updating name:", error);
+      }
+    };
+
+    const cancelEditingName = () => {
+      setIsEditingName(false);
+      setEditedName('');
+    };
+
+    // Auto-scroll functions
+    const scrollToBottom = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const checkIfNearBottom = () => {
+      if (!messagesContainerRef.current) return true;
+      
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const threshold = 100; // pixels from bottom
+      return scrollHeight - scrollTop - clientHeight < threshold;
+    };
+
+    const handleScroll = () => {
+      setIsNearBottom(checkIfNearBottom());
+    };
+
+    // Auto-scroll when messages change
+    useEffect(() => {
+      if (isNearBottom) {
+        scrollToBottom();
+      }
+    }, [messages, isNearBottom]);
+
+    // Always scroll to bottom when sending a message
+    const scrollToBottomAfterSend = () => {
+      setIsNearBottom(true);
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    };
+
+    const onlineCount = Object.values(participants).filter(p => p.isOnline).length;
+
+    return (
+      <>
+        {/* Chat FAB */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10%',
+          right: '20px',
+          zIndex: 11000
+        }}>
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: isChatOpen ? '#dc2626' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              position: 'relative'
+            }}
+          >
+            {isChatOpen ? '✕' : '💬'}
+            {onlineCount > 1 && !isChatOpen && (
+              <span style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: '#10b981',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {onlineCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Chat Panel */}
+        {isChatOpen && (
+          <div style={{
+            position: 'absolute',
+            bottom: 'calc(15% + 30px)',
+            right: '20px',
+            width: '350px',
+            height: '500px',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 11001
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              padding: '16px',
+              borderRadius: '16px 16px 0 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') saveEditedName();
+                        if (e.key === 'Escape') cancelEditingName();
+                      }}
+                      onBlur={saveEditedName}
+                      autoFocus
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        outline: 'none',
+                        minWidth: '120px'
+                      }}
+                      placeholder="Numele tău"
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '600', fontSize: '14px' }}>
+                        {participants[adminUserId]?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin"}
+                      </span>
+                      <button
+                        onClick={startEditingName}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          opacity: '0.7',
+                          padding: '2px'
+                        }}
+                        title="Editează numele"
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  )}
+                  <span style={{
+                    fontSize: '10px',
+                    opacity: '0.8',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    padding: '2px 6px',
+                    borderRadius: '8px'
+                  }}>
+                    ADMIN
+                  </span>
+                </div>
+                <span style={{ fontSize: '12px', opacity: '0.9' }}>
+                  👥 {onlineCount} online
+                </span>
+              </div>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '18px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div 
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              {messages.map((message) => (
+                <div key={message.id} style={{
+                  alignSelf: message.senderId === adminUserId ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%'
+                }}>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '4px'
+                  }}>
+                    {message.senderName}
+                  </div>
+                  <div style={{
+                    background: message.senderId === adminUserId 
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      : '#f1f5f9',
+                    color: message.senderId === adminUserId ? 'white' : '#374151',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    wordWrap: 'break-word'
+                  }}>
+                    {message.message}
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+              
+              {/* Scroll to bottom indicator */}
+              {!isNearBottom && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '80px',
+                  right: '50%',
+                  transform: 'translateX(50%)',
+                  zIndex: 1000
+                }}>
+                  <button
+                    onClick={() => {
+                      setIsNearBottom(true);
+                      scrollToBottom();
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    ↓ Mesaje noi
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div style={{
+              padding: '16px',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'flex-end'
+            }}>
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Scrie un mesaj..."
+                style={{
+                  flex: 1,
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!inputText.trim()}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: inputText.trim() ? 'pointer' : 'not-allowed',
+                  opacity: inputText.trim() ? 1 : 0.5
+                }}
+              >
+                📤
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   };
 
   // (vechea implementare API start/stop a fost înlocuită)
@@ -535,6 +990,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   if (isInCall && conferenceStarted) {
     return (
       <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+
+        
         <AgoraUIKit
           rtcProps={{
             appId: appID,
@@ -633,6 +1090,18 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             </button>
           </div>
         )}
+
+        {/* ADMIN CUSTOM CHAT */}
+        <AdminCustomChat 
+          meetingId={conferinta.documentId}
+          adminData={{
+            nume: userData?.nume || currentUser?.displayName || "Admin",
+            prenume: userData?.prenume || "",
+            email: userData?.email || currentUser?.email || "admin@site.com",
+            role: "admin"
+          }}
+        />
+
       </div>
     );
   }
@@ -750,6 +1219,21 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Global Chat FAB & Panel even in waiting room */}
+                        {/* Admin Chat in Waiting Room */}
+              {conferinta?.documentId && (
+                <AdminCustomChat 
+                  meetingId={conferinta.documentId}
+                  adminData={{
+                    nume: userData?.nume || currentUser?.displayName || "Admin",
+                    prenume: userData?.prenume || "",
+                    email: userData?.email || currentUser?.email || "admin@site.com",
+                    role: "admin"
+                  }}
+                />
+              )}
+
             </div>
           </div>
         </div>

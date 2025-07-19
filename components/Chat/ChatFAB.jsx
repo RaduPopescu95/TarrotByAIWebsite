@@ -21,53 +21,99 @@ const ChatFAB = ({
   onToggleChat, 
   isChatVisible 
 }) => {
+  console.log("🚀 [ChatFAB] Component started rendering with props:", {
+    meetingId,
+    meetingType,
+    isChatVisible,
+    onToggleChat: typeof onToggleChat
+  });
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOnline, setIsOnline] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   
   const chatRoomId = `${meetingType}_${meetingId}`;
 
+  console.log("🟦 [ChatFAB] Initialized with:", { 
+    meetingId, 
+    meetingType, 
+    chatRoomId,
+    isChatVisible
+  });
+
   useEffect(() => {
-    if (!meetingId) return;
+    if (!meetingId) {
+      console.log("🔴 [ChatFAB] No meetingId provided, returning");
+      return;
+    }
+
+    console.log("🟢 [ChatFAB] Setting up listeners for chatRoomId:", chatRoomId);
 
     let unsubscribeParticipants = () => {};
 
     const initializeListeners = async () => {
       try {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined') {
+          console.log("⚠️ [ChatFAB] Window undefined, skipping setup");
+          return;
+        }
         
+        console.log("📡 [ChatFAB] Importing Firebase functions...");
         // Import Firebase Realtime Database functions
         const { ref, onValue } = await import('firebase/database');
         const realtimeDb = database;
 
+        console.log("📊 [ChatFAB] Setting up participants listener...");
         // Listen to participants for online count
         const participantsRef = ref(realtimeDb, `chats/${chatRoomId}/participants`);
         
         unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
           const data = snapshot.val();
+          console.log("👥 [ChatFAB] Participants data received:", data);
+          
           if (data) {
             const onlineUsers = Object.values(data).filter(p => p.isOnline);
+            console.log("✅ [ChatFAB] Online users:", onlineUsers);
             setParticipantCount(onlineUsers.length);
-            setIsOnline(onlineUsers.length > 1); // Chat is "online" when multiple users
+            setIsOnline(onlineUsers.length > 0); // Changed from > 1 to > 0 for admin visibility
+            console.log(`📈 [ChatFAB] Updated counts - Participants: ${onlineUsers.length}, IsOnline: ${onlineUsers.length > 0}`);
           } else {
+            console.log("📊 [ChatFAB] No participants data");
             setParticipantCount(0);
             setIsOnline(false);
           }
         });
 
       } catch (error) {
-        console.error('Error setting up chat FAB listeners:', error);
+        console.error('💥 [ChatFAB] Error setting up chat FAB listeners:', error);
       }
     };
 
     initializeListeners();
 
     return () => {
+      console.log("🧹 [ChatFAB] Cleaning up listeners for:", chatRoomId);
       unsubscribeParticipants();
     };
   }, [meetingId, meetingType, chatRoomId]);
 
-  if (!meetingId) return null;
+  if (!meetingId) {
+    console.log("🚫 [ChatFAB] Rendering null - no meetingId");
+    return null;
+  }
+
+  console.log("🎨 [ChatFAB] Rendering FAB with state:", {
+    participantCount,
+    isOnline,
+    isChatVisible,
+    unreadCount
+  });
+
+  console.log("🎯 [ChatFAB] About to render JSX, final check:", {
+    meetingId,
+    chatRoomId,
+    willRender: true
+  });
 
   return (
     <>
@@ -107,7 +153,7 @@ const ChatFAB = ({
           position: fixed;
           bottom: 20px;
           right: 20px;
-          z-index: 999;
+          z-index: 5000;
         }
 
         .chat-fab {

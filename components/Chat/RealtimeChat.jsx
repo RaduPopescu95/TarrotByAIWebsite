@@ -55,6 +55,14 @@ const RealtimeChat = ({
   onToggle,
   onClose 
 }) => {
+  console.log("🚀 [RealtimeChat] Component started rendering with props:", {
+    meetingId,
+    meetingType,
+    isVisible,
+    participantData: participantData ? "PROVIDED" : "NULL",
+    hasCurrentUser: !!useAuth().currentUser
+  });
+
   const { currentUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -89,11 +97,43 @@ const RealtimeChat = ({
 
   const initializeChat = async () => {
     // Verifică dacă Firebase Realtime Database este disponibil
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      console.log("⚠️ [RealtimeChat] Window undefined, skipping initialization");
+      return;
+    }
+    
+    console.log("🚀 [RealtimeChat] Starting chat initialization...");
+    console.log("🔧 [RealtimeChat] Config:", {
+      meetingId,
+      meetingType,
+      chatRoomId,
+      userId,
+      userRole,
+      participantData: participantData ? "PROVIDED" : "MISSING"
+    });
+
+    // Test Firebase database connection
+    console.log("🔌 [RealtimeChat] Testing database connection...");
+    console.log("🔌 [RealtimeChat] Database object:", database);
+    console.log("🔌 [RealtimeChat] Database app:", database.app);
+    
+    // Check environment variables
+    console.log("🌍 [RealtimeChat] Environment check:", {
+      hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      hasAuthDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      hasDatabaseUrl: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+      hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    });
     
     try {
       // Folosește Firebase Realtime Database
       const realtimeDb = database;
+      
+      // Test connection first
+      console.log("🧪 [RealtimeChat] Testing database write/read...");
+      const testRef = ref(realtimeDb, `test/${Date.now()}`);
+      await set(testRef, { test: true, timestamp: Date.now() });
+      console.log("✅ [RealtimeChat] Database write test successful!");
       
       // Determine display name
       let displayName = 'Guest User';
@@ -110,6 +150,7 @@ const RealtimeChat = ({
         displayName = 'Cristina Zurba';
       }
       
+      console.log("👤 [RealtimeChat] Display name set to:", displayName);
       setUserDisplayName(displayName);
 
       // Initialize chat room references
@@ -119,14 +160,23 @@ const RealtimeChat = ({
       const participantsRef = ref(realtimeDb, `chats/${chatRoomId}/participants`);
       const typingRef = ref(realtimeDb, `chats/${chatRoomId}/typing`);
 
+      console.log("🔗 [RealtimeChat] Setting up database references for:", {
+        chatPath: `chats/${chatRoomId}`,
+        participantPath: `chats/${chatRoomId}/participants/${userId}`,
+        messagesPath: `chats/${chatRoomId}/messages`
+      });
+
       // Set user as online
-      await set(participantRef, {
+      const participantInfo = {
         name: displayName,
         role: userRole,
         isOnline: true,
         lastSeen: serverTimestamp(),
         isGuest: !currentUser?.uid || participantData?.isGuestUser || false
-      });
+      };
+      
+      console.log("✅ [RealtimeChat] Setting participant online:", participantInfo);
+      await set(participantRef, participantInfo);
 
       // Set user offline on disconnect
       onDisconnect(participantRef).update({
@@ -134,9 +184,11 @@ const RealtimeChat = ({
         lastSeen: serverTimestamp()
       });
 
+      console.log("📨 [RealtimeChat] Setting up messages listener...");
       // Listen to messages
       onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
+        console.log("💬 [RealtimeChat] Messages received:", data);
         if (data) {
           const messagesList = Object.entries(data)
             .map(([key, value]) => ({ id: key, ...value }))
@@ -145,18 +197,23 @@ const RealtimeChat = ({
               const timeB = new Date(b.timestamp || 0).getTime();
               return timeA - timeB;
             });
+          console.log("📋 [RealtimeChat] Processed messages:", messagesList);
           setMessages(messagesList);
         } else {
+          console.log("📭 [RealtimeChat] No messages found");
           setMessages([]);
         }
       });
 
+      console.log("👥 [RealtimeChat] Setting up participants listener...");
       // Listen to participants
       onValue(participantsRef, (snapshot) => {
         const data = snapshot.val();
+        console.log("👥 [RealtimeChat] Participants received:", data);
         setParticipants(data || {});
       });
 
+      console.log("⌨️ [RealtimeChat] Setting up typing listener...");
       // Listen to typing indicators
       onValue(typingRef, (snapshot) => {
         const data = snapshot.val();
@@ -168,6 +225,7 @@ const RealtimeChat = ({
               acc[id] = user;
               return acc;
             }, {});
+          console.log("⌨️ [RealtimeChat] Typing users:", filteredTyping);
           setTypingUsers(filteredTyping);
         } else {
           setTypingUsers({});
@@ -176,16 +234,21 @@ const RealtimeChat = ({
 
       // Initialize metadata
       const metadataRef = ref(realtimeDb, `chats/${chatRoomId}/metadata`);
-      await update(metadataRef, {
+      const metadataUpdate = {
         type: meetingType,
         createdAt: serverTimestamp(),
         [`${meetingType}Active`]: true,
         autoCleanup: true,
         lastActivity: serverTimestamp()
-      });
+      };
+      
+      console.log("📊 [RealtimeChat] Updating metadata:", metadataUpdate);
+      await update(metadataRef, metadataUpdate);
+
+      console.log("🎉 [RealtimeChat] Chat initialization completed successfully!");
 
     } catch (error) {
-      console.error('Error initializing chat:', error);
+      console.error('💥 [RealtimeChat] Error initializing chat:', error);
     }
   };
 
@@ -216,19 +279,32 @@ const RealtimeChat = ({
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim()) {
+      console.log("⚠️ [RealtimeChat] Empty message, not sending");
+      return;
+    }
+
+    console.log("📤 [RealtimeChat] Sending message:", {
+      message: newMessage.trim(),
+      chatRoomId,
+      userId,
+      userDisplayName
+    });
 
     try {
       const realtimeDb = database;
 
       const messagesRef = ref(realtimeDb, `chats/${chatRoomId}/messages`);
-      await push(messagesRef, {
+      const messageData = {
         senderId: userId,
         senderName: userDisplayName,
         message: newMessage.trim(),
         timestamp: serverTimestamp(),
         type: 'text'
-      });
+      };
+      
+      console.log("💾 [RealtimeChat] Pushing message to database:", messageData);
+      await push(messagesRef, messageData);
 
       // Update last activity
       const metadataRef = ref(realtimeDb, `chats/${chatRoomId}/metadata`);
@@ -236,10 +312,11 @@ const RealtimeChat = ({
         lastActivity: serverTimestamp()
       });
 
+      console.log("✅ [RealtimeChat] Message sent successfully");
       setNewMessage('');
       stopTyping();
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('💥 [RealtimeChat] Error sending message:', error);
     }
   };
 
@@ -327,7 +404,12 @@ const RealtimeChat = ({
     return Object.values(participants).filter(p => p.isOnline).length;
   };
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    console.log("🚫 [RealtimeChat] Not visible, returning null");
+    return null;
+  }
+
+  console.log("🎯 [RealtimeChat] About to render chat UI, isVisible:", isVisible);
 
   return (
     <>

@@ -357,8 +357,8 @@ const AdminVideoCall = () => {
         setRecordingStartTime(Date.now());
         setRecordingStatus('Înregistrare activă - capturează streamuri video');
         
-              // Start recording duration timer
-      recordingIntervalRef.current = setInterval(() => {
+        // Start recording duration timer
+        recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration((prev) => {
           const newDuration = prev + 1;
           
@@ -369,7 +369,7 @@ const AdminVideoCall = () => {
           
           return newDuration;
         });
-      }, 1000);
+        }, 1000);
 
         // Update recording status in Firebase
         if (documentId) {
@@ -636,36 +636,36 @@ const AdminVideoCall = () => {
 
                 {/* Recording Controls */}
                 {isRecordingSupported ? (
-                  <div style={styles.recordingControls}>
-                    <button
-                      style={{
-                        ...styles.recordButton,
-                        backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-                        animation: isRecording ? "pulse 2s infinite" : "none",
-                      }}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
-                    >
-                      <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
-                    </button>
-                    
-                    {isRecording && (
-                      <div style={styles.recordingInfo}>
-                        <div style={styles.recordingIndicator}>
-                          <div style={styles.recordingDot}></div>
-                          <span>REC</span>
-                        </div>
-                        <div style={styles.recordingTime}>
-                          {formatRecordingTime(recordingDuration)}
-                        </div>
+                <div style={styles.recordingControls}>
+                  <button
+                    style={{
+                      ...styles.recordButton,
+                      backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
+                      animation: isRecording ? "pulse 2s infinite" : "none",
+                    }}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
+                  >
+                    <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
+                  </button>
+                  
+                  {isRecording && (
+                    <div style={styles.recordingInfo}>
+                      <div style={styles.recordingIndicator}>
+                        <div style={styles.recordingDot}></div>
+                        <span>REC</span>
                       </div>
-                    )}
+                      <div style={styles.recordingTime}>
+                        {formatRecordingTime(recordingDuration)}
+                      </div>
+                    </div>
+                  )}
 
                     {recordingStatus && (
                       <div style={styles.recordingStatus}>
                         <i className="fas fa-info-circle" style={{marginRight: '8px'}}></i>
                         {recordingStatus}
-                      </div>
+                </div>
                     )}
                   </div>
                 ) : (
@@ -887,7 +887,7 @@ const AdminVideoCall = () => {
                     >
                       <i className="fas fa-times"></i>
                     </button>
-                  </div>
+          </div>
                   
                   <div style={styles.emailDialogBody}>
                     <p style={styles.emailDialogDescription}>
@@ -911,7 +911,7 @@ const AdminVideoCall = () => {
                           }
                         }}
                       />
-                    </div>
+        </div>
                     
                     {emailError && (
                       <div style={styles.emailError}>
