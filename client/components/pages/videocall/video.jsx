@@ -509,7 +509,7 @@ const VideoCall = () => {
         </div>
 
         {/* Chat Components */}
-        {documentId && (
+     {/*   {documentId && (
           <>
             <ChatFAB
               meetingId={documentId}
@@ -527,7 +527,7 @@ const VideoCall = () => {
               onClose={() => setIsChatVisible(false)}
             />
           </>
-        )}
+        )} */}
       </div>
 
 

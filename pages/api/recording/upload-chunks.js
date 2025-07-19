@@ -7,14 +7,21 @@ import path from 'path';
 
 // Initialize Firebase Admin
 if (!getApps().length) {
+  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 
+                       process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 
+                       `${projectId}.appspot.com`;
+  
   initializeApp({
     credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
+      projectId: projectId,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     }),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+    storageBucket: storageBucket
   });
+  
+  console.log(`🔥 Firebase Admin initialized with bucket: ${storageBucket}`);
 }
 
 const adminStorage = getStorage();
@@ -83,7 +90,24 @@ export default async function handler(req, res) {
 
     // Upload to Firebase Storage using Admin SDK
     console.log(`☁️ [${requestId}] Starting Firebase Storage upload`);
-    const bucket = adminStorage.bucket();
+    
+    // Get bucket with explicit fallback
+    let bucket;
+    try {
+      // Try default bucket first
+      bucket = adminStorage.bucket();
+      console.log(`📦 [${requestId}] Using default bucket: ${bucket.name}`);
+    } catch (error) {
+      // Fallback to explicit bucket name
+      const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 
+                         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 
+                         `${projectId}.appspot.com`;
+      
+      console.log(`📦 [${requestId}] Default bucket failed, trying explicit: ${bucketName}`);
+      bucket = adminStorage.bucket(bucketName);
+    }
+    
     const file = bucket.file(storagePath);
 
     // Create upload stream with metadata

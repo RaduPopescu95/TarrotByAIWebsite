@@ -333,6 +333,18 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     // Fix userId stability for guest users
     const [stableUserId] = useState(() => {
       if (currentUser?.uid) {
+        // Check if user is admin - if so, force them to use admin interface
+        const adminUIDs = [
+          'zFsAwNZA5bUonVRIQzRn2HZB3y62',
+          'BhJZdiWVQJNnbLOCGWxzjGHVjHB2', 
+          'MSBePxFVcVO3vsfM5nwHr36ROfh2'
+        ];
+        
+        if (adminUIDs.includes(currentUser.uid)) {
+          console.warn("⚠️ [USER CHAT] Admin detected in user interface - using participant_admin prefix");
+          return `participant_admin_${currentUser.uid}`;
+        }
+        
         return currentUser.uid;
       }
       // For guest users, create a stable ID based on participant data
@@ -808,23 +820,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                   outline: 'none'
                 }}
               />
-              <button
-                onClick={() => {
-                  setInputText('TEST mesaj de la client');
-                  setTimeout(() => sendMessage(), 100);
-                }}
-                style={{
-                  background: '#f59e0b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}
-              >
-                🧪
-              </button>
+            
               <button
                 onClick={sendMessage}
                 disabled={!inputText.trim()}
@@ -870,7 +866,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     return (
       <>
         <Home1Header />
-        <div className="content">
+        <div className="content" style={{ position: "relative" }}>
           <div className="container">
             <div className="text-center py-5">
               <div className="spinner-border text-primary" role="status">
@@ -889,7 +885,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     return (
       <>
         <Home1Header />
-        <div className="content">
+        <div className="content" style={{ position: "relative" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-6">
@@ -953,7 +949,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   return (
     <>
       <Home1Header />
-      <div className="content">
+      <div className="content" style={{ position: "relative" }}>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8">

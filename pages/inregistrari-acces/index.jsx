@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Home1Header from '../../client/components/home/home-1/header';
-import Footer from '../../client/components/Footer';
+import Footer from '../../components/Footer';
 import { motion } from 'framer-motion';
 import moment from 'moment';
 import 'moment/locale/ro';

@@ -14,6 +14,8 @@ export const useAuth = () => {
   return useContext(AuthContext);
 };
 
+export { AuthContext };
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null); // Inițializare cu null
   const [userData, setUserData] = useState(null); // Inițializare cu null

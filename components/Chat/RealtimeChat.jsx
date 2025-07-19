@@ -82,7 +82,10 @@ const RealtimeChat = ({
                    currentUser?.uid === 'MSBePxFVcVO3vsfM5nwHr36ROfh2' ? 'admin' : 
                    meetingType === 'consultation' ? 'client' : 'participant';
   
-  const userId = currentUser?.uid || `guest_${Date.now()}`;
+  // FIXED: Force unique identifiers to prevent admin/user confusion
+  const userId = userRole === 'admin' 
+    ? `admin_${currentUser?.uid || 'default'}` 
+    : currentUser?.uid || `guest_${Date.now()}`;
 
   useEffect(() => {
     if (meetingId) {
@@ -500,7 +503,7 @@ const RealtimeChat = ({
 
       <style jsx>{`
         .chat-container {
-          position: fixed;
+          position: absolute;
           bottom: 100px;
           right: 20px;
           width: 350px;

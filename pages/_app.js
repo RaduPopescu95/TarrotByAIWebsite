@@ -12,6 +12,8 @@ import { DatabaseProvider } from "../context/DatabaseContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
+import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
+import { useFirstVisit } from "../hooks/useFirstVisit";
 import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 
 // Load Bootstrap JavaScript only on client
@@ -32,6 +34,15 @@ const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
+  
+  // First visit detection for language selection dialog
+  const { 
+    showLanguageDialog, 
+    isFirstVisit, 
+    isLoading, 
+    closeLanguageDialog, 
+    resetFirstVisit 
+  } = useFirstVisit();
 
   // Debug logging only in development or when explicitly enabled
   const shouldLog = process.env.NODE_ENV === 'development' || process.env.ENABLE_I18N_LOGS === 'true';
@@ -88,6 +99,20 @@ function MyApp({ Component, pageProps }) {
     }
   }, [router.isReady, router.locale, i18n]); // Simplified dependencies
 
+  // Expose reset function globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.resetLanguageSelection = resetFirstVisit;
+    }
+  }, [resetFirstVisit]);
+
+  const handleLanguageSelect = (language) => {
+    if (shouldLog) {
+      console.log('🌍 [LANGUAGE DIALOG] Language selected:', language);
+    }
+    closeLanguageDialog();
+  };
+
   return (
     <DatabaseProvider>
       <AuthProvider>
@@ -96,7 +121,67 @@ function MyApp({ Component, pageProps }) {
             <CacheProvider value={createCache({ key: "css" })}>
               <ThemeProvider theme={defaultTheme}>
                 <CssBaseline />
+                
+                {/* Language Selection Dialog for First Visit */}
+                <LanguageSelectionDialog
+                  isOpen={showLanguageDialog}
+                  onClose={closeLanguageDialog}
+                  onLanguageSelect={handleLanguageSelect}
+                />
+                
+                {/* Loading Overlay for Better UX */}
+                {isLoading && (
+                  <div 
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      zIndex: 9999,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(2px)'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '16px'
+                    }}>
+                      <div 
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          border: '4px solid #e5e7eb',
+                          borderTop: '4px solid #667eea',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }}
+                      />
+                      <p style={{
+                        color: '#6b7280',
+                        fontSize: '14px',
+                        margin: 0,
+                        fontWeight: '500'
+                      }}>
+                        Preparing your experience...
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <Component {...pageProps} />
+                
+                <style jsx global>{`
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}</style>
               </ThemeProvider>
             </CacheProvider>
           </NumberProvider>

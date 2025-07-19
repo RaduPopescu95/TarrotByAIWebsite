@@ -150,7 +150,7 @@ const ChatFAB = ({
 
       <style jsx>{`
         .chat-fab-container {
-          position: fixed;
+          position: absolute;
           bottom: 20px;
           right: 20px;
           z-index: 5000;

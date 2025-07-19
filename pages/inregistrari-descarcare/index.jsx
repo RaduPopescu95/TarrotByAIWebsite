@@ -5,7 +5,7 @@ import { DatabaseContext } from '../../context/DatabaseContext';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import Home1Header from '../../client/components/home/home-1/header';
-import Footer from '../../client/components/Footer';
+import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { motion } from 'framer-motion';
 import moment from 'moment';
@@ -470,5 +470,13 @@ const InregistrariDescarcare = () => {
     </ProtectedRoute>
   );
 };
+
+// Force server-side rendering to avoid context issues during static generation
+export async function getServerSideProps() {
+  // This page requires authentication, so we use SSR instead of SSG
+  return {
+    props: {}
+  };
+}
 
 export default InregistrariDescarcare; 

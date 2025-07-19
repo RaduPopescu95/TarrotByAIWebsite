@@ -472,7 +472,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     const messagesContainerRef = useRef(null);
     
     const chatRoomId = `conference_${meetingId}`;
-    const adminUserId = currentUser?.uid || 'admin';
+    // FIXED: Force admin prefix to prevent confusion with regular users
+    const adminUserId = `admin_${currentUser?.uid || 'default'}`;
     
     console.log("🚀 [ADMIN CUSTOM CHAT] Initializing with:", {
       meetingId,
@@ -941,7 +942,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     return (
       <>
         <Home1Header />
-        <div className="content" style={{ paddingTop: "100px" }}>
+        <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
           <div className="container">
             <div className="text-center py-5">
               <div className="spinner-border text-primary" role="status">
@@ -961,7 +962,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     return (
       <>
         <Home1Header />
-        <div className="content" style={{ paddingTop: "100px" }}>
+        <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-6">
@@ -1110,7 +1111,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   return (
     <>
       <Home1Header />
-      <div className="content" style={{ paddingTop: "100px" }}>
+      <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8">
