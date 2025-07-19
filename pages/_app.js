@@ -44,7 +44,12 @@ function MyApp({ Component, pageProps }) {
     i18nLanguage: i18n?.language,
     i18nIsInitialized: i18n?.isInitialized,
     hasTranslations: !!t('hello'),
+    testTranslation: t('hello'),
+    testServices: t('Services'),
+    testExploreServices: t('exploreServices'),
     detectedLanguage: typeof window !== 'undefined' ? languageDetector.detect() : 'SSR',
+    i18nResources: i18n?.options?.resources,
+    loadedNamespaces: i18n?.options?.ns,
     timestamp: new Date().toISOString()
   });
 
@@ -68,8 +73,24 @@ function MyApp({ Component, pageProps }) {
         detectedLng,
         routerLocale: router.locale,
         routerReady: router.isReady,
-        shouldRedirect: savedLocale && savedLocale !== router.locale && router.isReady
+        i18nCurrentLang: i18n?.language,
+        shouldRedirect: savedLocale && savedLocale !== router.locale && router.isReady,
+        needsI18nSync: i18n?.language && i18n.language !== router.locale
       });
+
+      // Force i18n to sync with router locale if they differ
+      if (i18n?.language && i18n.language !== router.locale && router.isReady) {
+        console.log('🔄 [CLIENT] Syncing i18n language with router:', {
+          from: i18n.language,
+          to: router.locale
+        });
+        
+        try {
+          i18n.changeLanguage(router.locale);
+        } catch (error) {
+          console.error('❌ [CLIENT] Failed to sync i18n language:', error);
+        }
+      }
 
       if (savedLocale && savedLocale !== router.locale && router.isReady) {
         console.log('🔄 [CLIENT] Redirecting to saved locale:', {
@@ -122,10 +143,16 @@ export async function getServerSideProps({ locale }) {
 
   try {
     const translations = await serverSideTranslations(locale, ["common"]);
+    const loadedKeys = Object.keys(translations._nextI18Next?.initialI18nStore?.[locale]?.common || {});
     console.log('✅ [SSR] serverSideTranslations success:', {
       locale,
       namespaces: ["common"],
-      keysLoaded: Object.keys(translations._nextI18Next?.initialI18nStore?.[locale]?.common || {}).length
+      keysLoaded: loadedKeys.length,
+      sampleKeys: loadedKeys.slice(0, 10),
+      hasHello: loadedKeys.includes('hello'),
+      hasServices: loadedKeys.includes('Services'),
+      hasExploreServices: loadedKeys.includes('exploreServices'),
+      allLocalesLoaded: Object.keys(translations._nextI18Next?.initialI18nStore || {})
     });
     
     return {

@@ -408,7 +408,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
           console.log("✅ [USER CUSTOM CHAT] Connected successfully as:", userName);
 
-        } catch (error) {
+    } catch (error) {
           console.error("💥 [USER CUSTOM CHAT] Connection error:", error);
         }
       };
@@ -477,11 +477,11 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         setInputText('');
         scrollToBottomAfterSend();
         console.log("🎉 [USER CUSTOM CHAT] Message sent successfully!");
-      } catch (error) {
+    } catch (error) {
         console.error("💥 [USER CUSTOM CHAT] Send error details:", {
-          error: error.message,
+        error: error.message,
           errorCode: error.code,
-          errorStack: error.stack,
+        errorStack: error.stack,
           chatRoomId,
           userId: stableUserId
         });
@@ -540,7 +540,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     };
 
     // Auto-scroll when messages change
-    useEffect(() => {
+  useEffect(() => {
       if (isNearBottom) {
         scrollToBottom();
       }
@@ -939,8 +939,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         {/* CUSTOM USER CHAT */}
         {conferinta?.documentId && participant && (
           <CustomUserChat 
-            meetingId={conferinta.documentId}
-            participantData={participant}
+          meetingId={conferinta.documentId}
+          participantData={participant}
           />
         )}
 
