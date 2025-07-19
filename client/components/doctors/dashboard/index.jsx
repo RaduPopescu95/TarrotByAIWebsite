@@ -310,8 +310,8 @@ const DoctorDashboard = (props) => {
         },
       };
 
-      const chart = new ApexCharts(chartRef1.current, sCol);
-      chart.render();
+      // const chart = new ApexCharts(chartRef1.current, sCol);
+      // chart.render();
     }
   }, []);
 
@@ -361,10 +361,10 @@ const DoctorDashboard = (props) => {
       },
     };
 
-    if (chartRef.current) {
-      const chart = new ApexCharts(chartRef.current, sCol);
-      chart.render();
-    }
+    // if (chartRef.current) {
+    //   const chart = new ApexCharts(chartRef.current, sCol);
+    //   chart.render();
+    // }
   }, []);
 
   if (loading) {

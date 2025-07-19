@@ -19,7 +19,7 @@ import { formatSelectedSlot } from "../../../../utils/commonUtils.js";
 const isBrowser = typeof window !== "undefined";
 
 const OwlCarousel = dynamic(() => import("react-owl-carousel"), { ssr: false });
-const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+// const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const ContClient = (props) => {
   const TextContent = () => <p>Last Visit 25 Mar 2024</p>;
@@ -37,7 +37,7 @@ const ContClient = (props) => {
   //   };
   //   this.handleSelect = this.handleSelect.bind(this);
   // }
-  const chartRef = useRef(null);
+  // const chartRef = useRef(null);
 
   const handleGetUserReservations = async () => {
     setLoading(true);
@@ -95,52 +95,52 @@ const ContClient = (props) => {
 
   useEffect(() => {
     handleGetUserReservations();
-    if (chartRef.current) {
-      const options = {
-        series: [
-          {
-            data: [140, 100, 180, 130, 100, 130],
-          },
-        ],
-        chart: {
-          height: 300,
-          type: "bar",
-          events: {
-            click: function (chart, w, e) {
-              // Handle click event
-            },
-          },
-        },
-        fill: {
-          colors: ["#E8F1FF"],
-        },
-        plotOptions: {
-          bar: {
-            columnWidth: "45%",
-          },
-        },
-        dataLabels: {
-          enabled: false,
-        },
-        legend: {
-          show: false,
-        },
-        xaxis: {
-          categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        },
-        crosshairs: {
-          show: false,
-        },
-      };
+    // if (chartRef.current) {
+    //   const options = {
+    //     series: [
+    //       {
+    //         data: [140, 100, 180, 130, 100, 130],
+    //       },
+    //     ],
+    //     chart: {
+    //       height: 300,
+    //       type: "bar",
+    //       events: {
+    //         click: function (chart, w, e) {
+    //           // Handle click event
+    //         },
+    //       },
+    //     },
+    //     fill: {
+    //       colors: ["#E8F1FF"],
+    //     },
+    //     plotOptions: {
+    //       bar: {
+    //         columnWidth: "45%",
+    //       },
+    //     },
+    //     dataLabels: {
+    //       enabled: false,
+    //     },
+    //     legend: {
+    //       show: false,
+    //     },
+    //     xaxis: {
+    //       categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    //     },
+    //     crosshairs: {
+    //       show: false,
+    //     },
+    //   };
 
-      const chart = new ApexCharts(chartRef.current, options);
-      chart.render();
+    //   const chart = new ApexCharts(chartRef.current, options);
+    //   chart.render();
 
-      // Cleanup function
-      return () => {
-        chart.destroy();
-      };
-    }
+    //   // Cleanup function
+    //   return () => {
+    //     chart.destroy();
+    //   };
+    // }
   }, []);
 
   const [options1, setOptions1] = useState(null); // Initialize options1 as null
@@ -191,10 +191,10 @@ const ContClient = (props) => {
 
     setOptions1(options); // Set options1 state
 
-    if (chartContainerRef.current) {
-      const chart = new ApexCharts(chartContainerRef.current, options);
-      chart.render();
-    }
+    // if (chartContainerRef.current) {
+    //   const chart = new ApexCharts(chartContainerRef.current, options);
+    //   chart.render();
+    // }
 
     return () => {
       // Cleanup code if needed
