@@ -1,6 +1,9 @@
+const path = require("path");
+
 module.exports = {
   i18n: {
-    defaultLocale: "en",
+    localePath: path.resolve("./public/locales"),
+    defaultLocale: "ro",
     locales: [
       "en", // English
       "ro", // Romanian
@@ -16,11 +19,9 @@ module.exports = {
       "pl", // Polish
       "sk", // Slovak
       "es", // Spanish
+      // Adaugă aici alte locale
     ],
   },
-  fallbackLng: {
-    default: ['en'],
-  },
-  debug: false,
-  reloadOnPrerender: process.env.NODE_ENV === 'development',
+  ssg: false,
+  localeSubpaths: false,
 };
