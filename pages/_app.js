@@ -53,18 +53,41 @@ function MyApp({ Component, pageProps }) {
     availableLanguages: i18n?.options?.resources ? Object.keys(i18n.options.resources) : 'none',
     currentLangResources: i18n?.options?.resources?.[i18n?.language || router.locale],
     routerLangResources: i18n?.options?.resources?.[router.locale],
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    // Additional debugging for Vercel
+    isVercel: process.env.VERCEL === '1',
+    nodeEnv: process.env.NODE_ENV,
+    pagePropsKeys: Object.keys(pageProps || {}),
+    hasI18nInPageProps: !!pageProps?._nextI18Next
   });
 
   useEffect(() => {
     console.log('🔄 [CLIENT] useEffect triggered:', {
       routerReady: router.isReady,
       currentLocale: router.locale,
-      windowDefined: typeof window !== 'undefined'
+      windowDefined: typeof window !== 'undefined',
+      i18nReady: i18n?.isInitialized,
+      i18nLanguage: i18n?.language
     });
 
     // Only run on client-side to avoid hydration issues on Vercel
     if (typeof window === 'undefined') return;
+    
+    // If i18n is not initialized or resources are missing, try to initialize
+    if (!i18n?.isInitialized || !i18n?.options?.resources) {
+      console.log('⚠️ [CLIENT] i18n not properly initialized, attempting fix...');
+      
+      // Force i18n initialization with router locale
+      if (i18n && router.locale) {
+        try {
+          i18n.changeLanguage(router.locale);
+          console.log('✅ [CLIENT] i18n forced initialization successful');
+        } catch (error) {
+          console.error('❌ [CLIENT] Failed to force i18n initialization:', error);
+        }
+      }
+      return;
+    }
     
     try {
       // Verificăm dacă există o limbă salvată în localStorage
@@ -136,7 +159,7 @@ function MyApp({ Component, pageProps }) {
     } catch (error) {
       console.error('❌ [CLIENT] Language detection from localStorage failed:', error);
     }
-  }, [router.isReady, router.locale]); // Wait for router to be ready
+  }, [router.isReady, router.locale, i18n?.isInitialized]); // Add i18n.isInitialized to dependencies
 
   return (
     <DatabaseProvider>
