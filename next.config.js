@@ -43,6 +43,7 @@ const nextConfig = {
     return [
       {
         source: '/locales/:path*',
+        locale: false,
         headers: [
           {
             key: 'Cache-Control',
