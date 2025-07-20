@@ -1,5 +1,5 @@
-// Agora Stream Recorder - Records video streams directly from Agora without screen share dialog
-// Uses Canvas API to combine video streams and record the result
+// Agora Stream Recorder - SIMPLIFIED CLIENT-SIDE ONLY
+// Records video streams directly from Agora and uploads to Firebase Storage from client
 
 import { createRecordingLogger } from './recordingLogger';
 
@@ -11,8 +11,7 @@ export class AgoraStreamRecorder {
     this.canvasContext = null;
     this.animationFrame = null;
     this.startTime = null;
-    this.streams = new Map(); // Store participant video streams
-    this.videoElements = new Map(); // Store video elements for each stream
+    this.videoElements = new Map(); // Store video elements for recording
     this.isUploading = false; // Track upload state
     
     this.options = {
@@ -29,9 +28,12 @@ export class AgoraStreamRecorder {
     this.onComplete = options.onComplete || (() => {});
     this.onError = options.onError || (() => {});
     
+    // Store recipient email for proper metadata saving
+    this.recipientEmail = null;
+    
     // Initialize detailed logging
     this.logger = createRecordingLogger('AgoraStreamRecorder');
-    this.logger.info('AgoraStreamRecorder initialized', {
+    this.logger.info('🎥 AgoraStreamRecorder SIMPLIFIED - Client-Side Only', {
       options: this.options,
       timestamp: new Date().toISOString()
     });
@@ -40,187 +42,120 @@ export class AgoraStreamRecorder {
     this.setupBrowserWarnings();
   }
 
-  setupCanvas() {
+  static isSupported() {
+    if (typeof window === 'undefined') return false;
+    
     try {
-      // Create canvas element for recording
-      this.canvas = document.createElement('canvas');
-      const defaultWidth = 1280;
-      const defaultHeight = 720;
-      this.canvas.width = this.options.width || defaultWidth;
-      this.canvas.height = this.options.height || defaultHeight;
-      this.canvasContext = this.canvas.getContext('2d');
-      
-      // Set canvas styles for better rendering
-      this.canvasContext.fillStyle = '#000000';
-      this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      
-      this.logger.info('✅ Canvas setup completed', {
-        width: this.canvas.width,
-        height: this.canvas.height,
-        contextType: '2d'
-      });
+      return !!(
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getDisplayMedia &&
+        window.MediaRecorder &&
+        HTMLCanvasElement.prototype.captureStream
+      );
     } catch (error) {
-      this.logger.error('❌ Canvas setup failed', {
-        error: error.message,
-        errorStack: error.stack
-      });
-      throw error;
+      console.warn('🎥 Recording support check failed:', error);
+      return false;
     }
+  }
+
+  static getSupportedMimeTypes() {
+    if (typeof window === 'undefined') return [];
+    
+    const types = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus', 
+      'video/webm;codecs=h264,opus',
+      'video/webm',
+      'video/mp4'
+    ];
+    
+    return types.filter(type => MediaRecorder.isTypeSupported(type));
+  }
+
+  setupCanvas() {
+    if (typeof window === 'undefined') return;
+    
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = this.options.width;
+    this.canvas.height = this.options.height;
+    this.canvasContext = this.canvas.getContext('2d');
+    
+    // Set canvas style for better rendering
+    this.canvasContext.fillStyle = '#000000';
+    this.canvasContext.font = '24px Arial';
+    this.canvasContext.textAlign = 'center';
+    this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    this.logger.info('🎨 Canvas setup completed', {
+      dimensions: `${this.canvas.width}x${this.canvas.height}`,
+      frameRate: this.options.frameRate
+    });
   }
 
   setupBrowserWarnings() {
-    // Warn user before closing browser during upload
-    this.beforeUnloadHandler = (event) => {
-      if (this.isUploading) {
-        const message = 'Înregistrarea se încarcă pe server. Dacă închideți browser-ul, procesul va continua pe server.';
-        event.preventDefault();
-        event.returnValue = message;
-        return message;
-      }
-    };
-
-    // Add event listener
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', this.beforeUnloadHandler);
-      this.logger.info('🛡️ Browser close warning configured');
+    if (typeof window === 'undefined') return;
+    
+    // Check for potential issues
+    const warnings = [];
+    
+    if (!MediaRecorder.isTypeSupported(this.options.mimeType)) {
+      warnings.push('Preferred MIME type not supported');
+    }
+    
+    if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+      warnings.push('Safari has limited recording capabilities');
+    }
+    
+    if (warnings.length > 0) {
+      this.logger.warning('⚠️ Browser compatibility warnings:', warnings);
     }
   }
 
-  // Add video stream from Agora participant
-  addVideoStream(userId, stream, existingVideoElement = null) {
-    try {
-      this.logger.info('➕ Adding video stream', {
-        userId,
-        streamId: stream.id,
-        tracks: stream.getTracks().length,
-        videoTracks: stream.getVideoTracks().length,
-        audioTracks: stream.getAudioTracks().length
-      });
+  // REMOVED: Old stream-based methods replaced with direct video element handling
+  // addVideoStream() and removeVideoStream() are no longer needed
+  // We now use addVideoElement() and removeVideoElement() for better control
 
-      let videoElement;
-      if (existingVideoElement) {
-        videoElement = existingVideoElement;
-        this.logger.info('📺 Using existing video element for stream');
-        if (videoElement.paused) {
-          videoElement.play().catch(err => {
-            this.logger.warning('⚠️ Existing video element play() failed', {
-              error: err?.message || err
-            });
-          });
-        }
+  removeVideoElement(uid) {
+    try {
+      this.logger.info(`➖ Removing video element for UID: ${uid}`);
+      
+      // Remove video element from our tracking
+      if (this.videoElements.has(uid)) {
+        this.videoElements.delete(uid);
+        this.logger.success(`✅ Video element removed for UID: ${uid}`);
       } else {
-        // Create hidden video element for this stream
-        videoElement = document.createElement('video');
-        videoElement.style.display = 'none';
-        videoElement.srcObject = stream;
-        document.body.appendChild(videoElement);
-
-        videoElement.autoplay = true;
-        videoElement.muted = true; // Muted to avoid echo in recording
-        videoElement.playsInline = true;
-
-        // Ensure playback starts even though element isn't in the DOM
-        videoElement.play().catch(err => {
-          this.logger.warning('⚠️ Video element play() failed (likely autoplay policy)', {
-            error: err?.message || err
-          });
-        });
+        this.logger.warning(`⚠️ Video element not found for UID: ${uid}`);
       }
-      
-      // Store video element and stream
-      this.videoElements.set(userId, videoElement);
-      this.streams.set(userId, stream);
-      
-      this.logger.success(`✅ Video stream added for user ${userId}`);
-      
     } catch (error) {
-      this.logger.error('❌ Failed to add video stream', {
-        userId,
-        error: error.message,
-        errorStack: error.stack
-      });
+      this.logger.error(`❌ Failed to remove video element for UID: ${uid}`, error);
     }
   }
 
-  // Remove video stream when participant leaves
-  removeVideoStream(userId) {
-    try {
-      this.logger.info('➖ Removing video stream', { userId });
-      
-      const videoElement = this.videoElements.get(userId);
-      if (videoElement) {
-        videoElement.srcObject = null;
-        this.videoElements.delete(userId);
-      }
-      
-      this.streams.delete(userId);
-      
-      this.logger.success(`✅ Video stream removed for user ${userId}`);
-      
-    } catch (error) {
-      this.logger.error('❌ Failed to remove video stream', {
-        userId,
-        error: error.message
-      });
-    }
-  }
-
-  // Start recording the canvas
   async startRecording() {
     try {
-      this.logger.info('🎬 Starting Agora stream recording...');
-      
-      // Check if we have any video streams
-      if (this.streams.size === 0) {
-        this.logger.warning('⚠️ No video streams available initially - will wait for participants to join');
-        // Don't throw error - allow recording to start and wait for streams via callbacks
+      this.logger.info('🎬 Starting Agora stream recording (client-side only)');
+      this.onProgress('🎬 Pregătire înregistrare...');
+
+      // Check browser support
+      if (!AgoraStreamRecorder.isSupported()) {
+        throw new Error('Browser-ul nu suportă înregistrarea video');
       }
 
-      // Get canvas stream
+      // Capture existing Agora video elements
+      this.onProgress('🔍 Căutare elemente video...');
+      const capturedStreams = await this.captureExistingAgoraStreams();
+      
+      this.logger.info(`📊 Captured ${capturedStreams} video streams from Agora`);
+      
+      if (capturedStreams === 0) {
+        this.logger.warning('⚠️ No video streams captured - recording canvas only');
+        // Continue anyway - we'll record the canvas which shows "waiting for participants"
+      }
+
+      // Setup canvas stream
+      this.onProgress('🎨 Configurare canvas...');
       const canvasStream = this.canvas.captureStream(this.options.frameRate);
       
-      this.logger.info('📺 Canvas stream captured', {
-        streamId: canvasStream.id,
-        tracks: canvasStream.getTracks().length,
-        frameRate: this.options.frameRate,
-        videoTracks: canvasStream.getVideoTracks().length,
-        audioTracks: canvasStream.getAudioTracks().length
-      });
-
-      // Verify canvas stream has video tracks
-      const canvasVideoTracks = canvasStream.getVideoTracks();
-      if (canvasVideoTracks.length === 0) {
-        this.logger.error('❌ Canvas stream has no video tracks');
-        throw new Error('Canvas stream has no video tracks');
-      }
-
-      // Log canvas track details
-      canvasVideoTracks.forEach((track, index) => {
-        this.logger.info(`📹 Canvas video track ${index}`, {
-          id: track.id,
-          kind: track.kind,
-          label: track.label,
-          enabled: track.enabled,
-          readyState: track.readyState,
-          settings: track.getSettings()
-        });
-      });
-
-      // Add audio tracks from Agora streams
-      for (const [userId, stream] of this.streams) {
-        const audioTracks = stream.getAudioTracks();
-        audioTracks.forEach(track => {
-          if (!track.muted && track.enabled) {
-            canvasStream.addTrack(track.clone());
-            this.logger.info('🎵 Added audio track', {
-              userId,
-              trackId: track.id,
-              trackLabel: track.label
-            });
-          }
-        });
-      }
-
       // Setup MediaRecorder for canvas stream
       const mediaRecorderOptions = {
         videoBitsPerSecond: this.options.videoBitsPerSecond,
@@ -276,253 +211,332 @@ export class AgoraStreamRecorder {
 
       this.mediaRecorder.onstart = () => {
         this.logger.success('▶️ MediaRecorder started for canvas recording');
+        this.onProgress('🔴 Înregistrare în curs...');
       };
 
       // Start the drawing loop
       this.startDrawingLoop();
-      
-      // Add debug helper to canvas (temporarily visible for testing)
-      if (typeof window !== 'undefined') {
-        // Make canvas visible for debugging
-        this.canvas.style.position = 'fixed';
-        this.canvas.style.top = '80px';
-        this.canvas.style.right = '10px';
-        this.canvas.style.width = '200px';
-        this.canvas.style.height = '150px';
-        this.canvas.style.border = '2px solid red';
-        this.canvas.style.zIndex = '10000';
-        document.body.appendChild(this.canvas);
-        
-        this.logger.info('🔍 Debug canvas added to page (top-right corner)');
-      }
-      
-      // Start recording
-      this.mediaRecorder.start(1000);
-      
-      this.logger.success('🎉 Agora stream recording started successfully', {
-        streamsCount: this.streams.size,
-        canvasSize: `${this.canvas.width}x${this.canvas.height}`,
-        frameRate: this.options.frameRate
-      });
 
-      return { 
-        success: true, 
-        message: 'Recording started successfully - capturing video streams',
-        streamsCount: this.streams.size
+      // Start recording
+      this.mediaRecorder.start(1000); // Capture data every second
+
+      this.logger.success('✅ Agora stream recording started successfully');
+      
+      return {
+        success: true,
+        message: 'Recording started successfully',
+        startTime: this.startTime
       };
 
     } catch (error) {
       this.logger.error('💥 Failed to start Agora stream recording', {
         error: error.message,
-        errorStack: error.stack,
-        streamsAvailable: this.streams.size
+        errorStack: error.stack
+      });
+      this.onError(error);
+      throw error;
+    }
+  }
+
+  async captureExistingAgoraStreams() {
+    let capturedCount = 0;
+    
+    try {
+      this.logger.info('🔍 Waiting for AgoraUIKit videos to load...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Multiple attempts to find videos as they load asynchronously
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        this.logger.info(`🎥 Video capture attempt ${attempt}/3`);
+        
+        const allVideos = document.querySelectorAll('video');
+        this.logger.info(`📹 Found ${allVideos.length} video elements on attempt ${attempt}`);
+        
+        for (let i = 0; i < allVideos.length; i++) {
+          const videoElement = allVideos[i];
+          
+          this.logger.info(`🔍 Examining video element ${i}:`, {
+            id: videoElement.id,
+            className: videoElement.className,
+            width: videoElement.videoWidth,
+            height: videoElement.videoHeight,
+            readyState: videoElement.readyState,
+            hasSource: !!videoElement.srcObject,
+            paused: videoElement.paused,
+            muted: videoElement.muted
+          });
+          
+          // Check if video has actual video content (not just audio)
+          if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+            const uid = videoElement.id || `agora_video_${capturedCount}_${Date.now()}`;
+            
+            // Don't use cloned stream - use the actual video element directly for drawing
+            this.addVideoElement(uid, videoElement);
+            capturedCount++;
+            
+            this.logger.success(`✅ Added video element for recording: ${uid}`, {
+              videoWidth: videoElement.videoWidth,
+              videoHeight: videoElement.videoHeight,
+              readyState: videoElement.readyState
+            });
+          } else if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
+            const stream = videoElement.srcObject;
+            const videoTracks = stream.getVideoTracks();
+            
+            if (videoTracks.length > 0) {
+              const videoTrack = videoTracks[0];
+              this.logger.info(`📊 Video track details:`, {
+                trackId: videoTrack.id,
+                trackState: videoTrack.readyState,
+                trackEnabled: videoTrack.enabled,
+                trackKind: videoTrack.kind,
+                trackSettings: videoTrack.getSettings()
+              });
+              
+              // Add even if dimensions are not yet available - they might load
+              const uid = videoElement.id || `agora_pending_${capturedCount}_${Date.now()}`;
+              this.addVideoElement(uid, videoElement);
+              capturedCount++;
+              
+              this.logger.info(`📝 Added pending video element: ${uid}`);
+            }
+          }
+        }
+        
+        if (capturedCount > 0) {
+          this.logger.success(`🎯 Found ${capturedCount} video elements on attempt ${attempt}`);
+          break;
+        }
+        
+        // Wait before next attempt
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      this.logger.info(`📊 Final capture summary:`, {
+        totalAttempts: 3,
+        videosFound: capturedCount,
+        videoElementsStored: this.videoElements.size
       });
       
-      this.onError(error);
-      return { 
-        success: false, 
-        message: 'Nu s-a putut începe înregistrarea: ' + error.message 
-      };
+    } catch (error) {
+      this.logger.error('❌ Error capturing existing streams:', error);
+    }
+    
+    return capturedCount;
+  }
+
+
+
+  addVideoElement(uid, videoElement) {
+    try {
+      this.logger.info(`➕ Adding video element for UID: ${uid}`);
+      
+      // Store the video element directly for canvas drawing
+      this.videoElements.set(uid, videoElement);
+      
+      this.logger.success(`✅ Video element added for UID: ${uid}`);
+    } catch (error) {
+      this.logger.error(`❌ Failed to add video element for UID: ${uid}`, error);
     }
   }
 
-  // Drawing loop to render video streams on canvas
-  startDrawingLoop() {
-    let frameCount = 0;
-    const drawFrame = () => {
-      // Always schedule next frame first to keep the loop alive
-      this.animationFrame = requestAnimationFrame(drawFrame);
-
-      // Skip drawing until recorder is actively recording
-      if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
-        return;
-      }
-
-      frameCount++;
-
-      // Clear canvas
-      this.canvasContext.fillStyle = '#1a1a2e';
-      this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-      // Draw video streams
-      const participants = Array.from(this.videoElements.entries());
-      const participantCount = participants.length;
-
-      // Log drawing status every 30 frames (≈1 s @30 fps)
-      if (frameCount % 30 === 0) {
-        this.logger.debug('🎨 Drawing frame', {
-          frameNumber: frameCount,
-          participantCount,
-          recordingState: this.mediaRecorder.state,
-          canvasSize: `${this.canvas.width}x${this.canvas.height}`
-        });
-      }
-
-      if (participantCount === 0) {
-        this.drawPlaceholder();
-      } else if (participantCount === 1) {
-        this.drawSingleParticipant(participants[0]);
-      } else if (participantCount === 2) {
-        this.drawTwoParticipants(participants);
-      } else {
-        this.drawGridLayout(participants);
-      }
-    };
-
-    // Kick off the loop
-    drawFrame();
-    this.logger.info('🎨 Canvas drawing loop started');
-  }
-
-  drawPlaceholder() {
-    this.canvasContext.fillStyle = '#1a1a2e';
-    this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Title
-    this.canvasContext.fillStyle = '#667eea';
-    this.canvasContext.font = 'bold 48px Arial';
-    this.canvasContext.textAlign = 'center';
-    this.canvasContext.fillText(
-      'Tarot by AI - Recording Active',
-      this.canvas.width / 2,
-      this.canvas.height / 2 - 60
-    );
-    
-    // Subtitle
-    this.canvasContext.fillStyle = '#ffffff';
-    this.canvasContext.font = '32px Arial';
-    this.canvasContext.fillText(
-      'Waiting for participants to join...',
-      this.canvas.width / 2,
-      this.canvas.height / 2 + 20
-    );
-    
-    // Timestamp
-    this.canvasContext.fillStyle = '#aaaaaa';
-    this.canvasContext.font = '24px Arial';
-    this.canvasContext.fillText(
-      new Date().toLocaleTimeString('ro-RO'),
-      this.canvas.width / 2,
-      this.canvas.height / 2 + 80
-    );
-  }
-
-  drawSingleParticipant([userId, videoElement]) {
-    if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-      try {
-        this.canvasContext.drawImage(
-          videoElement,
-          0, 0,
-          this.canvas.width,
-          this.canvas.height
-        );
+  async recheckForVideos() {
+    try {
+      this.logger.info('🔄 Rechecking for new videos');
+      
+      const allVideos = document.querySelectorAll('video');
+      let newVideosFound = 0;
+      
+      for (let i = 0; i < allVideos.length; i++) {
+        const videoElement = allVideos[i];
+        const uid = videoElement.id || `recheck_video_${i}_${Date.now()}`;
         
-        // Log successful draw occasionally
-        if (Math.random() < 0.01) { // 1% chance to avoid spam
-          this.logger.debug('✅ Drew single participant', {
-            userId,
-            videoSize: `${videoElement.videoWidth}x${videoElement.videoHeight}`,
-            canvasSize: `${this.canvas.width}x${this.canvas.height}`,
-            readyState: videoElement.readyState
+        // Check if we already have this video and if it has content
+        if (!this.videoElements.has(uid) && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+          this.addVideoElement(uid, videoElement);
+          newVideosFound++;
+          this.logger.info(`🔄 Recheck found new video: ${uid}`, {
+            dimensions: `${videoElement.videoWidth}x${videoElement.videoHeight}`
           });
         }
-      } catch (error) {
-        this.logger.error('❌ Error drawing single participant', {
-          userId,
-          error: error.message,
-          videoElement: {
-            readyState: videoElement.readyState,
-            videoWidth: videoElement.videoWidth,
-            videoHeight: videoElement.videoHeight
-          }
-        });
       }
-    } else {
-      // Draw placeholder for unready video
-      this.canvasContext.fillStyle = '#333333';
-      this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      this.canvasContext.fillStyle = '#ffffff';
-      this.canvasContext.font = '32px Arial';
-      this.canvasContext.textAlign = 'center';
-      this.canvasContext.fillText(
-        `Loading ${userId}...`,
-        this.canvas.width / 2,
-        this.canvas.height / 2
-      );
+      
+      if (newVideosFound > 0) {
+        this.logger.success(`🎯 Recheck found ${newVideosFound} new videos`);
+      } else {
+        this.logger.info('ℹ️ No new videos found during recheck');
+      }
+    } catch (error) {
+      this.logger.error('❌ Error in recheckForVideos:', error);
     }
   }
 
-  drawTwoParticipants(participants) {
-    const halfWidth = this.canvas.width / 2;
-    
-    participants.forEach(([userId, videoElement], index) => {
-      if (videoElement.readyState >= 2) {
-        const x = index * halfWidth;
-        this.canvasContext.drawImage(
-          videoElement,
-          x, 0,
-          halfWidth,
-          this.canvas.height
-        );
-      }
-    });
+  drawWaitingMessage() {
+    this.canvasContext.fillStyle = '#ffffff';
+    this.canvasContext.font = '24px Arial';
+    this.canvasContext.textAlign = 'center';
+    this.canvasContext.fillText(
+      'Video nu poate fi desenat', 
+      this.canvas.width / 2, 
+      this.canvas.height / 2
+    );
   }
 
-  drawGridLayout(participants) {
-    const cols = Math.ceil(Math.sqrt(participants.length));
-    const rows = Math.ceil(participants.length / cols);
-    const cellWidth = this.canvas.width / cols;
-    const cellHeight = this.canvas.height / rows;
-    
-    participants.forEach(([userId, videoElement], index) => {
-      if (videoElement.readyState >= 2) {
-        const col = index % cols;
-        const row = Math.floor(index / cols);
-        const x = col * cellWidth;
-        const y = row * cellHeight;
+  startDrawingLoop() {
+    const draw = () => {
+      try {
+        // Clear canvas
+        this.canvasContext.fillStyle = '#000000';
+        this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.canvasContext.drawImage(
-          videoElement,
-          x, y,
-          cellWidth,
-          cellHeight
-        );
+        const videoElements = Array.from(this.videoElements.values());
+        let validVideoCount = 0;
+        
+        // Count videos that actually have content
+        const readyVideos = videoElements.filter(video => {
+          const isReady = video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2;
+          if (isReady) validVideoCount++;
+          return isReady;
+        });
+        
+        if (readyVideos.length === 0) {
+          // Try to capture new videos if none are ready yet
+          if (this.startTime && (Date.now() - this.startTime) > 3000) {
+            // After 3 seconds, try to find new videos
+            this.recheckForVideos();
+          }
+          
+          // Show waiting message with more info
+          this.canvasContext.fillStyle = '#ffffff';
+          this.canvasContext.font = '28px Arial';
+          this.canvasContext.textAlign = 'center';
+          this.canvasContext.fillText(
+            'Înregistrare în curs...', 
+            this.canvas.width / 2, 
+            this.canvas.height / 2 - 40
+          );
+          this.canvasContext.font = '18px Arial';
+          this.canvasContext.fillText(
+            `Video elemente găsite: ${videoElements.length}`, 
+            this.canvas.width / 2, 
+            this.canvas.height / 2 - 10
+          );
+          this.canvasContext.fillText(
+            `Video elemente gata: ${validVideoCount}`, 
+            this.canvas.width / 2, 
+            this.canvas.height / 2 + 20
+          );
+          this.canvasContext.fillText(
+            'Așteptare participanți cu video...', 
+            this.canvas.width / 2, 
+            this.canvas.height / 2 + 50
+          );
+        } else if (readyVideos.length === 1) {
+          // Single video - full screen
+          const video = readyVideos[0];
+          try {
+            this.canvasContext.drawImage(video, 0, 0, this.canvas.width, this.canvas.height);
+          } catch (drawError) {
+            this.logger.warning('Draw error for single video:', drawError);
+            // Fallback to waiting message
+            this.drawWaitingMessage();
+          }
+        } else {
+          // Multiple videos - grid layout
+          const cols = Math.ceil(Math.sqrt(readyVideos.length));
+          const rows = Math.ceil(readyVideos.length / cols);
+          const cellWidth = this.canvas.width / cols;
+          const cellHeight = this.canvas.height / rows;
+          
+          readyVideos.forEach((video, index) => {
+            try {
+              const col = index % cols;
+              const row = Math.floor(index / cols);
+              const x = col * cellWidth;
+              const y = row * cellHeight;
+              
+              this.canvasContext.drawImage(video, x, y, cellWidth, cellHeight);
+            } catch (drawError) {
+              this.logger.warning(`Draw error for video ${index}:`, drawError);
+            }
+          });
+        }
+        
+        // Recording indicator
+        const now = Date.now();
+        if (this.startTime && Math.floor((now - this.startTime) / 1000) % 2 === 0) {
+          this.canvasContext.fillStyle = '#ff0000';
+          this.canvasContext.beginPath();
+          this.canvasContext.arc(50, 50, 15, 0, 2 * Math.PI);
+          this.canvasContext.fill();
+          
+          this.canvasContext.fillStyle = '#ffffff';
+          this.canvasContext.font = '16px Arial';
+          this.canvasContext.textAlign = 'left';
+          this.canvasContext.fillText('REC', 80, 58);
+        }
+        
+      } catch (error) {
+        this.logger.error('❌ Drawing loop error:', error);
       }
-    });
+      
+      if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.animationFrame = requestAnimationFrame(draw);
+      }
+    };
+    
+    this.animationFrame = requestAnimationFrame(draw);
   }
 
-  stopRecording() {
-    this.logger.info('⏹️ Stopping Agora stream recording');
+  async stopRecording() {
+    try {
+      this.logger.info('🛑 Stopping Agora stream recording');
+      this.onProgress('🛑 Oprire înregistrare...');
 
-    // Stop drawing loop
-    if (this.animationFrame) {
-      cancelAnimationFrame(this.animationFrame);
-      this.animationFrame = null;
+      if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.mediaRecorder.stop();
+      }
+
+      // Stop drawing loop
+      if (this.animationFrame) {
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = null;
+      }
+
+      return {
+        success: true,
+        message: 'Recording stopped successfully'
+      };
+
+    } catch (error) {
+      this.logger.error('💥 Failed to stop recording', error);
+      this.onError(error);
+      throw error;
     }
-
-    // Stop MediaRecorder
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-      this.mediaRecorder.stop();
-    }
-
-    this.logger.success('✅ Agora stream recording stopped');
   }
 
   async onRecordingStopped() {
     try {
+      // Step 1: Show stop message
+      this.onProgress('🛑 Oprire înregistrare...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Step 2: Processing
+      this.onProgress('⚙️ Procesare video înregistrat...');
+      
       this.logger.info('🔄 Processing Agora stream recording', {
         chunksReceived: this.recordedChunks.length,
         totalDataSize: this.recordedChunks.reduce((sum, chunk) => sum + chunk.size, 0),
         recordingDuration: this.startTime ? Date.now() - this.startTime : 0,
         mediaRecorderState: this.mediaRecorder?.state,
-        streamsCount: this.streams.size,
         videoElementsCount: this.videoElements.size
       });
 
       if (this.recordedChunks.length === 0) {
         this.logger.error('❌ No recording chunks available', {
           mediaRecorderState: this.mediaRecorder?.state,
-          streamsActive: this.streams.size,
           videoElementsActive: this.videoElements.size,
           canvasSize: `${this.canvas.width}x${this.canvas.height}`,
           startTime: this.startTime,
@@ -544,10 +558,12 @@ export class AgoraStreamRecorder {
         chunksCount: this.recordedChunks.length
       });
       
-      this.onProgress('Preparing upload...');
+      // Step 3: Show processing complete, prepare upload
+      await new Promise(resolve => setTimeout(resolve, 600));
+      this.onProgress('📤 Încărcare video în Firebase Storage...');
       
-      // Upload to Firebase Storage using the same method as SimpleVideoRecorder
-      await this.uploadToFirebase(videoBlob, duration);
+      // Upload to Firebase Storage - CLIENT-SIDE ONLY!
+      await this.uploadToFirebaseClientSide(videoBlob, duration);
       
     } catch (error) {
       this.logger.error('💥 Failed to process Agora stream recording', {
@@ -558,58 +574,26 @@ export class AgoraStreamRecorder {
     }
   }
 
-  // Firebase Function upload for ALL recordings - unified, robust approach
-  async uploadToFirebase(videoBlob, duration) {
+  // SIMPLIFIED: Client-side Firebase Storage upload ONLY
+  async uploadToFirebaseClientSide(videoBlob, duration) {
     const uploadStartTime = Date.now();
     const fileSizeMB = videoBlob.size / (1024 * 1024);
-    
-    // Maximum supported file size (Firebase Functions can handle much more than Vercel)
-    const MAX_FILE_SIZE_MB = 500; // Much higher limit with Firebase Functions
     
     try {
       this.isUploading = true;
       
-      this.logger.info('🔥 Starting Firebase Function upload for ALL recordings', {
+      this.logger.info('🔥 Starting CLIENT-SIDE Firebase Storage upload', {
         fileSizeMB: fileSizeMB.toFixed(2),
-        maxSupportedMB: MAX_FILE_SIZE_MB,
-        approach: 'unified_firebase_function'
+        approach: 'client_only_simplified'
       });
 
-      // Check file size limit
-      if (fileSizeMB > MAX_FILE_SIZE_MB) {
-        throw new Error(`File too large (${fileSizeMB.toFixed(1)}MB). Maximum supported size is ${MAX_FILE_SIZE_MB}MB.`);
-      }
-
-      // Use Firebase Function for ALL recordings (unified approach)
-      return await this.uploadViaFirebaseFunction(videoBlob, duration);
-      
-    } catch (error) {
-      this.logger.error('💥 Firebase Function upload failed', {
-        error: error.message,
-        fileSizeMB: fileSizeMB.toFixed(2),
-        uploadTime: Date.now() - uploadStartTime
-      });
-      this.onError(error);
-      throw error;
-    } finally {
-      this.isUploading = false;
-    }
-  }
-
-  // Removed server-side upload - now using Firebase Functions for ALL recordings
-
-  // Firebase Function upload for larger files (ROBUST - no browser dependency)
-  async uploadViaFirebaseFunction(videoBlob, duration) {
-    const uploadStartTime = Date.now();
-    
-    try {
-      this.logger.info('🔥 Using Firebase Function upload (large file - browser independent)');
-      this.onProgress('Preparing Firebase Function upload...');
+      this.onProgress('🔥 Conectare la Firebase Storage...');
 
       // Dynamic imports for Firebase
       const { initializeApp, getApps } = await import('firebase/app');
-      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const { getStorage, ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
       const { getAuth } = await import('firebase/auth');
+      const { getFirestore, doc, setDoc } = await import('firebase/firestore');
 
       // Initialize Firebase if needed
       let app;
@@ -628,128 +612,104 @@ export class AgoraStreamRecorder {
         app = initializeApp(firebaseConfig);
       }
 
-      const functions = getFunctions(app, 'europe-west1'); // Folosește regiunea din function
-      const auth = getAuth(app);
-      
-      // Convert video blob to base64 for Firebase Function
-      this.onProgress('Converting video data...');
-      const base64Data = await this.blobToBase64(videoBlob);
-      
-      this.logger.info('📤 Calling Firebase Function for upload', {
-        blobSize: videoBlob.size,
-        meetingCode: this.getMeetingCode(),
-        duration: duration
-      });
-
-      // Call Firebase Function
-      const uploadLargeRecording = httpsCallable(functions, 'uploadLargeRecording');
-      
-      this.onProgress('Processing on Firebase server...');
-      
-      const result = await uploadLargeRecording({
-        meetingCode: this.getMeetingCode(),
-        recordingData: base64Data,
-        duration: duration,
-        fileSizeMB: (videoBlob.size / (1024 * 1024)).toFixed(2),
-        recordingType: 'firebase_function',
-        userEmail: auth.currentUser?.email || 'unknown',
-        fileName: `function_recording_${Date.now()}.webm`
-      });
-
-      const uploadTime = Date.now() - uploadStartTime;
-      
-      this.logger.success('🎊 Firebase Function upload completed', {
-        uploadTime: `${uploadTime}ms`,
-        fileSize: videoBlob.size,
-        functionResult: result.data ? 'SUCCESS' : 'FAILED'
-      });
-
-      if (!result.data.success) {
-        throw new Error(result.data.message || 'Firebase Function upload failed');
-      }
-
-      // Format result for compatibility
-      const recordingData = {
-        meetingCode: this.getMeetingCode(),
-        fileName: result.data.data.fileName,
-        downloadURL: result.data.data.downloadURL,
-        size: videoBlob.size,
-        duration,
-        uploadTime: uploadTime,
-        userEmail: auth.currentUser?.email || 'unknown',
-        status: 'completed',
-        recordingType: 'firebase_function'
-      };
-
-      this.onProgress('Upload completed! Email notification sent.');
-      this.onComplete(recordingData);
-      return recordingData;
-      
-    } catch (error) {
-      this.logger.error('💥 Firebase Function upload failed', {
-        error: error.message,
-        uploadTime: Date.now() - uploadStartTime
-      });
-      
-      // Fallback to client-side upload if Function fails
-      this.logger.warning('⚠️ Falling back to client-side upload');
-      return await this.uploadViaClientFallback(videoBlob, duration);
-    }
-  }
-
-  // Fallback client-side upload (simplified)
-  async uploadViaClientFallback(videoBlob, duration) {
-    this.logger.warning('🔄 Using client-side fallback (Function failed)');
-    
-    try {
-      // Simplified client-side upload for fallback
-      const { initializeApp, getApps } = await import('firebase/app');
-      const { getStorage, ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-      const { getAuth } = await import('firebase/auth');
-
-      let app = getApps()[0];
       const storage = getStorage(app);
       const auth = getAuth(app);
+      const firestore = getFirestore(app);
       
       const timestamp = Date.now();
-      const fileName = `fallback_recording_${timestamp}.webm`;
+      const fileName = `client_recording_${timestamp}.webm`;
       const meetingCode = this.getMeetingCode();
       const storagePath = `recordings/${meetingCode}/${fileName}`;
       
+      this.logger.info('📤 Starting Firebase Storage upload', {
+        storagePath,
+        fileName,
+        meetingCode,
+        fileSizeMB: fileSizeMB.toFixed(2)
+      });
+
       const fileRef = storageRef(storage, storagePath);
-      const uploadTask = uploadBytesResumable(fileRef, videoBlob);
+      const uploadTask = uploadBytesResumable(fileRef, videoBlob, {
+        contentType: 'video/webm',
+        customMetadata: {
+          meetingCode,
+          duration: duration.toString(),
+          uploadedBy: auth.currentUser?.email || 'unknown',
+          recordingType: 'client_simplified',
+          originalName: fileName,
+          fileSize: videoBlob.size.toString(),
+          uploadTime: timestamp.toString()
+        }
+      });
 
       return new Promise((resolve, reject) => {
         uploadTask.on('state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            this.onProgress(`Fallback upload: ${Math.round(progress)}%`);
+            const progressText = `📤 Upload: ${Math.round(progress)}% (${(snapshot.bytesTransferred / (1024 * 1024)).toFixed(1)}MB / ${fileSizeMB.toFixed(1)}MB)`;
+            this.onProgress(progressText);
+            
+            this.logger.info('📊 Upload progress', {
+              progress: Math.round(progress),
+              bytesTransferred: snapshot.bytesTransferred,
+              totalBytes: snapshot.totalBytes
+            });
           },
-          reject,
+          (error) => {
+            this.logger.error('💥 Upload failed', error);
+            this.onProgress('❌ Upload eșuat!');
+            reject(error);
+          },
           async () => {
             try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              this.onProgress('✅ Upload complet! Salvare metadata...');
               
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const uploadTime = Date.now() - uploadStartTime;
+              
+              this.logger.success('🎊 Firebase Storage upload completed', {
+                uploadTime: `${uploadTime}ms`,
+                fileSize: videoBlob.size,
+                downloadURL
+              });
+
               const recordingData = {
                 meetingCode,
                 fileName,
                 downloadURL,
                 size: videoBlob.size,
                 duration,
-                userEmail: auth.currentUser?.email || 'unknown',
+                userEmail: this.recipientEmail || auth.currentUser?.email || 'unknown', // 🎯 Use client email, not admin email
+                adminEmail: auth.currentUser?.email || 'unknown', // Keep admin email separately
                 status: 'completed',
-                recordingType: 'client_fallback',
+                recordingType: 'client_simplified',
                 createdAt: timestamp,
                 uploadTime: timestamp,
-                startTimestamp: timestamp
+                startTimestamp: timestamp,
+                processedBy: 'client_firebase',
+                downloadedBy: [], // 🔒 Track who downloaded this recording
+                downloadAttempts: [] // 🔍 Track all download attempts with timestamps
               };
 
-              // CRITICAL: Save metadata to Firestore for search functionality
-              await this.saveRecordingMetadata(recordingData);
+              // Save metadata to Firestore for search functionality
+              await this.saveRecordingMetadata(recordingData, firestore);
 
+              // Show email preparation step
+              this.onProgress('📧 Pregătire trimitere email...');
+              await new Promise(resolve => setTimeout(resolve, 800));
+              
+              this.onProgress('📧 Trimitere email în curs...');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              this.onProgress('✅ Email trimis! Înregistrare completă!');
+              await new Promise(resolve => setTimeout(resolve, 1200));
+              
+              this.onProgress('🎉 Proces finalizat cu succes!');
+              
               this.onComplete(recordingData);
               resolve(recordingData);
             } catch (error) {
+              this.logger.error('💥 Metadata save failed', error);
               reject(error);
             }
           }
@@ -757,123 +717,97 @@ export class AgoraStreamRecorder {
       });
       
     } catch (error) {
-      this.logger.error('💥 Fallback upload also failed', error);
+      this.logger.error('💥 Client-side upload failed', error);
+      this.onProgress('❌ Upload eșuat!');
+      throw error;
+    } finally {
+      this.isUploading = false;
+    }
+  }
+
+  async saveRecordingMetadata(recordingData, firestore) {
+    try {
+      // Import Firestore functions
+      const { doc, setDoc } = await import('firebase/firestore');
+      
+      // Save to multiple collections for compatibility
+      const recordingRef = doc(firestore, 'Recordings', recordingData.meetingCode);
+      await setDoc(recordingRef, recordingData, { merge: true });
+      
+      const simpleRecordingRef = doc(firestore, 'SimpleRecordings', recordingData.meetingCode);
+      await setDoc(simpleRecordingRef, recordingData, { merge: true });
+      
+      this.logger.success('📝 Recording metadata saved to Firestore', {
+        meetingCode: recordingData.meetingCode,
+        collections: ['Recordings', 'SimpleRecordings']
+      });
+    } catch (error) {
+      this.logger.error('❌ Failed to save recording metadata', error);
       throw error;
     }
   }
 
-  // Helper to convert blob to base64
-  async blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+  // Set the recipient email for proper metadata saving
+  setRecipientEmail(email) {
+    this.recipientEmail = email;
+    this.logger.info('📧 Recipient email set for recording metadata', {
+      recipientEmail: email,
+      timestamp: new Date().toISOString()
     });
   }
 
   getMeetingCode() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('meetingCode') || 
-           urlParams.get('conferenceId') ||
-           window.location.pathname.split('/').pop() ||
-           `meeting_${Date.now()}`;
-  }
-
-  getFileExtension() {
-    const mimeType = this.mediaRecorder?.mimeType || 'video/webm';
-    if (mimeType.includes('mp4')) return 'mp4';
-    if (mimeType.includes('webm')) return 'webm';
-    return 'webm';
-  }
-
-  async saveRecordingMetadata(data) {
-    try {
-      const response = await fetch('/api/recording/save-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      this.logger.success('✅ Agora recording metadata saved', result);
-      return result;
+    // Extract meeting code from URL or context
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const meetingCode = urlParams.get('meetingCode') || 
+                         urlParams.get('meetingId') ||
+                         urlParams.get('channelId');
       
-    } catch (error) {
-      this.logger.error('💥 Error saving Agora recording metadata', {
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  async sendRecordingNotification(meetingCode, downloadURL) {
-    try {
-      const response = await fetch('/api/recording/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingCode, downloadURL })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (meetingCode) {
+        return meetingCode;
       }
-
-      const result = await response.json();
-      this.logger.success('✅ Agora recording notification sent', result);
-      return result;
       
-    } catch (error) {
-      this.logger.error('💥 Error sending Agora recording notification', {
-        error: error.message
-      });
-      // Don't throw - notification failure shouldn't break recording
+      // Try to extract from pathname
+      const pathParts = window.location.pathname.split('/');
+      const lastPart = pathParts[pathParts.length - 1];
+      if (lastPart && lastPart !== '') {
+        return lastPart;
+      }
     }
+    
+    return `meeting_${Date.now()}`;
   }
 
-  // Clean up resources
   cleanup() {
-    if (this.animationFrame) {
-      cancelAnimationFrame(this.animationFrame);
+    try {
+      this.logger.info('🧹 Cleaning up AgoraStreamRecorder resources');
+      
+      // Stop recording if active
+      if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.mediaRecorder.stop();
+      }
+      
+      // Stop drawing loop
+      if (this.animationFrame) {
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = null;
+      }
+      
+      // Clean up all video elements
+      this.videoElements.forEach((element, uid) => {
+        this.removeVideoElement(uid);
+      });
+      
+      // Clean up canvas
+      if (this.canvas) {
+        this.canvasContext = null;
+        this.canvas = null;
+      }
+      
+      this.logger.success('✅ AgoraStreamRecorder cleanup completed');
+    } catch (error) {
+      this.logger.error('❌ Cleanup error:', error);
     }
-    
-    // Clean up video elements
-    this.videoElements.forEach(video => {
-      video.srcObject = null;
-    });
-    
-    this.videoElements.clear();
-    this.streams.clear();
-    
-    // Remove browser warning event listener
-    if (typeof window !== 'undefined' && this.beforeUnloadHandler) {
-      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
-      this.logger.info('🛡️ Browser warning event listener removed');
-    }
-    
-    this.logger.info('🧹 AgoraStreamRecorder cleanup completed');
-  }
-
-  // Static method to check if this recording method is supported
-  static isSupported() {
-    return !!(document.createElement('canvas').getContext &&
-              window.MediaRecorder &&
-              MediaRecorder.isTypeSupported('video/webm'));
-  }
-
-  // Get supported mime types
-  static getSupportedMimeTypes() {
-    const types = [
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm',
-      'video/mp4'
-    ];
-    
-    return types.filter(type => MediaRecorder.isTypeSupported(type));
   }
 } 

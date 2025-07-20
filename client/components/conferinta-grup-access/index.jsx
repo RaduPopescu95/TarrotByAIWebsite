@@ -188,13 +188,13 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       // Verifică timingul conferinței
       checkConferenceTiming(conferintaFound);
 
-      // Setează prezența participantului
+      // FIXED: NU marchează participantul ca prezent doar pentru accesarea paginii
+      // Prezența se va seta doar când face JOIN efectiv în conferință
       if (conferintaFound.documentId) {
         const accessLinkToUse = participantFound.uniqueAccessLink || participantFound.accessLink;
-        console.log("🔄 [PRESENCE] Setare prezență pentru:", accessLinkToUse);
-        await updateParticipantPresence(conferintaFound.documentId, accessLinkToUse, true);
+        console.log("🔄 [PRESENCE] Participant accesat pagina (încă nu e marcat ca prezent):", accessLinkToUse);
         
-        // Ascultă pentru actualizări în timp real
+        // Ascultă pentru actualizări în timp real (dar fără a marca participantul prezent)
         listenToConferenceUpdates(conferintaFound.documentId);
       }
 
@@ -207,24 +207,28 @@ const ConferintaGrupAccess = ({ accessLink }) => {
   };
 
   const checkConferenceTiming = (conferinta) => {
-    // Verificăm dacă conferința este activă ȘI dacă adminul este prezent
+    // FIXED: Verificăm DOAR dacă conferința este activă ȘI dacă adminul este prezent
     console.log("🔍 [PARTICIPANT] === VERIFICARE STATUS CONFERINȚĂ ===");
     console.log("🔍 [PARTICIPANT] Conference ID:", conferinta.documentId);
     console.log("🔍 [PARTICIPANT] Conference status:", conferinta.status);
     console.log("🔍 [PARTICIPANT] Admin present (state):", adminIsPresent);
     console.log("🔍 [PARTICIPANT] Conference started (state):", conferenceStarted);
     
-    if (conferinta.status === "activa" && adminIsPresent) {
-      console.log("✅ [PARTICIPANT] Conferința este LIVE - adminul este prezent");
+    // CRITICAL: Conference must be "activa" AND admin must be present
+    const shouldStartConference = conferinta.status === "activa" && adminIsPresent;
+    
+    if (shouldStartConference) {
+      console.log("✅ [PARTICIPANT] Conferința este LIVE - conferință activă ȘI admin prezent");
       setConferenceStarted(true);
-    } else if (conferinta.status === "activa" && !adminIsPresent) {
-      console.log("⏳ [PARTICIPANT] Conferința este activă dar adminul nu a intrat încă");
+    } else if (conferinta.status !== "activa") {
+      console.log("❌ [PARTICIPANT] Conferința nu este activă în baza de date");
       setConferenceStarted(false);
-    } else {
-      console.log("❌ [PARTICIPANT] Conferința nu este activă");
+    } else if (!adminIsPresent) {
+      console.log("⏳ [PARTICIPANT] Conferința este activă dar adminul nu a intrat încă");
       setConferenceStarted(false);
     }
     
+    console.log("🔍 [PARTICIPANT] Final decision - Conference started:", shouldStartConference);
     console.log("🔍 [PARTICIPANT] === SFÂRȘIT VERIFICARE ===");
   };
 
@@ -267,14 +271,23 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     return () => {
       const accessLinkToUse = participant?.uniqueAccessLink || participant?.accessLink;
       if (accessLinkToUse) {
+        console.log("🔄 [PRESENCE] Cleanup - demarchează participant la părăsirea paginii:", accessLinkToUse);
         updateParticipantPresence(conferintaId, accessLinkToUse, false);
       }
       unsubscribe();
     };
   };
 
-  const joinConference = () => {
+  const joinConference = async () => {
     console.log("🎥 [PARTICIPANT] Se alătură conferinței - Agora va gestiona permisiunile");
+    
+    // FIXED: Marchează participantul ca prezent DOAR când face join efectiv
+    if (conferinta && participant) {
+      const accessLinkToUse = participant.uniqueAccessLink || participant.accessLink;
+      console.log("🔄 [PRESENCE] Marchează participant ca prezent la join:", accessLinkToUse);
+      await updateParticipantPresence(conferinta.documentId, accessLinkToUse, true);
+    }
+    
     setIsInCall(true);
   };
 
@@ -341,7 +354,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         ];
         
         if (adminUIDs.includes(currentUser.uid)) {
-          console.warn("⚠️ [USER CHAT] Admin detected in user interface - using participant_admin prefix");
+          console.log("👑 [USER CHAT] Admin testing user interface - using participant_admin prefix");
           return `participant_admin_${currentUser.uid}`;
         }
         
@@ -916,7 +929,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             appId: appID,
             channel: conferinta.documentId,
             token: null,
-            role: "audience", // Participants are audience, not host
+            role: "host", // FIXED: Participants need to be hosts to publish video in group conferences
             enableScreensharing: true, // Enable screen sharing for participants too
             screenShareUID: 2, // Different UID for participant screen sharing
             // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
@@ -942,9 +955,9 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             },
           }}
           settings={{
-            host: false, // Participants are not hosts
-            mode: 1, // Live broadcast mode
-            role: 2, // Audience role
+            host: true, // FIXED: Participants can be hosts in group conferences  
+            mode: 0, // FIXED: RTC mode for equal participation (not live broadcast)
+            role: 1, // FIXED: Host role to allow publishing
             enableScreensharing: true, // Enable screen sharing in settings
             enableWhiteboard: false, // Disable whiteboard for cleaner UI
           }}

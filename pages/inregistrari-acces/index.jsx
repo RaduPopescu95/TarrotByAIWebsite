@@ -45,7 +45,12 @@ const InregistrariAcces = () => {
       setError('');
       setSearched(false);
 
-      console.log('🔍 Searching recordings for email:', searchEmail);
+      console.log('🔍 [SEARCH] Starting recordings search:', {
+        searchEmail: searchEmail.trim(),
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        urlParams: router.query
+      });
 
       const response = await fetch('/api/recordings/search', {
         method: 'POST',
@@ -57,16 +62,47 @@ const InregistrariAcces = () => {
 
       const data = await response.json();
 
+      console.log('📊 [SEARCH] API Response:', {
+        success: data.success,
+        recordingsCount: data.recordings?.length || 0,
+        searchEmail: data.searchEmail,
+        total: data.total,
+        hasError: !!data.error
+      });
+
       if (data.success) {
-        setRecordings(data.recordings || []);
+        const recordings = data.recordings || [];
+        setRecordings(recordings);
         setSearched(true);
-        console.log('✅ Found recordings:', data.recordings?.length || 0);
+        
+        // Log detailed recording information
+        recordings.forEach((recording, index) => {
+          console.log(`📹 [SEARCH] Recording ${index + 1}:`, {
+            meetingCode: recording.meetingCode,
+            userEmail: recording.userEmail,
+            adminEmail: recording.adminEmail,
+            status: recording.status,
+            downloadURL: !!recording.downloadURL,
+            downloadedBy: recording.downloadedBy?.length || 0,
+            downloadAttempts: recording.downloadAttempts?.length || 0,
+            type: recording.type,
+            collection: recording.collection,
+            size: recording.size,
+            duration: recording.duration
+          });
+        });
+
+        console.log('✅ [SEARCH] Search completed successfully:', recordings.length, 'recordings found');
       } else {
+        console.error('❌ [SEARCH] Search failed:', {
+          message: data.message,
+          error: data.error
+        });
         setError(data.message || 'Eroare la căutarea înregistrărilor');
       }
 
     } catch (error) {
-      console.error('❌ Error searching recordings:', error);
+      console.error('❌ [SEARCH] Search error:', error);
       setError('Eroare la căutarea înregistrărilor. Încercați din nou.');
     } finally {
       setLoading(false);
@@ -79,39 +115,194 @@ const InregistrariAcces = () => {
       return;
     }
 
+    // 🔒 FRONTEND EMAIL VALIDATION - prevent invalid emails
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!email || !emailRegex.test(email.trim())) {
+      alert('⚠️ Format email invalid!\n\nIntroduceți un email complet și valid (ex: exemplu@domeniu.com)');
+      return;
+    }
+
     try {
-      // Create download link
-      const link = document.createElement('a');
-      link.href = recording.downloadURL;
-      link.download = `${recording.title || recording.meetingCode}_${recording.createdAtFormatted}.${recording.format || 'webm'}`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      console.log('📥 [DOWNLOAD] Attempting download for:', {
+        meetingCode: recording.meetingCode,
+        userEmail: email,
+        recordingId: recording.id,
+        collection: recording.collection
+      });
+
+      // 🔒 Check download tracking BEFORE allowing download
+      const trackingResponse = await fetch('/api/recordings/track-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingCode: recording.meetingCode,
+          userEmail: email.trim(),
+          recordingId: recording.id,
+          collection: recording.collection
+        })
+      });
+
+      const trackingData = await trackingResponse.json();
+
+      if (!trackingData.success) {
+        if (trackingData.alreadyDownloaded) {
+          // 🚫 Already downloaded - show detailed message with similarity info
+          const isExactMatch = trackingData.isExactMatch;
+          const matchType = isExactMatch ? 'același email' : 'un email similar';
+          
+          const message = `
+⚠️ DESCĂRCARE BLOCATĂ
+
+${trackingData.message}
+
+🔍 Detalii verificare:
+• Email introdus: ${email.trim()}
+• Detectat în sistem: ${trackingData.matchedEmail || 'necunoscut'}
+• Tip potrivire: ${matchType}
+
+${trackingData.supportInfo.message}
+
+📧 Email suport: ${trackingData.supportInfo.supportEmail}
+📅 Data înregistrării: ${trackingData.supportInfo.recordingDate}
+          `.trim();
+          
+          alert(message);
+          console.log('🚫 [DOWNLOAD] Already downloaded (enhanced detection):', {
+            inputEmail: email.trim(),
+            matchedEmail: trackingData.matchedEmail,
+            isExactMatch: trackingData.isExactMatch,
+            trackingData
+          });
+          return;
+        } else {
+          // Other error
+          alert(trackingData.message || 'Eroare la verificarea descărcării');
+          console.error('❌ [DOWNLOAD] Tracking error:', trackingData);
+          return;
+        }
+      }
+
+      console.log('✅ [DOWNLOAD] Download approved, proceeding with file download');
+
+      // ✅ Download approved - proceed with actual file download
+      console.log('🔗 [DOWNLOAD] Creating download link for URL:', recording.downloadURL);
+      
+      const fileName = `${recording.title || recording.meetingCode}_${recording.createdAtFormatted}.${recording.format || 'webm'}`;
+      
+      // Method 1: Use proxy API endpoint with forced download headers
+      try {
+        const proxyDownloadUrl = `/api/recordings/download?${new URLSearchParams({
+          url: recording.downloadURL,
+          filename: fileName
+        })}`;
+        
+        console.log('🔗 [DOWNLOAD] Using proxy download URL:', proxyDownloadUrl);
+        
+        // Create download link using proxy endpoint
+        const link = document.createElement('a');
+        link.href = proxyDownloadUrl;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('💾 [DOWNLOAD] Proxy download initiated for file:', fileName);
+        
+      } catch (error) {
+        console.error('❌ [DOWNLOAD] Proxy method failed, trying direct download:', error);
+        
+        // Fallback Method 2: Direct download attempt
+        try {
+          const link = document.createElement('a');
+          link.href = recording.downloadURL;
+          link.download = fileName;
+          link.style.display = 'none';
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          console.log('💾 [DOWNLOAD] Direct download attempted for file:', fileName);
+          
+          // If direct doesn't work, try blob method after delay
+          setTimeout(() => {
+            console.log('🔄 [DOWNLOAD] Trying blob download method...');
+            fetch(recording.downloadURL)
+              .then(response => response.blob())
+              .then(blob => {
+                const blobUrl = window.URL.createObjectURL(blob);
+                const blobLink = document.createElement('a');
+                blobLink.href = blobUrl;
+                blobLink.download = fileName;
+                blobLink.style.display = 'none';
+                document.body.appendChild(blobLink);
+                blobLink.click();
+                document.body.removeChild(blobLink);
+                window.URL.revokeObjectURL(blobUrl);
+                console.log('✅ [DOWNLOAD] Blob method completed');
+              })
+              .catch(err => {
+                console.error('❌ [DOWNLOAD] All methods failed:', err);
+                alert('Descărcarea automată a eșuat. Înregistrarea se va deschide într-un tab nou pentru salvare manuală.');
+                window.open(recording.downloadURL, '_blank');
+              });
+          }, 1500);
+          
+        } catch (directError) {
+          console.error('❌ [DOWNLOAD] Direct download failed:', directError);
+          // Last resort: open in new tab
+          window.open(recording.downloadURL, '_blank');
+        }
+      }
+
+      console.log('🎉 [DOWNLOAD] File download initiated successfully');
+      
+      // Show success message
+      alert('Descărcarea a început! Fișierul va fi salvat în directorul de descărcări.');
+
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('❌ [DOWNLOAD] Download error:', error);
       alert('Eroare la descărcare. Vă rugăm încercați din nou.');
     }
   };
 
   const getStatusInfo = (recording) => {
-    if (recording.status === 'completed' && recording.downloadURL) {
+    // Check if this email has already downloaded this recording
+    const downloadedBy = recording.downloadedBy || [];
+    const currentEmailLower = email.toLowerCase().trim();
+    const alreadyDownloaded = downloadedBy.includes(currentEmailLower);
+    
+    if (alreadyDownloaded) {
+      return {
+        status: '🔒 Deja descărcat',
+        color: 'bg-red-100 text-red-800',
+        icon: '🔒',
+        isDownloaded: true
+      };
+    } else if (recording.status === 'completed' && recording.downloadURL) {
       return {
         status: 'Gata pentru descărcare',
         color: 'bg-green-100 text-green-800',
-        icon: '✅'
+        icon: '✅',
+        isDownloaded: false
       };
     } else if (recording.status === 'processing' || !recording.downloadURL) {
       return {
         status: 'Se procesează...',
         color: 'bg-yellow-100 text-yellow-800',
-        icon: '⏳'
+        icon: '⏳',
+        isDownloaded: false
       };
     } else {
       return {
         status: 'În lucru',
         color: 'bg-gray-100 text-gray-800',
-        icon: '🔄'
+        icon: '🔄',
+        isDownloaded: false
       };
     }
   };
@@ -308,7 +499,15 @@ const InregistrariAcces = () => {
 
                           {/* Action Buttons */}
                           <div className="flex gap-3 mt-4 lg:mt-0">
-                            {recording.downloadURL ? (
+                            {statusInfo.isDownloaded ? (
+                              <button
+                                disabled
+                                className="px-6 py-3 bg-red-100 text-red-700 rounded-lg cursor-not-allowed font-medium border border-red-200"
+                                title="Această înregistrare a fost deja descărcată pentru acest email"
+                              >
+                                🔒 Deja descărcat
+                              </button>
+                            ) : recording.downloadURL ? (
                               <button
                                 onClick={() => handleDownload(recording)}
                                 className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
@@ -339,14 +538,30 @@ const InregistrariAcces = () => {
                   })}
                 </div>
 
-                {/* Refresh Info */}
-                <div className="mt-8 text-center">
+                {/* Information Sections */}
+                <div className="mt-8 space-y-4 text-center">
+                  {/* Download Security Info */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-2xl mx-auto">
+                    <div className="flex items-center justify-center gap-2 text-amber-800 mb-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span className="font-medium">🔒 Descărcare securizată</span>
+                    </div>
+                    <p className="text-sm text-amber-700">
+                      <strong>Fiecare înregistrare poate fi descărcată o singură dată per adresă de email</strong> pentru securitatea și confidențialitatea datelor. 
+                      Dacă aveți probleme cu descărcarea sau credeți că este o greșeală, contactați support-ul la 
+                      <strong> webdynamicx@gmail.com</strong> cu emailul și data înregistrării.
+                    </p>
+                  </div>
+
+                  {/* Processing Info */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
                     <div className="flex items-center justify-center gap-2 text-blue-800 mb-2">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span className="font-medium">Informații utile</span>
+                      <span className="font-medium">Informații procesare</span>
                     </div>
                     <p className="text-sm text-blue-700">
                       Dacă o înregistrare se procesează, reîmprospătați pagina după câteva minute. 

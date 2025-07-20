@@ -6,6 +6,7 @@ import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebase";
 import { AgoraStreamRecorder } from "../../../../utils/agoraStreamRecorder";
+import RecordingProgressWidget from "../../../../components/RecordingProgressWidget";
 
 // Funcție pentru a obține timpul curent
 const getCurrentTime = () => Math.floor(Date.now() / 1000);
@@ -37,6 +38,7 @@ const AdminVideoCall = () => {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   const recordingIntervalRef = useRef(null);
 
   // Initialize AgoraStreamRecorder for admin (no screen share dialog!)
@@ -340,12 +342,12 @@ const AdminVideoCall = () => {
 
       console.log('🎬 [ADMIN] Starting recording process for meeting:', meetingCode);
 
-      // First, capture existing video streams from Agora DOM elements
-      const streamsCaptured = await captureExistingAgoraStreams();
+      // Capture all video streams from Agora
+      const streamsCaptured = await recorder.captureExistingAgoraStreams();
       
       if (streamsCaptured === 0) {
         console.warn('⚠️ [ADMIN] No video streams found, waiting for participants...');
-        setRecordingStatus("Așteptare participanți cu video...");
+        setRecordingStatus('Așteptare participanți cu video...');
         // Continue anyway - streams might be added during recording via callbacks
       }
 
@@ -355,7 +357,7 @@ const AdminVideoCall = () => {
       if (result.success) {
         setIsRecording(true);
         setRecordingStartTime(Date.now());
-        setRecordingStatus('Înregistrare activă - capturează streamuri video');
+        setRecordingStatus('Înregistrare activă - capturează toate streamurile');
         
         // Start recording duration timer
         recordingIntervalRef.current = setInterval(() => {
@@ -424,7 +426,10 @@ const AdminVideoCall = () => {
       console.log('🛑 [ADMIN] Stopping recording for meeting:', meetingCode);
       console.log('📧 [ADMIN] Recipient email:', recipientEmail.trim());
       
-              // Stop recording using AgoraStreamRecorder
+      // 🎯 Set the recipient email in recorder BEFORE stopping
+      recorder.setRecipientEmail(recipientEmail.trim());
+      
+      // Stop recording using AgoraStreamRecorder
       // The onComplete callback will handle Firebase updates and file upload
       await recorder.stopRecording();
       
@@ -634,19 +639,71 @@ const AdminVideoCall = () => {
                   </button>
                 )}
 
-                {/* Recording Controls */}
+                {/* Recording Controls - Main Control Button with Animations */}
                 {isRecordingSupported ? (
                 <div style={styles.recordingControls}>
+
                   <button
                     style={{
                       ...styles.recordButton,
-                      backgroundColor: isRecording ? "#ff4757" : "#e74c3c",
-                      animation: isRecording ? "pulse 2s infinite" : "none",
+                      backgroundColor: 
+                        recordingStatus.includes('Upload:') ? "#3742fa" :
+                        recordingStatus.includes('Oprire înregistrare') ? "#e67e22" :
+                        recordingStatus.includes('Procesare video') ? "#9b59b6" :
+                        recordingStatus.includes('Încărcare video') ? "#3742fa" :
+                        recordingStatus.includes('Salvare metadata') ? "#17a2b8" :
+                        recordingStatus.includes('Pregătire trimitere email') ? "#fd7e14" :
+                        recordingStatus.includes('Trimitere email în curs') ? "#ffc107" :
+                        recordingStatus.includes('Email trimis') ? "#28a745" :
+                        recordingStatus.includes('Proces finalizat') ? "#20c997" :
+                        recordingStatus.includes('complet') ? "#2ecc71" :
+                        isRecording ? "#ff4757" : "#e74c3c",
+                      animation: 
+                        recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? "shimmer 2s infinite" :
+                        recordingStatus.includes('Oprire înregistrare') ? "pulse 1s ease-in-out 3" :
+                        recordingStatus.includes('Procesare video') ? "rotate 2s linear infinite" :
+                        recordingStatus.includes('Salvare metadata') ? "bounce 1s ease-in-out infinite" :
+                        recordingStatus.includes('Pregătire trimitere email') || recordingStatus.includes('Trimitere email în curs') ? "pulse 1.5s ease-in-out infinite" :
+                        recordingStatus.includes('Email trimis') || recordingStatus.includes('Proces finalizat') ? "checkmark 1s ease-in-out" :
+                        recordingStatus.includes('complet') ? "bounce 0.6s ease-in-out" :
+                        isRecording ? "pulse 2s infinite" : "none",
                     }}
                     onClick={isRecording ? stopRecording : startRecording}
-                    title={isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"}
+                                         title={
+                       recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? "Se încarcă înregistrarea..." :
+                       recordingStatus.includes('Oprire înregistrare') ? "Se oprește înregistrarea..." :
+                       recordingStatus.includes('Procesare video') ? "Se procesează video-ul..." :
+                       recordingStatus.includes('Salvare metadata') ? "Se salvează informațiile..." :
+                       recordingStatus.includes('Pregătire trimitere email') ? "Se pregătește emailul..." :
+                       recordingStatus.includes('Trimitere email în curs') ? "Se trimite emailul..." :
+                       recordingStatus.includes('Email trimis') ? "Email trimis cu succes!" :
+                       recordingStatus.includes('Proces finalizat') ? "Procesul s-a finalizat!" :
+                       recordingStatus.includes('complet') ? "Înregistrare completă!" :
+                       isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"
+                     }
+                     disabled={recordingStatus && !isRecording}
                   >
-                    <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
+                                         {recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? (
+                       <i className="fas fa-cloud-upload-alt" />
+                     ) : recordingStatus.includes('Oprire înregistrare') ? (
+                       <i className="fas fa-stop-circle" />
+                     ) : recordingStatus.includes('Procesare video') ? (
+                       <i className="fas fa-cog" />
+                     ) : recordingStatus.includes('Salvare metadata') ? (
+                       <i className="fas fa-database" />
+                     ) : recordingStatus.includes('Pregătire trimitere email') ? (
+                       <i className="fas fa-envelope" />
+                     ) : recordingStatus.includes('Trimitere email în curs') ? (
+                       <i className="fas fa-paper-plane" />
+                     ) : recordingStatus.includes('Email trimis') ? (
+                       <i className="fas fa-envelope-check" />
+                     ) : recordingStatus.includes('Proces finalizat') ? (
+                       <i className="fas fa-trophy" />
+                     ) : recordingStatus.includes('complet') ? (
+                       <i className="fas fa-check-circle" />
+                     ) : (
+                       <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
+                     )}
                   </button>
                   
                   {isRecording && (
@@ -665,7 +722,22 @@ const AdminVideoCall = () => {
                       <div style={styles.recordingStatus}>
                         <i className="fas fa-info-circle" style={{marginRight: '8px'}}></i>
                         {recordingStatus}
-                </div>
+                        
+                        {/* Progress Bar for Upload */}
+                        {recordingStatus.includes('Upload:') && (
+                          <div style={styles.progressBarContainer}>
+                            <div 
+                              style={{
+                                ...styles.progressBar,
+                                width: `${recordingStatus.match(/(\d+)%/)?.[1] || 0}%`
+                              }}
+                            />
+                            <div style={styles.progressText}>
+                              {recordingStatus.match(/(\d+)%/)?.[1] || 0}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -708,42 +780,36 @@ const AdminVideoCall = () => {
                     },
                     'user-joined': (user) => {
                       console.log('👥 User joined:', user.uid);
-                      // Add user's video stream to recorder when available
-                      if (isRecording && user.videoTrack) {
-                        const stream = new MediaStream([user.videoTrack.getMediaStreamTrack()]);
-                        if (user.audioTrack) {
-                          stream.addTrack(user.audioTrack.getMediaStreamTrack());
-                        }
-                        recorder.addVideoStream(user.uid, stream);
-                        console.log('🎥 Added stream to recorder for user:', user.uid);
+                      // Video will be captured automatically by captureExistingAgoraStreams
+                      if (isRecording) {
+                        console.log('🎥 User joined during recording, will be captured automatically');
+                        // Trigger a recheck for new videos
+                        setTimeout(() => recorder.recheckForVideos(), 1000);
                       }
                     },
                     'user-left': (user) => {
                       console.log('👥 User left:', user.uid);
-                      // Remove user's video stream from recorder
+                      // Remove user's video element from recorder
                       if (isRecording) {
-                        recorder.removeVideoStream(user.uid);
-                        console.log('🎥 Removed stream from recorder for user:', user.uid);
+                        recorder.removeVideoElement(user.uid);
+                        console.log('🎥 Removed video element for user:', user.uid);
                       }
                     },
                     'user-published': (user, mediaType) => {
                       console.log('📡 User published:', user.uid, mediaType);
-                      // Handle when user starts sharing video/audio
-                      if (isRecording && mediaType === 'video' && user.videoTrack) {
-                        const stream = new MediaStream([user.videoTrack.getMediaStreamTrack()]);
-                        if (user.audioTrack) {
-                          stream.addTrack(user.audioTrack.getMediaStreamTrack());
-                        }
-                        recorder.addVideoStream(user.uid, stream);
-                        console.log('🎥 Added published stream to recorder for user:', user.uid);
+                      // Video will be captured automatically
+                      if (isRecording && mediaType === 'video') {
+                        console.log('🎥 User published video, will be captured automatically');
+                        // Trigger a recheck for new videos
+                        setTimeout(() => recorder.recheckForVideos(), 1000);
                       }
                     },
                     'user-unpublished': (user, mediaType) => {
                       console.log('📡 User unpublished:', user.uid, mediaType);
-                      // Handle when user stops sharing video/audio
+                      // Remove video element when video is unpublished
                       if (isRecording && mediaType === 'video') {
-                        recorder.removeVideoStream(user.uid);
-                        console.log('🎥 Removed unpublished stream from recorder for user:', user.uid);
+                        recorder.removeVideoElement(user.uid);
+                        console.log('🎥 Removed video element for unpublished user:', user.uid);
                       }
                     },
                   }}
@@ -870,19 +936,25 @@ const AdminVideoCall = () => {
               </div>
             )}
 
-            {/* Recording Error Notification */}
-            {recordingError && (
-              <div style={styles.errorNotification}>
-                <i className="fas fa-exclamation-triangle"></i>
-                <span>{recordingError}</span>
-                <button
-                  style={styles.errorCloseButton}
-                  onClick={() => setRecordingError("")}
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-            )}
+            {/* Compact Recording Progress Monitor - Bottom Right */}
+            <RecordingProgressWidget
+              isRecording={isRecording}
+              recordingDuration={recordingDuration}
+              recordingStatus={recordingStatus}
+              recordingError={recordingError}
+              showCancelButton={false}
+              showStartStopButtons={false}
+              onCancel={() => {
+                recorder.cleanup();
+                setIsRecording(false);
+                setRecordingStatus('');
+                setRecordingError('');
+                if (recordingIntervalRef.current) {
+                  clearInterval(recordingIntervalRef.current);
+                  recordingIntervalRef.current = null;
+                }
+              }}
+            />
 
             {/* Email Dialog for Recording */}
             {showEmailDialog && (
@@ -1318,10 +1390,38 @@ const styles = {
     fontWeight: '600',
     marginTop: '8px',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     border: '1px solid #bbdefb',
     textAlign: 'center',
+    minWidth: '200px',
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: '6px',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: '3px',
+    marginTop: '8px',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    background: 'linear-gradient(90deg, #3742fa, #5352ed)',
+    borderRadius: '3px',
+    transition: 'width 0.3s ease',
+    position: 'relative',
+  },
+  progressText: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: '#1976d2',
+    zIndex: 1,
   },
   recordingUnsupported: {
     backgroundColor: '#fff3cd',
@@ -1337,6 +1437,53 @@ const styles = {
     textAlign: 'center',
     marginBottom: '10px',
   },
+
 };
 
 export default AdminVideoCall;
+
+// Add CSS animations for recording button
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200px 0; }
+      100% { background-position: 200px 0; }
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 53%, 80%, 100% { transform: scale(1); }
+      40%, 43% { transform: scale(1.1); }
+      70% { transform: scale(1.05); }
+    }
+    
+    @keyframes checkmark {
+      0% { transform: scale(1) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+      100% { transform: scale(1) rotate(360deg); opacity: 1; }
+    }
+    
+         @keyframes blink {
+       0%, 50% { opacity: 1; }
+       51%, 100% { opacity: 0.3; }
+     }
+     
+     @keyframes rotate {
+       from { transform: rotate(0deg); }
+       to { transform: rotate(360deg); }
+     }
+     
+     /* Enhanced shimmer effect for upload button */
+     button[style*="shimmer"] {
+       background: linear-gradient(90deg, #3742fa 25%, #5352ed 37%, #3742fa 63%) !important;
+       background-size: 400% 100% !important;
+     }
+  `;
+  document.head.appendChild(style);
+}
