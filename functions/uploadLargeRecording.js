@@ -184,8 +184,10 @@ exports.uploadLargeRecording = functions
         status: 'completed'
       };
 
-      await db.collection('recordings').add(recordingMetadata);
-      console.log(`📝 [${requestId}] Metadata saved to Firestore`);
+      // Save to multiple collections for compatibility with search API
+      await db.collection('SimpleRecordings').doc(meetingCode).set(recordingMetadata, { merge: true });
+      await db.collection('Recordings').doc(meetingCode).set(recordingMetadata, { merge: true });
+      console.log(`📝 [${requestId}] Metadata saved to SimpleRecordings and Recordings collections`);
 
       // Trimite notificare prin email (rulează în background)
       if (userEmail) {
@@ -303,16 +305,19 @@ exports.cleanupOldRecordings = functions
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Găsește înregistrări mai vechi de 30 de zile
-      const oldRecordings = await db.collection('recordings')
-        .where('createdAt', '<', thirtyDaysAgo)
-        .get();
+      // Găsește înregistrări mai vechi de 30 de zile din ambele colecții
+      const [oldSimpleRecordings, oldRecordings] = await Promise.all([
+        db.collection('SimpleRecordings').where('createdAt', '<', thirtyDaysAgo).get(),
+        db.collection('Recordings').where('createdAt', '<', thirtyDaysAgo).get()
+      ]);
       
-      console.log(`Found ${oldRecordings.size} old recordings to clean up`);
+      const totalOldRecordings = oldSimpleRecordings.size + oldRecordings.size;
+      console.log(`Found ${totalOldRecordings} old recordings to clean up (${oldSimpleRecordings.size} SimpleRecordings, ${oldRecordings.size} Recordings)`);
       
       const bucket = storage.bucket();
       
-      for (const doc of oldRecordings.docs) {
+      // Process SimpleRecordings
+      for (const doc of oldSimpleRecordings.docs) {
         const data = doc.data();
         
         try {
@@ -323,10 +328,34 @@ exports.cleanupOldRecordings = functions
           // Șterge metadata din Firestore
           await doc.ref.delete();
           
-          console.log(`🗑️ Cleaned up recording: ${data.fileName}`);
+          console.log(`🗑️ Cleaned up SimpleRecording: ${data.fileName}`);
           
         } catch (error) {
-          console.error(`Failed to clean up ${data.fileName}:`, error);
+          console.error(`Failed to clean up SimpleRecording ${data.fileName}:`, error);
+        }
+      }
+      
+      // Process Recordings
+      for (const doc of oldRecordings.docs) {
+        const data = doc.data();
+        
+        try {
+          // Șterge fișierul din Storage (doar dacă nu a fost șters deja)
+          const filePath = `recordings/${data.meetingCode}/${data.fileName}`;
+          try {
+            await bucket.file(filePath).delete();
+          } catch (storageError) {
+            // File might already be deleted by SimpleRecordings cleanup
+            console.log(`File ${filePath} already deleted or not found`);
+          }
+          
+          // Șterge metadata din Firestore
+          await doc.ref.delete();
+          
+          console.log(`🗑️ Cleaned up Recording: ${data.fileName}`);
+          
+        } catch (error) {
+          console.error(`Failed to clean up Recording ${data.fileName}:`, error);
         }
       }
       

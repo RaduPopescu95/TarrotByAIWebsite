@@ -94,30 +94,46 @@ export default async function handler(req, res) {
       });
     }
 
-    // 4. Caută înregistrări în toate colecțiile pentru aceste meeting codes
+    // 4. Caută înregistrări în toate colecțiile - atât prin meeting codes, cât și prin email direct
     const allRecordings = [];
     const collections = ['SimpleRecordings', 'Recordings', 'BrowserRecordings'];
 
     for (const collectionName of collections) {
       try {
         const recordingsSnapshot = await db.collection(collectionName).get();
+        const collectionMatches = [];
         
         recordingsSnapshot.forEach(doc => {
           const recording = doc.data();
+          
+          // Method 1: Match by meetingCode (existing logic)
           const meetingCodeMatch = meetingCodes.find(mc => mc.meetingCode === recording.meetingCode);
           
-          if (meetingCodeMatch) {
-            allRecordings.push({
+          // Method 2: Match by userEmail directly (for fallback recordings)
+          const emailMatch = recording.userEmail && recording.userEmail.toLowerCase() === emailLower;
+          
+          if (meetingCodeMatch || emailMatch) {
+            const recordingData = {
               id: doc.id,
               ...recording,
               collection: collectionName,
-              associatedData: meetingCodeMatch.data,
-              type: meetingCodeMatch.type
-            });
+              associatedData: meetingCodeMatch?.data || null,
+              type: meetingCodeMatch?.type || (emailMatch ? 'direct_email_match' : 'unknown'),
+              matchMethod: meetingCodeMatch ? 'meetingCode' : 'userEmail'
+            };
+            
+            collectionMatches.push(recordingData);
+            allRecordings.push(recordingData);
           }
         });
 
-        console.log(`📦 [RECORDINGS SEARCH] Found ${allRecordings.length} recordings in ${collectionName}`);
+        // Count matches by method for this collection
+        const meetingCodeMatches = collectionMatches.filter(r => r.matchMethod === 'meetingCode').length;
+        const emailMatches = collectionMatches.filter(r => r.matchMethod === 'userEmail').length;
+        
+        console.log(`📦 [RECORDINGS SEARCH] Collection ${collectionName}: ${collectionMatches.length} matches`);
+        console.log(`  📋 Meeting code matches: ${meetingCodeMatches}`);
+        console.log(`  📧 Direct email matches: ${emailMatches}`);
       } catch (error) {
         console.error(`Error searching ${collectionName}:`, error);
       }
