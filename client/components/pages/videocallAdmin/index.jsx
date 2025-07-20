@@ -1,24 +1,8 @@
-import AgoraRTC, {
-  AgoraRTCProvider,
-  LocalVideoTrack,
-  RemoteUser,
-  useJoin,
-  useLocalCameraTrack,
-  useLocalMicrophoneTrack,
-  usePublish,
-  useRTCClient,
-  useRemoteAudioTracks,
-  useRemoteUsers,
-} from "agora-rtc-react";
+// Simplified import - only AdminVideoCall component needed
+// AgoraUIKit manages its own client internally, no need for separate provider
 import AdminVideoCall from "./video";
 
 export default function Meeting() {
-  const client = useRTCClient(
-    AgoraRTC.createClient({ codec: "vp8", mode: "rtc" })
-  );
-  return (
-    <AgoraRTCProvider client={client}>
-      <AdminVideoCall />
-    </AgoraRTCProvider>
-  );
+  // Direct export of AdminVideoCall - AgoraUIKit handles all client management
+  return <AdminVideoCall />;
 }

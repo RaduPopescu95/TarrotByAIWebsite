@@ -364,17 +364,22 @@ const VideoCall = () => {
                     appId: appID,
                     channel: documentId,
                     token: null,
-                    role: isHost ? "host" : "audience",
+                    role: "host", // Both admin and client are hosts in one-to-one calls
                     layout: isPinned ? layout.pin : layout.grid,
                     enableScreensharing: true,
                     screenShareUID: 2, // Unique UID for client screen sharing
-                    enableDualStream: true, // Enable dual stream for better quality
+                    // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
                     videoMode: {
                       max: "cover", // Video-ul mare va acoperi întregul container
                       min: "contain", // Video-ul mic va fi afișat complet în container, fără să fie tăiat
                     },
                   }}
                   rtmProps={{ username: username, displayUsername: true }}
+                  settings={{
+                    host: true, // Client can also be host in one-to-one
+                    mode: 0, // RTC mode for one-to-one calls (not live broadcast)
+                    role: 1, // Host role in settings
+                  }}
                   callbacks={{
                     EndCall: () => {
                       handleEndCall();

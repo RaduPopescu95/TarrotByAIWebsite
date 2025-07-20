@@ -48,7 +48,7 @@ const formatSelectedSlot = (selectedSlotDay) => {
 
   const formattedDate = moment(
     `${currentYear}-${correctMonth}-${day}`,
-    "YYYY-MM-DD",
+      "YYYY-MM-DD",
   ).format("DD-MM-YYYY");
 
   return formattedDate;
@@ -62,24 +62,24 @@ const formatSelectedSlot = (selectedSlotDay) => {
  * FUNCȚIE EXISTENTĂ: Trimite notificări pentru rezervări noi
  */
 exports.sendNotificationOnNewReservation = functions.firestore
-  .document("RezervariConsultatii/{documentId}")
-  .onCreate((snap, context) => {
+    .document("RezervariConsultatii/{documentId}")
+    .onCreate((snap, context) => {
     console.log("🔔 [EXISTING] sendNotificationOnNewReservation a fost apelată.");
 
-    const newReservation = snap.data();
+      const newReservation = snap.data();
     console.log("📝 [EXISTING] Datele noii rezervări:", newReservation);
 
-    // Extrage datele din documentul nou creat
-    const email = newReservation.email;
-    const telefon = newReservation.telefon;
-    const meetingCode = newReservation.meetingCode;
-    const day = newReservation.selectedSlot.day;
-    const time = newReservation.selectedSlot.slot;
-    const documentId = context.params.documentId;
+      // Extrage datele din documentul nou creat
+      const email = newReservation.email;
+      const telefon = newReservation.telefon;
+      const meetingCode = newReservation.meetingCode;
+      const day = newReservation.selectedSlot.day;
+      const time = newReservation.selectedSlot.slot;
+      const documentId = context.params.documentId;
 
     console.log(`📧 [EXISTING] Email: ${email}, Telefon: ${telefon}, Meeting Code: ${meetingCode}`);
 
-    // Construcția mesajului de e-mail
+      // Construcția mesajului de e-mail
     const emailMessage = `Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.\n` +
       `Vă rugăm să accesați:\n` +
       `https://www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}\n` +
@@ -88,12 +88,12 @@ exports.sendNotificationOnNewReservation = functions.firestore
       `nu ezitați să contactați echipa de dezvoltare la ` +
       `https://www.webappdynamicx.ro/contact`;
 
-    const mailOptions = {
-      from: "webdynamicx@gmail.com",
-      to: email,
-      subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
+      const mailOptions = {
+        from: "webdynamicx@gmail.com",
+        to: email,
+        subject: "Confirmare Rezervare Consultatie - Cristina Zurba",
       text: emailMessage,
-    };
+      };
 
     // Verificare format telefon
     if (!telefon || !/^\+\d+$/.test(telefon)) {
@@ -104,17 +104,17 @@ exports.sendNotificationOnNewReservation = functions.firestore
     console.log("📤 [EXISTING] Trimiterea email-ului, SMS-ului și WhatsApp-ului...");
 
     // Trimiterea emailului, SMS-ului și WhatsApp-ului
-    return Promise.all([
-      transporter.sendMail(mailOptions).then((info) => {
+      return Promise.all([
+        transporter.sendMail(mailOptions).then((info) => {
         console.log("✅ [EXISTING] E-mail trimis cu succes:", info);
-      }),
+        }),
       twilioClient.messages
-        .create({
+            .create({
           body: emailMessage,
           from: "+15042266134",
-          to: telefon,
-        })
-        .then((message) => {
+              to: telefon,
+            })
+            .then((message) => {
           console.log("✅ [EXISTING] SMS trimis cu succes:", message.sid);
         }),
       twilioClient.messages
@@ -125,15 +125,15 @@ exports.sendNotificationOnNewReservation = functions.firestore
         })
         .then((message) => {
           console.log("✅ [EXISTING] WhatsApp trimis cu succes:", message.sid);
-        }),
-    ])
-      .then(() => {
+            }),
+      ])
+          .then(() => {
         console.log("🎉 [EXISTING] E-mail, SMS și WhatsApp trimise cu succes!");
-      })
-      .catch((error) => {
+          })
+          .catch((error) => {
         console.error("💥 [EXISTING] Eroare la trimiterea notificărilor:", error);
-      });
-  });
+          });
+    });
 
 // ===========================================
 // FUNCȚII NOI (RECORDING SYSTEM)

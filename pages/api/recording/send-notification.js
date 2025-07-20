@@ -114,14 +114,14 @@ export default async function handler(req, res) {
 
     // Always send email with link to public recordings access page
     logWithDetails('INFO', 'Sending recording access email with public page link', {
-      requestId,
-      meetingCode,
-      recipientEmail: recipientEmail.substring(0, 20) + '...',
+        requestId,
+        meetingCode,
+        recipientEmail: recipientEmail.substring(0, 20) + '...',
       hasDownloadURL: !!downloadURL
-    });
+      });
 
-    // Try to fetch meeting details for nicer email (not mandatory)
-    const meetingDetails = await getMeetingDetails(meetingCode, requestId);
+      // Try to fetch meeting details for nicer email (not mandatory)
+      const meetingDetails = await getMeetingDetails(meetingCode, requestId);
     const emailResult = await sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDetails, requestId);
 
     const processingTime = Date.now() - requestStartTime;

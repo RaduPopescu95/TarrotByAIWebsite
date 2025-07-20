@@ -1001,7 +1001,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             role: "host",
             enableScreensharing: true, // Enable screen sharing for admin
             screenShareUID: 1, // Unique UID for screen sharing
-            enableDualStream: true, // Enable dual stream for better quality
+            // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
           }}
           rtmProps={{ 
             username: currentUser?.displayName || 'Admin', 

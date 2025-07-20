@@ -919,7 +919,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             role: "audience", // Participants are audience, not host
             enableScreensharing: true, // Enable screen sharing for participants too
             screenShareUID: 2, // Different UID for participant screen sharing
-            enableDualStream: true, // Enable dual stream for better quality
+            // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
           }}
           rtmProps={{ 
             username: participant?.nume || 'Participant', 
