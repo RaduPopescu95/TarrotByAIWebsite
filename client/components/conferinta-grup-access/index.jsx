@@ -916,17 +916,46 @@ const ConferintaGrupAccess = ({ accessLink }) => {
             appId: appID,
             channel: conferinta.documentId,
             token: null,
-            role: "host",
+            role: "audience", // Participants are audience, not host
+            enableScreensharing: true, // Enable screen sharing for participants too
+            screenShareUID: 2, // Different UID for participant screen sharing
+            enableDualStream: true, // Enable dual stream for better quality
           }}
-          rtmProps={{ username: participant?.nume || 'Participant', displayUsername: true }}
+          rtmProps={{ 
+            username: participant?.nume || 'Participant', 
+            displayUsername: true 
+          }}
           styleProps={{
             UIKitContainer: {
               width: '100vw',
               height: '100vh',
             },
+            localBtnContainer: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: '8px',
+            },
+            maxViewContainer: {
+              backgroundColor: '#000',
+            },
+            minViewContainer: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            },
+          }}
+          settings={{
+            host: false, // Participants are not hosts
+            mode: 1, // Live broadcast mode
+            role: 2, // Audience role
+            enableScreensharing: true, // Enable screen sharing in settings
+            enableWhiteboard: false, // Disable whiteboard for cleaner UI
           }}
           callbacks={{
             EndCall: leaveConference,
+            'rtc-screen-share-start': () => {
+              console.log('🖥️ [PARTICIPANT] Screen sharing started');
+            },
+            'rtc-screen-share-stop': () => {
+              console.log('🖥️ [PARTICIPANT] Screen sharing stopped');
+            },
           }}
         />
         

@@ -558,91 +558,218 @@ export class AgoraStreamRecorder {
     }
   }
 
-  // Use server-side upload for better reliability
+  // Firebase Function upload for ALL recordings - unified, robust approach
   async uploadToFirebase(videoBlob, duration) {
     const uploadStartTime = Date.now();
+    const fileSizeMB = videoBlob.size / (1024 * 1024);
+    
+    // Maximum supported file size (Firebase Functions can handle much more than Vercel)
+    const MAX_FILE_SIZE_MB = 500; // Much higher limit with Firebase Functions
     
     try {
-      this.logger.info('🔥 Starting server-side upload for Agora recording');
-      this.isUploading = true; // Set upload state to true
-
-      // Create FormData for multipart upload
-      const formData = new FormData();
-      formData.append('videoFile', videoBlob, `agora_recording_${Date.now()}.webm`);
-      formData.append('meetingCode', this.getMeetingCode());
-      formData.append('duration', duration.toString());
+      this.isUploading = true;
       
-      // Get user email if available
-      try {
-        const { getAuth } = await import('firebase/auth');
-        const auth = getAuth();
-        if (auth.currentUser?.email) {
-          formData.append('userEmail', auth.currentUser.email);
-        }
-      } catch (authError) {
-        this.logger.warning('⚠️ Could not get user email', { error: authError.message });
-      }
-      
-      this.logger.info('📤 Sending video to server for processing', {
-        videoSize: videoBlob.size,
-        meetingCode: this.getMeetingCode(),
-        duration
-      });
-      
-      this.onProgress('Sending to server...');
-      
-      // Upload to server with progress tracking
-      const response = await fetch('/api/recording/upload-chunks', {
-        method: 'POST',
-        body: formData
+      this.logger.info('🔥 Starting Firebase Function upload for ALL recordings', {
+        fileSizeMB: fileSizeMB.toFixed(2),
+        maxSupportedMB: MAX_FILE_SIZE_MB,
+        approach: 'unified_firebase_function'
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server upload failed: ${response.status} ${errorText}`);
+      // Check file size limit
+      if (fileSizeMB > MAX_FILE_SIZE_MB) {
+        throw new Error(`File too large (${fileSizeMB.toFixed(1)}MB). Maximum supported size is ${MAX_FILE_SIZE_MB}MB.`);
       }
 
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Server upload failed');
-      }
-
-      const uploadTime = Date.now() - uploadStartTime;
-      
-      this.logger.success('🎊 Server-side upload completed successfully', {
-        uploadTime: `${uploadTime}ms`,
-        fileSize: videoBlob.size,
-        downloadURL: result.data.downloadURL?.substring(0, 100) + '...',
-        recordingType: result.data.recordingType
-      });
-
-      // Return the same format as before for compatibility
-      const recordingData = {
-        meetingCode: this.getMeetingCode(),
-        fileName: result.data.fileName,
-        downloadURL: result.data.downloadURL,
-        size: videoBlob.size,
-        duration,
-        uploadTime: result.data.uploadTime,
-        userEmail: result.data.userEmail,
-        status: 'completed',
-        recordingType: 'server_processed'
-      };
-
-      this.onComplete(recordingData);
-      return recordingData;
+      // Use Firebase Function for ALL recordings (unified approach)
+      return await this.uploadViaFirebaseFunction(videoBlob, duration);
       
     } catch (error) {
-      this.logger.error('💥 Server-side upload failed', {
+      this.logger.error('💥 Firebase Function upload failed', {
         error: error.message,
+        fileSizeMB: fileSizeMB.toFixed(2),
         uploadTime: Date.now() - uploadStartTime
       });
       this.onError(error);
       throw error;
     } finally {
-      this.isUploading = false; // Reset upload state
+      this.isUploading = false;
     }
+  }
+
+  // Removed server-side upload - now using Firebase Functions for ALL recordings
+
+  // Firebase Function upload for larger files (ROBUST - no browser dependency)
+  async uploadViaFirebaseFunction(videoBlob, duration) {
+    const uploadStartTime = Date.now();
+    
+    try {
+      this.logger.info('🔥 Using Firebase Function upload (large file - browser independent)');
+      this.onProgress('Preparing Firebase Function upload...');
+
+      // Dynamic imports for Firebase
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const { getAuth } = await import('firebase/auth');
+
+      // Initialize Firebase if needed
+      let app;
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        app = existingApps[0];
+      } else {
+        const firebaseConfig = {
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        };
+        app = initializeApp(firebaseConfig);
+      }
+
+      const functions = getFunctions(app, 'europe-west1'); // Folosește regiunea din function
+      const auth = getAuth(app);
+      
+      // Convert video blob to base64 for Firebase Function
+      this.onProgress('Converting video data...');
+      const base64Data = await this.blobToBase64(videoBlob);
+      
+      this.logger.info('📤 Calling Firebase Function for upload', {
+        blobSize: videoBlob.size,
+        meetingCode: this.getMeetingCode(),
+        duration: duration
+      });
+
+      // Call Firebase Function
+      const uploadLargeRecording = httpsCallable(functions, 'uploadLargeRecording');
+      
+      this.onProgress('Processing on Firebase server...');
+      
+      const result = await uploadLargeRecording({
+        meetingCode: this.getMeetingCode(),
+        recordingData: base64Data,
+        duration: duration,
+        fileSizeMB: (videoBlob.size / (1024 * 1024)).toFixed(2),
+        recordingType: 'firebase_function',
+        userEmail: auth.currentUser?.email || 'unknown',
+        fileName: `function_recording_${Date.now()}.webm`
+      });
+
+      const uploadTime = Date.now() - uploadStartTime;
+      
+      this.logger.success('🎊 Firebase Function upload completed', {
+        uploadTime: `${uploadTime}ms`,
+        fileSize: videoBlob.size,
+        functionResult: result.data ? 'SUCCESS' : 'FAILED'
+      });
+
+      if (!result.data.success) {
+        throw new Error(result.data.message || 'Firebase Function upload failed');
+      }
+
+      // Format result for compatibility
+      const recordingData = {
+        meetingCode: this.getMeetingCode(),
+        fileName: result.data.data.fileName,
+        downloadURL: result.data.data.downloadURL,
+        size: videoBlob.size,
+        duration,
+        uploadTime: uploadTime,
+        userEmail: auth.currentUser?.email || 'unknown',
+        status: 'completed',
+        recordingType: 'firebase_function'
+      };
+
+      this.onProgress('Upload completed! Email notification sent.');
+      this.onComplete(recordingData);
+      return recordingData;
+      
+    } catch (error) {
+      this.logger.error('💥 Firebase Function upload failed', {
+        error: error.message,
+        uploadTime: Date.now() - uploadStartTime
+      });
+      
+      // Fallback to client-side upload if Function fails
+      this.logger.warning('⚠️ Falling back to client-side upload');
+      return await this.uploadViaClientFallback(videoBlob, duration);
+    }
+  }
+
+  // Fallback client-side upload (simplified)
+  async uploadViaClientFallback(videoBlob, duration) {
+    this.logger.warning('🔄 Using client-side fallback (Function failed)');
+    
+    try {
+      // Simplified client-side upload for fallback
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getStorage, ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+      const { getAuth } = await import('firebase/auth');
+
+      let app = getApps()[0];
+      const storage = getStorage(app);
+      const auth = getAuth(app);
+      
+      const timestamp = Date.now();
+      const fileName = `fallback_recording_${timestamp}.webm`;
+      const meetingCode = this.getMeetingCode();
+      const storagePath = `recordings/${meetingCode}/${fileName}`;
+      
+      const fileRef = storageRef(storage, storagePath);
+      const uploadTask = uploadBytesResumable(fileRef, videoBlob);
+
+      return new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            this.onProgress(`Fallback upload: ${Math.round(progress)}%`);
+          },
+          reject,
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              
+              const recordingData = {
+                meetingCode,
+                fileName,
+                downloadURL,
+                size: videoBlob.size,
+                duration,
+                userEmail: auth.currentUser?.email || 'unknown',
+                status: 'completed',
+                recordingType: 'client_fallback',
+                createdAt: timestamp,
+                uploadTime: timestamp,
+                startTimestamp: timestamp
+              };
+
+              // CRITICAL: Save metadata to Firestore for search functionality
+              await this.saveRecordingMetadata(recordingData);
+
+              this.onComplete(recordingData);
+              resolve(recordingData);
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+      
+    } catch (error) {
+      this.logger.error('💥 Fallback upload also failed', error);
+      throw error;
+    }
+  }
+
+  // Helper to convert blob to base64
+  async blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   getMeetingCode() {

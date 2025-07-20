@@ -19,19 +19,19 @@ const LanguageSelectionDialog = ({ isOpen, onClose, onLanguageSelect }) => {
 
   const languages = [
     { code: 'ro', name: 'Română', flag: '/flags/romania.png' },
-    { code: 'en', name: 'English', flag: '/flags/usa.png' },
-    { code: 'es', name: 'Español', flag: '/flags/spain.png' },
+    { code: 'en', name: 'English', flag: '/flags/english.png' },
+    { code: 'es', name: 'Español', flag: '/flags/spanish.png' },
     { code: 'fr', name: 'Français', flag: '/flags/france.png' },
     { code: 'de', name: 'Deutsch', flag: '/flags/germany.png' },
     { code: 'it', name: 'Italiano', flag: '/flags/italy.png' },
-    { code: 'pt', name: 'Português', flag: '/flags/portugal.png' },
-    { code: 'ru', name: 'Русский', flag: '/flags/russia.png' },
-    { code: 'zh', name: '中文', flag: '/flags/china.png' },
-    { code: 'ja', name: '日本語', flag: '/flags/japan.png' },
-    { code: 'ko', name: '한국어', flag: '/flags/south-korea.png' },
-    { code: 'ar', name: 'العربية', flag: '/flags/saudi-arabia.png' },
+    { code: 'bg', name: 'Български', flag: '/flags/bulgaria.png' },
+    { code: 'hr', name: 'Hrvatski', flag: '/flags/croatia.png' },
+    { code: 'cs', name: 'Čeština', flag: '/flags/czech.png' },
+    { code: 'el', name: 'Ελληνικά', flag: '/flags/greece.png' },
     { code: 'hi', name: 'हिन्दी', flag: '/flags/india.png' },
-    { code: 'tr', name: 'Türkçe', flag: '/flags/turkey.png' }
+    { code: 'id', name: 'Bahasa Indonesia', flag: '/flags/indonesia.png' },
+    { code: 'pl', name: 'Polski', flag: '/flags/poland.png' },
+    { code: 'sk', name: 'Slovenčina', flag: '/flags/slovakia.png' }
   ];
 
   const handleLanguageSelect = (langCode) => {

@@ -683,6 +683,8 @@ const AdminVideoCall = () => {
                     role: isHost ? "host" : "audience",
                     layout: isPinned ? layout.pin : layout.grid,
                     enableScreensharing: true,
+                    screenShareUID: 1, // Unique UID for admin screen sharing
+                    enableDualStream: true, // Enable dual stream for better quality
                     videoMode: {
                       max: "cover", // Video-ul mare va acoperi întregul container
                       min: "contain", // Video-ul mic va fi afișat complet în container, fără să fie tăiat
@@ -692,6 +694,12 @@ const AdminVideoCall = () => {
                   callbacks={{
                     EndCall: () => {
                       handleEndCall();
+                    },
+                    'rtc-screen-share-start': () => {
+                      console.log('🖥️ [ADMIN] Screen sharing started in one-to-one');
+                    },
+                    'rtc-screen-share-stop': () => {
+                      console.log('🖥️ [ADMIN] Screen sharing stopped in one-to-one');
                     },
                     'user-joined': (user) => {
                       console.log('👥 User joined:', user.uid);

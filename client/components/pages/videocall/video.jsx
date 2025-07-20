@@ -367,6 +367,8 @@ const VideoCall = () => {
                     role: isHost ? "host" : "audience",
                     layout: isPinned ? layout.pin : layout.grid,
                     enableScreensharing: true,
+                    screenShareUID: 2, // Unique UID for client screen sharing
+                    enableDualStream: true, // Enable dual stream for better quality
                     videoMode: {
                       max: "cover", // Video-ul mare va acoperi întregul container
                       min: "contain", // Video-ul mic va fi afișat complet în container, fără să fie tăiat
@@ -377,6 +379,12 @@ const VideoCall = () => {
                     EndCall: () => {
                       handleEndCall();
                       // router.push("/consultatii");
+                    },
+                    'rtc-screen-share-start': () => {
+                      console.log('🖥️ [CLIENT] Screen sharing started');
+                    },
+                    'rtc-screen-share-stop': () => {
+                      console.log('🖥️ [CLIENT] Screen sharing stopped');
                     },
                   }}
                   styleProps={{

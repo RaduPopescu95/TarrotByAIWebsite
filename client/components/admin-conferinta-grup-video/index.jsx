@@ -999,16 +999,45 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             channel: conferinta.documentId,
             token: null,
             role: "host",
+            enableScreensharing: true, // Enable screen sharing for admin
+            screenShareUID: 1, // Unique UID for screen sharing
+            enableDualStream: true, // Enable dual stream for better quality
           }}
-          rtmProps={{ username: currentUser?.displayName || 'Admin', displayUsername: true }}
+          rtmProps={{ 
+            username: currentUser?.displayName || 'Admin', 
+            displayUsername: true 
+          }}
           styleProps={{
             UIKitContainer: {
               width: '100vw',
               height: '100vh',
             },
+            localBtnContainer: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: '8px',
+            },
+            maxViewContainer: {
+              backgroundColor: '#000',
+            },
+            minViewContainer: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            },
+          }}
+          settings={{
+            host: true,
+            mode: 1, // Live broadcast mode
+            role: 1, // Host role
+            enableScreensharing: true, // Enable screen sharing in settings
+            enableWhiteboard: false, // Disable whiteboard for cleaner UI
           }}
           callbacks={{
             EndCall: leaveConference,
+            'rtc-screen-share-start': () => {
+              console.log('🖥️ [ADMIN] Screen sharing started');
+            },
+            'rtc-screen-share-stop': () => {
+              console.log('🖥️ [ADMIN] Screen sharing stopped');
+            },
           }}
         />
         
