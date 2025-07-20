@@ -71,8 +71,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [recorder] = useState(() => new AgoraStreamRecorder({
     onProgress: (msg) => setRecordingStatus(msg),
     onComplete: (data) => {
+      console.log('🎉 [GROUP RECORDING] Completed:', data);
+      setRecordingStatus('📧 Se trimit emailurile...');
+      
+      // Track email sending progress
+      let emailsSent = 0;
+      const totalEmails = emailList.length;
+      
       // trimite email pentru fiecare destinatar cu link către pagina publică de acces
-      emailList.forEach(async (dest) => {
+      emailList.forEach(async (dest, index) => {
         try {
           const res = await fetch('/api/recording/send-notification', {
             method: 'POST',
@@ -86,14 +93,53 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           });
           const jr = await res.json();
           console.log('📧 Email access page sent to', dest, jr.success ? '✅' : '❌');
+          
+          emailsSent++;
+          setRecordingStatus(`📧 Emailuri trimise: ${emailsSent}/${totalEmails}`);
+          
+          // Reset UI when all emails are sent
+          if (emailsSent === totalEmails) {
+            setTimeout(() => {
+              setRecordingStatus('✅ Toate emailurile au fost trimise!');
+              
+              setTimeout(() => {
+                setRecordingStatus('');
+                setEmailList([]);
+                setEmailInput('');
+                setEmailError('');
+                console.log('🔄 [UI RESET] Group recording interface reset after completion');
+              }, 3000);
+            }, 500);
+          }
+          
         } catch (err) {
           console.error('Email send error', dest, err);
+          emailsSent++;
+          
+          // Handle errors but still reset UI when done
+          if (emailsSent === totalEmails) {
+            setTimeout(() => {
+              setRecordingStatus('⚠️ Unele emailuri au eșuat');
+              
+              setTimeout(() => {
+                setRecordingStatus('');
+              }, 5000);
+            }, 500);
+          }
         }
       });
 
       setIsRecording(false);
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
+      
+      // Fallback reset in case no emails to send
+      if (totalEmails === 0) {
+        setTimeout(() => {
+          setRecordingStatus('');
+          console.log('🔄 [UI RESET] Group recording interface reset (no emails)');
+        }, 2000);
+      }
     },
     onError: (err) => {
       console.error('Recorder error', err);
@@ -1036,7 +1082,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         />
         
         {/* Compact Recording Progress Monitor - Bottom Right */}
-        <RecordingProgressWidget
+        {/* <RecordingProgressWidget
           isRecording={isRecording}
           recordingDuration={recordingDuration}
           recordingStatus={recordingStatus}
@@ -1053,7 +1099,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
               recordingIntervalRef.current = null;
             }
           }}
-        />
+        /> */}
 
         {/* Recording Controls - Main Control Button with Animations */}
         {isRecordingSupported && (

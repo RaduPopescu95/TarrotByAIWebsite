@@ -62,6 +62,8 @@ const AdminVideoCall = () => {
 
         // Send email with access link to public recordings page
         if (recipientEmail.trim()) {
+          setRecordingStatus('📧 Se trimite emailul...');
+          
           fetch('/api/recording/send-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -76,11 +78,41 @@ const AdminVideoCall = () => {
           .then(resp => {
             if (resp.success) {
               console.log('✅ Recording access email sent to:', recipientEmail.trim());
+              setRecordingStatus('✅ Email trimis cu succes!');
+              
+              // Reset UI after successful completion
+              setTimeout(() => {
+                setRecordingStatus('');
+                setRecipientEmail('');
+                setShowEmailDialog(false);
+                console.log('🔄 [UI RESET] Recording interface reset after completion');
+              }, 3000);
+              
             } else {
               console.error('Failed to send access email:', resp.message);
+              setRecordingStatus('❌ Eroare la trimiterea emailului');
+              
+              // Reset UI even on error
+              setTimeout(() => {
+                setRecordingStatus('');
+              }, 5000);
             }
           })
-          .catch(err => console.error('Error sending access email:', err));
+          .catch(err => {
+            console.error('Error sending access email:', err);
+            setRecordingStatus('❌ Eroare la conexiune pentru email');
+            
+            // Reset UI on network error
+            setTimeout(() => {
+              setRecordingStatus('');
+            }, 5000);
+          });
+        } else {
+          // No email provided, reset immediately
+          setTimeout(() => {
+            setRecordingStatus('');
+            console.log('🔄 [UI RESET] Recording interface reset (no email)');
+          }, 2000);
         }
 
         // Update Firestore with recording completion
@@ -937,7 +969,7 @@ const AdminVideoCall = () => {
             )}
 
             {/* Compact Recording Progress Monitor - Bottom Right */}
-            <RecordingProgressWidget
+            {/* <RecordingProgressWidget
               isRecording={isRecording}
               recordingDuration={recordingDuration}
               recordingStatus={recordingStatus}
@@ -954,7 +986,7 @@ const AdminVideoCall = () => {
                   recordingIntervalRef.current = null;
                 }
               }}
-            />
+            /> */}
 
             {/* Email Dialog for Recording */}
             {showEmailDialog && (

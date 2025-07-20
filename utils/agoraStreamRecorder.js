@@ -694,17 +694,8 @@ export class AgoraStreamRecorder {
               // Save metadata to Firestore for search functionality
               await this.saveRecordingMetadata(recordingData, firestore);
 
-              // Show email preparation step
-              this.onProgress('📧 Pregătire trimitere email...');
-              await new Promise(resolve => setTimeout(resolve, 800));
-              
-              this.onProgress('📧 Trimitere email în curs...');
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              this.onProgress('✅ Email trimis! Înregistrare completă!');
-              await new Promise(resolve => setTimeout(resolve, 1200));
-              
-              this.onProgress('🎉 Proces finalizat cu succes!');
+              // Recording and upload completed successfully
+              this.onProgress('✅ Înregistrare încărcată cu succes!');
               
               this.onComplete(recordingData);
               resolve(recordingData);

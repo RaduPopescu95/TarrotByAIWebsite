@@ -667,6 +667,17 @@ async function sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDeta
             </p>
           </div>
 
+           <!-- Disclaimer -->
+              <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            
+              <h4 style="margin: 0; color: #856404; font-size: 16px;">Timp de stocare</h4>
+            </div>
+            <p style="margin: 10px 0 0 0; color: #856404; font-size: 14px;">
+              Inregistrarea va fi stocata timp de 14 zile. Dupa aceasta perioada va fi ștearsă automat și nu va mai fi accesibila.
+            </p>
+          </div>
+
           <!-- Support Section -->
           <div style="text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid #eee;">
             <h4 style="color: #555; margin-bottom: 10px;">Aveți întrebări?</h4>
@@ -681,9 +692,7 @@ async function sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDeta
           <p style="margin: 0; color: #6c757d; font-size: 14px;">
             © ${new Date().getFullYear()} Cristina Zurba. Toate drepturile rezervate.
           </p>
-          <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 12px;">
-            Acest email a fost trimis automat. Vă rugăm să nu răspundeți direct.
-          </p>
+       
         </div>
       </div>
     `;
