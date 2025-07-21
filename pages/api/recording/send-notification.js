@@ -185,8 +185,44 @@ async function getMeetingDetails(meetingCode, requestId) {
       searchMethod: 'direct_document_lookup'
     });
 
-    // Try different collections to find meeting details
-    const collections = ['Consultations', 'ConferinteGrup', 'Meetings'];
+    // Check if this is a group conference meeting code
+    if (meetingCode.startsWith('group_')) {
+      const conferenceId = meetingCode.replace('group_', '');
+      
+      logWithDetails('INFO', 'Processing group conference meeting code', {
+        requestId,
+        originalMeetingCode: meetingCode,
+        extractedConferenceId: conferenceId
+      });
+
+      // Look specifically in ConferinteGrup collection
+      const conferenceDoc = await db.collection('ConferinteGrup').doc(conferenceId).get();
+      
+      if (conferenceDoc.exists) {
+        const data = conferenceDoc.data();
+        logWithDetails('SUCCESS', `Group conference details found`, {
+          requestId,
+          collection: 'ConferinteGrup',
+          documentId: conferenceId,
+          hasTitle: !!data.titlu,
+          hasDate: !!data.dataInceput,
+          hasTime: !!data.oraInceput,
+          hasParticipants: !!(data.participanti && data.participanti.length > 0),
+          participantCount: data.participanti ? data.participanti.length : 0,
+          dataKeys: Object.keys(data)
+        });
+        return data;
+      } else {
+        logWithDetails('WARNING', `Group conference not found with ID: ${conferenceId}`, {
+          requestId,
+          conferenceId,
+          originalMeetingCode: meetingCode
+        });
+      }
+    }
+
+    // Try different collections for regular meetings
+    const collections = ['Consultations', 'RezervariConsultatii', 'Meetings'];
     
     for (const collectionName of collections) {
       logWithDetails('DEBUG', `Checking collection: ${collectionName}`, {
@@ -619,8 +655,22 @@ async function sendRecordingAccessEmail(meetingCode, recipientEmail, meetingDeta
             <div style="display: grid; gap: 8px;">
               <p style="margin: 0; color: #333;"><strong>Tip:</strong> ${meetingType}</p>
               <p style="margin: 0; color: #333;"><strong>Titlu:</strong> ${meetingTitle}</p>
-              ${meetingDetails?.data ? `<p style="margin: 0; color: #333;"><strong>Data:</strong> ${new Date(meetingDetails.data).toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
-              ${meetingDetails?.ora ? `<p style="margin: 0; color: #333;"><strong>Ora:</strong> ${meetingDetails.ora}</p>` : ''}
+              ${(() => {
+                if (isGroupConference && meetingDetails?.dataInceput) {
+                  return `<p style="margin: 0; color: #333;"><strong>Data:</strong> ${new Date(meetingDetails.dataInceput).toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>`;
+                } else if (!isGroupConference && meetingDetails?.data) {
+                  return `<p style="margin: 0; color: #333;"><strong>Data:</strong> ${new Date(meetingDetails.data).toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>`;
+                }
+                return '';
+              })()}
+              ${(() => {
+                if (isGroupConference && meetingDetails?.oraInceput) {
+                  return `<p style="margin: 0; color: #333;"><strong>Ora:</strong> ${meetingDetails.oraInceput}</p>`;
+                } else if (!isGroupConference && meetingDetails?.ora) {
+                  return `<p style="margin: 0; color: #333;"><strong>Ora:</strong> ${meetingDetails.ora}</p>`;
+                }
+                return '';
+              })()}
             </div>
           </div>
 
