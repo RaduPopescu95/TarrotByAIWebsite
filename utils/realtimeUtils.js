@@ -54,6 +54,11 @@ export const getData = async (locationName, secondLocationName) => {
     return { arr };
   } catch (error) {
     console.error(error);
+    // 🚀 TEMP FIX: For card reading data, throw error to trigger API fallback
+    if (locationName === "Citire-Personalizata" || locationName === "Citire-Viitor") {
+      console.log("🔥 [REALTIME] Throwing error for card reading data to trigger API fallback");
+      throw error;
+    }
     return { arr: [] };
   }
 };

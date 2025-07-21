@@ -105,21 +105,81 @@ const MediaCardConstantService = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
-  const card =
-    shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
+  const card = (shuffledCartiPersonalizate && Array.isArray(shuffledCartiPersonalizate) && shuffledCartiPersonalizate.length > 0)
+    ? shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length]
+    : null;
 
-  console.log("carti PERSONALIZATE...", cartiPersonalizate);
-  console.log("Card...", shuffledCartiPersonalizate);
-  console.log("Card...", card);
+  // 🔍 [DEBUG LOGS] Pentru troubleshooting optimizări cache
+  console.log("📚 [CITIRE PERSONALIZATA] CartiPersonalizate state:", {
+    data: cartiPersonalizate,
+    type: typeof cartiPersonalizate,
+    hasArr: cartiPersonalizate && cartiPersonalizate.arr,
+    arrLength: cartiPersonalizate?.arr?.length,
+    isArray: Array.isArray(cartiPersonalizate)
+  });
+  
+  console.log("🃏 [CITIRE PERSONALIZATA] ShuffledCartiPersonalizate state:", {
+    data: shuffledCartiPersonalizate,
+    type: typeof shuffledCartiPersonalizate,
+    length: shuffledCartiPersonalizate?.length,
+    isArray: Array.isArray(shuffledCartiPersonalizate)
+  });
+  
+  console.log("🎯 [CITIRE PERSONALIZATA] CategoriiPersonalizate state:", {
+    data: categoriiPersonalizate,
+    type: typeof categoriiPersonalizate,
+    hasArr: categoriiPersonalizate && categoriiPersonalizate.arr,
+    arrLength: categoriiPersonalizate?.arr?.length
+  });
+  
+  console.log("🎴 [CITIRE PERSONALIZATA] Current card:", {
+    card,
+    index,
+    cardExists: !!card
+  });
 
+  // 🚀 FIX: Hooks TREBUIE să fie apelate înainte de orice return condiționat
   // Starea pentru a gestiona afișarea fundalului alternativ
   const [flipped, setFlipped] = React.useState(false);
   const { currentNumber, updateNumber, sendToHistory, setSendToHistory } =
     useNumberContext();
 
+  // 🚀 FIX: Toate hook-urile TREBUIE înainte de early return
+  // Actualizează starea flipped bazată pe prop-ul flipAllCards
+  React.useEffect(() => {
+    if (flipAllCards) {
+      setFlipped(true);
+      if (currentNumber === 1) {
+        setTimeout(() => {
+          getVariantaCarti(1);
+        }, 1000);
+      }
+    }
+  }, [flipAllCards]);
+  
+  // 🚀 FIX: Return early DUPĂ hooks dacă datele nu sunt disponibile
+  if (!card || !categoriiPersonalizate || !categoriiPersonalizate.arr) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <p>Se încarcă datele...</p>
+      </div>
+    );
+  }
+
   // Funcția pentru a schimba starea la click pe card
   const getVariantaCarti = async (index) => {
+    // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+    if (!shuffledCartiPersonalizate || !Array.isArray(shuffledCartiPersonalizate) || shuffledCartiPersonalizate.length === 0) {
+      console.error("❌ [CARTI 1] shuffledCartiPersonalizate not available:", shuffledCartiPersonalizate);
+      return;
+    }
+    if (!categoriiPersonalizate || !categoriiPersonalizate.arr || !Array.isArray(categoriiPersonalizate.arr) || categoriiPersonalizate.arr.length === 0) {
+      console.error("❌ [CATEGORII 1] categoriiPersonalizate not available:", categoriiPersonalizate);
+      return;
+    }
+    
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
     const conditieCategorie = categoriiPersonalizate.arr[index];
@@ -162,18 +222,6 @@ const MediaCardConstantService = ({
       console.log("Error at navigateToPersonalizedReading...", err);
     }
   };
-
-  // Actualizează starea flipped bazată pe prop-ul flipAllCards
-  React.useEffect(() => {
-    if (flipAllCards) {
-      setFlipped(true);
-      if (currentNumber === 1) {
-        setTimeout(() => {
-          getVariantaCarti(1);
-        }, 1000);
-      }
-    }
-  }, [flipAllCards]);
 
   // Definirea animațiilor
   const delay = index * 0.15; // De exemplu, întârziere de 0.1 secunde pentru fiecare card
@@ -324,6 +372,16 @@ export function CitirePersonalizata({ services }) {
   };
 
   const getVariantaCarti = async (index) => {
+    // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+    if (!shuffledCartiPersonalizate || !Array.isArray(shuffledCartiPersonalizate) || shuffledCartiPersonalizate.length === 0) {
+      console.error("❌ [CARTI 2] shuffledCartiPersonalizate not available:", shuffledCartiPersonalizate);
+      return;
+    }
+    if (!categoriiPersonalizate || !categoriiPersonalizate.arr || !Array.isArray(categoriiPersonalizate.arr) || categoriiPersonalizate.arr.length === 0) {
+      console.error("❌ [CATEGORII 2] categoriiPersonalizate not available:", categoriiPersonalizate);
+      return;
+    }
+    
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
     const conditieCategorie = categoriiPersonalizate.arr[index];
@@ -416,20 +474,27 @@ export function CitirePersonalizata({ services }) {
     }
   };
 
-  const [visibleCards, setVisibleCards] = React.useState(
-    new Array(categoriiPersonalizate.arr.length).fill(true)
-  );
+  // 🚀 FIX: Safe initialization pentru optimizările cache 
+  const [visibleCards, setVisibleCards] = React.useState(() => {
+    // Lazy initialization pentru a evita crash-ul pe undefined
+    const length = categoriiPersonalizate?.arr?.length || 8; // fallback la 8 carti default
+    return new Array(length).fill(true);
+  });
 
   React.useEffect(() => {
-    setVisibleCards(new Array(categoriiPersonalizate.arr.length).fill(true));
+    // 🚀 FIX: Safe access pentru optimizările cache
+    const length = categoriiPersonalizate?.arr?.length || 8;
+    setVisibleCards(new Array(length).fill(true));
   }, [shuffleCartiPersonalizate]);
 
   // Declanșarea animației de ieșire
   React.useEffect(() => {
     if (triggerExitAnimation) {
-      setVisibleCards(new Array(categoriiPersonalizate.arr.length).fill(false));
+      // 🚀 FIX: Safe access pentru optimizările cache
+      const length = categoriiPersonalizate?.arr?.length || 8;
+      setVisibleCards(new Array(length).fill(false));
     }
-  }, [triggerExitAnimation, categoriiPersonalizate.arr.length]);
+  }, [triggerExitAnimation, categoriiPersonalizate?.arr?.length]);
 
   const isFirstEntry = React.useRef(true);
 
@@ -455,7 +520,8 @@ export function CitirePersonalizata({ services }) {
 
   React.useEffect(() => {
     // Setează o întârziere pentru a permite tuturor cardurilor să termine animația de intrare
-    const delay = constantServices.length * 0.15 + 0.5; // Ajustează această valoare dacă este necesar
+    // 🚀 FIX: Safe access pentru constantServices
+    const delay = (constantServices?.length || 8) * 0.15 + 0.5; // Ajustează această valoare dacă este necesar
     const timer = setTimeout(() => {
       setFlipAllCards(true);
     }, delay * 2700);
@@ -528,7 +594,8 @@ export function CitirePersonalizata({ services }) {
                   {categoriiPersonalizate.arr &&
                     categoriiPersonalizate.arr.map((item, index) => {
                       // Aplică stilul de sus pentru cardurile din mijloc
-                      const isLastItem = index === constantServices.length - 1;
+                      // 🚀 FIX: Safe access pentru constantServices
+                      const isLastItem = index === (constantServices?.length || 8) - 1;
                       const isMiddleCard = index % 3 === 1 && !isLastItem; // Verifică dacă cardul este pe poziția din mijloc în rând
                       if (!visibleCards[index]) {
                         return null; // Nu afișa cardul dacă visibleCards la acest index este false

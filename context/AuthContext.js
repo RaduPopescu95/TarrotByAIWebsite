@@ -54,6 +54,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
       console.log("start use effect from auth context", user);
+      
+      // 🚀 TEMP FIX: If no user, sign in anonymously for public data access
+      if (!user) {
+        try {
+          console.log("🔑 [AUTH] No user found, signing in anonymously for public data access...");
+          const { signInAnonymously } = await import("firebase/auth");
+          const anonUser = await signInAnonymously(authentication);
+          console.log("✅ [AUTH] Anonymous sign-in successful:", anonUser.user.uid);
+          return; // onAuthStateChanged will be called again with the anonymous user
+        } catch (error) {
+          console.error("❌ [AUTH] Anonymous sign-in failed:", error);
+        }
+      }
+      
       if (user && user.providerData[0]?.providerId !== "google.com") {
         try {
           console.log("user....firebase...", user);
@@ -96,6 +110,23 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         console.log("user....other...", user);
+        
+        // Handle anonymous users (for public data access)
+        if (user && user.isAnonymous) {
+          console.log("🔑 [AUTH] Anonymous user detected, setting minimal data for public access");
+          let anonymousUserData = {
+            first_name: "Guest",
+            last_name: "User",
+            email: "",
+            owner_uid: user.uid,
+            isAnonymous: true
+          };
+          setUserData(anonymousUserData);
+          localStorage.setItem("currentUser", JSON.stringify(user));
+          localStorage.setItem("userData", JSON.stringify(anonymousUserData));
+          return;
+        }
+        
         if (user?.displayName) {
           let first_name = user.displayName;
           let last_name = "";

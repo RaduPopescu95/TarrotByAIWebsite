@@ -94,13 +94,32 @@ export default async function handler(req, res) {
       });
     }
 
-    // 4. Caută înregistrări în toate colecțiile - atât prin meeting codes, cât și prin email direct
+    // 4. 🚀 OPTIMIZAT: Caută înregistrări cu limite pentru a reduce read-urile
     const allRecordings = [];
     const collections = ['SimpleRecordings', 'Recordings', 'BrowserRecordings'];
+    const SEARCH_LIMIT = 500; // Limită conservativă pentru a găsi majoritatea înregistrărilor
 
     for (const collectionName of collections) {
       try {
-        const recordingsSnapshot = await db.collection(collectionName).get();
+        console.log(`🔍 [RECORDINGS SEARCH OPTIMIZED] Searching ${collectionName} with limit ${SEARCH_LIMIT}`);
+        
+        // OPTIMIZAT: Folosim limite și ordering pentru a reduce read-urile
+        let recordingsSnapshot;
+        try {
+          // Încearcă cu ordering pentru cele mai recente înregistrări
+          recordingsSnapshot = await db.collection(collectionName)
+            .orderBy('uploadTime', 'desc')
+            .limit(SEARCH_LIMIT)
+            .get();
+          console.log(`✅ [RECORDINGS SEARCH] Ordered query successful for ${collectionName}`);
+        } catch (orderError) {
+          // FALLBACK: Dacă ordering nu funcționează, folosește limita simplă
+          console.log(`⚠️ [RECORDINGS SEARCH] Ordering failed for ${collectionName}, using simple limit`);
+          recordingsSnapshot = await db.collection(collectionName)
+            .limit(SEARCH_LIMIT)
+            .get();
+        }
+        
         const collectionMatches = [];
         
         recordingsSnapshot.forEach(doc => {
@@ -131,11 +150,52 @@ export default async function handler(req, res) {
         const meetingCodeMatches = collectionMatches.filter(r => r.matchMethod === 'meetingCode').length;
         const emailMatches = collectionMatches.filter(r => r.matchMethod === 'userEmail').length;
         
-        console.log(`📦 [RECORDINGS SEARCH] Collection ${collectionName}: ${collectionMatches.length} matches`);
+        console.log(`📦 [RECORDINGS SEARCH OPTIMIZED] Collection ${collectionName}: ${collectionMatches.length} matches from ${recordingsSnapshot.size} docs (limit: ${SEARCH_LIMIT})`);
         console.log(`  📋 Meeting code matches: ${meetingCodeMatches}`);
         console.log(`  📧 Direct email matches: ${emailMatches}`);
+        
+        // AVERTIZARE dacă s-a atins limita - s-ar putea să existe mai multe înregistrări
+        if (recordingsSnapshot.size === SEARCH_LIMIT) {
+          console.log(`⚠️ [RECORDINGS SEARCH] ATENȚIE: S-a atins limita de ${SEARCH_LIMIT} pentru ${collectionName}. Ar putea exista mai multe înregistrări.`);
+        }
+        
       } catch (error) {
-        console.error(`Error searching ${collectionName}:`, error);
+        console.error(`❌ [RECORDINGS SEARCH] Error searching ${collectionName}:`, error);
+        
+        // FALLBACK EXTREM: Dacă optimizarea eșuează, încearcă metoda originală cu atenție
+        try {
+          console.log(`🔄 [FALLBACK] Trying original method for ${collectionName} (without limit)`);
+          const fallbackSnapshot = await db.collection(collectionName).get();
+          
+          // Procesează doar primele 1000 pentru siguranță
+          let processed = 0;
+          const MAX_FALLBACK = 1000;
+          
+          fallbackSnapshot.forEach(doc => {
+            if (processed >= MAX_FALLBACK) return;
+            
+            const recording = doc.data();
+            const meetingCodeMatch = meetingCodes.find(mc => mc.meetingCode === recording.meetingCode);
+            const emailMatch = recording.userEmail && recording.userEmail.toLowerCase() === emailLower;
+            
+            if (meetingCodeMatch || emailMatch) {
+              allRecordings.push({
+                id: doc.id,
+                ...recording,
+                collection: collectionName,
+                associatedData: meetingCodeMatch?.data || null,
+                type: meetingCodeMatch?.type || (emailMatch ? 'direct_email_match' : 'unknown'),
+                matchMethod: meetingCodeMatch ? 'meetingCode' : 'userEmail'
+              });
+            }
+            processed++;
+          });
+          
+          console.log(`✅ [FALLBACK] Processed ${processed} docs from ${collectionName} (max: ${MAX_FALLBACK})`);
+          
+        } catch (fallbackError) {
+          console.error(`❌ [FALLBACK] Complete failure for ${collectionName}:`, fallbackError);
+        }
       }
     }
 

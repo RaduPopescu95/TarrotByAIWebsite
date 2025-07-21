@@ -72,4 +72,115 @@
   .footer-copyright-mobile {
     display: block !important;
   }
+}
+
+/* 🚀 ENHANCED MOBILE NAVBAR FIXES */
+@media (max-width: 768px) {
+  /* Asigură că header-ul nu overflow pe orizontală */
+  header[style*="position: fixed"] {
+    overflow-x: hidden !important;
+  }
+  
+  /* Container fix pentru mobile */
+  .navbar {
+    max-width: 100vw !important;
+    overflow: visible !important;
+    padding: 0 15px !important;
+  }
+  
+  /* Right section adjustments */
+  .header-right-section {
+    flex-shrink: 0 !important;
+    min-width: auto !important;
+    max-width: 50% !important;
+  }
+  
+  /* Mobile menu button positioning */
+  .mobile-menu-button {
+    position: relative !important;
+    right: 0 !important;
+    margin-right: 0 !important;
+    margin-left: 8px !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Hide less critical elements on very small screens */
+  .header-right-section .language-dropdown {
+    display: none !important;
+  }
+  
+  .store-link span {
+    display: none !important;
+  }
+  
+  /* More aggressive spacing */
+  .navbar {
+    padding: 0 10px !important;
+  }
+  
+  .header-right-section {
+    gap: 0.25rem !important;
+    max-width: 40% !important;
+  }
+  
+  .store-links {
+    gap: 0.25rem !important;
+  }
+  
+  .mobile-menu-button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Hide store links on very small screens */
+  .header-right-section .store-links {
+    display: none !important;
+  }
+  
+  /* Give more space to mobile button */
+  .header-right-section {
+    max-width: 30% !important;
+  }
+  
+  .navbar {
+    padding: 0 8px !important;
+  }
+}
+
+/* Mobile Menu Enhancements */
+@media (max-width: 768px) {
+  /* Enhanced mobile menu styling */
+  .mobile-close-button:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    transform: scale(1.05) !important;
+  }
+  
+  .mobile-close-button:active {
+    transform: scale(0.95) !important;
+  }
+  
+  /* Prevent body scroll when mobile menu is open */
+  body.mobile-menu-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+  }
+}
+
+/* Touch improvements for mobile */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-menu-button {
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
+  
+  .mobile-close-button {
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
 } 

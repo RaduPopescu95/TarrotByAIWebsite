@@ -79,11 +79,39 @@ const MediaCardConstantService = ({
   const detectedLng = languageDetector.detect();
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
-  const card =
-    shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
+  // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+  const card = (shuffledCartiPersonalizate && Array.isArray(shuffledCartiPersonalizate) && shuffledCartiPersonalizate.length > 0)
+    ? shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length]
+    : null;
 
-  console.log("carti PERSONALIZATE...", cartiPersonalizate);
-  console.log("Card...", shuffledCartiPersonalizate);
+  // 🔍 [DEBUG LOGS] Pentru troubleshooting optimizări cache
+  console.log("🧠 [CE GANDESTE] CartiPersonalizate state:", {
+    data: cartiPersonalizate,
+    type: typeof cartiPersonalizate,
+    hasArr: cartiPersonalizate && cartiPersonalizate.arr,
+    arrLength: cartiPersonalizate?.arr?.length,
+    isArray: Array.isArray(cartiPersonalizate)
+  });
+  
+  console.log("🃏 [CE GANDESTE] ShuffledCartiPersonalizate state:", {
+    data: shuffledCartiPersonalizate,
+    type: typeof shuffledCartiPersonalizate,
+    length: shuffledCartiPersonalizate?.length,
+    isArray: Array.isArray(shuffledCartiPersonalizate)
+  });
+  
+  console.log("🎯 [CE GANDESTE] CategoriiPersonalizate state:", {
+    data: categoriiPersonalizate,
+    type: typeof categoriiPersonalizate,
+    hasArr: categoriiPersonalizate && categoriiPersonalizate.arr,
+    arrLength: categoriiPersonalizate?.arr?.length
+  });
+  
+  console.log("🎴 [CE GANDESTE] Current card:", {
+    card,
+    index,
+    cardExists: !!card
+  });
   console.log("Card...", card);
 
   // Starea pentru a gestiona afișarea fundalului alternativ
@@ -110,6 +138,16 @@ const MediaCardConstantService = ({
   // Funcția pentru a schimba starea la click pe card
 
   const getVariantaCarti = async (index) => {
+    // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+    if (!shuffledCartiPersonalizate || !Array.isArray(shuffledCartiPersonalizate) || shuffledCartiPersonalizate.length === 0) {
+      console.error("❌ [CE GANDESTE] shuffledCartiPersonalizate not available:", shuffledCartiPersonalizate);
+      return;
+    }
+    if (!categoriiPersonalizate || !categoriiPersonalizate.arr || !Array.isArray(categoriiPersonalizate.arr) || categoriiPersonalizate.arr.length === 0) {
+      console.error("❌ [CE GANDESTE] categoriiPersonalizate not available:", categoriiPersonalizate);
+      return;
+    }
+    
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
     const conditieCategorie = categoriiPersonalizate.arr[index];
@@ -416,7 +454,7 @@ export function CitirePersonalizata({ services }) {
     if (triggerExitAnimation) {
       setVisibleCards(new Array(1).fill(false));
     }
-  }, [triggerExitAnimation, categoriiPersonalizate.arr.length]);
+  }, [triggerExitAnimation, categoriiPersonalizate?.arr?.length]);
 
   const isFirstEntry = React.useRef(true);
 

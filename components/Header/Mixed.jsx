@@ -81,6 +81,29 @@ function Mixed(props) {
   const [fixed, setFixed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
+  
+  // 🚀 FIX: Cleanup pentru mobile menu state
+  useEffect(() => {
+    return () => {
+      // Cleanup la demontarea componentei
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('mobile-menu-open');
+      }
+    };
+  }, []);
+  
+  // 🚀 FIX: Închide mobile menu la resize pe desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        document.body.classList.remove('mobile-menu-open');
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mobileMenuOpen]);
   const [isDesktop, setIsDesktop] = useState(true);
   
   const { userData } = useAuth();
@@ -147,7 +170,17 @@ function Mixed(props) {
   }, [languageDropdownOpen]);
 
   const handleMobileMenuToggle = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+    const newMenuState = !mobileMenuOpen;
+    setMobileMenuOpen(newMenuState);
+    
+    // 🚀 FIX: Previne scroll-ul body-ului când mobile menu-ul este deschis
+    if (typeof document !== 'undefined') {
+      if (newMenuState) {
+        document.body.classList.add('mobile-menu-open');
+      } else {
+        document.body.classList.remove('mobile-menu-open');
+      }
+    }
   };
 
   const handleLanguageChange = (locale) => {
@@ -312,12 +345,12 @@ function Mixed(props) {
             )}
 
             {/* Right Section - Language Dropdown, Store Links & Mobile Menu */}
-            <div style={styles.rightSection}>
+            <div style={styles.rightSection} className="header-right-section">
               {/* Language Dropdown */}
               <div className="language-dropdown" style={styles.languageDropdown}>
-                <button
-                  onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-                  style={{
+                  <button
+                    onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
+                    style={{
                     ...styles.languageButton,
                     color: isConsultationsPage ? '#333' : 'white',
                     backgroundColor: isConsultationsPage 
@@ -399,7 +432,7 @@ function Mixed(props) {
                     ))}
                   </div>
                 )}
-              </div>
+                </div>
 
               {/* Store Links */}
               <div style={styles.storeLinks} className="store-links">
@@ -466,6 +499,21 @@ function Mixed(props) {
             ...(mobileMenuOpen && styles.mobileMenuOpen)
           }}>
             <div style={styles.mobileMenuContent}>
+              {/* 🚀 FIX: Adaug buton de închidere explicit pentru mobile menu */}
+              <div style={styles.mobileMenuHeader}>
+                <div style={styles.mobileMenuTitle}>
+                  {t("menu") || "Meniu"}
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={styles.mobileCloseButton}
+                  className="mobile-close-button"
+                  aria-label="Închide meniul"
+                >
+                  <span style={styles.closeIcon}>✕</span>
+                </button>
+              </div>
+              
               {userData && (
                 <div style={styles.mobileUserGreeting}>
                   {t("helloUser")}, {userData.first_name}!
@@ -652,12 +700,26 @@ const styles = {
     fontWeight: "600",
   },
   
-  // Right Section
+  // Right Section - 🚀 FIX: Îmbunătățit pentru mobile
   rightSection: {
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
     flex: "0 0 auto",
+    minWidth: 0, // Permite shrinking când e necesar
+    overflow: "visible", // Asigură că dropdown-urile nu sunt tăiate
+    maxWidth: "none", // Permite flexibilitate
+    '@media (max-width: 768px)': {
+      maxWidth: "50%",
+      gap: "0.25rem",
+    },
+    '@media (max-width: 480px)': {
+      maxWidth: "40%",
+      gap: "0.2rem",
+    },
+    '@media (max-width: 360px)': {
+      maxWidth: "30%",
+    },
   },
   
   // Language Dropdown
@@ -767,14 +829,19 @@ const styles = {
     fontWeight: "500",
   },
   
-  // Mobile Menu Button
+  // Mobile Menu Button - 🚀 FIX: Îmbunătățit pentru touch
   mobileMenuButton: {
     background: "none",
     border: "none",
-    padding: "8px",
+    padding: "10px", // Mărit pentru touch
     cursor: "pointer",
     borderRadius: "8px",
     transition: "all 0.2s ease",
+    minWidth: "44px", // Minim recomandat pentru touch
+    minHeight: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   hamburgerIcon: {
     width: "24px",
@@ -821,9 +888,45 @@ const styles = {
     visibility: "visible",
   },
   mobileMenuContent: {
-    padding: "2rem 20px",
+    padding: "1rem 20px 2rem 20px",
     maxWidth: "1400px",
     margin: "0 auto",
+  },
+  
+  // 🚀 FIX: Stiluri pentru header-ul mobile menu cu buton de închidere
+  mobileMenuHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "1.5rem",
+    paddingBottom: "1rem",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+  },
+  mobileMenuTitle: {
+    color: "white",
+    fontSize: "18px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  mobileCloseButton: {
+    background: "rgba(255, 255, 255, 0.1)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    borderRadius: "8px",
+    padding: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "40px",
+    minHeight: "40px",
+  },
+  closeIcon: {
+    color: "white",
+    fontSize: "16px",
+    fontWeight: "bold",
+    lineHeight: 1,
   },
   mobileUserGreeting: {
     color: "white",
@@ -874,3 +977,53 @@ Mixed.defaultProps = {
 };
 
 export default Mixed;
+
+// 🚀 FIX: Adaug stiluri globale pentru responsive navbar
+if (typeof window !== 'undefined') {
+  const globalStyles = `
+    /* Responsive fixes pentru navbar */
+    @media (max-width: 480px) {
+      .header-right-section .language-dropdown {
+        display: none !important;
+      }
+      
+      .header-right-section {
+        gap: 0.25rem !important;
+      }
+      
+      .store-links {
+        gap: 0.25rem !important;
+      }
+      
+      .store-link span {
+        display: none !important;
+      }
+      
+      .mobile-menu-button {
+        margin-left: 0.25rem;
+        min-width: 44px !important;
+        min-height: 44px !important;
+      }
+    }
+    
+    @media (max-width: 360px) {
+      .header-right-section .store-links {
+        display: none !important;
+      }
+    }
+    
+    /* Hover effects pentru mobile close button */
+    .mobile-close-button:hover {
+      background-color: rgba(255, 255, 255, 0.2) !important;
+      transform: scale(1.05);
+    }
+  `;
+  
+  // Adaugă stilurile în head dacă nu există deja
+  if (!document.querySelector('#navbar-responsive-styles')) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'navbar-responsive-styles';
+    styleElement.innerHTML = globalStyles;
+    document.head.appendChild(styleElement);
+  }
+}

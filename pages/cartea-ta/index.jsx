@@ -78,11 +78,43 @@ const MediaCardConstantService = ({
   const detectedLng = languageDetector.detect();
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
-  const card =
-    shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
+  // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+  const card = (shuffledCartiPersonalizate && Array.isArray(shuffledCartiPersonalizate) && shuffledCartiPersonalizate.length > 0)
+    ? shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length]
+    : null;
 
-  console.log("carti PERSONALIZATE...", cartiPersonalizate);
-  console.log("Card...", shuffledCartiPersonalizate);
+  // 🔍 [DEBUG LOGS] Pentru troubleshooting optimizări cache
+  console.log("📖 [CARTEA TA] CartiPersonalizate state:", {
+    data: cartiPersonalizate,
+    type: typeof cartiPersonalizate,
+    hasArr: cartiPersonalizate && cartiPersonalizate.arr,
+    arrLength: cartiPersonalizate?.arr?.length,
+    isArray: Array.isArray(cartiPersonalizate),
+    keys: cartiPersonalizate ? Object.keys(cartiPersonalizate) : 'none',
+    firstElement: cartiPersonalizate?.arr?.[0],
+    isEmpty: Array.isArray(cartiPersonalizate) && cartiPersonalizate.length === 0,
+    isEmptyObject: cartiPersonalizate && Object.keys(cartiPersonalizate).length === 0
+  });
+  
+  console.log("🃏 [CARTEA TA] ShuffledCartiPersonalizate state:", {
+    data: shuffledCartiPersonalizate,
+    type: typeof shuffledCartiPersonalizate,
+    length: shuffledCartiPersonalizate?.length,
+    isArray: Array.isArray(shuffledCartiPersonalizate)
+  });
+  
+  console.log("🎯 [CARTEA TA] CategoriiPersonalizate state:", {
+    data: categoriiPersonalizate,
+    type: typeof categoriiPersonalizate,
+    hasArr: categoriiPersonalizate && categoriiPersonalizate.arr,
+    arrLength: categoriiPersonalizate?.arr?.length
+  });
+  
+  console.log("🎴 [CARTEA TA] Current card:", {
+    card,
+    index,
+    cardExists: !!card
+  });
   console.log("Card...", card);
 
   // Starea pentru a gestiona afișarea fundalului alternativ
@@ -113,6 +145,16 @@ const MediaCardConstantService = ({
 
   const getVariantaCarti = async (index) => {
     console.log(index);
+    // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+    if (!shuffledCartiPersonalizate || !Array.isArray(shuffledCartiPersonalizate) || shuffledCartiPersonalizate.length === 0) {
+      console.error("❌ [CARTEA TA] shuffledCartiPersonalizate not available:", shuffledCartiPersonalizate);
+      return;
+    }
+    if (!categoriiPersonalizate || !categoriiPersonalizate.arr || !Array.isArray(categoriiPersonalizate.arr) || categoriiPersonalizate.arr.length === 0) {
+      console.error("❌ [CARTEA TA] categoriiPersonalizate not available:", categoriiPersonalizate);
+      return;
+    }
+    
     const card =
       shuffledCartiPersonalizate[index % shuffledCartiPersonalizate.length];
     const conditieCategorie = categoriiPersonalizate.arr?.[index];

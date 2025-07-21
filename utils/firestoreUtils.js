@@ -234,6 +234,125 @@ export const handleGetFirestore = async (location) => {
   return arr;
 };
 
+// 🚀 OPTIMIZED VERSIONS - Versiuni cu limite pentru reducerea read-urilor
+// PĂSTREAZĂ FUNCȚIA ORIGINALĂ NESCHIMBATĂ PENTRU COMPATIBILITATE
+
+//get firestore docs from a collection WITH LIMIT - versiune optimizată
+export const handleGetFirestoreWithLimit = async (location, limitCount = 50, orderByField = null, orderDirection = 'desc') => {
+  console.log(`🔥 [OPTIMIZED] Fetching from ${location} with limit ${limitCount}`);
+  
+  try {
+    let arr = [];
+    let q = collection(db, location);
+    
+    // Adaugă ordering dacă e specificat
+    if (orderByField) {
+      q = query(q, orderBy(orderByField, orderDirection), limit(limitCount));
+    } else {
+      q = query(q, limit(limitCount));
+    }
+    
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      arr.push({
+        documentId: doc.id, // Adaugă documentId pentru referință
+        ...doc.data()
+      });
+    });
+
+    console.log(`✅ [OPTIMIZED] Fetched ${arr.length} docs from ${location} (limit: ${limitCount})`);
+    return arr;
+    
+  } catch (error) {
+    console.error(`❌ [OPTIMIZED] Error fetching ${location}:`, error);
+    
+    // FALLBACK LA VERSIUNEA ORIGINALĂ în caz de eroare
+    console.log(`🔄 [FALLBACK] Falling back to original handleGetFirestore for ${location}`);
+    return await handleGetFirestore(location);
+  }
+};
+
+//get firestore docs with pagination - versiune pentru încărcare progresivă
+export const handleGetFirestorePaginated = async (location, limitCount = 20, lastVisible = null, orderByField = 'createdAt', orderDirection = 'desc') => {
+  console.log(`📄 [PAGINATED] Fetching from ${location} - page size: ${limitCount}`);
+  
+  try {
+    let arr = [];
+    let q = collection(db, location);
+    
+    if (lastVisible) {
+      q = query(q, orderBy(orderByField, orderDirection), startAfter(lastVisible), limit(limitCount));
+    } else {
+      q = query(q, orderBy(orderByField, orderDirection), limit(limitCount));
+    }
+    
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      arr.push({
+        documentId: doc.id,
+        ...doc.data()
+      });
+    });
+
+    const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+    const hasMore = querySnapshot.docs.length === limitCount;
+
+    console.log(`✅ [PAGINATED] Fetched ${arr.length} docs from ${location}, hasMore: ${hasMore}`);
+    
+    return {
+      data: arr,
+      lastVisible: newLastVisible,
+      hasMore: hasMore
+    };
+    
+  } catch (error) {
+    console.error(`❌ [PAGINATED] Error fetching ${location}:`, error);
+    
+    // FALLBACK - returnează datele cu versiunea originală
+    console.log(`🔄 [FALLBACK] Using original handleGetFirestore for ${location}`);
+    const fallbackData = await handleGetFirestore(location);
+    return {
+      data: fallbackData,
+      lastVisible: null,
+      hasMore: false
+    };
+  }
+};
+
+//get active conferences with limit and ordering - versiune îmbunătățită
+export const handleGetConferinteActiveOptimized = async (limitCount = 100) => {
+  console.log(`🎪 [CONFERENCES OPTIMIZED] Fetching active conferences with limit ${limitCount}`);
+  
+  try {
+    let arr = [];
+    
+    const q = query(
+      collection(db, "ConferinteGrup"),
+      where("status", "==", "activa"),
+      orderBy("dataInceput", "asc"),
+      limit(limitCount)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      arr.push({
+        documentId: doc.id,
+        ...doc.data()
+      });
+    });
+
+    console.log(`✅ [CONFERENCES OPTIMIZED] Fetched ${arr.length} active conferences`);
+    return arr;
+    
+  } catch (error) {
+    console.error(`❌ [CONFERENCES OPTIMIZED] Error fetching active conferences:`, error);
+    
+    // FALLBACK - folosește funcția existentă handleGetConferinteActive
+    console.log(`🔄 [FALLBACK] Using existing handleGetConferinteActive function`);
+    return await handleGetConferinteActive();
+  }
+};
+
 //DELETE FROM FIRESTORE DATA
 
 export const handleDeleteFirestoreData = async (

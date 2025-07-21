@@ -57,7 +57,10 @@ const MediaCardConstantService = ({
   } = useApiData();
 
   // Asociază fiecare categorie cu o carte, repetând cărțile dacă este necesar
-  const card = shuffledCartiViitor[index % shuffledCartiViitor.length];
+  // 🚀 FIX: Verificări defensive pentru datele din cache optimizat
+  const card = (shuffledCartiViitor && Array.isArray(shuffledCartiViitor) && shuffledCartiViitor.length > 0)
+    ? shuffledCartiViitor[index % shuffledCartiViitor.length]
+    : null;
   const detectedLng = languageDetector.detect();
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -71,8 +74,34 @@ const MediaCardConstantService = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  console.log("carti viitor...", cartiViitor);
-  console.log("Card...", shuffledCartiViitor);
+  // 🔍 [DEBUG LOGS] Pentru troubleshooting optimizări cache
+  console.log("🔮 [CITIRE VIITOR] CartiViitor state:", {
+    data: cartiViitor,
+    type: typeof cartiViitor,
+    hasArr: cartiViitor && cartiViitor.arr,
+    arrLength: cartiViitor?.arr?.length,
+    isArray: Array.isArray(cartiViitor)
+  });
+  
+  console.log("🎯 [CITIRE VIITOR] CategoriiViitor state:", {
+    data: categoriiViitor,
+    type: typeof categoriiViitor,
+    hasArr: categoriiViitor && categoriiViitor.arr,
+    arrLength: categoriiViitor?.arr?.length
+  });
+  
+  console.log("🃏 [CITIRE VIITOR] ShuffledCartiViitor state:", {
+    data: shuffledCartiViitor,
+    type: typeof shuffledCartiViitor,
+    length: shuffledCartiViitor?.length,
+    isArray: Array.isArray(shuffledCartiViitor)
+  });
+  
+  console.log("🎴 [CITIRE VIITOR] Current card:", {
+    card,
+    index,
+    cardExists: !!card
+  });
   console.log("Card...", card);
 
   // Starea pentru a gestiona afișarea fundalului alternativ
@@ -222,20 +251,27 @@ export function CitirePersonalizata({ services }) {
 
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
-  const [visibleCards, setVisibleCards] = React.useState(
-    new Array(categoriiViitor.arr.length).fill(true)
-  );
+  // 🚀 FIX: Safe initialization pentru optimizările cache 
+  const [visibleCards, setVisibleCards] = React.useState(() => {
+    // Lazy initialization pentru a evita crash-ul pe undefined
+    const length = categoriiViitor?.arr?.length || 8; // fallback la 8 carti default
+    return new Array(length).fill(true);
+  });
 
   React.useEffect(() => {
-    setVisibleCards(new Array(categoriiViitor.arr.length).fill(true));
+    // 🚀 FIX: Safe access pentru optimizările cache
+    const length = categoriiViitor?.arr?.length || 8;
+    setVisibleCards(new Array(length).fill(true));
   }, [shuffleCartiViitor]);
 
   // Declanșarea animației de ieșire
   React.useEffect(() => {
     if (triggerExitAnimation) {
-      setVisibleCards(new Array(categoriiViitor.arr.length).fill(false));
+      // 🚀 FIX: Safe access pentru optimizările cache
+      const length = categoriiViitor?.arr?.length || 8;
+      setVisibleCards(new Array(length).fill(false));
     }
-  }, [triggerExitAnimation, categoriiViitor.arr.length]);
+  }, [triggerExitAnimation, categoriiViitor?.arr?.length]);
 
   const isFirstEntry = React.useRef(true);
 

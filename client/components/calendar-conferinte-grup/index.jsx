@@ -38,12 +38,13 @@ const CalendarConferinteGrup = () => {
   useEffect(() => {
     fetchConferinte();
     
-    // Setez un interval pentru a reîmprospăta datele la fiecare 30 de secunde
+    // 🚀 OPTIMIZAT: Setez un interval pentru a reîmprospăta datele la fiecare 5 minute
+    // Redus de la 30 secunde pentru a economisi read-uri Firestore
     // Acest lucru ajută la sincronizarea cu modificările făcute de admin
     const refreshInterval = setInterval(() => {
-      console.log("🔄 [REFRESH] Reîmprospătez datele conferințelor...");
+      console.log("🔄 [REFRESH OPTIMIZED] Reîmprospătez datele conferințelor...");
       fetchConferinte();
-    }, 30000); // 30 secunde
+    }, 300000); // 5 minute (300000ms) - redus de la 30s pentru optimizare
 
     // Cleanup interval când componenta se demontează
     return () => {
