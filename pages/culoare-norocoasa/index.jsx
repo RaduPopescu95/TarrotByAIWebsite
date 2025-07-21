@@ -100,12 +100,6 @@ export function NumarNorocos() {
   }, []);
 
   React.useEffect(() => {
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
-  }, []);
-
-  React.useEffect(() => {
     // Setează o întârziere pentru a permite tuturor cardurilor să termine animația de intrare
     const delay = constantServices.length * 0.15 + 0.5; // Ajustează această valoare dacă este necesar
     const timer = setTimeout(() => {

@@ -450,9 +450,7 @@ export function CitirePersonalizata({ services }) {
       "categorii personalizate.................//asdas......",
       categoriiPersonalizate
     );
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
+    // Access allowed without authentication
   }, []);
 
   React.useEffect(() => {

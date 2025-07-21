@@ -118,11 +118,7 @@ export function NumarNorocos() {
     getRandomDocumentFirestore();
   }, []);
 
-  React.useEffect(() => {
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
-  }, []);
+  // Access allowed without authentication
 
   React.useEffect(() => {
     // Setează o întârziere pentru a permite tuturor cardurilor să termine animația de intrare

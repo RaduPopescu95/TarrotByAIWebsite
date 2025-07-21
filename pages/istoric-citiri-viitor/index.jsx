@@ -223,9 +223,7 @@ export function IstoricCitiriViitor() {
 
   React.useEffect(() => {
     loadImages();
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
+    // Access allowed without authentication
   }, []);
 
   return (

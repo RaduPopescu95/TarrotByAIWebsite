@@ -251,9 +251,7 @@ export function CitirePersonalizata({ services }) {
 
   React.useEffect(() => {
     console.log("categoriiViitor........//asdas......", categoriiViitor);
-    if (!currentUser && !isGuestUser) {
-      router.push("login");
-    }
+    // Access allowed without authentication
   }, []);
 
   React.useEffect(() => {
