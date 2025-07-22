@@ -323,7 +323,7 @@ const MediaCardConstantService = ({
         initial="initial"
         animate="animate"
       >
-        {card && (
+        {card && card.image && card.image.finalUri && (
           <img
             src={card.image.finalUri}
             alt={item.text}
@@ -334,6 +334,21 @@ const MediaCardConstantService = ({
               borderRadius: "12px"
             }}
           />
+        )}
+        {card && (!card.image || !card.image.finalUri) && (
+          <div style={{
+            width: isDesktop ? "75%" : "85%",
+            height: "200px",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f0f0f0',
+            color: '#999',
+            fontSize: '12px',
+            borderRadius: "12px"
+          }}>
+            Loading...
+          </div>
         )}
       </motion.div>
 

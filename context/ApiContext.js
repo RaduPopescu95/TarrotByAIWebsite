@@ -13,6 +13,8 @@ const ApiDataContext = createContext();
 export const useApiData = () => useContext(ApiDataContext);
 
 export const ApiDataProvider = ({ children }) => {
+  // 🚀 NEW: Get clearAuthCache from AuthContext
+  
   // 🚀 FIX: Initialize cu structura corectă în loc de array gol
   const [cartiPersonalizate, setCartiPersonalizate] = useState({ arr: [] });
   const [categoriiPersonalizate, setCategoriiPersonalizate] = useState({ arr: [] });
@@ -227,279 +229,52 @@ export const ApiDataProvider = ({ children }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log("🚀 [NO CACHE] Starting API-only data fetching...");
 
-      // Funcție separată pentru handleGetFirestore
-
-      // setVarianteCarti(await handleGetFirestore("VarianteCarti"));
-
-      // Funcție pentru a obține datele fie din localStorage, fie de la Firebase
-
-      // 🚀 OPTIMIZAT: Cache îmbunătățit cu timestamp și logică mai inteligentă
-      
-      // Actualizează sau obține contorul de accesări (păstrez sistemul existent)
-      let accessCount = parseInt(localStorage.getItem("accessCount") || "0");
-      accessCount += 1;
-      localStorage.setItem("accessCount", accessCount.toString());
-
-      // OPTIMIZAT: Reduc frecvența refresh-ului de la 100 la 200 pentru mai puține read-uri
-      // 🚀 TEMPORARY FIX: Force refresh pentru a repara structura datelor corupte
-      const shouldRefreshData = accessCount % 200 === 0 || accessCount <= 10;
-
-      const getDataOrFetch = async (category, key) => {
-        console.log("🔍 [CACHE OPTIMIZED] Start fetch from firebase real time or localstorage");
-        const storageKey = `${category}-${key}`;
-        const timestampKey = `${storageKey}_timestamp`;
-        
-        console.log("🎯 [CACHE DEBUG] Requesting:", { category, key, storageKey, shouldRefreshData, accessCount });
-        
-        // 🚀 TEMPORARY FIX: Disable cache for tarot reading data to debug corruption issues
-        const isCardReadingData = (
-          category === "Citire-Personalizata" || 
-          category === "Citire-Viitor"
-        );
-        
-        if (isCardReadingData) {
-          console.log("🚫 [CACHE DISABLED] Forcing fresh fetch for card reading data:", { category, key });
-          try {
-            console.log("🔥 [CACHE DISABLED] Fetching FRESH from Firebase (no cache)");
-            const data = await getData(category, key);
-            
-            console.log("🎉 [CACHE DISABLED] Fresh data structure:", {
-              dataType: typeof data,
-              isArray: Array.isArray(data),
-              hasArr: data && data.arr,
-              arrLength: data?.arr?.length,
-              dataStructure: data,
-              firstElement: data?.arr?.[0]
-            });
-            
-            // 🚀 CHECK: If Firebase returns empty data, try API fallback
-            if (!data?.arr || data.arr.length === 0) {
-              console.log("⚠️ [EMPTY DATA] Firebase returned empty data, trying API fallback...");
-              
-              try {
-                const response = await fetch(`/api/public-tarot-data?category=${category}&key=${key}`);
-                const apiData = await response.json();
-                
-                console.log("🎉 [FALLBACK] API data fetched successfully:", {
-                  dataType: typeof apiData,
-                  hasArr: apiData && apiData.arr,
-                  arrLength: apiData?.arr?.length,
-                  firstElement: apiData?.arr?.[0]
-                });
-                
-                if (apiData?.arr && apiData.arr.length > 0) {
-                  return apiData;
-                } else {
-                  console.log("⚠️ [FALLBACK] API also returned empty data");
-                }
-              } catch (apiError) {
-                console.error("❌ [FALLBACK] API fallback failed:", apiError);
-              }
-            }
-            
-            return data;
-          } catch (firebaseError) {
-            console.error("❌ [CACHE DISABLED] Error fetching fresh data:", firebaseError);
-            console.log("🔄 [FALLBACK] Firebase error - trying API endpoint for public data...");
-            
-            try {
-              const response = await fetch(`/api/public-tarot-data?category=${category}&key=${key}`);
-              const apiData = await response.json();
-              
-              console.log("🎉 [FALLBACK] API data fetched successfully:", {
-                dataType: typeof apiData,
-                hasArr: apiData && apiData.arr,
-                arrLength: apiData?.arr?.length,
-                firstElement: apiData?.arr?.[0]
-              });
-              
-              return apiData;
-            } catch (apiError) {
-              console.error("❌ [FALLBACK] API fallback also failed:", apiError);
-              return { arr: [] }; // final fallback
-            }
-          }
-        }
-        
-        // Regular cache logic for other data
-        // Verifică dacă există date în cache
-        const cachedData = localStorage.getItem(storageKey);
-        const cacheTimestamp = localStorage.getItem(timestampKey);
-        
-        console.log("💾 [CACHE DEBUG] Cache status:", { 
-          hasCachedData: !!cachedData, 
-          cacheDataLength: cachedData?.length || 0,
-          cacheTimestamp,
-          rawCachePreview: cachedData ? cachedData.substring(0, 100) + "..." : "none"
-        });
-        
-        // OPTIMIZAT: Cache cu timestamp - datele expiră după 24 de ore
-        const CACHE_EXPIRY_HOURS = 24;
-        const CACHE_EXPIRY_MS = CACHE_EXPIRY_HOURS * 60 * 60 * 1000;
-        const now = Date.now();
-        
-        // Verifică dacă cache-ul este fresh
-        const isCacheFresh = cacheTimestamp && 
-                            (now - parseInt(cacheTimestamp)) < CACHE_EXPIRY_MS;
-
-        if (cachedData && !shouldRefreshData && isCacheFresh) {
-          console.log(
-            "🗂️ [CACHE OPTIMIZED] Fetching from localStorage - cache is fresh",
-            shouldRefreshData
-          );
-          console.log("📊 [CACHE OPTIMIZED] Enter count:", accessCount);
-          console.log("⏰ [CACHE OPTIMIZED] Cache age:", Math.round((now - parseInt(cacheTimestamp)) / (60 * 60 * 1000)), "hours");
-          console.log("✅ [CACHE OPTIMIZED] Fetching from --------localstorage--------");
-          
-          try {
-            const parsedCacheData = JSON.parse(cachedData); // Datele sunt în localStorage
-            console.log("✅ [CACHE DEBUG] Successfully parsed cached data:", {
-              dataType: typeof parsedCacheData,
-              isArray: Array.isArray(parsedCacheData),
-              hasArr: parsedCacheData && parsedCacheData.arr,
-              arrLength: parsedCacheData?.arr?.length,
-              dataStructure: parsedCacheData
-            });
-            return parsedCacheData;
-          } catch (parseError) {
-            console.error("❌ [CACHE OPTIMIZED] Error parsing cached data, will fetch fresh:", parseError);
-            // Continuă să preia date fresh dacă parse-ul eșuează
-          }
-        }
-        
-        // Motivele pentru care se preiau date fresh
-        if (!cachedData) {
-          console.log("📭 [CACHE OPTIMIZED] No cached data found");
-        }
-        if (shouldRefreshData) {
-          console.log("🔄 [CACHE OPTIMIZED] Scheduled refresh due to access count");
-        }
-        if (!isCacheFresh) {
-          console.log("⏰ [CACHE OPTIMIZED] Cache expired, fetching fresh data");
-        }
-
+      // 🎯 API ONLY: Funcție simplă pentru a prelua date doar din API
+      const getDataFromAPI = async (category, key) => {
+        console.log("🔍 [API ONLY] Fetching:", { category, key });
         try {
-          console.log("🔥 [CACHE OPTIMIZED] Fetching from !!!!!!!Firebase!!!!!!!!!!");
-          const data = await getData(category, key); // Datele sunt preluate de la Firebase
+          const response = await fetch(`/api/public-tarot-data?category=${category}&key=${key}`);
+          const apiData = await response.json();
           
-          console.log("🎉 [CACHE DEBUG] Fresh data fetched from Firebase:", {
-            dataType: typeof data,
-            isArray: Array.isArray(data),
-            hasArr: data && data.arr,
-            arrLength: data?.arr?.length,
-            dataStructure: data
+          console.log("✅ [API ONLY] Data fetched successfully:", {
+            dataType: typeof apiData,
+            hasArr: apiData && apiData.arr,
+            arrLength: apiData?.arr?.length
           });
           
-          // Salvează datele și timestamp-ul
-          localStorage.setItem(storageKey, JSON.stringify(data));
-          localStorage.setItem(timestampKey, now.toString());
-          console.log("💾 [CACHE OPTIMIZED] Data cached successfully with timestamp");
-          
-          return data;
-        } catch (firebaseError) {
-          console.error("❌ [CACHE OPTIMIZED] Error fetching from Firebase:", firebaseError);
-          
-          // FALLBACK: Folosește datele cached chiar dacă sunt expirate
-          if (cachedData) {
-            console.log("🔄 [CACHE OPTIMIZED] Using expired cache as fallback");
-            try {
-              return JSON.parse(cachedData);
-            } catch (fallbackParseError) {
-              console.error("❌ [CACHE OPTIMIZED] Even fallback cache is corrupted:", fallbackParseError);
-            }
-          }
-          
-          // FALLBACK FINAL: Returnează date goale pentru a evita crash-ul aplicației
-          console.log("🆘 [CACHE OPTIMIZED] Returning empty fallback data");
-          return { arr: [] };
+          return apiData;
+        } catch (apiError) {
+          console.error("❌ [API ONLY] Error fetching from API:", apiError);
+          return { arr: [] }; // fallback gol
         }
       };
 
-      // 🚀 TEMPORARY FIX: Clear corrupted cache for card reading data
-      console.log("🧹 [CACHE CLEANUP] Clearing corrupted card reading cache...");
-      const cardReadingKeys = [
-        "Citire-Personalizata-Carti",
-        "Citire-Personalizata-Categorii", 
-        "Citire-Viitor-Carti",
-        "Citire-Viitor-Categorii",
-        "Citire-Personalizata-Carti_timestamp",
-        "Citire-Personalizata-Categorii_timestamp",
-        "Citire-Viitor-Carti_timestamp", 
-        "Citire-Viitor-Categorii_timestamp"
-      ];
-      
-      cardReadingKeys.forEach(key => {
-        const existed = localStorage.getItem(key);
-        if (existed) {
-          localStorage.removeItem(key);
-          console.log("🗑️ [CACHE CLEANUP] Removed corrupted cache:", key);
-        }
-      });
+      // Preia toate datele doar din API
+      console.log("📚 [API ONLY] Fetching CartiPersonalizate...");
+      const cartiPersonalizateData = await getDataFromAPI("Citire-Personalizata", "Carti");
+      setCartiPersonalizate(cartiPersonalizateData || { arr: [] });
 
-      // Preia datele din fiecare categorie si le salveaza in state
-      console.log("🔥 [API CONTEXT] Starting data fetching...");
+      console.log("📂 [API ONLY] Fetching CategoriiPersonalizate...");
+      const categoriiPersonalizateData = await getDataFromAPI("Citire-Personalizata", "Categorii");
+      setCategoriiPersonalizate(categoriiPersonalizateData || { arr: [] });
 
-      const cartiPersonalizateData = await getDataOrFetch("Citire-Personalizata", "Carti");
-      console.log("📚 [API CONTEXT] CartiPersonalizate fetched:", cartiPersonalizateData);
-      console.log("📚 [API CONTEXT] CartiPersonalizate DETAILED:", {
-        data: cartiPersonalizateData,
-        type: typeof cartiPersonalizateData,
-        isArray: Array.isArray(cartiPersonalizateData),
-        hasArr: cartiPersonalizateData && cartiPersonalizateData.arr,
-        arrLength: cartiPersonalizateData?.arr?.length,
-        keys: cartiPersonalizateData ? Object.keys(cartiPersonalizateData) : 'none',
-        firstElement: cartiPersonalizateData?.arr?.[0]
-      });
-      // 🚀 FIX: Ensure correct structure is set
-      if (cartiPersonalizateData && !cartiPersonalizateData.arr) {
-        console.warn("⚠️ [API CONTEXT] CartiPersonalizate missing .arr property, wrapping data");
-        setCartiPersonalizate({ arr: Array.isArray(cartiPersonalizateData) ? cartiPersonalizateData : [] });
-      } else {
-        setCartiPersonalizate(cartiPersonalizateData || { arr: [] });
-      }
+      console.log("🔮 [API ONLY] Fetching CartiViitor...");
+      const cartiViitorData = await getDataFromAPI("Citire-Viitor", "Carti");
+      setCartiViitor(cartiViitorData || { arr: [] });
 
-      const categoriiPersonalizateData = await getDataOrFetch("Citire-Personalizata", "Categorii");
-      console.log("📂 [API CONTEXT] CategoriiPersonalizate fetched:", categoriiPersonalizateData);
-      // 🚀 FIX: Ensure correct structure is set
-      if (categoriiPersonalizateData && !categoriiPersonalizateData.arr) {
-        console.warn("⚠️ [API CONTEXT] CategoriiPersonalizate missing .arr property, wrapping data");
-        setCategoriiPersonalizate({ arr: Array.isArray(categoriiPersonalizateData) ? categoriiPersonalizateData : [] });
-      } else {
-        setCategoriiPersonalizate(categoriiPersonalizateData || { arr: [] });
-      }
+      console.log("🗂️ [API ONLY] Fetching CategoriiViitor...");
+      const categoriiViitorData = await getDataFromAPI("Citire-Viitor", "Categorii");
+      setCategoriiViitor(categoriiViitorData || { arr: [] });
 
-      const cartiViitorData = await getDataOrFetch("Citire-Viitor", "Carti");
-      console.log("🔮 [API CONTEXT] CartiViitor fetched:", cartiViitorData);
-      // 🚀 FIX: Ensure correct structure is set
-      if (cartiViitorData && !cartiViitorData.arr) {
-        console.warn("⚠️ [API CONTEXT] CartiViitor missing .arr property, wrapping data");
-        setCartiViitor({ arr: Array.isArray(cartiViitorData) ? cartiViitorData : [] });
-      } else {
-        setCartiViitor(cartiViitorData || { arr: [] });
-      }
+      // Set empty for unused data
+      setVarianteCarti({ arr: [] });
 
-      const categoriiViitorData = await getDataOrFetch("Citire-Viitor", "Categorii");
-      console.log("🗂️ [API CONTEXT] CategoriiViitor fetched:", categoriiViitorData);
-      // 🚀 FIX: Ensure correct structure is set
-      if (categoriiViitorData && !categoriiViitorData.arr) {
-        console.warn("⚠️ [API CONTEXT] CategoriiViitor missing .arr property, wrapping data");
-        setCategoriiViitor({ arr: Array.isArray(categoriiViitorData) ? categoriiViitorData : [] });
-      } else {
-        setCategoriiViitor(categoriiViitorData || { arr: [] });
-      }
-      // setBlogData(await handleGetFirestore("BlogArticole"));
-
-      // setCitateMotivationale(
-      //   await getDataOrFetch("Others", "Citate-Motivationale")
-      // );
-      // setCuloriNorocoase(await getDataOrFetch("Others", "Culori-Norocoase"));
-      // setNumereNorocoase(await getDataOrFetch("Others", "Numere-Norocoase"));
-      // setOreNorocoase(await getDataOrFetch("Others", "Ore-Norocoase"));
-
+      console.log("🎉 [NO CACHE] All data fetched successfully from API only");
       setLoading(false);
     } catch (err) {
-      console.error(err);
+      console.error("❌ [NO CACHE] Error in fetchData:", err);
       setError(err);
       setLoading(false);
     }

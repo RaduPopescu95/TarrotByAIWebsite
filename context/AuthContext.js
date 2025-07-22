@@ -51,21 +51,77 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🚀 NEW: Function to clear auth cache and force re-authentication
+  const clearAuthCache = async () => {
+    try {
+      console.log("🧹 [AUTH] Clearing authentication cache...");
+      
+      // Clear localStorage
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("isGuestUser");
+      localStorage.removeItem("accessCount");
+      
+      // Clear state
+      setCurrentUser(null);
+      setUserData(null);
+      setIsGuestUser(false);
+      
+      // Sign out from Firebase (if signed in)
+      if (authentication.currentUser) {
+        const { signOut } = await import("firebase/auth");
+        await signOut(authentication);
+        console.log("✅ [AUTH] Firebase sign-out successful");
+      }
+      
+      // 🚀 REMOVED: No more anonymous auth - just clear cache
+      console.log("✅ [AUTH] Cache cleared successfully");
+      
+    } catch (error) {
+      console.error("❌ [AUTH] Error clearing auth cache:", error);
+    }
+  };
+
+  // 🚀 NEW: Function to detect account switches and handle them
+  const handleAccountSwitch = async (newUser) => {
+    const storedUser = localStorage.getItem("currentUser");
+    
+    if (storedUser) {
+      const parsedStoredUser = JSON.parse(storedUser);
+      
+      // Check if user has switched accounts
+      if (newUser && parsedStoredUser.uid !== newUser.uid) {
+        console.log("🔄 [AUTH] Account switch detected!", {
+          previous: parsedStoredUser.uid,
+          current: newUser.uid
+        });
+        
+        await clearAuthCache();
+        return true; // Indicates an account switch occurred
+      }
+    }
+    
+    return false;
+  };
+
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
       console.log("start use effect from auth context", user);
       
-      // 🚀 TEMP FIX: If no user, sign in anonymously for public data access
-      if (!user) {
-        try {
-          console.log("🔑 [AUTH] No user found, signing in anonymously for public data access...");
-          const { signInAnonymously } = await import("firebase/auth");
-          const anonUser = await signInAnonymously(authentication);
-          console.log("✅ [AUTH] Anonymous sign-in successful:", anonUser.user.uid);
-          return; // onAuthStateChanged will be called again with the anonymous user
-        } catch (error) {
-          console.error("❌ [AUTH] Anonymous sign-in failed:", error);
+      // 🚀 NEW: Check for account switch first
+      if (user && !user.isAnonymous) {
+        const accountSwitched = await handleAccountSwitch(user);
+        if (accountSwitched) {
+          console.log("🔄 [AUTH] Account switch handled, returning early");
+          return; // onAuthStateChanged will be called again
         }
+      }
+      
+      // 🚀 REMOVED: No anonymous auth - just set loading to false if no user
+      if (!user) {
+        console.log("🔑 [AUTH] No user found, setting loading to false");
+        setLoading(false);
+        return;
       }
       
       if (user && user.providerData[0]?.providerId !== "google.com") {
@@ -97,6 +153,13 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           console.error("Failed to fetch user data:", error);
+          // 🚀 NEW: Handle permission denied errors
+          if (error.message && error.message.includes("Permission denied")) {
+            console.log("🚨 [AUTH] Permission denied detected, clearing cache and re-authenticating...");
+            await clearAuthCache();
+            return;
+          }
+          
           // Set fallback user data in case of error
           let fallbackUserData = {
             first_name: user.displayName || "",
@@ -186,6 +249,7 @@ export const AuthProvider = ({ children }) => {
     setLoading,
     selectedSlot,
     setSelectedSlot,
+    clearAuthCache, // 🚀 NEW: Export function to clear auth cache
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

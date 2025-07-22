@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
 import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
 import { useFirstVisit } from "../hooks/useFirstVisit";
+import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
 import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 
 // Load Bootstrap JavaScript only on client
@@ -105,6 +106,13 @@ function MyApp({ Component, pageProps }) {
       window.resetLanguageSelection = resetFirstVisit;
     }
   }, [resetFirstVisit]);
+
+  // 🚀 NEW: Initialize account switch monitor
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      initAccountSwitchMonitor();
+    }
+  }, []);
 
   const handleLanguageSelect = (language) => {
     if (shouldLog) {
