@@ -5,8 +5,10 @@ import { createRecordingLogger } from './recordingLogger';
 
 export class AgoraStreamRecorder {
   constructor(options = {}) {
-    console.log('🚀 [AGORA RECORDER v3.0] === CONSTRUCTOR CALLED ===', options);
-    window.AGORA_RECORDER_VERSION = 'v3.0'; // Global marker
+    console.log('🚀 [AGORA RECORDER v4.0 FORCE RELOAD] === CONSTRUCTOR CALLED ===', options);
+    console.error('🚀 [AGORA RECORDER v4.0 FORCE RELOAD] ERROR LOG TO ENSURE VISIBILITY');
+    alert('AGORA RECORDER v4.0 LOADED'); // Force visible confirmation
+    window.AGORA_RECORDER_VERSION = 'v4.0'; // Global marker
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.canvas = null;
@@ -197,19 +199,31 @@ export class AgoraStreamRecorder {
   }
 
   async startRecording() {
+    alert('🎬 [v4.2] METHOD STARTED!'); // FIRST THING
+    
     try {
+      console.log('🎬 [AUDIO DEBUG v4.2] === START RECORDING CALLED ===');
+      console.error('🎬 [AUDIO DEBUG v4.2] === START RECORDING CALLED === (ERROR LOG)');
+      
+      // Check browser support FIRST
+      if (!AgoraStreamRecorder.isSupported()) {
+        alert('❌ Browser not supported!');
+        throw new Error('Browser-ul nu suportă înregistrarea video');
+      }
+      
+      alert('✅ Browser check passed!');
+      
       this.logger.info('🎬 [NEW AUDIO SYSTEM v2.0] Starting Agora stream recording (client-side only)');
       console.log('🎬 [NEW AUDIO SYSTEM v2.0] Starting Agora stream recording (client-side only)');
       this.onProgress('🎬 Pregătire înregistrare...');
 
-      // Check browser support
-      if (!AgoraStreamRecorder.isSupported()) {
-        throw new Error('Browser-ul nu suportă înregistrarea video');
-      }
-
+      alert('📹 About to capture video elements...');
+      
       // Capture existing Agora video elements
       this.onProgress('🔍 Căutare elemente video...');
       const capturedStreams = await this.captureExistingAgoraStreams();
+      
+      alert(`📹 Captured ${capturedStreams} video streams!`);
       
       this.logger.info(`📊 Captured ${capturedStreams} video streams from Agora`);
       
@@ -218,13 +232,19 @@ export class AgoraStreamRecorder {
         // Continue anyway - we'll record the canvas which shows "waiting for participants"
       }
 
+      alert('🎨 About to setup canvas...');
+      
       // Setup canvas stream (VIDEO ONLY)
       this.onProgress('🎨 Configurare canvas...');
       const canvasStream = this.canvas.captureStream(this.options.frameRate);
       
+      alert('🎤 About to capture audio...');
+      
       // 🎤 NEW: Capture AUDIO from Agora video elements
       this.onProgress('🎤 Capturare audio...');
       const audioStream = await this.captureAudioFromAgoraStreams();
+      
+      alert(`🎤 Audio captured! Tracks: ${audioStream.getAudioTracks().length}`);
       
       // 🔗 NEW: Combine video (canvas) + audio streams
       const combinedStream = new MediaStream([
@@ -455,71 +475,103 @@ export class AgoraStreamRecorder {
   async captureAudioFromAgoraStreams() {
     let allAudioTracks = [];
     
-    console.log('🎤 [AUDIO CAPTURE v2.0] Searching for audio tracks in video elements...');
-    this.logger.info('🎤 [AUDIO CAPTURE v2.0] Searching for audio tracks in video elements...');
-    
-    for (const [uid, videoElement] of this.videoElements.entries()) {
-      try {
-        if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
-          const stream = videoElement.srcObject;
-          const streamAudioTracks = stream.getAudioTracks();
-          
-          this.logger.info(`🔍 Video element ${uid}:`, {
-            hasStream: !!stream,
-            audioTracks: streamAudioTracks.length,
-            trackDetails: streamAudioTracks.map(track => ({
-              id: track.id,
-              kind: track.kind,
-              enabled: track.enabled,
-              readyState: track.readyState,
-              muted: track.muted
-            }))
-          });
-          
-          if (streamAudioTracks.length > 0) {
-            streamAudioTracks.forEach(track => {
-              if (track.kind === 'audio' && track.readyState === 'live') {
-                // 🔧 FORCE ENABLE audio track if disabled
-                if (!track.enabled) {
-                  track.enabled = true;
-                  this.logger.warning(`🔧 Force-enabled audio track ${track.id}`);
-                }
-                allAudioTracks.push(track);
-                this.logger.success(`✅ Added audio track from ${uid}: ${track.id}`);
-              }
-            });
+    console.log('🎤 [AUDIO CAPTURE v3.1] Searching for audio tracks in <video> & <audio> elements...');
+    this.logger.info('🎤 [AUDIO CAPTURE v3.1] Searching for audio tracks in <video> & <audio> elements...');
+
+    const examineElement = (element, label) => {
+      if (element.srcObject && element.srcObject instanceof MediaStream) {
+        const stream = element.srcObject;
+        const streamAudioTracks = stream.getAudioTracks();
+
+        this.logger.info(`🔍 Element ${label}:`, {
+          tag: element.tagName.toLowerCase(),
+          hasStream: !!stream,
+          audioTracks: streamAudioTracks.length,
+          mutedProp: element.muted,
+          volume: element.volume,
+          trackDetails: streamAudioTracks.map(track => ({
+            id: track.id,
+            kind: track.kind,
+            enabled: track.enabled,
+            readyState: track.readyState,
+            muted: track.muted
+          }))
+        });
+
+        streamAudioTracks.forEach(track => {
+          if (track.kind === 'audio' && track.readyState === 'live') {
+            if (!track.enabled) {
+              track.enabled = true;
+              this.logger.warning(`🔧 Force-enabled audio track ${track.id}`);
+            }
+            allAudioTracks.push(track);
+            this.logger.success(`✅ Added audio track: ${track.id}`);
           }
-        } else {
-          this.logger.warning(`⚠️ Video element ${uid} has no srcObject stream`);
+        });
+      }
+    };
+
+    // 1. Examine stored video elements map
+    for (const [uid, videoElement] of this.videoElements.entries()) {
+      examineElement(videoElement, `stored video ${uid}`);
+    }
+
+    // 2. Examine ALL video elements on page
+    document.querySelectorAll('video').forEach((v, idx) => examineElement(v, `page video ${idx}`));
+
+    // 3. Examine ALL audio elements on page (new)
+    document.querySelectorAll('audio').forEach((a, idx) => examineElement(a, `page audio ${idx}`));
+
+    // If still none, try capture system audio via getDisplayMedia
+    if (allAudioTracks.length === 0) {
+      this.logger.warning('⚠️ [AUDIO CAPTURE v3.1] No audio after DOM scan – try getDisplayMedia({audio:true})');
+      try {
+        const sysStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: false });
+        sysStream.getAudioTracks().forEach(t => allAudioTracks.push(t));
+        if (sysStream.getAudioTracks().length) {
+          this.logger.success(`✅ Captured ${sysStream.getAudioTracks().length} system audio track(s)`);
         }
-      } catch (error) {
-        this.logger.error(`❌ Error processing audio from ${uid}:`, error);
+      } catch (e) {
+        this.logger.error('❌ getDisplayMedia audio failed:', e);
       }
     }
-    
-    // 🎯 FALLBACK: If no audio tracks found, try capturing from ALL video elements on page
+
+    // FINAL silent fallback
     if (allAudioTracks.length === 0) {
-      this.logger.warning('⚠️ No audio tracks found in stored elements, trying page-wide search...');
-      allAudioTracks = await this.fallbackAudioCapture();
+      this.logger.warning('⚠️ [AUDIO CAPTURE v3.1] Still no audio – creating silent track');
+      const silent = await this.createSilentAudioTrack();
+      if (silent) allAudioTracks.push(silent);
     }
-    
-    // 🎯 FINAL FALLBACK: Create silent audio track if no audio found
-    if (allAudioTracks.length === 0) {
-      this.logger.warning('⚠️ No audio tracks found anywhere, creating silent audio track...');
-      const silentTrack = await this.createSilentAudioTrack();
-      if (silentTrack) {
-        allAudioTracks.push(silentTrack);
-      }
-    }
-    
-    this.logger.info('🎵 Final audio capture summary:', {
-      totalAudioTracks: allAudioTracks.length,
-      videoElementsChecked: this.videoElements.size,
-      trackIds: allAudioTracks.map(t => t.id)
+
+    // ✅ MIX tracks via AudioContext to ensure single clean track (resolves browsers that reject multi-track)
+    const mixedStream = await this.mixAudioTracks(allAudioTracks);
+
+    this.logger.info('🎵 [AUDIO CAPTURE v3.1] Final audio capture summary:', {
+      totalOriginalTracks: allAudioTracks.length,
+      mixedTracks: mixedStream.getAudioTracks().length,
+      trackIds: mixedStream.getAudioTracks().map(t => t.id)
     });
     
-    // Return MediaStream with all captured audio tracks
-    return new MediaStream(allAudioTracks);
+    return mixedStream; // Return stream with 1 mixed audio track
+  }
+
+  // 🧫 Mix multiple audio tracks into single track using AudioContext
+  async mixAudioTracks(tracks) {
+    try {
+      if (!tracks.length) {
+        return new MediaStream();
+      }
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const destination = audioContext.createMediaStreamDestination();
+      tracks.forEach(track => {
+        const src = audioContext.createMediaStreamSource(new MediaStream([track]));
+        src.connect(destination);
+      });
+      return destination.stream;
+    } catch (err) {
+      this.logger.error('💥 Failed to mix audio tracks:', err);
+      return new MediaStream(tracks); // fallback return original
+    }
   }
 
   // 🎯 FALLBACK: Search all video elements on page for audio
