@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthContext";
 import { useRouter } from "next/router";
+import { ADMIN_UIDS } from "../../../../data/constants";
 
 const Home1Header = () => {
   const [searchField, setSearchField] = useState(false);
@@ -746,7 +747,7 @@ const Home1Header = () => {
                   </div>
                 </li> */}
                 {currentUser &&
-                (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+                !ADMIN_UIDS.includes(currentUser.uid) ? (
                   <li className="login-link">
                     <Link
                       onClick={() => onhandleCloseMenu()}
@@ -756,7 +757,7 @@ const Home1Header = () => {
                     </Link>
                   </li>
                 ) : currentUser &&
-                  (currentUser.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || currentUser.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+                  ADMIN_UIDS.includes(currentUser.uid) ? (
                   <li className="login-link">
                     <Link
                       onClick={() => onhandleCloseMenu()}
@@ -778,7 +779,7 @@ const Home1Header = () => {
               </ul>
             </div>
             {currentUser &&
-            (currentUser.uid != "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid != "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+            !ADMIN_UIDS.includes(currentUser.uid) ? (
               <ul className="nav header-navbar-rht">
                 <li className="register-btn">
                   <Link href="/cont-client" className="btn btn-primary log-btn">
@@ -788,7 +789,7 @@ const Home1Header = () => {
                 </li>
               </ul>
             ) : currentUser &&
-              (currentUser.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || currentUser.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+              ADMIN_UIDS.includes(currentUser.uid) ? (
               <ul className="nav header-navbar-rht">
                 <li className="register-btn">
                   <Link

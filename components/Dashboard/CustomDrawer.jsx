@@ -45,6 +45,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { handleLogout } from "../../utils/authUtils";
 import { useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
+import { ADMIN_UIDS } from "../../data/constants";
 
 const drawerWidth = 240;
 
@@ -133,7 +134,7 @@ export default function CustomDrawer(props) {
         // https://firebase.google.com/docs/reference/js/auth.user
         const uid = user.uid;
         console.log("is user.......");
-        if (uid === "LQheTX2moAhKbu72gaStkZgaGz32" || uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2" || uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") {
+        if (ADMIN_UIDS.includes(uid)) {
           router.push(router.asPath);
         } else {
           // setCurrentUser(null);

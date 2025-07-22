@@ -11,6 +11,7 @@ import {
 } from 'firebase/database';
 import { useAuth } from '../../context/AuthContext';
 import { database } from '../../firebase';
+import { ADMIN_UIDS } from '../../data/constants';
 
 // Iconițe simple (poți înlocui cu Lucide React sau alte librării)
 const MessageCircle = () => (
@@ -77,9 +78,7 @@ const RealtimeChat = ({
   const chatRoomId = `${meetingType}_${meetingId}`;
   
   // Determine user role and initial name
-  const userRole = currentUser?.uid === 'zFsAwNZA5bUonVRIQzRn2HZB3y62' || 
-                   currentUser?.uid === 'BhJZdiWVQJNnbLOCGWxzjGHVjHB2' || 
-                   currentUser?.uid === 'MSBePxFVcVO3vsfM5nwHr36ROfh2' ? 'admin' : 
+  const userRole = ADMIN_UIDS.includes(currentUser?.uid) ? 'admin' : 
                    meetingType === 'consultation' ? 'client' : 'participant';
   
   // FIXED: Force unique identifiers to prevent admin/user confusion

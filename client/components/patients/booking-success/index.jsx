@@ -8,6 +8,7 @@ import {
   handleGetFirestore,
 } from "../../../../utils/firestoreUtils";
 import { formatDateSlot } from "../../../../utils/timeUtils";
+import { ADMIN_UIDS } from "../../../../data/constants";
 
 const BookingSuccess = (props) => {
   const { currentUser } = useAuth();
@@ -169,7 +170,7 @@ const BookingSuccess = (props) => {
                       </div>
                     )}
                     {currentUser?.uid &&
-                    (currentUser.uid !== "LQheTX2moAhKbu72gaStkZgaGz32" && currentUser.uid !== "zFsAwNZA5bUonVRIQzRn2HZB3y62") ? (
+                    !ADMIN_UIDS.includes(currentUser.uid) ? (
                       <>
                         <p>
                           Accesați rezervarea din cont la data rezervării pentru

@@ -8,6 +8,7 @@ import { useAuth } from "../../../../context/AuthContext";
 import { onAuthStateChanged } from "firebase/auth";
 import { authentication } from "../../../../firebase";
 import { Box, CircularProgress } from "@mui/material";
+import { ADMIN_UIDS } from "../../../../data/constants";
 const DoctorSidebar = () => {
   const router = useRouter();
   const {
@@ -25,26 +26,40 @@ const DoctorSidebar = () => {
   ];
 
   useEffect(() => {
+    console.log("🔄 [DOCTOR SIDEBAR] useEffect triggered");
+    console.log("🔄 [DOCTOR SIDEBAR] currentUser from context:", currentUser ? "EXISTS" : "NULL");
+    console.log("🔄 [DOCTOR SIDEBAR] loading from context:", loading);
+    
+    // If context is still loading, wait for it
+    if (loading) {
+      console.log("⏳ [DOCTOR SIDEBAR] Auth context still loading, waiting...");
+      return;
+    }
+    
     setLoading(true);
     const authenticated = authentication;
     onAuthStateChanged(authenticated, (user) => {
-      if (user && (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62")) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/auth.user
-        const uid = user.uid;
-        console.log("is user.......");
-        setLoading(false);
-
-        // ...
+      console.log("🔍 [DOCTOR SIDEBAR] Auth state changed, user:", user ? "EXISTS" : "NULL");
+      
+      if (user) {
+        console.log("👤 [DOCTOR SIDEBAR] User UID:", user.uid);
+        console.log("🔐 [DOCTOR SIDEBAR] Checking against admin UIDs:", ADMIN_UIDS);
+        
+        if (ADMIN_UIDS.includes(user.uid)) {
+          console.log("✅ [DOCTOR SIDEBAR] User is admin, allowing access");
+          setLoading(false);
+        } else {
+          console.log("❌ [DOCTOR SIDEBAR] User UID not in admin list, redirecting to login");
+          router.push("/login-admin-consultatii");
+          setLoading(false);
+        }
       } else {
-        console.log("is user......no.");
+        console.log("❌ [DOCTOR SIDEBAR] No user found, redirecting to login");
         router.push("/login-admin-consultatii");
         setLoading(false);
-        // User is signed out
-        // ...
       }
     });
-  }, []);
+  }, [loading, currentUser]); // Add dependencies to re-run when context changes
 
   return (
     <>

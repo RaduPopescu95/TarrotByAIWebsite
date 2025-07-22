@@ -17,15 +17,28 @@ const LoginContainer = (props) => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
+    console.log("🔑 [LOGIN] Attempting admin login with email:", email);
+
     handleSignIn(email, password)
       .then((userCredentials) => {
-        console.log("user credentials...", userCredentials);
-        setTimeout(() => {
-          router.push("/admin-consultatii");
-        }, 500);
+        console.log("✅ [LOGIN] User credentials received:", userCredentials.user.uid);
+        console.log("🔐 [LOGIN] Checking if UID is in admin list...");
+        
+        // Import ADMIN_UIDS to check if this user is admin
+        import("../../../data/constants").then((constants) => {
+          if (constants.ADMIN_UIDS.includes(userCredentials.user.uid)) {
+            console.log("✅ [LOGIN] User is admin, redirecting to dashboard...");
+            setTimeout(() => {
+              router.push("/admin-consultatii");
+            }, 500);
+          } else {
+            console.error("❌ [LOGIN] User is not admin, UID:", userCredentials.user.uid);
+            setError("Access denied. Only admins can access this area.");
+          }
+        });
       })
       .catch((error) => {
-        console.error("Error during sign in:", error.message);
+        console.error("❌ [LOGIN] Error during sign in:", error.message);
         setError("Failed to log in. Error message: " + error.message);
       });
   };

@@ -21,6 +21,7 @@ import { authentication } from "../../firebase";
 import Head from "next/head";
 import { handleLogout } from "../../utils/authUtils";
 import { useAuth } from "../../context/AuthContext";
+import { ADMIN_UIDS } from "../../data/constants";
 
 const defaultTheme = createTheme();
 
@@ -98,7 +99,7 @@ export default function SignIn() {
           // Signed in
           const user = userCredential.user;
           // Verifică dacă UID-ul utilizatorului corespunde cu cel specificat
-          if (user.uid === "LQheTX2moAhKbu72gaStkZgaGz32" || user.uid === "MSBePxFVcVO3vsfM5nwHr36ROfh2" || user.uid === "zFsAwNZA5bUonVRIQzRn2HZB3y62") {
+          if (ADMIN_UIDS.includes(user.uid)) {
             // Dacă UID-ul corespunde, utilizatorul poate continua
             route.push("/dashboard/citire-viitor-carti");
           } else {
