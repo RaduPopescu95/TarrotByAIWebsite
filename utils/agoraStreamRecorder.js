@@ -5,6 +5,8 @@ import { createRecordingLogger } from './recordingLogger';
 
 export class AgoraStreamRecorder {
   constructor(options = {}) {
+    console.log('🚀 [AGORA RECORDER v3.0] === CONSTRUCTOR CALLED ===', options);
+    window.AGORA_RECORDER_VERSION = 'v3.0'; // Global marker
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.canvas = null;
@@ -65,11 +67,74 @@ export class AgoraStreamRecorder {
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus', 
       'video/webm;codecs=h264,opus',
+      'video/webm;codecs=vp9,vorbis', // Fallback audio codec
+      'video/webm;codecs=vp8,vorbis', // Fallback audio codec
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
       'video/webm',
+      'video/mp4;codecs=h264,aac', // MP4 with AAC audio
       'video/mp4'
     ];
     
     return types.filter(type => MediaRecorder.isTypeSupported(type));
+  }
+
+  static getAudioSupportedMimeTypes() {
+    if (typeof window === 'undefined') return [];
+    
+    const audioTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm;codecs=vorbis',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg;codecs=vorbis',
+      'audio/mp4;codecs=aac',
+      'audio/mpeg'
+    ];
+    return audioTypes.filter(type => MediaRecorder.isTypeSupported(type));
+  }
+
+  // 🎵 SELECT BEST MIME TYPE based on audio availability
+  selectBestMimeType(hasAudio) {
+    const supportedTypes = AgoraStreamRecorder.getSupportedMimeTypes();
+    
+    this.logger.info('🎯 Selecting best MIME type:', {
+      hasAudio,
+      availableTypes: supportedTypes,
+      preferredType: this.options.mimeType
+    });
+
+    // Try preferred type first
+    if (MediaRecorder.isTypeSupported(this.options.mimeType)) {
+      this.logger.success(`✅ Using preferred MIME type: ${this.options.mimeType}`);
+      return this.options.mimeType;
+    }
+
+    // Fallback priority list based on audio availability
+    const fallbackTypes = hasAudio ? [
+      'video/webm;codecs=vp9,opus',  // Best quality with OPUS audio
+      'video/webm;codecs=vp8,opus',  // Good quality with OPUS audio  
+      'video/webm;codecs=vp9,vorbis', // Fallback audio codec
+      'video/webm;codecs=vp8,vorbis', // Fallback audio codec
+      'video/mp4;codecs=h264,aac',   // MP4 with AAC audio
+      'video/webm',                  // Basic WebM
+      'video/mp4'                    // Basic MP4
+    ] : [
+      'video/webm;codecs=vp9',       // Video only - high quality
+      'video/webm;codecs=vp8',       // Video only - good quality
+      'video/webm',                  // Basic WebM
+      'video/mp4'                    // Basic MP4
+    ];
+
+    for (const type of fallbackTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        this.logger.warning(`⚠️ Fallback to MIME type: ${type} (hasAudio: ${hasAudio})`);
+        return type;
+      }
+    }
+
+    this.logger.error('❌ No supported MIME type found, using browser default');
+    return ''; // Let browser choose
   }
 
   setupCanvas() {
@@ -133,7 +198,8 @@ export class AgoraStreamRecorder {
 
   async startRecording() {
     try {
-      this.logger.info('🎬 Starting Agora stream recording (client-side only)');
+      this.logger.info('🎬 [NEW AUDIO SYSTEM v2.0] Starting Agora stream recording (client-side only)');
+      console.log('🎬 [NEW AUDIO SYSTEM v2.0] Starting Agora stream recording (client-side only)');
       this.onProgress('🎬 Pregătire înregistrare...');
 
       // Check browser support
@@ -170,7 +236,14 @@ export class AgoraStreamRecorder {
         videoTracks: combinedStream.getVideoTracks().length,
         audioTracks: combinedStream.getAudioTracks().length,
         hasVideo: combinedStream.getVideoTracks().length > 0,
-        hasAudio: combinedStream.getAudioTracks().length > 0
+        hasAudio: combinedStream.getAudioTracks().length > 0,
+        audioTrackDetails: combinedStream.getAudioTracks().map(track => ({
+          id: track.id,
+          kind: track.kind,
+          enabled: track.enabled,
+          readyState: track.readyState,
+          muted: track.muted
+        }))
       });
 
       // Setup MediaRecorder for COMBINED stream (video + audio)
@@ -179,14 +252,8 @@ export class AgoraStreamRecorder {
         audioBitsPerSecond: this.options.audioBitsPerSecond
       };
 
-      let mimeType = this.options.mimeType;
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        this.logger.warning('⚠️ Preferred MIME type not supported, falling back');
-        mimeType = 'video/webm';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = ''; // Use default
-        }
-      }
+      // 🎵 ENHANCED MIME TYPE SELECTION with audio codec fallbacks
+      let mimeType = this.selectBestMimeType(combinedStream.getAudioTracks().length > 0);
 
       if (mimeType) {
         mediaRecorderOptions.mimeType = mimeType;
@@ -194,11 +261,20 @@ export class AgoraStreamRecorder {
 
       this.logger.info('⚙️ Configuring MediaRecorder for combined stream', {
         options: mediaRecorderOptions,
-        finalMimeType: mimeType || 'default',
+        finalMimeType: mimeType || 'browser-default',
         streamTracks: {
           video: combinedStream.getVideoTracks().length,
           audio: combinedStream.getAudioTracks().length
-        }
+        },
+        audioTrackInfo: combinedStream.getAudioTracks().map(track => ({
+          id: track.id,
+          enabled: track.enabled,
+          readyState: track.readyState,
+          muted: track.muted,
+          label: track.label
+        })),
+        supportedMimeTypes: AgoraStreamRecorder.getSupportedMimeTypes(),
+        supportedAudioTypes: AgoraStreamRecorder.getAudioSupportedMimeTypes()
       });
 
       // 🎥 Use COMBINED stream instead of canvas-only stream
@@ -220,6 +296,12 @@ export class AgoraStreamRecorder {
 
       this.mediaRecorder.onstop = () => {
         this.logger.info('🛑 MediaRecorder stopped, processing recording');
+        this.logger.info('🔍 Final recording info:', {
+          chunksCount: this.recordedChunks.length,
+          totalSize: this.recordedChunks.reduce((size, chunk) => size + chunk.size, 0),
+          mimeType: this.mediaRecorder.mimeType,
+          state: this.mediaRecorder.state
+        });
         this.onRecordingStopped();
       };
 
@@ -266,7 +348,8 @@ export class AgoraStreamRecorder {
     let capturedCount = 0;
     
     try {
-      this.logger.info('🔍 Waiting for AgoraUIKit videos to load...');
+      console.log('🔍 [VIDEO CAPTURE v2.0] Waiting for AgoraUIKit videos to load...');
+      this.logger.info('🔍 [VIDEO CAPTURE v2.0] Waiting for AgoraUIKit videos to load...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Run audio diagnostics first
@@ -370,9 +453,10 @@ export class AgoraStreamRecorder {
   }
 
   async captureAudioFromAgoraStreams() {
-    const allAudioTracks = [];
+    let allAudioTracks = [];
     
-    this.logger.info('🎤 Searching for audio tracks in video elements...');
+    console.log('🎤 [AUDIO CAPTURE v2.0] Searching for audio tracks in video elements...');
+    this.logger.info('🎤 [AUDIO CAPTURE v2.0] Searching for audio tracks in video elements...');
     
     for (const [uid, videoElement] of this.videoElements.entries()) {
       try {
@@ -387,13 +471,19 @@ export class AgoraStreamRecorder {
               id: track.id,
               kind: track.kind,
               enabled: track.enabled,
-              readyState: track.readyState
+              readyState: track.readyState,
+              muted: track.muted
             }))
           });
           
           if (streamAudioTracks.length > 0) {
             streamAudioTracks.forEach(track => {
               if (track.kind === 'audio' && track.readyState === 'live') {
+                // 🔧 FORCE ENABLE audio track if disabled
+                if (!track.enabled) {
+                  track.enabled = true;
+                  this.logger.warning(`🔧 Force-enabled audio track ${track.id}`);
+                }
                 allAudioTracks.push(track);
                 this.logger.success(`✅ Added audio track from ${uid}: ${track.id}`);
               }
@@ -407,13 +497,174 @@ export class AgoraStreamRecorder {
       }
     }
     
-    this.logger.info('🎵 Audio capture summary:', {
+    // 🎯 FALLBACK: If no audio tracks found, try capturing from ALL video elements on page
+    if (allAudioTracks.length === 0) {
+      this.logger.warning('⚠️ No audio tracks found in stored elements, trying page-wide search...');
+      allAudioTracks = await this.fallbackAudioCapture();
+    }
+    
+    // 🎯 FINAL FALLBACK: Create silent audio track if no audio found
+    if (allAudioTracks.length === 0) {
+      this.logger.warning('⚠️ No audio tracks found anywhere, creating silent audio track...');
+      const silentTrack = await this.createSilentAudioTrack();
+      if (silentTrack) {
+        allAudioTracks.push(silentTrack);
+      }
+    }
+    
+    this.logger.info('🎵 Final audio capture summary:', {
       totalAudioTracks: allAudioTracks.length,
-      videoElementsChecked: this.videoElements.size
+      videoElementsChecked: this.videoElements.size,
+      trackIds: allAudioTracks.map(t => t.id)
     });
     
     // Return MediaStream with all captured audio tracks
     return new MediaStream(allAudioTracks);
+  }
+
+  // 🎯 FALLBACK: Search all video elements on page for audio
+  async fallbackAudioCapture() {
+    const foundAudioTracks = [];
+    const allVideos = document.querySelectorAll('video');
+    
+    console.log(`🔍 [FALLBACK v2.0] Searching ${allVideos.length} video elements on page...`);
+    this.logger.info(`🔍 [FALLBACK v2.0] Searching ${allVideos.length} video elements on page...`);
+    
+    allVideos.forEach((video, index) => {
+      if (video.srcObject && video.srcObject instanceof MediaStream) {
+        const audioTracks = video.srcObject.getAudioTracks();
+        
+        this.logger.info(`🎥 [FALLBACK] Video ${index}:`, {
+          id: video.id || 'no-id',
+          className: video.className,
+          audioTracks: audioTracks.length,
+          muted: video.muted
+        });
+        
+        audioTracks.forEach(track => {
+          if (track.kind === 'audio' && track.readyState === 'live') {
+            // Force enable if disabled
+            if (!track.enabled) {
+              track.enabled = true;
+              this.logger.warning(`🔧 [FALLBACK] Force-enabled audio track ${track.id}`);
+            }
+            foundAudioTracks.push(track);
+            this.logger.success(`✅ [FALLBACK] Found audio track: ${track.id}`);
+          }
+        });
+      }
+    });
+    
+    return foundAudioTracks;
+  }
+
+  // 🎯 CREATE SILENT AUDIO TRACK as absolute fallback
+  async createSilentAudioTrack() {
+    try {
+      this.logger.info('🔇 Creating silent audio track...');
+      
+      // Create AudioContext for silent audio generation
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // Create silent audio (gain = 0)
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      oscillator.connect(gainNode);
+      
+      // Create MediaStream from AudioContext
+      const destination = audioContext.createMediaStreamDestination();
+      gainNode.connect(destination);
+      
+      oscillator.start();
+      
+      const silentAudioTrack = destination.stream.getAudioTracks()[0];
+      
+      if (silentAudioTrack) {
+        this.logger.success('✅ Created silent audio track successfully');
+        return silentAudioTrack;
+      }
+      
+    } catch (error) {
+      this.logger.error('❌ Failed to create silent audio track:', error);
+    }
+    
+    return null;
+  }
+
+  // 🎵 VERIFY AUDIO CONTENT in recorded blob
+  async verifyAudioInBlob(videoBlob, mimeType) {
+    try {
+      this.logger.info('🔍 Verifying audio content in recorded blob...');
+      
+      // Create a temporary video element to test the blob
+      const tempVideo = document.createElement('video');
+      tempVideo.muted = false; // Important: unmute to detect audio
+      tempVideo.style.display = 'none';
+      document.body.appendChild(tempVideo);
+      
+      return new Promise((resolve) => {
+        const blobUrl = URL.createObjectURL(videoBlob);
+        tempVideo.src = blobUrl;
+        
+        const cleanup = () => {
+          URL.revokeObjectURL(blobUrl);
+          if (tempVideo.parentNode) {
+            tempVideo.parentNode.removeChild(tempVideo);
+          }
+        };
+        
+        tempVideo.addEventListener('loadedmetadata', () => {
+          this.logger.info('🎬 Blob metadata loaded:', {
+            duration: tempVideo.duration,
+            videoWidth: tempVideo.videoWidth,
+            videoHeight: tempVideo.videoHeight,
+            mimeType: mimeType,
+            blobSize: videoBlob.size,
+            hasVideoTrack: tempVideo.videoWidth > 0,
+            // Note: Audio tracks detection is limited in recorded blobs
+            // The actual audio presence will be verified during playback
+          });
+          
+          // Try to detect if audio might be present
+          const audioIndicators = {
+            mimeTypeHasAudio: mimeType.includes('opus') || mimeType.includes('vorbis') || mimeType.includes('aac'),
+            blobSizeIndicatesAudio: videoBlob.size > (tempVideo.duration * 50000), // Rough estimate
+            durationReasonable: tempVideo.duration > 0
+          };
+          
+          this.logger.info('🎵 Audio presence indicators:', audioIndicators);
+          
+          if (!audioIndicators.mimeTypeHasAudio) {
+            this.logger.warning('⚠️ MIME type suggests no audio codec: ' + mimeType);
+          }
+          
+          if (!audioIndicators.blobSizeIndicatesAudio) {
+            this.logger.warning('⚠️ Blob size may indicate missing audio (video-only)');
+          }
+          
+          cleanup();
+          resolve();
+        });
+        
+        tempVideo.addEventListener('error', (e) => {
+          this.logger.error('❌ Error loading blob for verification:', e);
+          cleanup();
+          resolve(); // Don't fail the whole process
+        });
+        
+        // Timeout fallback
+        setTimeout(() => {
+          this.logger.warning('⏰ Blob verification timeout');
+          cleanup();
+          resolve();
+        }, 5000);
+      });
+      
+    } catch (error) {
+      this.logger.error('❌ Failed to verify audio in blob:', error);
+      // Don't fail the whole process
+    }
   }
 
 
@@ -432,7 +683,8 @@ export class AgoraStreamRecorder {
 
   // Debug audio capture
   debugAudioCapture() {
-    this.logger.info('🔧 [AUDIO DEBUG] Starting audio capture diagnosis...');
+    console.log('🔧 [AUDIO DEBUG v2.0] Starting audio capture diagnosis...');
+    this.logger.info('🔧 [AUDIO DEBUG v2.0] Starting audio capture diagnosis...');
     
     // Check all video elements on page
     const allVideos = document.querySelectorAll('video');
@@ -669,6 +921,9 @@ export class AgoraStreamRecorder {
         mimeType: mimeType,
         chunksCount: this.recordedChunks.length
       });
+
+      // 🎵 VERIFY AUDIO CONTENT in blob
+      await this.verifyAudioInBlob(videoBlob, mimeType);
       
       // Step 3: Show processing complete, prepare upload
       await new Promise(resolve => setTimeout(resolve, 600));
@@ -728,6 +983,32 @@ export class AgoraStreamRecorder {
       const auth = getAuth(app);
       const firestore = getFirestore(app);
       
+      // 🔐 AUTO-AUTHENTICATE FOR STORAGE OPERATIONS
+      // Check if user is already authenticated, if not, sign in with admin credentials
+      if (!auth.currentUser) {
+        this.logger.info('🔐 No auth user found, signing in for storage access...');
+        try {
+          const { signInWithEmailAndPassword } = await import('firebase/auth');
+          // Use admin credentials for storage operations - CORRECT EMAIL/PASSWORD
+          await signInWithEmailAndPassword(auth, 'cristinazurbac@gmail.com', 'CristinaZurba1994!');
+          this.logger.info('✅ Authenticated for storage operations');
+        } catch (authError) {
+          this.logger.error('💥 Failed to authenticate for storage:', authError.message);
+          this.logger.error('Auth error details:', authError);
+          // Try alternative authentication
+          try {
+            this.logger.info('🔄 Trying alternative auth approach...');
+            // Sign in anonymously as fallback
+            const { signInAnonymously } = await import('firebase/auth');
+            await signInAnonymously(auth);
+            this.logger.info('✅ Anonymous authentication successful');
+          } catch (anonymousError) {
+            this.logger.error('💥 Anonymous auth also failed:', anonymousError.message);
+            // Continue without auth - metadata will show 'unknown'
+          }
+        }
+      }
+      
       const timestamp = Date.now();
       const fileName = `client_recording_${timestamp}.webm`;
       const meetingCode = this.getMeetingCode();
@@ -746,8 +1027,9 @@ export class AgoraStreamRecorder {
         customMetadata: {
           meetingCode,
           duration: duration.toString(),
-          uploadedBy: auth.currentUser?.email || 'unknown',
-          recordingType: 'client_simplified',
+          uploadedBy: 'cristina_admin', // Static admin identifier
+          adminEmail: auth.currentUser?.email || 'cristinazurbac@gmail.com',
+          recordingType: 'admin_conference_video',
           originalName: fileName,
           fileSize: videoBlob.size.toString(),
           uploadTime: timestamp.toString()
@@ -791,10 +1073,11 @@ export class AgoraStreamRecorder {
                 downloadURL,
                 size: videoBlob.size,
                 duration,
-                userEmail: this.recipientEmail || auth.currentUser?.email || 'unknown', // 🎯 Use client email, not admin email
-                adminEmail: auth.currentUser?.email || 'unknown', // Keep admin email separately
+                recipientEmail: this.recipientEmail || 'conference_participants', // Email pentru notificări
+                adminEmail: auth.currentUser?.email || 'cristinazurbac@gmail.com',
+                uploadedBy: 'cristina_admin',
                 status: 'completed',
-                recordingType: 'client_simplified',
+                recordingType: 'admin_conference_video',
                 createdAt: timestamp,
                 uploadTime: timestamp,
                 startTimestamp: timestamp,

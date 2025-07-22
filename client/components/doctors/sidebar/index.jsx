@@ -4,62 +4,77 @@ import { doctorprofileimg } from "../../imagepath";
 import { handleSignIn, handleLogout } from "../../../../utils/authUtils";
 import Select from "react-select";
 import { useRouter } from "next/router";
-import { useAuth } from "../../../../context/AuthContext";
-import { onAuthStateChanged } from "firebase/auth";
-import { authentication } from "../../../../firebase";
+// REMOVED: import { useAuth } from "../../../../context/AuthContext";
+// REMOVED: import { onAuthStateChanged } from "firebase/auth";
+// REMOVED: import { authentication } from "../../../../firebase";
 import { Box, CircularProgress } from "@mui/material";
-import { ADMIN_UIDS } from "../../../../data/constants";
+// REMOVED: import { ADMIN_UIDS } from "../../../../data/constants";
+
 const DoctorSidebar = () => {
   const router = useRouter();
-  const {
-    currentUser,
-    userData,
-    loading,
-    setLoading,
-    setCurrentUser,
-    setUserData,
-  } = useAuth();
+  // REMOVED: const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth();
+  
+  // 🔐 SIMPLE AUTH STATE
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const AUTH_STORAGE_KEY = "adminConsultatiiAuth";
 
   const availablity = [
     { value: "Online acum", label: "Online acum" },
     { value: "Offline", label: "Offline" },
   ];
 
+  // 🔐 CHECK SIMPLE AUTH INSTEAD OF FIREBASE
   useEffect(() => {
-    console.log("🔄 [DOCTOR SIDEBAR] useEffect triggered");
-    console.log("🔄 [DOCTOR SIDEBAR] currentUser from context:", currentUser ? "EXISTS" : "NULL");
-    console.log("🔄 [DOCTOR SIDEBAR] loading from context:", loading);
+    console.log("🔄 [DOCTOR SIDEBAR] Checking simple auth...");
     
-    // If context is still loading, wait for it
-    if (loading) {
-      console.log("⏳ [DOCTOR SIDEBAR] Auth context still loading, waiting...");
-      return;
-    }
-    
-    setLoading(true);
-    const authenticated = authentication;
-    onAuthStateChanged(authenticated, (user) => {
-      console.log("🔍 [DOCTOR SIDEBAR] Auth state changed, user:", user ? "EXISTS" : "NULL");
+    try {
+      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+      const storedTime = localStorage.getItem(AUTH_STORAGE_KEY + "_time");
       
-      if (user) {
-        console.log("👤 [DOCTOR SIDEBAR] User UID:", user.uid);
-        console.log("🔐 [DOCTOR SIDEBAR] Checking against admin UIDs:", ADMIN_UIDS);
+      if (storedAuth && storedTime) {
+        const authTime = parseInt(storedTime);
+        const currentTime = Date.now();
+        const hoursPassed = (currentTime - authTime) / (1000 * 60 * 60);
         
-        if (ADMIN_UIDS.includes(user.uid)) {
-          console.log("✅ [DOCTOR SIDEBAR] User is admin, allowing access");
+        // Auth expires after 1 week (168 hours)
+        if (hoursPassed < 168) {
+          console.log("✅ [DOCTOR SIDEBAR] Valid simple auth found");
+          setIsAuthenticated(true);
           setLoading(false);
+          return;
         } else {
-          console.log("❌ [DOCTOR SIDEBAR] User UID not in admin list, redirecting to login");
-          router.push("/login-admin-consultatii");
-          setLoading(false);
+          console.log("⏰ [DOCTOR SIDEBAR] Simple auth expired, clearing...");
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
         }
-      } else {
-        console.log("❌ [DOCTOR SIDEBAR] No user found, redirecting to login");
-        router.push("/login-admin-consultatii");
-        setLoading(false);
       }
-    });
-  }, [loading, currentUser]); // Add dependencies to re-run when context changes
+      
+      console.log("❌ [DOCTOR SIDEBAR] No valid auth, redirecting to login");
+      router.push("/login-admin-consultatii");
+      setLoading(false);
+      
+    } catch (error) {
+      console.error("💥 [DOCTOR SIDEBAR] Error checking auth:", error);
+      router.push("/login-admin-consultatii");
+      setLoading(false);
+    }
+  }, [router]);
+
+  // 🔐 SIMPLE LOGOUT FUNCTION
+  const handleSimpleLogout = () => {
+    console.log("🔐 [DOCTOR SIDEBAR] Simple logout triggered");
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
+      console.log("✅ [DOCTOR SIDEBAR] Auth cleared, redirecting to login");
+      router.push("/login-admin-consultatii");
+    } catch (error) {
+      console.error("💥 [DOCTOR SIDEBAR] Error during logout:", error);
+      router.push("/login-admin-consultatii");
+    }
+  };
 
   return (
     <>
@@ -253,15 +268,9 @@ const DoctorSidebar = () => {
               <li className={false ? "active" : ""}>
                 <Link
                   href="/login"
-                  onClick={async (e) => {
-                    // Prevenim comportamentul default al link-ului dacă este necesar
-
+                  onClick={(e) => {
                     e.preventDefault();
-                    await handleLogout().then(() => {
-                      setCurrentUser(null);
-                      setUserData(null);
-                      router.push("/consultatii");
-                    });
+                    handleSimpleLogout();
                   }}
                 >
                   <i className="fa-solid fa-calendar-check me-2" />

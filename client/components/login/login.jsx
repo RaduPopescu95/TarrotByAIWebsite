@@ -1,46 +1,85 @@
-import React, { useState } from "react";
-import Link from "next/link";
-import { handleSignIn } from "../../../utils/authUtils";
+import React, { useState, useEffect } from "react";
 import Footer from "../footer";
 import Home1Header from "../home/home-1/header";
 import { useRouter } from "next/router";
-import { useAuth } from "../../../context/AuthContext";
 
 const LoginContainer = (props) => {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // Stare pentru a stoca mesaje de eroare
-  const { setCurrentUser } = useAuth();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 👁️ Password visibility toggle
   const router = useRouter();
+  
+  // 🔐 SIMPLE ADMIN PASSWORD SYSTEM
+  const ADMIN_PASSWORD = "Cristina1994!";
+  const AUTH_STORAGE_KEY = "adminConsultatiiAuth";
+  
+  console.log("🔐 [ADMIN LOGIN] Simple password login initialized");
 
-  // Functie pentru a gestiona trimiterea formularului
+  // 🔐 CHECK IF ALREADY AUTHENTICATED ON COMPONENT MOUNT
+  useEffect(() => {
+    console.log("🔐 [ADMIN LOGIN] Checking stored authentication...");
+    
+    try {
+      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+      const storedTime = localStorage.getItem(AUTH_STORAGE_KEY + "_time");
+      
+      if (storedAuth && storedTime) {
+        const authTime = parseInt(storedTime);
+        const currentTime = Date.now();
+        const hoursPassed = (currentTime - authTime) / (1000 * 60 * 60);
+        
+        // Auth expires after 1 week (168 hours)
+        if (hoursPassed < 168) {
+          console.log("🔐 [ADMIN LOGIN] Valid stored auth found, redirecting...");
+          router.push("/admin-consultatii");
+          return;
+        } else {
+          console.log("🔐 [ADMIN LOGIN] Stored auth expired, clearing...");
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
+        }
+      }
+      
+      console.log("🔐 [ADMIN LOGIN] No valid auth, staying on login page");
+      
+    } catch (error) {
+      console.error("🔐 [ADMIN LOGIN] Error checking stored auth:", error);
+    }
+  }, [router]);
+
+  // 🔐 HANDLE PASSWORD SUBMISSION
   const handleSubmit = (event) => {
     event.preventDefault();
+    setLoading(true);
+    setError("");
 
-    console.log("🔑 [LOGIN] Attempting admin login with email:", email);
+    console.log("🔐 [ADMIN LOGIN] Password submitted");
 
-    handleSignIn(email, password)
-      .then((userCredentials) => {
-        console.log("✅ [LOGIN] User credentials received:", userCredentials.user.uid);
-        console.log("🔐 [LOGIN] Checking if UID is in admin list...");
+    if (password === ADMIN_PASSWORD) {
+      console.log("🔐 [ADMIN LOGIN] Password correct, storing auth");
+      
+      try {
+        // Store authentication
+        localStorage.setItem(AUTH_STORAGE_KEY, "authenticated");
+        localStorage.setItem(AUTH_STORAGE_KEY + "_time", Date.now().toString());
         
-        // Import ADMIN_UIDS to check if this user is admin
-        import("../../../data/constants").then((constants) => {
-          if (constants.ADMIN_UIDS.includes(userCredentials.user.uid)) {
-            console.log("✅ [LOGIN] User is admin, redirecting to dashboard...");
-            setTimeout(() => {
-              router.push("/admin-consultatii");
-            }, 500);
-          } else {
-            console.error("❌ [LOGIN] User is not admin, UID:", userCredentials.user.uid);
-            setError("Access denied. Only admins can access this area.");
-          }
-        });
-      })
-      .catch((error) => {
-        console.error("❌ [LOGIN] Error during sign in:", error.message);
-        setError("Failed to log in. Error message: " + error.message);
-      });
+        console.log("🔐 [ADMIN LOGIN] Authentication successful, redirecting...");
+        
+        setTimeout(() => {
+          router.push("/admin-consultatii");
+        }, 500);
+        
+      } catch (storageError) {
+        console.error("🔐 [ADMIN LOGIN] Error storing auth:", storageError);
+        setError("Eroare la salvarea autentificării");
+        setLoading(false);
+      }
+    } else {
+      console.log("🔐 [ADMIN LOGIN] Password incorrect");
+      setError("Parolă incorectă!");
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,35 +97,71 @@ const LoginContainer = (props) => {
                   <div className="row align-items-center justify-content-center">
                     <div className="col-md-12 col-lg-6 login-right">
                       <div className="login-header">
-                        <h3>Autentificare</h3>
+                        <h3>
+                          <i className="fa fa-lock me-2"></i>
+                          Acces Admin Consultatii
+                        </h3>
+                        <p className="text-muted">Introduceți parola de administrator</p>
                       </div>
                       <form onSubmit={handleSubmit}>
-                        <div className="form-group form-focus">
+                        <div className="form-group form-focus position-relative">
                           <input
-                            type="email"
-                            className="form-control floating"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                          <label className="focus-label">Email</label>
-                        </div>
-                        <div className="form-group form-focus">
-                          <input
-                            type="password"
-                            className="form-control floating"
+                            type={showPassword ? "text" : "password"}
+                            className="form-control floating pe-5"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Parolă Administrator"
                             required
+                            autoFocus
+                            disabled={loading}
                           />
-                          <label className="focus-label">Parola</label>
+                          <label className="focus-label">Parolă Administrator</label>
+                          
+                          {/* 👁️ Password visibility toggle button */}
+                          <button
+                            type="button"
+                            className="btn btn-link position-absolute"
+                            style={{
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              border: 'none',
+                              background: 'none',
+                              color: '#6c757d',
+                              padding: '0',
+                              zIndex: 10
+                            }}
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={loading}
+                            title={showPassword ? "Ascunde parola" : "Arată parola"}
+                          >
+                            <i className={`fa ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                          </button>
                         </div>
-                        {error && <p style={{ color: "red" }}>{error}</p>}
+                        
+                        {error && (
+                          <div className="alert alert-danger" role="alert">
+                            <i className="fa fa-exclamation-triangle me-2"></i>
+                            {error}
+                          </div>
+                        )}
+                        
                         <button
                           className="btn btn-primary w-100 btn-lg login-btn"
                           type="submit"
+                          disabled={loading || !password.trim()}
                         >
-                          Autentificare
+                          {loading ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                              Se autentifică...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fa fa-sign-in-alt me-2"></i>
+                              Autentificare
+                            </>
+                          )}
                         </button>
                       </form>
                     </div>

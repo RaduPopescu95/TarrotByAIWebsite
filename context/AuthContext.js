@@ -106,7 +106,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
-      console.log("start use effect from auth context", user);
+      console.log("🔥 [AUTH CONTEXT] onAuthStateChanged triggered:", user ? {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        isAnonymous: user.isAnonymous,
+        providerData: user.providerData?.map(p => ({ providerId: p.providerId, email: p.email }))
+      } : "NULL USER");
       
       // 🚀 NEW: Check for account switch first
       if (user && !user.isAnonymous) {
@@ -120,7 +126,8 @@ export const AuthProvider = ({ children }) => {
       
       // 🚀 FIXED: Handle no user properly - set state and complete loading
       if (!user) {
-        console.log("🔑 [AUTH] No user found, clearing state");
+        console.log("🔑 [AUTH CONTEXT] No user found, clearing state");
+        console.log("🔑 [AUTH CONTEXT] Setting loading to false");
         setCurrentUser(null);
         setUserData(null);
         setIsGuestUser(false);
@@ -128,6 +135,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("userData");
         localStorage.removeItem("isGuestUser");
         setLoading(false);
+        console.log("🔑 [AUTH CONTEXT] State cleared completely");
         return;
       }
       
@@ -222,8 +230,15 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem("userData", JSON.stringify(basicData));
         }
       }
+      
+      console.log("🔑 [AUTH CONTEXT] Setting currentUser:", user ? {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName
+      } : "NULL");
       setCurrentUser(user);
 
+      console.log("🔑 [AUTH CONTEXT] Setting loading to false - AUTH COMPLETE");
       setLoading(false);
     });
 

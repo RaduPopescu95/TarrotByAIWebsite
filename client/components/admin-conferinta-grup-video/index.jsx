@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import Home1Header from "../home/home-1/header";
-import { useAuth } from "../../../context/AuthContext"; // RESTORED - Needed for Firestore access
+// REMOVED: import { useAuth } from "../../../context/AuthContext"; - Now using simple password auth
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
-// import { ADMIN_UIDS } from '../../../data/constants'; // REMOVED - No auth checks needed
 import moment from "moment";
 import "moment/locale/ro";
 // Old chat imports removed - using custom chat implementation
@@ -24,16 +23,30 @@ const LAYOUT_TYPES = {
   grid: 0,
   pin: 1
 };
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase";
 
 moment.locale("ro");
 
 const AdminConferintaGrupVideo = ({ conferenceId }) => {
-  console.log("🏗️ [ADMIN VIDEO] Componenta se inițializează cu conferenceId:", conferenceId);
+  console.log("🏗️ [ADMIN VIDEO] === COMPONENT INIT ===");
+  console.log("🏗️ [ADMIN VIDEO] conferenceId:", conferenceId);
   
   const router = useRouter();
-  const { currentUser, userData, loading: authLoading } = useAuth(); // RESTORED - Needed for Firestore access
+  
+  // 🔐 SIMPLE PASSWORD AUTH SYSTEM
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false); // 👁️ Password visibility toggle
+  
+  const ADMIN_PASSWORD = "Cristina1994!";
+  const AUTH_STORAGE_KEY = "adminConsultatiiAuth"; // SAME AS ADMIN PANEL
+  
+  console.log("🏗️ [ADMIN VIDEO] Simple auth system initialized");
+  
   const [loading, setLoading] = useState(true);
   const [conferinta, setConferinta] = useState(null);
   const [error, setError] = useState(null);
@@ -266,6 +279,78 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
   }, []);
 
+  // 🔐 CHECK STORED AUTHENTICATION ON COMPONENT MOUNT
+  useEffect(() => {
+    console.log("🔐 [SIMPLE AUTH] Checking stored authentication...");
+    
+    try {
+      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+      const storedTime = localStorage.getItem(AUTH_STORAGE_KEY + "_time");
+      
+      if (storedAuth && storedTime) {
+        const authTime = parseInt(storedTime);
+        const currentTime = Date.now();
+        const hoursPassed = (currentTime - authTime) / (1000 * 60 * 60);
+        
+        // Auth expires after 1 week (168 hours)
+        if (hoursPassed < 168) {
+          console.log("🔐 [SIMPLE AUTH] Valid stored auth found");
+          setIsAuthenticated(true);
+          setAuthLoading(false);
+          return;
+        } else {
+          console.log("🔐 [SIMPLE AUTH] Stored auth expired");
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
+        }
+      }
+      
+      console.log("🔐 [SIMPLE AUTH] No valid auth, showing password dialog");
+      setShowPasswordDialog(true);
+      setAuthLoading(false);
+      
+    } catch (error) {
+      console.error("🔐 [SIMPLE AUTH] Error checking stored auth:", error);
+      setShowPasswordDialog(true);
+      setAuthLoading(false);
+    }
+  }, []);
+
+  // 🔐 HANDLE PASSWORD SUBMISSION
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    
+    console.log("🔐 [SIMPLE AUTH] Password submitted");
+    
+    if (passwordInput === ADMIN_PASSWORD) {
+      console.log("🔐 [SIMPLE AUTH] Password correct, storing auth");
+      
+      // Store authentication
+      localStorage.setItem(AUTH_STORAGE_KEY, "authenticated");
+      localStorage.setItem(AUTH_STORAGE_KEY + "_time", Date.now().toString());
+      
+      setIsAuthenticated(true);
+      setShowPasswordDialog(false);
+      setPasswordInput("");
+      setPasswordError("");
+      
+      console.log("🔐 [SIMPLE AUTH] Authentication successful");
+    } else {
+      console.log("🔐 [SIMPLE AUTH] Password incorrect");
+      setPasswordError("Parolă incorectă!");
+      setPasswordInput("");
+    }
+  };
+
+  // 🔐 LOGOUT FUNCTION
+  const handleLogout = () => {
+    console.log("🔐 [SIMPLE AUTH] Logging out");
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
+    setIsAuthenticated(false);
+    setShowPasswordDialog(true);
+  };
+
   // Timeout pentru debugging - dacă loading durează prea mult
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -275,27 +360,37 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           loading,
           error,
           conferinta: conferinta ? "DA" : "NU",
-          currentUser: currentUser ? "DA" : "NU",
-          userData: userData ? "DA" : "NU"
+          isAuthenticated
         });
       }
     }, 10000); // 10 secunde
 
     return () => clearTimeout(timeout);
-  }, [loading, error, conferinta, currentUser, userData]);
+  }, [loading, error, conferinta, isAuthenticated]);
 
-  // Load conference data - Wait for auth but NO AUTH CHECKS
+  // Load conference data - Wait for simple auth
   useEffect(() => {
-    console.log("🚀 [ADMIN VIDEO] Încărcare cu autentificare pentru Firestore...");
+    console.log("🚀 [ADMIN VIDEO] === useEffect TRIGGERED ===");
     console.log("🚀 [ADMIN VIDEO] authLoading:", authLoading);
-    console.log("🚀 [ADMIN VIDEO] currentUser:", currentUser ? "DA" : "NU");
+    console.log("🚀 [ADMIN VIDEO] isAuthenticated:", isAuthenticated);
     console.log("🚀 [ADMIN VIDEO] conferenceId:", conferenceId);
+    console.log("🚀 [ADMIN VIDEO] loading:", loading);
+    console.log("🚀 [ADMIN VIDEO] error:", error);
+    console.log("🚀 [ADMIN VIDEO] conferinta:", conferinta ? "LOADED" : "NULL");
 
-    // 🔥 CRITICAL: Așteaptă ca AuthContext să termine loading-ul pentru Firestore access
+    // 🔥 Wait for simple auth to complete
     if (authLoading) {
-      console.log("⏳ [ADMIN VIDEO] AuthContext încă se încarcă, așteaptă pentru Firestore...");
+      console.log("⏳ [ADMIN VIDEO] Simple auth loading, wait...");
       return;
     }
+
+    // 🔥 Wait for authentication
+    if (!isAuthenticated) {
+      console.log("⏳ [ADMIN VIDEO] Not authenticated yet, wait...");
+      return;
+    }
+
+    console.log("✅ [ADMIN VIDEO] Simple auth completed and authenticated!");
 
     // Dacă deja încărcase sau are o eroare, nu mai executa
     if (conferinta || error) {
@@ -304,32 +399,32 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
 
     if (conferenceId) {
-      console.log("🎯 [ADMIN VIDEO] Pornește încărcarea datelor pentru conferința:", conferenceId);
+      console.log("🎯 [ADMIN VIDEO] PORNEȘTE ÎNCĂRCAREA pentru conferința:", conferenceId);
       loadConferenceData();
     } else {
       console.log("⚠️ [ADMIN VIDEO] Nu există conferenceId");
       setError("Conference ID lipsește");
       setLoading(false);
     }
-  }, [conferenceId, authLoading]); // Wait for auth to complete
+  }, [conferenceId, authLoading, isAuthenticated, router]); // Wait for simple auth to complete
 
   // Debugging - afișează starea fără să forțeze reîncărcarea
   useEffect(() => {
     const debugTimeout = setTimeout(() => {
-      if (loading && conferenceId && currentUser) {
+      if (loading && conferenceId && isAuthenticated) {
         console.log("🚨 [DEBUG] Încă se încarcă după 10 secunde...");
         console.log("🚨 [DEBUG] Stare:", {
           loading,
           error,
           conferinta: !!conferinta,
           conferenceId,
-          currentUser: !!currentUser
+          isAuthenticated
         });
       }
     }, 10000);
 
     return () => clearTimeout(debugTimeout);
-  }, [loading, error, conferinta, conferenceId, currentUser]);
+  }, [loading, error, conferinta, conferenceId, isAuthenticated]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -344,6 +439,13 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     try {
       console.log("🔍 [ADMIN VIDEO] === ÎNCEPE ÎNCĂRCAREA ===");
       
+      // 🔥 DEBUG: Verifică starea auth în timp real
+      console.log("🔍 [AUTH DEBUG] Stare auth la început încărcare:", {
+        isAuthenticated,
+        authLoading,
+        simpleAuth: "CRISTINA ADMIN"
+      });
+      
       // Verifică dacă deja se încarcă pentru a evita multiple calls
       if (loading) {
         console.log("⚠️ [ADMIN VIDEO] Încărcarea deja în progres, skip...");
@@ -353,18 +455,25 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setLoading(true);
       setError(null); // Clear previous errors
       
-      console.log("🔍 [ADMIN VIDEO] Parametri:", {
+      console.log("🔍 [ADMIN VIDEO] Parametri pentru Firestore:", {
         conferenceId,
-        currentUser: currentUser?.uid,
-        userDisplayName: currentUser?.displayName,
-        userEmail: currentUser?.email
+        simpleAuth: isAuthenticated,
+        adminUser: "Cristina Admin",
+        handleGetFirestore: typeof handleGetFirestore
       });
 
       if (!conferenceId) {
         throw new Error("Conference ID lipsește");
       }
 
-      console.log("📥 [ADMIN VIDEO] Apelează Firestore...");
+      // 🔥 DEBUG: Verifică starea simple auth înainte de Firestore
+      console.log("🔍 [AUTH DEBUG] Verifică auth înainte de Firestore:", {
+        isAuthenticated,
+        authLoading,
+        adminUser: "Cristina"
+      });
+
+      console.log("📥 [ADMIN VIDEO] Apelează Firestore cu timeout...");
       const startTime = Date.now();
       
       // Add timeout pentru Firestore call
@@ -372,27 +481,72 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         setTimeout(() => reject(new Error("Timeout: Firestore call took too long")), 15000);
       });
       
-      const firestorePromise = handleGetFirestore("ConferinteGrup");
+      console.log("📥 [ADMIN VIDEO] Pornește handleGetFirestore('ConferinteGrup')...");
+      // 🔥 IMPORTANT: Use manual Firestore call to ensure documentId is included
+      const firestorePromise = getDocs(collection(db, "ConferinteGrup")).then(querySnapshot => {
+        const arr = [];
+        querySnapshot.forEach((doc) => {
+          arr.push({
+            documentId: doc.id, // 🔥 Include documentId
+            ...doc.data()
+          });
+        });
+        return arr;
+      });
+      
+      console.log("📥 [ADMIN VIDEO] Așteaptă răspuns Firestore...");
       const conferinte = await Promise.race([firestorePromise, timeoutPromise]);
       
       const endTime = Date.now();
       console.log("📦 [ADMIN VIDEO] Firestore răspuns în", endTime - startTime, "ms");
+      console.log("📦 [ADMIN VIDEO] Tip răspuns:", typeof conferinte);
+      console.log("📦 [ADMIN VIDEO] Este array:", Array.isArray(conferinte));
       console.log("📦 [ADMIN VIDEO] Conferințe găsite:", conferinte?.length || 0);
 
-      if (!conferinte || !Array.isArray(conferinte)) {
-        throw new Error("Date invalide din Firestore");
+      // 🔥 DEBUG: Verifică din nou auth după Firestore call
+      console.log("🔍 [AUTH DEBUG] Verifică auth după Firestore:", {
+        isAuthenticated,
+        authLoading,
+        adminUser: "Cristina"
+      });
+
+      if (!conferinte) {
+        console.error("💥 [ADMIN VIDEO] Conferinte este null/undefined");
+        throw new Error("Firestore a returnat null/undefined");
+      }
+
+      if (!Array.isArray(conferinte)) {
+        console.error("💥 [ADMIN VIDEO] Conferinte nu este array:", typeof conferinte);
+        throw new Error("Date invalide din Firestore - nu este array");
+      }
+
+      if (conferinte.length === 0) {
+        console.warn("⚠️ [ADMIN VIDEO] Array-ul conferințe este gol");
+        throw new Error("Nu există conferințe în baza de date");
       }
 
       console.log("🔍 [ADMIN VIDEO] Caută conferința cu ID:", conferenceId);
-      console.log("🔍 [ADMIN VIDEO] IDs disponibile:", conferinte.map(c => c.documentId));
+      console.log("🔍 [ADMIN VIDEO] IDs disponibile:", conferinte.map(c => {
+        console.log("📋 Conferință:", c.documentId, "-", c.titlu);
+        return c.documentId;
+      }));
 
       const conferintaFound = conferinte.find(c => c.documentId === conferenceId);
       
       if (!conferintaFound) {
-        throw new Error(`Conferința cu ID ${conferenceId} nu a fost găsită`);
+        console.error("💥 [ADMIN VIDEO] Conferința NU a fost găsită!");
+        console.error("💥 [ADMIN VIDEO] ID căutat:", conferenceId);
+        console.error("💥 [ADMIN VIDEO] IDs disponibile:", conferinte.map(c => c.documentId));
+        throw new Error(`Conferința cu ID ${conferenceId} nu a fost găsită în ${conferinte.length} conferințe`);
       }
 
       console.log("✅ [ADMIN VIDEO] Conferința găsită:", conferintaFound.titlu);
+      console.log("✅ [ADMIN VIDEO] Detalii conferință:", {
+        titlu: conferintaFound.titlu,
+        status: conferintaFound.status,
+        participanti: conferintaFound.participanti?.length || 0
+      });
+
       setConferinta(conferintaFound);
       setConferenceStarted(true); // Simplificat pentru debug
 
@@ -407,6 +561,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.error("💥 [ADMIN VIDEO] Tip eroare:", error.constructor.name);
       console.error("💥 [ADMIN VIDEO] Mesaj:", error.message);
       console.error("💥 [ADMIN VIDEO] Stack:", error.stack);
+      
+      // 🔥 DEBUG: Verifică auth la eroare
+      console.log("🔍 [AUTH DEBUG] Stare auth la eroare:", {
+        isAuthenticated,
+        authLoading,
+        adminUser: "Cristina",
+        error: error.message
+      });
+      
       setError(`Eroare: ${error.message}`);
     } finally {
       console.log("🏁 [ADMIN VIDEO] Finalizează loading");
@@ -432,10 +595,10 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     try {
       const docRef = doc(db, "ConferinteGrupPresence", conferintaId);
       
-      // Creăm datele admin folosind auth dar cu fallback static
+      // Creăm datele admin static pentru simple auth
       const adminData = {
-        name: userData?.nume || currentUser?.displayName || "Admin",
-        email: userData?.email || currentUser?.email || "admin@cristinazurba.com",
+        name: "Cristina Zurba",
+        email: "cristinazurbac@gmail.com",
         role: "host"
       };
       
@@ -510,7 +673,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       await updateAdminPresence(conferinta.documentId, false);
     }
     const chatId = `conference_${conferinta.documentId}`;
-    await setUserOfflineInChat(chatId, currentUser?.uid || 'admin');
+    await setUserOfflineInChat(chatId, 'cristina_admin');
     // Redirecționez înapoi la panoul de administrare
     router.push("/admin-conferinte-grup");
   };
@@ -550,7 +713,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     
     const chatRoomId = `conference_${meetingId}`;
     // FIXED: Force admin prefix to prevent confusion with regular users
-    const adminUserId = `admin_${currentUser?.uid || 'default'}`;
+    const adminUserId = `admin_cristina_zurba`;
     
     console.log("🚀 [ADMIN CUSTOM CHAT] Initializing with:", {
       meetingId,
@@ -1030,6 +1193,88 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
   };
 
+  // 🔐 PASSWORD AUTHENTICATION DIALOG
+  if (showPasswordDialog) {
+    return (
+      <>
+        <Home1Header />
+        <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
+          <div className="container">
+            <div className="row justify-content-center">
+              <div className="col-lg-4">
+                <div className="card shadow-lg">
+                  <div className="card-header bg-primary text-white text-center">
+                    <h4 className="mb-0">
+                      <i className="fa fa-lock me-2"></i>
+                      Acces Admin Conferințe
+                    </h4>
+                  </div>
+                  <div className="card-body">
+                                         <form onSubmit={handlePasswordSubmit}>
+                       <div className="mb-3">
+                         <label htmlFor="adminPassword" className="form-label">
+                           Parolă Administrator:
+                         </label>
+                         <div className="position-relative">
+                           <input
+                             type={showPassword ? "text" : "password"}
+                             className="form-control pe-5"
+                             id="adminPassword"
+                             value={passwordInput}
+                             onChange={(e) => setPasswordInput(e.target.value)}
+                             placeholder="Introduceți parola de admin"
+                             required
+                             autoFocus
+                           />
+                           
+                           {/* 👁️ Password visibility toggle button */}
+                           <button
+                             type="button"
+                             className="btn btn-link position-absolute"
+                             style={{
+                               right: '10px',
+                               top: '50%',
+                               transform: 'translateY(-50%)',
+                               border: 'none',
+                               background: 'none',
+                               color: '#6c757d',
+                               padding: '0',
+                               zIndex: 10
+                             }}
+                             onClick={() => setShowPassword(!showPassword)}
+                             title={showPassword ? "Ascunde parola" : "Arată parola"}
+                           >
+                             <i className={`fa ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                           </button>
+                         </div>
+                       </div>
+                      
+                      {passwordError && (
+                        <div className="alert alert-danger" role="alert">
+                          <i className="fa fa-exclamation-triangle me-2"></i>
+                          {passwordError}
+                        </div>
+                      )}
+                      
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary w-100"
+                        disabled={!passwordInput.trim()}
+                      >
+                        <i className="fa fa-sign-in-alt me-2"></i>
+                        Autentificare
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // Loading state
   if (loading) {
     return (
@@ -1127,7 +1372,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
           }}
           rtmProps={{ 
-            username: currentUser?.displayName || 'Admin', 
+            username: 'Cristina Zurba', 
             displayUsername: true 
           }}
           styleProps={{
@@ -1465,7 +1710,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           adminData={{
             nume: "Cristina",
             prenume: "Zurba",
-            email: userData?.email || currentUser?.email || "cristinazurbac@gmail.com",
+            email: "cristinazurbac@gmail.com",
             role: "admin"
           }}
         />
@@ -1483,16 +1728,28 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           <div className="row justify-content-center">
             <div className="col-lg-8">
               <div className="card shadow-lg">
-                <div className="card-header bg-primary text-white text-center">
-                  <h3 className="mb-0">
-                    <i className="fa fa-video me-2"></i>
-                    Conferință de Grup - Acces Admin
-                    {!isConferenceActive(conferinta) && (
-                      <span className="badge bg-danger ms-2">
-                        {conferinta.status === "inactiva" ? "INACTIVĂ" : "COMPLETATĂ"}
-                      </span>
-                    )}
-                  </h3>
+                <div className="card-header bg-primary text-white">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h3 className="mb-0">
+                        <i className="fa fa-video me-2"></i>
+                        Conferință de Grup - Acces Admin
+                        {!isConferenceActive(conferinta) && (
+                          <span className="badge bg-danger ms-2">
+                            {conferinta.status === "inactiva" ? "INACTIVĂ" : "COMPLETATĂ"}
+                          </span>
+                        )}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="btn btn-outline-light btn-sm"
+                      title="Deconectare"
+                    >
+                      <i className="fa fa-sign-out-alt me-1"></i>
+                      Logout
+                    </button>
+                  </div>
                 </div>
                 <div className="card-body text-center py-5">
                   <div className="mb-4">
@@ -1594,9 +1851,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 <AdminCustomChat 
                   meetingId={conferinta.documentId}
                   adminData={{
-                    nume: userData?.nume || currentUser?.displayName || "Admin",
-                    prenume: userData?.prenume || "",
-                    email: userData?.email || currentUser?.email || "admin@cristinazurba.com",
+                    nume: "Cristina",
+                    prenume: "Zurba",
+                    email: "cristinazurbac@gmail.com",
                     role: "admin"
                   }}
                 />
