@@ -348,9 +348,9 @@ function Mixed(props) {
             <div style={styles.rightSection} className="header-right-section">
               {/* Language Dropdown */}
               <div className="language-dropdown" style={styles.languageDropdown}>
-                  <button
-                    onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-                    style={{
+                <button
+                  onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
+                  style={{
                     ...styles.languageButton,
                     color: isConsultationsPage ? '#333' : 'white',
                     backgroundColor: isConsultationsPage 
@@ -432,7 +432,7 @@ function Mixed(props) {
                     ))}
                   </div>
                 )}
-                </div>
+              </div>
 
               {/* Store Links */}
               <div style={styles.storeLinks} className="store-links">

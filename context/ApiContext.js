@@ -99,7 +99,7 @@ export const ApiDataProvider = ({ children }) => {
           setLoading(false);
           return;
         }
-        
+
         // Apelează funcția ajutătoare pentru a amesteca array-ul de cărți
         let shuffledArray = [];
         try {
@@ -174,7 +174,7 @@ export const ApiDataProvider = ({ children }) => {
         setLoading(false);
         return;
       }
-      
+
       // Apelează funcția ajutătoare pentru a amesteca array-ul de cărți
       let shuffledArray = [];
       try {

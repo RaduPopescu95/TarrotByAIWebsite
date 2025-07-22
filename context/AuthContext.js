@@ -117,9 +117,15 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // 🚀 REMOVED: No anonymous auth - just set loading to false if no user
+      // 🚀 FIXED: Handle no user properly - set state and complete loading
       if (!user) {
-        console.log("🔑 [AUTH] No user found, setting loading to false");
+        console.log("🔑 [AUTH] No user found, clearing state");
+        setCurrentUser(null);
+        setUserData(null);
+        setIsGuestUser(false);
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("userData");
+        localStorage.removeItem("isGuestUser");
         setLoading(false);
         return;
       }

@@ -1311,21 +1311,21 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                     🔄 Resetează
                   </button>
                 </div>
-                <div style={chipContainerStyle}>
+              <div style={chipContainerStyle}>
                   {emailList.length === 0 ? (
                     <div style={{fontSize: '12px', color: '#999', fontStyle: 'italic', padding: '10px'}}>
                       Nu sunt emailuri în listă. Adăugați cel puțin un email.
                     </div>
                   ) : (
                     emailList.map((mail)=>(
-                      <span key={mail} style={chipStyle}>
-                        {mail}
-                        <button
+                  <span key={mail} style={chipStyle}>
+                    {mail}
+                    <button
                           onClick={()=>removeEmailFromList(mail)}
-                          style={chipRemoveBtnStyle}
+                      style={chipRemoveBtnStyle}
                           title="Șterge din listă"
-                        >×</button>
-                      </span>
+                    >×</button>
+                  </span>
                     ))
                   )}
                 </div>
@@ -1337,15 +1337,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                   ➕ Adaugă email nou:
                 </label>
                 <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                  <input
+              <input
                     style={{...emailInputStyle, flex: 1}}
-                    placeholder="email@example.com"
-                    value={emailInput}
-                    onChange={e=>setEmailInput(e.target.value)}
-                    onKeyDown={e=>{
+                placeholder="email@example.com"
+                value={emailInput}
+                onChange={e=>setEmailInput(e.target.value)}
+                onKeyDown={e=>{
                       if(e.key==='Enter') { e.preventDefault(); addEmailFromInput(); }
-                    }}
-                  />
+                }}
+              />
                   <button
                     onClick={addEmailFromInput}
                     disabled={!emailInput.trim()}

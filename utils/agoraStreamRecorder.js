@@ -152,11 +152,28 @@ export class AgoraStreamRecorder {
         // Continue anyway - we'll record the canvas which shows "waiting for participants"
       }
 
-      // Setup canvas stream
+      // Setup canvas stream (VIDEO ONLY)
       this.onProgress('🎨 Configurare canvas...');
       const canvasStream = this.canvas.captureStream(this.options.frameRate);
       
-      // Setup MediaRecorder for canvas stream
+      // 🎤 NEW: Capture AUDIO from Agora video elements
+      this.onProgress('🎤 Capturare audio...');
+      const audioStream = await this.captureAudioFromAgoraStreams();
+      
+      // 🔗 NEW: Combine video (canvas) + audio streams
+      const combinedStream = new MediaStream([
+        ...canvasStream.getVideoTracks(), // Video from canvas
+        ...audioStream.getAudioTracks()   // Audio from Agora streams
+      ]);
+      
+      this.logger.info('🎬 Combined stream created', {
+        videoTracks: combinedStream.getVideoTracks().length,
+        audioTracks: combinedStream.getAudioTracks().length,
+        hasVideo: combinedStream.getVideoTracks().length > 0,
+        hasAudio: combinedStream.getAudioTracks().length > 0
+      });
+
+      // Setup MediaRecorder for COMBINED stream (video + audio)
       const mediaRecorderOptions = {
         videoBitsPerSecond: this.options.videoBitsPerSecond,
         audioBitsPerSecond: this.options.audioBitsPerSecond
@@ -175,12 +192,17 @@ export class AgoraStreamRecorder {
         mediaRecorderOptions.mimeType = mimeType;
       }
 
-      this.logger.info('⚙️ Configuring MediaRecorder for canvas', {
+      this.logger.info('⚙️ Configuring MediaRecorder for combined stream', {
         options: mediaRecorderOptions,
-        finalMimeType: mimeType || 'default'
+        finalMimeType: mimeType || 'default',
+        streamTracks: {
+          video: combinedStream.getVideoTracks().length,
+          audio: combinedStream.getAudioTracks().length
+        }
       });
 
-      this.mediaRecorder = new MediaRecorder(canvasStream, mediaRecorderOptions);
+      // 🎥 Use COMBINED stream instead of canvas-only stream
+      this.mediaRecorder = new MediaRecorder(combinedStream, mediaRecorderOptions);
       this.recordedChunks = [];
       this.startTime = Date.now();
 
@@ -210,8 +232,8 @@ export class AgoraStreamRecorder {
       };
 
       this.mediaRecorder.onstart = () => {
-        this.logger.success('▶️ MediaRecorder started for canvas recording');
-        this.onProgress('🔴 Înregistrare în curs...');
+        this.logger.success('▶️ MediaRecorder started with video + audio');
+        this.onProgress('🔴 Înregistrare în curs (video + audio)...');
       };
 
       // Start the drawing loop
@@ -220,12 +242,14 @@ export class AgoraStreamRecorder {
       // Start recording
       this.mediaRecorder.start(1000); // Capture data every second
 
-      this.logger.success('✅ Agora stream recording started successfully');
+      this.logger.success('✅ Agora stream recording started successfully with audio');
       
       return {
         success: true,
-        message: 'Recording started successfully',
-        startTime: this.startTime
+        message: 'Recording started successfully with audio',
+        startTime: this.startTime,
+        hasAudio: combinedStream.getAudioTracks().length > 0,
+        hasVideo: combinedStream.getVideoTracks().length > 0
       };
 
     } catch (error) {
@@ -245,6 +269,9 @@ export class AgoraStreamRecorder {
       this.logger.info('🔍 Waiting for AgoraUIKit videos to load...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Run audio diagnostics first
+      this.debugAudioCapture();
+      
       // Multiple attempts to find videos as they load asynchronously
       for (let attempt = 1; attempt <= 3; attempt++) {
         this.logger.info(`🎥 Video capture attempt ${attempt}/3`);
@@ -263,7 +290,11 @@ export class AgoraStreamRecorder {
             readyState: videoElement.readyState,
             hasSource: !!videoElement.srcObject,
             paused: videoElement.paused,
-            muted: videoElement.muted
+            muted: videoElement.muted,
+            // 🎤 NEW: Audio information
+            hasAudioTracks: videoElement.srcObject ? videoElement.srcObject.getAudioTracks().length : 0,
+            audioTrackEnabled: videoElement.srcObject ? 
+              videoElement.srcObject.getAudioTracks().map(t => t.enabled) : []
           });
           
           // Check if video has actual video content (not just audio)
@@ -277,20 +308,31 @@ export class AgoraStreamRecorder {
             this.logger.success(`✅ Added video element for recording: ${uid}`, {
               videoWidth: videoElement.videoWidth,
               videoHeight: videoElement.videoHeight,
-              readyState: videoElement.readyState
+              readyState: videoElement.readyState,
+              // 🎤 NEW: Audio track info
+              audioTracks: videoElement.srcObject ? videoElement.srcObject.getAudioTracks().length : 0
             });
           } else if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
             const stream = videoElement.srcObject;
             const videoTracks = stream.getVideoTracks();
+            const audioTracks = stream.getAudioTracks(); // 🎤 NEW: Check audio too
             
-            if (videoTracks.length > 0) {
+            if (videoTracks.length > 0 || audioTracks.length > 0) { // 🎤 NEW: Accept if has audio even without video
               const videoTrack = videoTracks[0];
-              this.logger.info(`📊 Video track details:`, {
-                trackId: videoTrack.id,
-                trackState: videoTrack.readyState,
-                trackEnabled: videoTrack.enabled,
-                trackKind: videoTrack.kind,
-                trackSettings: videoTrack.getSettings()
+              this.logger.info(`📊 Stream track details:`, {
+                videoTrackId: videoTrack?.id,
+                videoTrackState: videoTrack?.readyState,
+                videoTrackEnabled: videoTrack?.enabled,
+                videoTrackKind: videoTrack?.kind,
+                videoTrackSettings: videoTrack?.getSettings(),
+                // 🎤 NEW: Audio track details
+                audioTracksCount: audioTracks.length,
+                audioTrackDetails: audioTracks.map(track => ({
+                  id: track.id,
+                  enabled: track.enabled,
+                  kind: track.kind,
+                  readyState: track.readyState
+                }))
               });
               
               // Add even if dimensions are not yet available - they might load
@@ -298,7 +340,7 @@ export class AgoraStreamRecorder {
               this.addVideoElement(uid, videoElement);
               capturedCount++;
               
-              this.logger.info(`📝 Added pending video element: ${uid}`);
+              this.logger.info(`📝 Added pending video element: ${uid} (video: ${videoTracks.length}, audio: ${audioTracks.length})`);
             }
           }
         }
@@ -314,19 +356,65 @@ export class AgoraStreamRecorder {
         }
       }
       
-      this.logger.info(`📊 Final capture summary:`, {
-        totalAttempts: 3,
-        videosFound: capturedCount,
-        videoElementsStored: this.videoElements.size
+      // Final audio capture summary
+      this.logger.info('🎵 Final audio capture attempt summary:', {
+        videoElementsCaptured: capturedCount,
+        totalVideoElements: document.querySelectorAll('video').length
       });
       
     } catch (error) {
-      this.logger.error('❌ Error capturing existing streams:', error);
+      this.logger.error('❌ Error in captureExistingAgoraStreams:', error);
     }
     
     return capturedCount;
   }
 
+  async captureAudioFromAgoraStreams() {
+    const allAudioTracks = [];
+    
+    this.logger.info('🎤 Searching for audio tracks in video elements...');
+    
+    for (const [uid, videoElement] of this.videoElements.entries()) {
+      try {
+        if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
+          const stream = videoElement.srcObject;
+          const streamAudioTracks = stream.getAudioTracks();
+          
+          this.logger.info(`🔍 Video element ${uid}:`, {
+            hasStream: !!stream,
+            audioTracks: streamAudioTracks.length,
+            trackDetails: streamAudioTracks.map(track => ({
+              id: track.id,
+              kind: track.kind,
+              enabled: track.enabled,
+              readyState: track.readyState
+            }))
+          });
+          
+          if (streamAudioTracks.length > 0) {
+            streamAudioTracks.forEach(track => {
+              if (track.kind === 'audio' && track.readyState === 'live') {
+                allAudioTracks.push(track);
+                this.logger.success(`✅ Added audio track from ${uid}: ${track.id}`);
+              }
+            });
+          }
+        } else {
+          this.logger.warning(`⚠️ Video element ${uid} has no srcObject stream`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Error processing audio from ${uid}:`, error);
+      }
+    }
+    
+    this.logger.info('🎵 Audio capture summary:', {
+      totalAudioTracks: allAudioTracks.length,
+      videoElementsChecked: this.videoElements.size
+    });
+    
+    // Return MediaStream with all captured audio tracks
+    return new MediaStream(allAudioTracks);
+  }
 
 
   addVideoElement(uid, videoElement) {
@@ -342,35 +430,59 @@ export class AgoraStreamRecorder {
     }
   }
 
+  // Debug audio capture
+  debugAudioCapture() {
+    this.logger.info('🔧 [AUDIO DEBUG] Starting audio capture diagnosis...');
+    
+    // Check all video elements on page
+    const allVideos = document.querySelectorAll('video');
+    
+    allVideos.forEach((video, index) => {
+      this.logger.info(`🎥 [AUDIO DEBUG] Video element ${index}:`, {
+        id: video.id,
+        className: video.className,
+        hasStream: !!video.srcObject,
+        streamType: video.srcObject ? video.srcObject.constructor.name : 'none',
+        videoTracks: video.srcObject ? video.srcObject.getVideoTracks().length : 0,
+        audioTracks: video.srcObject ? video.srcObject.getAudioTracks().length : 0,
+        muted: video.muted,
+        volume: video.volume,
+        audioTrackDetails: video.srcObject ? 
+          video.srcObject.getAudioTracks().map(track => ({
+            id: track.id,
+            kind: track.kind,
+            enabled: track.enabled,
+            readyState: track.readyState,
+            muted: track.muted
+          })) : []
+      });
+    });
+    
+    // Check browser audio capabilities
+    this.logger.info('🎤 [AUDIO DEBUG] Browser audio capabilities:', {
+      mediaDevices: !!navigator.mediaDevices,
+      getUserMedia: !!navigator.mediaDevices?.getUserMedia,
+      getDisplayMedia: !!navigator.mediaDevices?.getDisplayMedia,
+      audioContext: !!window.AudioContext || !!window.webkitAudioContext,
+      webRTC: !!window.RTCPeerConnection
+    });
+  }
+
   async recheckForVideos() {
-    try {
-      this.logger.info('🔄 Rechecking for new videos');
+    this.logger.info('🔄 Rechecking for new video/audio elements...');
+    
+    const beforeCount = this.videoElements.size;
+    const capturedStreams = await this.captureExistingAgoraStreams();
+    const afterCount = this.videoElements.size;
+    
+    if (afterCount > beforeCount) {
+      this.logger.success(`🎯 Found ${afterCount - beforeCount} new video elements during recheck`);
       
-      const allVideos = document.querySelectorAll('video');
-      let newVideosFound = 0;
-      
-      for (let i = 0; i < allVideos.length; i++) {
-        const videoElement = allVideos[i];
-        const uid = videoElement.id || `recheck_video_${i}_${Date.now()}`;
-        
-        // Check if we already have this video and if it has content
-        if (!this.videoElements.has(uid) && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-          this.addVideoElement(uid, videoElement);
-          newVideosFound++;
-          this.logger.info(`🔄 Recheck found new video: ${uid}`, {
-            dimensions: `${videoElement.videoWidth}x${videoElement.videoHeight}`
-          });
-        }
-      }
-      
-      if (newVideosFound > 0) {
-        this.logger.success(`🎯 Recheck found ${newVideosFound} new videos`);
-      } else {
-        this.logger.info('ℹ️ No new videos found during recheck');
-      }
-    } catch (error) {
-      this.logger.error('❌ Error in recheckForVideos:', error);
+      // Also debug audio for new elements
+      this.debugAudioCapture();
     }
+    
+    return capturedStreams;
   }
 
   drawWaitingMessage() {

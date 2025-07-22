@@ -31,6 +31,41 @@ import {
 } from "../../utils/firestoreUtils";
 import { collection, getCountFromServer } from "firebase/firestore";
 import { db } from "../../firebase";
+
+// 🎨 NEW: Ultra-robust helper function to format description with line breaks
+const formatDescription = (text) => {
+  if (!text) return '';
+  
+  let result = text;
+  
+  // AGGRESSIVE MULTI-LAYERED APPROACH
+  
+  // 1. Handle known Romanian categories (most common case)
+  const romanianCategories = [
+    'Psihologic:', 'Energetic:', 'Dragoste:', 'Bani:', 'Practic:', 'Viitor:', 
+    'Sănătate:', 'Carieră:', 'Spiritual:', 'Relații:', 'Muncă:'
+  ];
+  romanianCategories.forEach(category => {
+    // Match: ". Category" or ".  Category" (multiple spaces)
+    const pattern = new RegExp(`\\.\\s+${category.replace(':', '\\:')}`, 'g');
+    result = result.replace(pattern, `.\n\n${category}`);
+  });
+  
+  // 2. Generic pattern: ". [Capital][lowercase]*:"
+  result = result.replace(/\.\s+([A-ZĂÎÂȘȚÁÉÍÓÚÜŐŰČĐŠŽŁĆŃĄ][a-zA-ZăîâșțáéíóúüőűčđšžłćńąćęłńóśźżĂÎÂȘȚ]*\s*:)/g, '.\n\n$1');
+  
+  // 3. Ultra-simple fallback: any ". [Word]:" pattern
+  result = result.replace(/\.\s+([A-Z][a-z]+:)/g, '.\n\n$1');
+  
+  // 4. Handle edge cases with multiple spaces
+  result = result.replace(/\.\s{2,}([A-Z][a-z]*:)/g, '.\n\n$1');
+  
+  // 5. Final cleanup: ensure we don't have triple line breaks
+  result = result.replace(/\n{3,}/g, '\n\n');
+  
+  return result;
+};
+
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -312,13 +347,14 @@ export function NumarNorocos() {
                       margin: "0",
                       textAlign: "justify",
                       fontStyle: "italic",
-                      paddingLeft: "20px"
+                      paddingLeft: "20px",
+                      whiteSpace: "pre-line" // 🎨 NEW: Enable line breaks in text
                     }}>
-                      {detectedLng === "hi"
+                      {formatDescription(detectedLng === "hi"
                         ? zilnicNumereNorocoase.info.hu.descriere
                         : detectedLng === "id"
                           ? zilnicNumereNorocoase.info.ru.descriere
-                          : zilnicNumereNorocoase.info[detectedLng].descriere}
+                          : zilnicNumereNorocoase.info[detectedLng].descriere)}
                     </p>
                   </div>
                 )}
