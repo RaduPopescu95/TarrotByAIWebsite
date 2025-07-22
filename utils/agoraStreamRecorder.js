@@ -252,6 +252,16 @@ export class AgoraStreamRecorder {
         ...audioStream.getAudioTracks()   // Audio from Agora streams
       ]);
       
+      alert(`🔗 Combined stream: Video=${combinedStream.getVideoTracks().length}, Audio=${combinedStream.getAudioTracks().length}`);
+      
+      // Verify audio tracks are enabled
+      combinedStream.getAudioTracks().forEach((track, i) => {
+        alert(`🎵 Audio track ${i}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}`);
+        
+        // 🔍 TEST if audio track has real data
+        this.testAudioTrackData(track, i);
+      });
+      
       this.logger.info('🎬 Combined stream created', {
         videoTracks: combinedStream.getVideoTracks().length,
         audioTracks: combinedStream.getAudioTracks().length,
@@ -274,6 +284,8 @@ export class AgoraStreamRecorder {
 
       // 🎵 ENHANCED MIME TYPE SELECTION with audio codec fallbacks
       let mimeType = this.selectBestMimeType(combinedStream.getAudioTracks().length > 0);
+      
+      alert(`🎭 Selected MIME type: ${mimeType || 'browser-default'}`);
 
       if (mimeType) {
         mediaRecorderOptions.mimeType = mimeType;
@@ -475,8 +487,35 @@ export class AgoraStreamRecorder {
   async captureAudioFromAgoraStreams() {
     let allAudioTracks = [];
     
-    console.log('🎤 [AUDIO CAPTURE v3.1] Searching for audio tracks in <video> & <audio> elements...');
-    this.logger.info('🎤 [AUDIO CAPTURE v3.1] Searching for audio tracks in <video> & <audio> elements...');
+    console.log('🎤 [AUDIO CAPTURE v4.0] Enhanced audio capture with direct mic access...');
+    this.logger.info('🎤 [AUDIO CAPTURE v4.0] Enhanced audio capture with direct mic access...');
+    
+    alert('🔍 Starting enhanced audio capture v4.0...');
+    
+    // 🎙️ FIRST: Try direct microphone access (bypass Agora complexity)
+    try {
+      console.log('🎤 [AUDIO CAPTURE v4.0] Attempting direct microphone capture...');
+      const micStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }, 
+        video: false 
+      });
+      
+      if (micStream.getAudioTracks().length > 0) {
+        allAudioTracks.push(...micStream.getAudioTracks());
+        alert(`🎙️ Direct mic: ${micStream.getAudioTracks().length} tracks captured!`);
+        console.log(`✅ Direct microphone capture: ${micStream.getAudioTracks().length} tracks`);
+      }
+    } catch (micError) {
+      console.log('⚠️ Direct microphone failed:', micError.message);
+      alert(`⚠️ Direct mic failed: ${micError.message}`);
+    }
+    
+    console.log('🎤 [AUDIO CAPTURE v4.0] Now scanning DOM elements...');
+    this.logger.info('🎤 [AUDIO CAPTURE v4.0] Now scanning DOM elements...');
 
     const examineElement = (element, label) => {
       if (element.srcObject && element.srcObject instanceof MediaStream) {
@@ -543,16 +582,65 @@ export class AgoraStreamRecorder {
       if (silent) allAudioTracks.push(silent);
     }
 
-    // ✅ MIX tracks via AudioContext to ensure single clean track (resolves browsers that reject multi-track)
+        // ✅ MIX tracks via AudioContext to ensure single clean track (resolves browsers that reject multi-track)
     const mixedStream = await this.mixAudioTracks(allAudioTracks);
-
-    this.logger.info('🎵 [AUDIO CAPTURE v3.1] Final audio capture summary:', {
+    
+    alert(`🎵 Final result: ${allAudioTracks.length} input tracks → ${mixedStream.getAudioTracks().length} mixed tracks`);
+    
+    this.logger.info('🎵 [AUDIO CAPTURE v4.0] Final audio capture summary:', {
       totalOriginalTracks: allAudioTracks.length,
       mixedTracks: mixedStream.getAudioTracks().length,
       trackIds: mixedStream.getAudioTracks().map(t => t.id)
     });
     
     return mixedStream; // Return stream with 1 mixed audio track
+  }
+
+  /**
+   * Test if audio track contains real data (not silent)
+   */
+  async testAudioTrackData(track, trackIndex) {
+    try {
+      // Create temporary stream with just this track
+      const tempStream = new MediaStream([track]);
+      
+      // Create AudioContext to analyze the audio
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const mediaStreamSource = audioContext.createMediaStreamSource(tempStream);
+      const analyser = audioContext.createAnalyser();
+      
+      mediaStreamSource.connect(analyser);
+      analyser.fftSize = 256;
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      // Sample audio for 2 seconds
+      let sampleCount = 0;
+      let totalVolume = 0;
+      
+      const checkInterval = setInterval(() => {
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume
+        const sum = dataArray.reduce((a, b) => a + b, 0);
+        const average = sum / dataArray.length;
+        totalVolume += average;
+        sampleCount++;
+        
+        if (sampleCount >= 20) { // 2 seconds at 100ms intervals
+          clearInterval(checkInterval);
+          const avgVolume = totalVolume / sampleCount;
+          
+          alert(`🔊 Track ${trackIndex} volume test: ${avgVolume.toFixed(2)} (${avgVolume > 1 ? 'HAS AUDIO' : 'SILENT'})`);
+          
+          // Cleanup
+          audioContext.close().catch(() => {});
+        }
+      }, 100);
+      
+    } catch (error) {
+      alert(`❌ Audio test failed for track ${trackIndex}: ${error.message}`);
+    }
   }
 
   // 🧫 Mix multiple audio tracks into single track using AudioContext
@@ -964,6 +1052,8 @@ export class AgoraStreamRecorder {
       // Create video blob
       const mimeType = this.mediaRecorder.mimeType || 'video/webm';
       const videoBlob = new Blob(this.recordedChunks, { type: mimeType });
+      
+      alert(`💾 Blob created: size=${Math.round(videoBlob.size/1024)}KB, type=${mimeType}`);
       
       const duration = this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0;
       
