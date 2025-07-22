@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import Home1Header from "../home/home-1/header";
-import { useAuth } from "../../../context/AuthContext";
+// import { useAuth } from "../../../context/AuthContext"; // REMOVED - No auth checks needed
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
-import { ADMIN_UIDS } from '../../../data/constants';
+// import { ADMIN_UIDS } from '../../../data/constants'; // REMOVED - No auth checks needed
 import moment from "moment";
 import "moment/locale/ro";
 // Old chat imports removed - using custom chat implementation
@@ -33,7 +33,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   console.log("🏗️ [ADMIN VIDEO] Componenta se inițializează cu conferenceId:", conferenceId);
   
   const router = useRouter();
-  const { currentUser, userData, loading: authLoading } = useAuth();
+  // const { currentUser, userData, loading: authLoading } = useAuth(); // REMOVED - No auth checks needed
   const [loading, setLoading] = useState(true);
   const [conferinta, setConferinta] = useState(null);
   const [error, setError] = useState(null);
@@ -274,60 +274,24 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         console.log("⏰ [ADMIN VIDEO] State curent:", {
           loading,
           error,
-          conferinta: conferinta ? "DA" : "NU",
-          currentUser: currentUser ? "DA" : "NU",
-          userData: userData ? "DA" : "NU"
+          conferinta: conferinta ? "DA" : "NU"
         });
       }
     }, 10000); // 10 secunde
 
     return () => clearTimeout(timeout);
-  }, [loading, error, conferinta, currentUser, userData]);
+  }, [loading, error, conferinta]);
 
-  // Check admin access
+  // Load conference data - NO AUTH CHECKS
   useEffect(() => {
-    console.log("🚀 [ADMIN VIDEO] useEffect pentru verificarea accesului...");
-    console.log("🚀 [ADMIN VIDEO] authLoading:", authLoading);
-    console.log("🚀 [ADMIN VIDEO] currentUser:", currentUser ? "DA" : "NU");
-    console.log("🚀 [ADMIN VIDEO] userData:", userData ? "DA" : "NU");
+    console.log("🚀 [ADMIN VIDEO] Încărcare simplă a conferinței...");
     console.log("🚀 [ADMIN VIDEO] conferenceId:", conferenceId);
-    console.log("🚀 [ADMIN VIDEO] loading:", loading);
-    console.log("🚀 [ADMIN VIDEO] error:", error);
-
-    // 🔥 CRITICAL FIX: Așteaptă ca AuthContext să termine loading-ul
-    if (authLoading) {
-      console.log("⏳ [ADMIN VIDEO] AuthContext încă se încarcă, așteaptă...");
-      return;
-    }
 
     // Dacă deja încărcase sau are o eroare, nu mai executa
     if (conferinta || error) {
       console.log("🛑 [ADMIN VIDEO] Conferința deja încărcată sau există eroare, skip useEffect");
       return;
     }
-
-    if (!currentUser) {
-      console.log("❌ [ADMIN VIDEO] Utilizator neautentificat după ce AuthContext s-a încărcat");
-      setError("Trebuie să fii autentificat ca admin");
-      setLoading(false);
-      return;
-    }
-
-    // Verifică dacă utilizatorul este admin - folosim direct UID-ul din currentUser
-    // Importă constant admin UIDs pentru consistență
-    const adminUIDs = ADMIN_UIDS;
-
-    console.log("🔐 [ADMIN VIDEO] Verifică UID admin:", currentUser.uid);
-    console.log("🔐 [ADMIN VIDEO] UIDs admin permise:", adminUIDs);
-
-    if (!adminUIDs.includes(currentUser.uid)) {
-      console.log("❌ [ADMIN VIDEO] UID nu este în lista de admin");
-      setError("Acces restricționat. Doar adminii pot accesa această pagină.");
-      setLoading(false);
-      return;
-    }
-
-    console.log("✅ [ADMIN VIDEO] Utilizator admin verificat");
 
     if (conferenceId) {
       console.log("🎯 [ADMIN VIDEO] Pornește încărcarea datelor pentru conferința:", conferenceId);
@@ -337,25 +301,24 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setError("Conference ID lipsește");
       setLoading(false);
     }
-  }, [conferenceId, currentUser?.uid, authLoading]); // Added authLoading dependency
+  }, [conferenceId]); // Only depends on conferenceId
 
   // Debugging - afișează starea fără să forțeze reîncărcarea
   useEffect(() => {
     const debugTimeout = setTimeout(() => {
-      if (loading && conferenceId && currentUser) {
+      if (loading && conferenceId) {
         console.log("🚨 [DEBUG] Încă se încarcă după 10 secunde...");
         console.log("🚨 [DEBUG] Stare:", {
           loading,
           error,
           conferinta: !!conferinta,
-          conferenceId,
-          currentUser: !!currentUser
+          conferenceId
         });
       }
     }, 10000);
 
     return () => clearTimeout(debugTimeout);
-  }, [loading, error, conferinta, conferenceId, currentUser]);
+  }, [loading, error, conferinta, conferenceId]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -380,10 +343,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setError(null); // Clear previous errors
       
       console.log("🔍 [ADMIN VIDEO] Parametri:", {
-        conferenceId,
-        currentUser: currentUser?.uid,
-        userDisplayName: currentUser?.displayName,
-        userEmail: currentUser?.email
+        conferenceId
       });
 
       if (!conferenceId) {
@@ -458,10 +418,10 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     try {
       const docRef = doc(db, "ConferinteGrupPresence", conferintaId);
       
-      // Creăm datele admin local dacă userData nu există
+      // Creăm datele admin static - nu mai dependem de auth
       const adminData = {
-        name: userData?.nume || currentUser?.displayName || "Admin",
-        email: userData?.email || currentUser?.email || "admin@site.com",
+        name: "Admin",
+        email: "admin@cristinazurba.com",
         role: "host"
       };
       
@@ -536,7 +496,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       await updateAdminPresence(conferinta.documentId, false);
     }
     const chatId = `conference_${conferinta.documentId}`;
-    await setUserOfflineInChat(chatId, currentUser?.uid || 'admin');
+    await setUserOfflineInChat(chatId, 'admin');
     // Redirecționez înapoi la panoul de administrare
     router.push("/admin-conferinte-grup");
   };
@@ -576,7 +536,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     
     const chatRoomId = `conference_${meetingId}`;
     // FIXED: Force admin prefix to prevent confusion with regular users
-    const adminUserId = `admin_${currentUser?.uid || 'default'}`;
+    const adminUserId = `admin_default`;
     
     console.log("🚀 [ADMIN CUSTOM CHAT] Initializing with:", {
       meetingId,
@@ -1110,7 +1070,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
             // enableDualStream: true, // Disabled to prevent conflicts - managed by AgoraUIKit internally
           }}
           rtmProps={{ 
-            username: currentUser?.displayName || 'Admin', 
+            username: 'Admin', 
             displayUsername: true 
           }}
           styleProps={{
@@ -1448,7 +1408,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           adminData={{
             nume: "Cristina",
             prenume: "Zurba",
-            email: userData?.email || currentUser?.email || "cristinazurbac@gmail.com",
+            email: "cristinazurbac@gmail.com",
             role: "admin"
           }}
         />
@@ -1577,9 +1537,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 <AdminCustomChat 
                   meetingId={conferinta.documentId}
                   adminData={{
-                    nume: userData?.nume || currentUser?.displayName || "Admin",
-                    prenume: userData?.prenume || "",
-                    email: userData?.email || currentUser?.email || "admin@site.com",
+                    nume: "Admin",
+                    prenume: "",
+                    email: "admin@cristinazurba.com",
                     role: "admin"
                   }}
                 />
