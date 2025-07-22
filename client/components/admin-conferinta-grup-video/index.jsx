@@ -983,11 +983,24 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   };
 
   const isConferenceActive = (conferinta) => {
+    // 🚫 GUARD: Verifică dacă conferința există
+    if (!conferinta) {
+      return false;
+    }
     // Noua logică: doar statusul contează
     return conferinta.status === "activa";
   };
 
   const formatDataDisplay = (conferinta) => {
+    // 🚫 GUARD: Verifică dacă conferința există
+    if (!conferinta) {
+      return {
+        dataRange: "Încarcă...",
+        oraRange: "Încarcă...",
+        type: "Conferință"
+      };
+    }
+
     if (conferinta.tipConferinta === "course") {
       return {
         dataRange: `${moment(conferinta.dataInceput).format("DD MMMM YYYY")} - ${moment(conferinta.dataFinal).format("DD MMMM YYYY")}`,
@@ -1041,6 +1054,36 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                     onClick={() => router.push("/admin-conferinte-grup")}
                   >
                     Înapoi la Administrare
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // 🚫 GUARD: Verifică dacă conferința a fost încărcată
+  if (!conferinta) {
+    return (
+      <>
+        <Home1Header />
+        <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
+          <div className="container">
+            <div className="row justify-content-center">
+              <div className="col-lg-6">
+                <div className="text-center py-5">
+                  <i className="fa fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                  <h3>Conferința nu a fost găsită</h3>
+                  <p className="text-muted">
+                    Nu s-au putut încărca datele conferinței. Verificați ID-ul și încercați din nou.
+                  </p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => router.push("/admin-conferinte-grup")}
+                  >
+                    Înapoi la Lista Conferințe
                   </button>
                 </div>
               </div>
