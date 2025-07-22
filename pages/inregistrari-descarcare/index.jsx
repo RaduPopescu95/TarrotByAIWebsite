@@ -39,35 +39,13 @@ const InregistrariDescarcare = () => {
 
       console.log('🎥 Loading recordings for user:', currentUser?.email);
 
-      // Load recordings from different collections
-      const [simpleRecordings, generalRecordings, browserRecordings] = await Promise.all([
-        loadFromCollection('SimpleRecordings'),
-        loadFromCollection('Recordings'),
-        loadFromCollection('BrowserRecordings')
-      ]);
+      // 🎯 Load recordings from SimpleRecordings only (single source of truth)
+      const recordings = await loadFromCollection('SimpleRecordings');
 
-      // Combine and deduplicate recordings
-      const allRecordings = [
-        ...simpleRecordings,
-        ...generalRecordings,
-        ...browserRecordings
-      ];
-
-      // Remove duplicates based on meetingCode
-      const uniqueRecordings = allRecordings.reduce((unique, recording) => {
-        const existing = unique.find(r => r.meetingCode === recording.meetingCode);
-        if (!existing) {
-          unique.push(recording);
-        } else if (recording.downloadURL && !existing.downloadURL) {
-          // Replace with recording that has downloadURL
-          const index = unique.indexOf(existing);
-          unique[index] = recording;
-        }
-        return unique;
-      }, []);
+      console.log('✅ Loaded recordings from SimpleRecordings:', recordings.length);
 
       // Enrich recordings with additional data
-      const enrichedRecordings = await enrichRecordingsWithMetadata(uniqueRecordings);
+      const enrichedRecordings = await enrichRecordingsWithMetadata(recordings);
 
       // Sort by creation date (newest first)
       enrichedRecordings.sort((a, b) => {

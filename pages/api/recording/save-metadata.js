@@ -159,7 +159,7 @@ export default async function handler(req, res) {
       durationFormatted: recordingData.durationFormatted
     });
 
-    // Save to Firestore - SimpleRecordings collection
+    // 🎯 Save to SimpleRecordings ONLY - single source of truth
     logWithDetails('INFO', 'Saving to SimpleRecordings collection', {
       requestId,
       collection: 'SimpleRecordings',
@@ -175,35 +175,13 @@ export default async function handler(req, res) {
       writeTime: simpleRecordingsResult.writeTime?.toDate()?.toISOString()
     });
 
-    // Also save to general recordings collection for compatibility
-    const compatibilityData = {
-      ...recordingData,
-      recordingType: 'browser_simple',
-      storageLocation: downloadURL
-    };
-
-    logWithDetails('INFO', 'Saving to Recordings collection for compatibility', {
-      requestId,
-      collection: 'Recordings',
-      documentId: meetingCode
-    });
-
-    const recordingsResult = await db.collection('Recordings').doc(meetingCode).set(compatibilityData, { merge: true });
-
-    logWithDetails('SUCCESS', 'Saved to Recordings collection', {
-      requestId,
-      collection: 'Recordings',
-      documentId: meetingCode,
-      writeTime: recordingsResult.writeTime?.toDate()?.toISOString()
-    });
-
     const processingTime = Date.now() - requestStartTime;
 
     logWithDetails('SUCCESS', 'Recording metadata saved successfully', {
       requestId,
       meetingCode,
       processingTime: `${processingTime}ms`,
-      totalCollections: 2,
+      totalCollections: 1,
       finalSize: formatFileSize(recordingData.size),
       finalDuration: recordingData.durationFormatted
     });

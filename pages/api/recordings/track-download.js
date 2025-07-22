@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     });
 
     // Search for the recording in multiple collections
-    const collections = ['SimpleRecordings', 'Recordings', 'BrowserRecordings'];
+    const collections = ['SimpleRecordings']; // 🎯 Single collection for all recordings
     let recordingDoc = null;
     let recordingData = null;
     let foundCollection = null;

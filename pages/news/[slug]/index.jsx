@@ -177,6 +177,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
   }
 
   const shareUrl = filteredArticle.currentUrl;
+  
+  // Text for display on page (current language)
   const articleTitle = detectedLng === "hi" 
     ? filteredArticle?.info?.hu?.nume 
     : detectedLng === "id" 
@@ -189,11 +191,15 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
     ? filteredArticle?.info?.ru?.descriere 
     : filteredArticle?.info?.[detectedLng]?.descriere || filteredArticle?.info?.ro?.descriere || '';
 
+  // 🇷🇴 Text for social media sharing (ALWAYS Romanian)
+  const shareTitle = filteredArticle?.info?.ro?.nume || "Articol Blog - Cristina Zurba";
+  const shareDescription = filteredArticle?.info?.ro?.descriere || "Descoperă ghidarea spirituală și dezvoltarea personală alături de Cristina Zurba.";
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: articleTitle,
-        text: articleDescription,
+        title: shareTitle, // 🇷🇴 Always use Romanian for sharing
+        text: shareDescription, // 🇷🇴 Always use Romanian for sharing
         url: shareUrl,
       });
     } else {
@@ -209,18 +215,18 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
         <meta name="description" content={articleDescription} />
         <meta name="keywords" content="spiritual, tarot, dezvoltare personală, ghidare spirituală" />
         
-        {/* Open Graph / Facebook */}
+        {/* Open Graph / Facebook - ALWAYS Romanian */}
         <meta property="og:type" content="article" />
-        <meta property="og:title" content={articleTitle} />
-        <meta property="og:description" content={articleDescription} />
+        <meta property="og:title" content={shareTitle} />
+        <meta property="og:description" content={shareDescription} />
         <meta property="og:url" content={shareUrl} />
         <meta property="og:image" content={filteredArticle?.image?.finalUri || '/icon.png'} />
         <meta property="og:site_name" content="Cristina Zurba - Ghid Spiritual" />
         
-        {/* Twitter */}
+        {/* Twitter - ALWAYS Romanian */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={articleTitle} />
-        <meta name="twitter:description" content={articleDescription} />
+        <meta name="twitter:title" content={shareTitle} />
+        <meta name="twitter:description" content={shareDescription} />
         <meta name="twitter:image" content={filteredArticle?.image?.finalUri || '/icon.png'} />
         
         {/* Article specific meta */}
@@ -232,15 +238,15 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
           ? filteredArticle?.categorie?.info?.ru?.nume 
           : filteredArticle?.categorie?.info?.[detectedLng]?.nume || filteredArticle?.categorie?.info?.ro?.nume} />
         
-        {/* Schema.org structured data */}
+        {/* Schema.org structured data - ALWAYS Romanian */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Article",
-              "headline": articleTitle,
-              "description": articleDescription,
+              "headline": shareTitle,
+              "description": shareDescription,
               "image": filteredArticle?.image?.finalUri || '/icon.png',
               "author": {
                 "@type": "Person",

@@ -31,8 +31,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Load recordings from different collections
-    const collections = ['SimpleRecordings', 'Recordings', 'BrowserRecordings'];
+    // Load recordings from SimpleRecordings (single source of truth)
+    const collections = ['SimpleRecordings'];
     const allRecordings = [];
 
     for (const collectionName of collections) {

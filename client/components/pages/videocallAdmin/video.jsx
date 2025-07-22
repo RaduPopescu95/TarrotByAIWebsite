@@ -3,7 +3,7 @@ import AgoraUIKit, { layout } from "agora-react-uikit";
 import "agora-react-uikit/dist/index.css";
 import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "../../../../firebase";
 import { AgoraStreamRecorder } from "../../../../utils/agoraStreamRecorder";
 import RecordingProgressWidget from "../../../../components/RecordingProgressWidget";
@@ -38,8 +38,53 @@ const AdminVideoCall = () => {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isLoadingClientEmail, setIsLoadingClientEmail] = useState(false);
 
   const recordingIntervalRef = useRef(null);
+
+  // 🔍 Function to fetch client email from RezervariConsultatii
+  const fetchClientEmail = async (meetingCode) => {
+    try {
+      setIsLoadingClientEmail(true);
+      
+      // First, try to find by document ID (from meetingCode format: code__documentId)
+      if (meetingCode.includes('__')) {
+        const documentId = meetingCode.split('__')[1];
+        const docRef = doc(db, 'RezervariConsultatii', documentId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log('📧 [ADMIN EMAIL] Found client email from document ID:', data.email);
+          return data.email;
+        }
+      }
+      
+      // Fallback: search by meetingCode field
+      const q = query(
+        collection(db, 'RezervariConsultatii'),
+        where('meetingCode', '==', meetingCode),
+        limit(1)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const data = querySnapshot.docs[0].data();
+        console.log('📧 [ADMIN EMAIL] Found client email from query:', data.email);
+        return data.email;
+      }
+      
+      console.log('⚠️ [ADMIN EMAIL] No client email found for meetingCode:', meetingCode);
+      return null;
+      
+    } catch (error) {
+      console.error('❌ [ADMIN EMAIL] Error fetching client email:', error);
+      return null;
+    } finally {
+      setIsLoadingClientEmail(false);
+    }
+  };
 
   // Initialize AgoraStreamRecorder for admin (no screen share dialog!)
   const [recorder] = useState(() => {
@@ -430,11 +475,24 @@ const AdminVideoCall = () => {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     // Show email dialog instead of stopping immediately
     setEmailError("");
     setRecipientEmail("");
     setShowEmailDialog(true);
+    
+    // 🚀 Auto-populate client email from RezervariConsultatii
+    if (meetingCode) {
+      console.log('🔍 [ADMIN EMAIL] Fetching client email for meetingCode:', meetingCode);
+      const clientEmail = await fetchClientEmail(meetingCode);
+      
+      if (clientEmail) {
+        setRecipientEmail(clientEmail);
+        console.log('✅ [ADMIN EMAIL] Auto-populated client email:', clientEmail);
+      } else {
+        console.log('⚠️ [ADMIN EMAIL] Could not find client email, admin will need to enter manually');
+      }
+    }
   };
 
   const confirmStopRecording = async () => {
@@ -1014,20 +1072,43 @@ const AdminVideoCall = () => {
                     <div style={styles.emailInputContainer}>
                       <label style={styles.emailInputLabel}>
                         Adresa de email pentru înregistrare:
+                        {isLoadingClientEmail && (
+                          <span style={{marginLeft: '8px', color: '#667eea', fontSize: '14px'}}>
+                            <i className="fas fa-spinner fa-spin" style={{marginRight: '4px'}}></i>
+                            Se caută emailul clientului...
+                          </span>
+                        )}
                       </label>
                       <input
                         type="email"
-                        style={styles.emailInput}
+                        style={{
+                          ...styles.emailInput,
+                          backgroundColor: isLoadingClientEmail ? '#f8f9fa' : 'white'
+                        }}
                         value={recipientEmail}
                         onChange={(e) => setRecipientEmail(e.target.value)}
-                        placeholder="client@example.com"
-                        disabled={isSendingEmail}
+                        placeholder={isLoadingClientEmail ? "Se caută emailul..." : "client@example.com"}
+                        disabled={isSendingEmail || isLoadingClientEmail}
                         onKeyPress={(e) => {
-                          if (e.key === 'Enter' && !isSendingEmail) {
+                          if (e.key === 'Enter' && !isSendingEmail && !isLoadingClientEmail) {
                             confirmStopRecording();
                           }
                         }}
                       />
+                      {recipientEmail && !isLoadingClientEmail && (
+                        <div style={{
+                          marginTop: '8px',
+                          padding: '8px 12px',
+                          background: '#e8f5e8',
+                          border: '1px solid #28a745',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          color: '#155724'
+                        }}>
+                          <i className="fas fa-check-circle" style={{marginRight: '6px', color: '#28a745'}}></i>
+                          Email găsit automat din rezervare. Poți modifica dacă dorești să trimiți la alt email.
+                        </div>
+                      )}
         </div>
                     
                     {emailError && (
@@ -1049,12 +1130,17 @@ const AdminVideoCall = () => {
                     <button
                       style={styles.emailDialogConfirmButton}
                       onClick={confirmStopRecording}
-                      disabled={isSendingEmail || !recipientEmail.trim()}
+                      disabled={isSendingEmail || isLoadingClientEmail || !recipientEmail.trim()}
                     >
                       {isSendingEmail ? (
                         <>
                           <i className="fas fa-spinner fa-spin" style={{marginRight: '8px'}}></i>
                           Se procesează...
+                        </>
+                      ) : isLoadingClientEmail ? (
+                        <>
+                          <i className="fas fa-search fa-spin" style={{marginRight: '8px'}}></i>
+                          Se caută emailul...
                         </>
                       ) : (
                         <>

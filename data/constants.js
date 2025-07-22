@@ -1,3 +1,17 @@
+// Admin UIDs pentru acces administrativ
+export const ADMIN_UIDS = [
+  "zFsAwNZA5bUonVRIQzRn2HZB3y62", // UID principal admin (Cristina)
+  "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", // UID secundar admin
+  "MSBePxFVcVO3vsfM5nwHr36ROfh2", // UID terțiar admin
+  "LQheTX2moAhKbu72gaStkZgaGz32"  // UID quaternar admin (backup)
+];
+
+// Admin emails pentru verificări alternative
+export const ADMIN_EMAILS = [
+  'cristinazurbac@gmail.com',
+  'webdynamicx@gmail.com'
+];
+
 export const LANGUAGE_LABELS = {
   ro: {
     name: "Nume Română",

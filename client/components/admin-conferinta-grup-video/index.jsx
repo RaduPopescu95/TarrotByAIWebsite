@@ -1,13 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import Home1Header from "../home/home-1/header";
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { useAuth } from "../../../context/AuthContext";
+import { handleGetFirestore } from "../../../utils/firestoreUtils";
+import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
+import { ADMIN_UIDS } from '../../../data/constants';
 import moment from "moment";
 import "moment/locale/ro";
-import dynamic from "next/dynamic";
-import RecordingProgressWidget from "../../../components/RecordingProgressWidget";
-import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
 // Old chat imports removed - using custom chat implementation
 import { setUserOfflineInChat } from "../../../utils/chatUtils";
 import { ref, push, onValue, off, serverTimestamp, set, update } from 'firebase/database';
@@ -179,20 +179,65 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     } catch(e) { setRecordingError(e.message);}  };
 
   const stopRecording = () => {
-    // deschide dialog emailuri pre-populate
-    const preEmails = participantsOnline.filter(p=>p && p.email).map(p=>p.email);
-    setEmailList(preEmails);
+    // 🚀 Preiau toate emailurile participanților din conferința din Firestore
+    const allParticipantEmails = conferinta?.participanti 
+      ? conferinta.participanti
+          .filter(p => p && p.email && p.email.trim()) // Filtrează doar cei cu email valid
+          .map(p => p.email.trim())
+          .filter((email, index, arr) => arr.indexOf(email) === index) // Elimină duplicatele
+      : [];
+    
+    console.log('📧 [ADMIN] Emailuri participanți preluate din conferință:', allParticipantEmails);
+    
+    // Pre-populez lista cu emailurile din Firestore
+    setEmailList(allParticipantEmails);
+    setEmailInput(''); // Resetez input-ul
+    setEmailError(''); // Resetez erorile
     setShowEmailDialog(true);
   };
 
-  const validateEmail = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const addEmailFromInput = () => {
-    const parts = emailInput.split(',').map(e=>e.trim()).filter(Boolean);
-    const invalid = parts.find(p=>!validateEmail(p));
-    if (invalid) { setEmailError(`Email invalid: ${invalid}`); return; }
-    setEmailList(prev=>[...prev, ...parts.filter(p=>!prev.includes(p))]);
-    setEmailInput(''); setEmailError('');
+    if (!emailInput.trim()) {
+      setEmailError('Introduceți un email');
+      return;
+    }
+    
+    if (!validateEmail(emailInput.trim())) {
+      setEmailError('Format email invalid');
+      return;
+    }
+    
+    if (emailList.includes(emailInput.trim())) {
+      setEmailError('Email-ul există deja în listă');
+      return;
+    }
+    
+    setEmailList(prev => [...prev, emailInput.trim()]);
+    setEmailInput('');
+    setEmailError('');
+    console.log('📧 [ADMIN] Email adăugat:', emailInput.trim());
+  };
+
+  const removeEmailFromList = (emailToRemove) => {
+    setEmailList(prev => prev.filter(email => email !== emailToRemove));
+    setEmailError('');
+    console.log('📧 [ADMIN] Email șters:', emailToRemove);
+  };
+
+  const reloadParticipantEmails = () => {
+    const allParticipantEmails = conferinta?.participanti 
+      ? conferinta.participanti
+          .filter(p => p && p.email && p.email.trim())
+          .map(p => p.email.trim())
+          .filter((email, index, arr) => arr.indexOf(email) === index)
+      : [];
+    
+    setEmailList(allParticipantEmails);
+    setEmailInput('');
+    setEmailError('');
+    console.log('🔄 [ADMIN] Lista emailuri resetată la participanții conferinței:', allParticipantEmails);
   };
 
   const confirmStopRecording = async () => {
@@ -253,10 +298,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
 
     // Verifică dacă utilizatorul este admin - folosim direct UID-ul din currentUser
-    const adminUIDs = [
-      "zFsAwNZA5bUonVRIQzRn2HZB3y62", // UID-ul tău de admin
-      "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", // Alt UID admin dacă există
-    ];
+    // Importă constant admin UIDs pentru consistență
+    const adminUIDs = ADMIN_UIDS;
 
     console.log("🔐 [ADMIN VIDEO] Verifică UID admin:", currentUser.uid);
     console.log("🔐 [ADMIN VIDEO] UIDs admin permise:", adminUIDs);
@@ -319,7 +362,6 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       
       console.log("🔍 [ADMIN VIDEO] Parametri:", {
         conferenceId,
-        handleGetFirestore: typeof handleGetFirestore,
         currentUser: currentUser?.uid,
         userDisplayName: currentUser?.displayName,
         userEmail: currentUser?.email
@@ -327,10 +369,6 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
       if (!conferenceId) {
         throw new Error("Conference ID lipsește");
-      }
-
-      if (typeof handleGetFirestore !== 'function') {
-        throw new Error("handleGetFirestore nu este o funcție");
       }
 
       console.log("📥 [ADMIN VIDEO] Apelează Firestore...");
@@ -555,7 +593,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           // Set admin as participant
           const adminParticipantRef = ref(database, `chats/${chatRoomId}/participants/${adminUserId}`);
           await set(adminParticipantRef, {
-            name: `${adminData.nume} ${adminData.prenume}`.trim() || "Admin",
+            name: "Cristina Zurba",
             role: "admin",
             isOnline: true,
             lastSeen: serverTimestamp(),
@@ -587,7 +625,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         
         // Get current participant name
         const currentParticipant = participants[adminUserId];
-        const senderName = currentParticipant?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin";
+        const senderName = currentParticipant?.name || "Cristina Zurba";
         
         const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
         await push(messagesRef, {
@@ -614,7 +652,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
     const startEditingName = () => {
       const currentParticipant = participants[adminUserId];
-      const currentName = currentParticipant?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin";
+      const currentName = currentParticipant?.name || "Cristina Zurba";
       setEditedName(currentName);
       setIsEditingName(true);
     };
@@ -681,8 +719,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       <>
         {/* Chat FAB */}
         <div style={{
-          position: 'absolute',
-          bottom: '10%',
+          position: 'fixed',
+          bottom: '20px',
           right: '20px',
           zIndex: 11000
         }}>
@@ -729,8 +767,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         {/* Chat Panel */}
         {isChatOpen && (
           <div style={{
-            position: 'absolute',
-            bottom: 'calc(15% + 30px)',
+            position: 'fixed',
+            bottom: '100px',
             right: '20px',
             width: '350px',
             height: '500px',
@@ -781,7 +819,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontWeight: '600', fontSize: '14px' }}>
-                        {participants[adminUserId]?.name || `${adminData.nume} ${adminData.prenume}`.trim() || "Admin"}
+                        {participants[adminUserId]?.name || "Cristina Zurba"}
                       </span>
                       <button
                         onClick={startEditingName}
@@ -790,13 +828,16 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                           border: 'none',
                           color: 'white',
                           cursor: 'pointer',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           opacity: '0.7',
-                          padding: '2px'
+                          padding: '2px 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
                         }}
                         title="Editează numele"
                       >
-                        ✏️
+                        ✏️ <span style={{ fontSize: '10px' }}>Schimbă Nume Chat</span>
                       </button>
                     </div>
                   )}
@@ -1237,36 +1278,126 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         {showEmailDialog && (
           <div style={emailDialogOverlayStyle}>
             <div style={emailDialogStyle}>
-              <h3 style={{marginTop:0}}>Trimite înregistrarea</h3>
-              <p>Introduceți una sau mai multe adrese de email separate prin virgule sau Enter.</p>
-
-              <div style={chipContainerStyle}>
-                {emailList.map((mail)=>(
-                  <span key={mail} style={chipStyle}>
-                    {mail}
-                    <button
-                      onClick={()=>setEmailList(list=>list.filter(e=>e!==mail))}
-                      style={chipRemoveBtnStyle}
-                    >×</button>
-                  </span>
-                ))}
+              <h3 style={{marginTop:0}}>📧 Trimite înregistrarea participanților</h3>
+              <p style={{fontSize: '14px', color: '#666', marginBottom: '10px'}}>
+                📋 Emailurile participanților au fost preluate automat din conferință. 
+                Puteți adăuga sau șterge emailuri după necesitate.
+              </p>
+              <div style={{fontSize: '12px', color: '#888', marginBottom: '15px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px'}}>
+                ℹ️ Total participanți în conferință: <strong>{conferinta?.participanti?.length || 0}</strong> | 
+                Cu email valid: <strong>{conferinta?.participanti?.filter(p => p?.email?.trim())?.length || 0}</strong>
               </div>
 
-              <input
-                style={emailInputStyle}
-                placeholder="email@example.com"
-                value={emailInput}
-                onChange={e=>setEmailInput(e.target.value)}
-                onKeyDown={e=>{
-                  if(e.key==='Enter' || e.key===',') { e.preventDefault(); addEmailFromInput(); }
-                }}
-              />
+              {/* Lista emailurilor cu posibilitatea de ștergere */}
+              <div style={{marginBottom: '15px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                  <label style={{fontSize: '13px', fontWeight: 'bold', color: '#333'}}>
+                    📋 Participanți ({emailList.length} emailuri):
+                  </label>
+                  <button
+                    onClick={reloadParticipantEmails}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: '#17a2b8',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontWeight: 'bold'
+                    }}
+                    title="Resetează la participanții originali din conferință"
+                  >
+                    🔄 Resetează
+                  </button>
+                </div>
+                <div style={chipContainerStyle}>
+                  {emailList.length === 0 ? (
+                    <div style={{fontSize: '12px', color: '#999', fontStyle: 'italic', padding: '10px'}}>
+                      Nu sunt emailuri în listă. Adăugați cel puțin un email.
+                    </div>
+                  ) : (
+                    emailList.map((mail)=>(
+                      <span key={mail} style={chipStyle}>
+                        {mail}
+                        <button
+                          onClick={()=>removeEmailFromList(mail)}
+                          style={chipRemoveBtnStyle}
+                          title="Șterge din listă"
+                        >×</button>
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Input pentru adăugare email nou */}
+              <div style={{marginBottom: '15px'}}>
+                <label style={{fontSize: '13px', fontWeight: 'bold', color: '#333', display: 'block', marginBottom: '8px'}}>
+                  ➕ Adaugă email nou:
+                </label>
+                <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                  <input
+                    style={{...emailInputStyle, flex: 1}}
+                    placeholder="email@example.com"
+                    value={emailInput}
+                    onChange={e=>setEmailInput(e.target.value)}
+                    onKeyDown={e=>{
+                      if(e.key==='Enter') { e.preventDefault(); addEmailFromInput(); }
+                    }}
+                  />
+                  <button
+                    onClick={addEmailFromInput}
+                    disabled={!emailInput.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: emailInput.trim() ? '#4CAF50' : '#ccc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: emailInput.trim() ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ➕ Adaugă
+                  </button>
+                </div>
+              </div>
 
               {emailError && <div style={emailErrorStyle}>{emailError}</div>}
 
               <div style={emailDialogFooterStyle}>
-                <button onClick={()=>setShowEmailDialog(false)} disabled={isSendingEmail}>Anulează</button>
-                <button onClick={confirmStopRecording} disabled={isSendingEmail||!emailList.length}>Trimite</button>
+                <button 
+                  onClick={()=>setShowEmailDialog(false)} 
+                  disabled={isSendingEmail}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Anulează
+                </button>
+                <button 
+                  onClick={confirmStopRecording} 
+                  disabled={isSendingEmail||!emailList.length}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: emailList.length > 0 ? '#007bff' : '#ccc',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: emailList.length > 0 ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {isSendingEmail ? '🔄 Se trimite...' : `📧 Trimite (${emailList.length})`}
+                </button>
               </div>
             </div>
           </div>
@@ -1290,9 +1421,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         <AdminCustomChat 
           meetingId={conferinta.documentId}
           adminData={{
-            nume: userData?.nume || currentUser?.displayName || "Admin",
-            prenume: userData?.prenume || "",
-            email: userData?.email || currentUser?.email || "admin@site.com",
+            nume: "Cristina",
+            prenume: "Zurba",
+            email: userData?.email || currentUser?.email || "cristinazurbac@gmail.com",
             role: "admin"
           }}
         />

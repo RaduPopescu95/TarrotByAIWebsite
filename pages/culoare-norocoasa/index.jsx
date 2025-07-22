@@ -143,10 +143,10 @@ export function NumarNorocos() {
         </section>
 
         {/* Modern Minimal Design */}
-        <section style={{ padding: "80px 0" }}>
-          <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
+        <section style={{ padding: "100px 0" }}>
+          <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 20px" }}>
             {/* Hero Section */}
-            <div style={{ textAlign: "center", marginBottom: "80px" }}>
+            <div style={{ textAlign: "center", marginBottom: "20px",  }}>
               <div style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -192,13 +192,13 @@ export function NumarNorocos() {
             <div style={{
               background: "white",
               borderRadius: "24px",
-              padding: isMobile ? "40px 20px" : "60px 40px",
+              padding: isMobile ? "40px 25px" : "60px 60px",
               textAlign: "center",
               boxShadow: "0 20px 40px rgba(0, 0, 0, 0.08)",
-              border: "1px solid rgba(102, 126, 234, 0.1)",
+              border: "0.5px solid rgba(102, 126, 234, 0.1)",
               position: "relative",
               overflow: "hidden",
-              maxWidth: "600px",
+              maxWidth: isMobile ? "90%" : "800px",
               margin: "0 auto"
             }}>
               {/* Background Pattern */}
@@ -223,17 +223,17 @@ export function NumarNorocos() {
                     display: "inline-block"
                   }}>
                     <div style={{
-                      width: isMobile ? "200px" : "250px",
-                      height: isMobile ? "200px" : "250px",
+                      width: isMobile ? "280px" : "350px",
+                      height: isMobile ? "280px" : "350px",
                       borderRadius: "50%",
-                      padding: "20px",
+                      padding: isMobile ? "6px" : "8px",
                       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       boxShadow: "0 15px 35px rgba(102, 126, 234, 0.4)"
                     }}>
                       <img
                         src={zilnicCuloriNorocoase.image.finalUri}
-                        width={isMobile ? 160 : 210}
-                        height={isMobile ? 160 : 210}
+                        width={isMobile ? 268 : 334}
+                        height={isMobile ? 268 : 334}
                         alt="Lucky Color"
                         style={{
                           borderRadius: "50%",
@@ -263,7 +263,7 @@ export function NumarNorocos() {
                 {/* Color Name */}
                 {zilnicCuloriNorocoase.info && (
                   <h2 style={{
-                    fontSize: isMobile ? "2rem" : "2.5rem",
+                    fontSize: isMobile ? "2.2rem" : "2.8rem",
                     fontWeight: "700",
                     color: "#1a202c",
                     margin: "0 0 20px 0",
@@ -294,7 +294,7 @@ export function NumarNorocos() {
                 {zilnicCuloriNorocoase.info && (
                   <div style={{
                     background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-                    padding: "30px",
+                    padding: isMobile ? "25px 20px" : "30px 25px",
                     borderRadius: "16px",
                     border: "1px solid #e2e8f0",
                     position: "relative"
@@ -312,13 +312,13 @@ export function NumarNorocos() {
                     </div>
                     
                     <p style={{
-                      fontSize: "1.1rem",
+                      fontSize: isMobile ? "1.3rem" : "1.4rem",
                       lineHeight: "1.7",
                       color: "#374151",
                       margin: "0",
-                      textAlign: "justify",
+                      textAlign: isMobile ? "left" : "justify",
                       fontStyle: "italic",
-                      paddingLeft: "20px"
+                      paddingLeft: isMobile ? "10px" : "15px"
                     }}>
                       {detectedLng === "hi"
                         ? zilnicCuloriNorocoase.info.hu.descriere

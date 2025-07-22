@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const moment = require("moment");
+const { ADMIN_UIDS } = require("../../data/constants");
 
 // Configurații pentru Nodemailer (aceleași ca în Firebase Functions)
 const transporter = nodemailer.createTransporter({
@@ -10,12 +11,8 @@ const transporter = nodemailer.createTransporter({
   },
 });
 
-// Lista de UIDs admin autorizate
-const adminUIDs = [
-  "zFsAwNZA5bUonVRIQzRn2HZB3y62",
-  "BhJZdiWVQJNnbLOCGWxzjGHVjHB2", 
-  "MSBePxFVcVO3vsfM5nwHr36ROfh2"
-];
+// Lista de UIDs admin autorizate (din constante centralizate)
+const adminUIDs = ADMIN_UIDS;
 
 export default async function handler(req, res) {
   console.log("🚀 [CONFERENCE EMAIL API] Request primit:", req.method);

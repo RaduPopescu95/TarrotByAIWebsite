@@ -7,6 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
 import dynamic from "next/dynamic";
+import { ADMIN_UIDS } from '../../../data/constants';
 
 
 // Import dinamic pentru AgoraUIKit pentru a evita SSR issues
@@ -347,13 +348,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     const [stableUserId] = useState(() => {
       if (currentUser?.uid) {
         // Check if user is admin - if so, force them to use admin interface
-        const adminUIDs = [
-          'zFsAwNZA5bUonVRIQzRn2HZB3y62',
-          'BhJZdiWVQJNnbLOCGWxzjGHVjHB2', 
-          'MSBePxFVcVO3vsfM5nwHr36ROfh2'
-        ];
-        
-        if (adminUIDs.includes(currentUser.uid)) {
+        if (ADMIN_UIDS.includes(currentUser.uid)) {
           console.log("👑 [USER CHAT] Admin testing user interface - using participant_admin prefix");
           return `participant_admin_${currentUser.uid}`;
         }
@@ -585,8 +580,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       <>
         {/* Chat FAB */}
         <div style={{
-          position: 'absolute',
-          bottom: '10%',
+          position: 'fixed',
+          bottom: '20px',
           right: '20px',
           zIndex: 11000
         }}>
@@ -633,8 +628,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         {/* Chat Panel */}
         {isChatOpen && (
           <div style={{
-            position: 'absolute',
-            bottom: 'calc(15% + 40px)',
+            position: 'fixed',
+            bottom: '100px',
             right: '20px',
             width: '350px',
             height: '500px',
@@ -697,13 +692,16 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                           border: 'none',
                           color: 'white',
                           cursor: 'pointer',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           opacity: '0.7',
-                          padding: '2px'
+                          padding: '2px 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
                         }}
                         title="Editează numele"
                       >
-                        ✏️
+                        ✏️ <span style={{ fontSize: '10px' }}>Schimbă Nume Chat</span>
                       </button>
                     </div>
                   )}

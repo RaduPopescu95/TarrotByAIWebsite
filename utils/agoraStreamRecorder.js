@@ -721,16 +721,13 @@ export class AgoraStreamRecorder {
       // Import Firestore functions
       const { doc, setDoc } = await import('firebase/firestore');
       
-      // Save to multiple collections for compatibility
-      const recordingRef = doc(firestore, 'Recordings', recordingData.meetingCode);
-      await setDoc(recordingRef, recordingData, { merge: true });
-      
+      // 🎯 SAVE ONLY TO SimpleRecordings - single source of truth
       const simpleRecordingRef = doc(firestore, 'SimpleRecordings', recordingData.meetingCode);
       await setDoc(simpleRecordingRef, recordingData, { merge: true });
       
-      this.logger.success('📝 Recording metadata saved to Firestore', {
+      this.logger.success('📝 Recording metadata saved to SimpleRecordings', {
         meetingCode: recordingData.meetingCode,
-        collections: ['Recordings', 'SimpleRecordings']
+        collection: 'SimpleRecordings'
       });
     } catch (error) {
       this.logger.error('❌ Failed to save recording metadata', error);
