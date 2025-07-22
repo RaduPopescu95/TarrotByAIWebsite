@@ -113,6 +113,7 @@ export const AuthProvider = ({ children }) => {
         const accountSwitched = await handleAccountSwitch(user);
         if (accountSwitched) {
           console.log("🔄 [AUTH] Account switch handled, returning early");
+          setLoading(false);
           return; // onAuthStateChanged will be called again
         }
       }
@@ -163,6 +164,7 @@ export const AuthProvider = ({ children }) => {
           if (error.message && error.message.includes("Permission denied")) {
             console.log("🚨 [AUTH] Permission denied detected, clearing cache and re-authenticating...");
             await clearAuthCache();
+            setLoading(false);
             return;
           }
           
@@ -193,6 +195,8 @@ export const AuthProvider = ({ children }) => {
           setUserData(anonymousUserData);
           localStorage.setItem("currentUser", JSON.stringify(user));
           localStorage.setItem("userData", JSON.stringify(anonymousUserData));
+          setCurrentUser(user);
+          setLoading(false);
           return;
         }
         

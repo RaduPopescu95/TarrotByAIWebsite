@@ -33,7 +33,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   console.log("🏗️ [ADMIN VIDEO] Componenta se inițializează cu conferenceId:", conferenceId);
   
   const router = useRouter();
-  const { currentUser, userData } = useAuth();
+  const { currentUser, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [conferinta, setConferinta] = useState(null);
   const [error, setError] = useState(null);
@@ -287,13 +287,29 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   // Check admin access
   useEffect(() => {
     console.log("🚀 [ADMIN VIDEO] useEffect pentru verificarea accesului...");
+    console.log("🚀 [ADMIN VIDEO] authLoading:", authLoading);
     console.log("🚀 [ADMIN VIDEO] currentUser:", currentUser ? "DA" : "NU");
     console.log("🚀 [ADMIN VIDEO] userData:", userData ? "DA" : "NU");
     console.log("🚀 [ADMIN VIDEO] conferenceId:", conferenceId);
+    console.log("🚀 [ADMIN VIDEO] loading:", loading);
+    console.log("🚀 [ADMIN VIDEO] error:", error);
+
+    // 🔥 CRITICAL FIX: Așteaptă ca AuthContext să termine loading-ul
+    if (authLoading) {
+      console.log("⏳ [ADMIN VIDEO] AuthContext încă se încarcă, așteaptă...");
+      return;
+    }
+
+    // Dacă deja încărcase sau are o eroare, nu mai executa
+    if (conferinta || error) {
+      console.log("🛑 [ADMIN VIDEO] Conferința deja încărcată sau există eroare, skip useEffect");
+      return;
+    }
 
     if (!currentUser) {
-      console.log("❌ [ADMIN VIDEO] Utilizator neautentificat");
+      console.log("❌ [ADMIN VIDEO] Utilizator neautentificat după ce AuthContext s-a încărcat");
       setError("Trebuie să fii autentificat ca admin");
+      setLoading(false);
       return;
     }
 
@@ -307,44 +323,39 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     if (!adminUIDs.includes(currentUser.uid)) {
       console.log("❌ [ADMIN VIDEO] UID nu este în lista de admin");
       setError("Acces restricționat. Doar adminii pot accesa această pagină.");
+      setLoading(false);
       return;
     }
 
     console.log("✅ [ADMIN VIDEO] Utilizator admin verificat");
-
-    // Creăm userData pentru admin dacă nu există
-    if (!userData) {
-      console.log("🔧 [ADMIN VIDEO] Creez userData pentru admin...");
-      const adminUserData = {
-        nume: currentUser.displayName || "Admin",
-        email: currentUser.email || "admin@site.com",
-        owner_uid: currentUser.uid,
-        role: "admin"
-      };
-      console.log("🔧 [ADMIN VIDEO] AdminUserData creat:", adminUserData);
-      // Nu setăm userData în context pentru a nu afecta alte părți ale aplicației
-      // Doar continuăm cu încărcarea conferinței
-    }
 
     if (conferenceId) {
       console.log("🎯 [ADMIN VIDEO] Pornește încărcarea datelor pentru conferința:", conferenceId);
       loadConferenceData();
     } else {
       console.log("⚠️ [ADMIN VIDEO] Nu există conferenceId");
+      setError("Conference ID lipsește");
+      setLoading(false);
     }
-  }, [conferenceId, currentUser]); // Am eliminat userData din dependențe
+  }, [conferenceId, currentUser?.uid, authLoading]); // Added authLoading dependency
 
-  // Funcție separată pentru debugging - forțează încărcarea dacă nu se întâmplă
+  // Debugging - afișează starea fără să forțeze reîncărcarea
   useEffect(() => {
     const debugTimeout = setTimeout(() => {
       if (loading && conferenceId && currentUser) {
-        console.log("🚨 [DEBUG] Forțez reîncărcarea după 5 secunde...");
-        loadConferenceData();
+        console.log("🚨 [DEBUG] Încă se încarcă după 10 secunde...");
+        console.log("🚨 [DEBUG] Stare:", {
+          loading,
+          error,
+          conferinta: !!conferinta,
+          conferenceId,
+          currentUser: !!currentUser
+        });
       }
-    }, 5000);
+    }, 10000);
 
     return () => clearTimeout(debugTimeout);
-  }, []);
+  }, [loading, error, conferinta, conferenceId, currentUser]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -358,7 +369,15 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const loadConferenceData = async () => {
     try {
       console.log("🔍 [ADMIN VIDEO] === ÎNCEPE ÎNCĂRCAREA ===");
+      
+      // Verifică dacă deja se încarcă pentru a evita multiple calls
+      if (loading) {
+        console.log("⚠️ [ADMIN VIDEO] Încărcarea deja în progres, skip...");
+        return;
+      }
+      
       setLoading(true);
+      setError(null); // Clear previous errors
       
       console.log("🔍 [ADMIN VIDEO] Parametri:", {
         conferenceId,
@@ -374,7 +393,13 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.log("📥 [ADMIN VIDEO] Apelează Firestore...");
       const startTime = Date.now();
       
-      const conferinte = await handleGetFirestore("ConferinteGrup");
+      // Add timeout pentru Firestore call
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout: Firestore call took too long")), 15000);
+      });
+      
+      const firestorePromise = handleGetFirestore("ConferinteGrup");
+      const conferinte = await Promise.race([firestorePromise, timeoutPromise]);
       
       const endTime = Date.now();
       console.log("📦 [ADMIN VIDEO] Firestore răspuns în", endTime - startTime, "ms");
