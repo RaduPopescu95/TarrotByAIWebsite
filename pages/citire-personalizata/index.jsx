@@ -305,7 +305,7 @@ const MediaCardConstantService = ({
       </motion.div>
 
       <div style={styles.cardLabel}>
-        <span style={{...styles.cardLabelText, fontSize: isMobile ? '10px' : '16px'}}>
+        <span style={{...styles.cardLabelText, fontSize: isMobile ? '8px' : '14px'}}>
           {detectedLng === "hi"
             ? item.info.hu.nume
             : detectedLng === "id"
@@ -686,7 +686,7 @@ const styles = {
   cardsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '2rem',
+    gap: '2.5rem',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -694,7 +694,7 @@ const styles = {
     height: '100%',
     '@media (max-width: 768px)': {
       gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: '1rem',
+      gap: '1.2rem',
       padding: '0 10px',
     },
   },
@@ -735,7 +735,7 @@ const styles = {
     justifyContent: 'center',
   },
   cardImage: {
-    width: '40%',
+    width: '85%',
     height: 'auto',
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
@@ -743,7 +743,7 @@ const styles = {
   },
   cardLabel: {
     backgroundColor: '#667eea',
-    padding: '0.5rem 1rem',
+    padding: '0.4rem 0.8rem',
     borderRadius: '8px',
     marginTop: '8px',
     boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
@@ -755,7 +755,7 @@ const styles = {
     textOverflow: 'ellipsis',
     color: 'white',
     fontWeight: '600',
-    fontSize: '16px',
+    fontSize: '14px',
   },
 };
 
@@ -765,7 +765,7 @@ if (typeof window !== 'undefined') {
   styleSheet.type = 'text/css';
   styleSheet.innerText = `
     .card-container:hover {
-      transform: translateY(-5px) scale(1.02);
+      transform: translateY(-5px) scale(1.05);
     }
     
     .card-image:hover {
@@ -779,18 +779,18 @@ if (typeof window !== 'undefined') {
       }
       
       .card-container {
-        transform: scale(0.8);
+        transform: scale(0.9);
       }
       
       .card-label {
-        padding: 0.3rem 0.5rem !important;
-        font-size: 10px !important;
+        padding: 0.2rem 0.4rem !important;
+        font-size: 8px !important;
       }
     }
     
     @media (max-width: 480px) {
       .card-container {
-        transform: scale(0.7);
+        transform: scale(0.8);
       }
     }
   `;

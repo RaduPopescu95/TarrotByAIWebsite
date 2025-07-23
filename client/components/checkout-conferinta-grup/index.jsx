@@ -38,6 +38,9 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
   // Test mode pentru simulare fără Stripe
   const [testMode, setTestMode] = useState(false);
+  
+  // State pentru acceptarea termenilor și condițiilor
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const showAlert = (type, message) => {
     setAlert({ type, message, visible: true });
@@ -145,6 +148,12 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         showAlert("danger", "Codul de acces este incorect");
         return false;
       }
+    }
+
+    // Verifică acceptarea termenilor și condițiilor
+    if (!termsAccepted) {
+      showAlert("danger", "Trebuie să acceptați termenii și condițiile pentru a continua");
+      return false;
     }
 
     return true;
@@ -716,13 +725,55 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                             </div>
                           </div>
 
+                          {/* Acceptarea termenilor și condițiilor */}
+                          <div className="terms-accept mb-4">
+                            <div className="custom-checkbox">
+                              <input
+                                type="checkbox"
+                                id="terms_accept"
+                                checked={termsAccepted}
+                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                style={{ 
+                                  marginRight: '8px',
+                                  cursor: 'pointer',
+                                  transform: 'scale(1.2)'
+                                }}
+                              />
+                              <label 
+                                htmlFor="terms_accept" 
+                                className="text-dark fw-medium"
+                                style={{ 
+                                  cursor: 'pointer',
+                                  lineHeight: '1.5',
+                                  fontSize: '1rem'
+                                }}
+                              >
+                                Am citit și accept{" "}
+                                <Link 
+                                  href="/politica-platforma" 
+                                  className="text-primary text-decoration-underline fw-bold"
+                                  target="_blank"
+                                >
+                                  Termenii &amp; Condițiile
+                                </Link>{" "}
+                                platformei ȘI condițiile importante de mai sus
+                              </label>
+                            </div>
+                            {!termsAccepted && (
+                              <div className="alert alert-warning mt-2 py-2 px-3" style={{ fontSize: '0.9rem' }}>
+                                <i className="fa fa-exclamation-triangle me-2"></i>
+                                <strong>Atenție:</strong> Bifarea acestui câmp este obligatorie pentru a continua cu plata
+                              </div>
+                            )}
+                          </div>
+
                         
                           {testMode ? (
                             <button
                               type="button"
                               className="btn btn-warning btn-lg w-100"
                               onClick={simulateSuccessfulPayment}
-                              disabled={processing}
+                              disabled={processing || !termsAccepted}
                             >
                               {processing ? (
                                 <>
@@ -731,7 +782,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                                 </>
                               ) : (
                                 <>
-                                
+                                  <i className="fa fa-flask me-2"></i>
                                   Simulează Plata (TEST MODE)
                                 </>
                               )}
@@ -739,14 +790,20 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                           ) : (
                             <button
                               type="button"
-                              className="btn btn-primary btn-lg w-100"
+                              className={`btn ${!termsAccepted ? 'btn-secondary' : 'btn-primary'} btn-lg w-100`}
                               onClick={createStripeCheckoutSession}
-                              disabled={processing}
+                              disabled={processing || !termsAccepted}
+                              title={!termsAccepted ? "Trebuie să acceptați termenii și condițiile pentru a continua" : ""}
                             >
                               {processing ? (
                                 <>
                                   <i className="fa fa-spinner fa-spin me-2"></i>
                                   Procesare...
+                                </>
+                              ) : !termsAccepted ? (
+                                <>
+                                  <i className="fa fa-exclamation-triangle me-2"></i>
+                                  Acceptați termenii pentru a continua
                                 </>
                               ) : (
                                 <>
@@ -758,7 +815,12 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                           )}
 
                           <div className="text-center mt-3">
-                            {testMode ? (
+                            {!termsAccepted ? (
+                              <small className="text-danger">
+                                <i className="fa fa-exclamation-circle me-1"></i>
+                                Pentru a continua, bifați căsuța de acceptare a termenilor și condițiilor
+                              </small>
+                            ) : testMode ? (
                               <small className="text-warning">
                                 <i className="fa fa-exclamation-triangle me-1"></i>
                                 Mod Test Activ - Nu se va efectua plata reală
