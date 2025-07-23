@@ -93,36 +93,86 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   const [recorder] = useState(() => new AgoraStreamRecorder({
     onProgress: (msg) => setRecordingStatus(msg),
     onComplete: (data) => {
-      console.log('🎉 [GROUP RECORDING] Completed:', data);
+      console.log('🎉 [GROUP RECORDING] === RECORDING COMPLETED ===');
+      console.log('🎉 [GROUP RECORDING] Recording data:', data);
+      console.log('🎉 [GROUP RECORDING] Conference ID:', conferinta?.documentId);
+      console.log('🎉 [GROUP RECORDING] Email list:', emailList);
+      console.log('🎉 [GROUP RECORDING] Email list length:', emailList.length);
+      
       setRecordingStatus('📧 Se trimit emailurile...');
       
       // Track email sending progress
       let emailsSent = 0;
+      let emailErrors = 0;
       const totalEmails = emailList.length;
+      
+      console.log(`📧 [EMAIL SENDING] Starting email sending process for ${totalEmails} recipients`);
+      
+      if (totalEmails === 0) {
+        console.warn('⚠️ [EMAIL SENDING] No emails to send!');
+        setRecordingStatus('⚠️ Nu există emailuri de trimis');
+        setIsRecording(false);
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+        return;
+      }
       
       // trimite email pentru fiecare destinatar cu link către pagina publică de acces
       emailList.forEach(async (dest, index) => {
         try {
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Sending to: ${dest}`);
+          
+          const emailPayload = {
+            meetingCode: `group_${conferinta?.documentId || 'unknown'}`,
+            recipientEmail: dest,
+            // No downloadURL - email will contain link to public access page only
+            duration: data.duration,
+            conferenceTitle: conferinta?.titlu || 'Conferință de grup',
+            conferenceDate: conferinta?.dataInceput || new Date().toISOString()
+          };
+          
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Payload:`, emailPayload);
+          
           const res = await fetch('/api/recording/send-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              meetingCode: `group_${conferinta?.documentId || 'unknown'}`,
-              recipientEmail: dest,
-              // No downloadURL - email will contain link to public access page only
-              duration: data.duration
-            })
+            body: JSON.stringify(emailPayload)
           });
+          
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Response status:`, res.status);
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Response ok:`, res.ok);
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Response error:`, errorText);
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+          }
+          
           const jr = await res.json();
-          console.log('📧 Email access page sent to', dest, jr.success ? '✅' : '❌');
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Response data:`, jr);
+          console.log(`📧 [EMAIL SENDING] [${index + 1}/${totalEmails}] Success:`, jr.success ? '✅' : '❌');
           
-          emailsSent++;
-          setRecordingStatus(`📧 Emailuri trimise: ${emailsSent}/${totalEmails}`);
+          if (jr.success) {
+            emailsSent++;
+            console.log(`✅ [EMAIL SENDING] Email sent successfully to ${dest} (${emailsSent}/${totalEmails})`);
+          } else {
+            emailErrors++;
+            console.error(`❌ [EMAIL SENDING] Email failed to ${dest}:`, jr.error || 'Unknown error');
+          }
           
-          // Reset UI when all emails are sent
-          if (emailsSent === totalEmails) {
+          setRecordingStatus(`📧 Emailuri trimise: ${emailsSent}/${totalEmails}${emailErrors > 0 ? ` (${emailErrors} erori)` : ''}`);
+          
+          // Reset UI when all emails are processed
+          if (emailsSent + emailErrors >= totalEmails) {
+            console.log(`🏁 [EMAIL SENDING] All emails processed. Sent: ${emailsSent}, Errors: ${emailErrors}`);
             setTimeout(() => {
-              setRecordingStatus('✅ Toate emailurile au fost trimise!');
+              if (emailErrors === 0) {
+                setRecordingStatus('✅ Toate emailurile au fost trimise!');
+              } else if (emailsSent > 0) {
+                setRecordingStatus(`⚠️ ${emailsSent} emailuri trimise, ${emailErrors} erori`);
+              } else {
+                setRecordingStatus('❌ Toate emailurile au eșuat');
+              }
               
               setTimeout(() => {
                 setRecordingStatus('');
@@ -130,23 +180,28 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                 setEmailInput('');
                 setEmailError('');
                 console.log('🔄 [UI RESET] Group recording interface reset after completion');
-              }, 3000);
-            }, 500);
+              }, 5000);
+            }, 1000);
           }
           
         } catch (err) {
-          console.error('Email send error', dest, err);
-          emailsSent++;
+          console.error(`💥 [EMAIL SENDING] [${index + 1}/${totalEmails}] Email send error to ${dest}:`, err);
+          emailErrors++;
           
           // Handle errors but still reset UI when done
-          if (emailsSent === totalEmails) {
+          if (emailsSent + emailErrors >= totalEmails) {
+            console.log(`🏁 [EMAIL SENDING] All emails processed with errors. Sent: ${emailsSent}, Errors: ${emailErrors}`);
             setTimeout(() => {
-              setRecordingStatus('⚠️ Unele emailuri au eșuat');
+              if (emailsSent > 0) {
+                setRecordingStatus(`⚠️ ${emailsSent} emailuri trimise, ${emailErrors} erori`);
+              } else {
+                setRecordingStatus('❌ Toate emailurile au eșuat');
+              }
               
               setTimeout(() => {
                 setRecordingStatus('');
               }, 5000);
-            }, 500);
+            }, 1000);
           }
         }
       });
@@ -154,17 +209,9 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setIsRecording(false);
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
-      
-      // Fallback reset in case no emails to send
-      if (totalEmails === 0) {
-        setTimeout(() => {
-          setRecordingStatus('');
-          console.log('🔄 [UI RESET] Group recording interface reset (no emails)');
-        }, 2000);
-      }
     },
     onError: (err) => {
-      console.error('Recorder error', err);
+      console.error('💥 [GROUP RECORDING] Recorder error:', err);
       setRecordingError(err.message);
       setIsRecording(false);
     }
@@ -201,6 +248,14 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     } catch(e) { setRecordingError(e.message);}  };
 
   const stopRecording = () => {
+    console.log('🛑 [ADMIN] === STOP RECORDING CALLED ===');
+    console.log('🛑 [ADMIN] Conference data:', {
+      documentId: conferinta?.documentId,
+      titlu: conferinta?.titlu,
+      participantiCount: conferinta?.participanti?.length || 0,
+      status: conferinta?.status
+    });
+    
     // 🚀 Preiau toate emailurile participanților din conferința din Firestore
     const allParticipantEmails = conferinta?.participanti 
       ? conferinta.participanti
@@ -209,13 +264,22 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
           .filter((email, index, arr) => arr.indexOf(email) === index) // Elimină duplicatele
       : [];
     
-    console.log('📧 [ADMIN] Emailuri participanți preluate din conferință:', allParticipantEmails);
+    console.log('📧 [ADMIN] === EMAIL EXTRACTION ===');
+    console.log('📧 [ADMIN] Raw participanti data:', conferinta?.participanti);
+    console.log('📧 [ADMIN] Filtered emails:', allParticipantEmails);
+    console.log('📧 [ADMIN] Total valid emails found:', allParticipantEmails.length);
+    
+    if (allParticipantEmails.length === 0) {
+      console.warn('⚠️ [ADMIN] No participant emails found in conference data!');
+    }
     
     // Pre-populez lista cu emailurile din Firestore
     setEmailList(allParticipantEmails);
     setEmailInput(''); // Resetez input-ul
     setEmailError(''); // Resetez erorile
     setShowEmailDialog(true);
+    
+    console.log('📧 [ADMIN] Email dialog opened with', allParticipantEmails.length, 'emails');
   };
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -263,9 +327,28 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
   };
 
   const confirmStopRecording = async () => {
-    if (!emailList.length) { setEmailError('Adaugă cel puțin un email'); return; }
+    console.log('✅ [ADMIN] === CONFIRM STOP RECORDING ===');
+    console.log('✅ [ADMIN] Email list before stopping:', emailList);
+    console.log('✅ [ADMIN] Email list length:', emailList.length);
+    
+    if (!emailList.length) { 
+      console.error('❌ [ADMIN] No emails in list, cannot proceed');
+      setEmailError('Adaugă cel puțin un email'); 
+      return; 
+    }
+    
+    console.log('✅ [ADMIN] Starting recording stop process...');
     setIsSendingEmail(true);
+    
+    // Update recording metadata with recipient emails
+    const primaryEmail = emailList[0]; // Use first email as primary
+    console.log('✅ [ADMIN] Setting primary recipient email for recorder:', primaryEmail);
+    recorder.setRecipientEmail(primaryEmail);
+    
+    console.log('✅ [ADMIN] Calling recorder.stopRecording()...');
     await recorder.stopRecording(); // onComplete va trimite emailuri
+    
+    console.log('✅ [ADMIN] Recording stopped, closing dialog...');
     setShowEmailDialog(false);
     setIsSendingEmail(false);
   };

@@ -85,7 +85,7 @@ exports.sendNotificationOnNewReservation = functions.firestore
       `https://www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}\n` +
       `la data de ${formatSelectedSlot(day)} la ora ${time}.\n\n` +
       `ATENȚIE - CONDIȚII IMPORTANTE:\n` +
-      `- Intrarea la consultație se face la ora exact stabilită în programare.\n` +
+      `- Intrarea la consultație se face la ora exact stabilită în programare (ORA ROMÂNIEI).\n` +
       `- Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.\n\n` +
       `Dacă întâmpinați dificultăți în utilizarea platformei, ` +
       `nu ezitați să contactați echipa de dezvoltare la ` +

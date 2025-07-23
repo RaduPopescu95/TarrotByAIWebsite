@@ -75,7 +75,7 @@ exports.sendNotificationOnNewReservation = functions.firestore
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
 
       ATENȚIE - CONDIȚII IMPORTANTE:
-      - Intrarea la consultație se face la ora exact stabilită în programare.
+      - Intrarea la consultație se face la ora exact stabilită în programare (ORA ROMÂNIEI).
       - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
     `;
 
@@ -87,7 +87,7 @@ exports.sendNotificationOnNewReservation = functions.firestore
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
 
       ATENȚIE - CONDIȚII IMPORTANTE:
-      - Intrarea la consultație se face la ora exact stabilită în programare.
+      - Intrarea la consultație se face la ora exact stabilită în programare (ORA ROMÂNIEI).
       - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
     `;
 

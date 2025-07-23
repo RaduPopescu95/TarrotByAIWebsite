@@ -160,7 +160,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
           <h3 style="color: #c62828; margin: 0 0 15px 0; font-size: 18px;">ATENȚIE - CONDIȚII IMPORTANTE</h3>
           <div style="color: #c62828; line-height: 1.6; font-size: 14px;">
             <p style="margin-bottom: 10px; font-weight: bold;">
-              Intrarea la ${tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare.
+              Intrarea la ${tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare (ORA ROMÂNIEI).
             </p>
             <p style="margin-bottom: 0; font-weight: bold;">
               Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
@@ -259,7 +259,7 @@ export default async function handler(req, res) {
         Link de acces: ${baseUrl}/conferinta-grup/${accessLink}
         
         ATENȚIE - CONDIȚII IMPORTANTE:
-        - Intrarea la ${conferintaData.tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare.
+        - Intrarea la ${conferintaData.tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare (ORA ROMÂNIEI).
         - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
         
         Mulțumim!

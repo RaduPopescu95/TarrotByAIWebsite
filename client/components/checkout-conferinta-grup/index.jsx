@@ -707,7 +707,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                               </h4>
                               <div className="text-danger" style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
                                 <p className="fw-bold mb-2">
-                                  Intrarea la {conferinta.tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare.
+                                  Intrarea la {conferinta.tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare. (ORA ROMÂNIEI)
                                 </p>
                                 <p className="fw-bold mb-0">
                                   Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.

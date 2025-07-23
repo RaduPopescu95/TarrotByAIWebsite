@@ -1209,6 +1209,14 @@ export class AgoraStreamRecorder {
                 downloadURL
               });
 
+              console.log('📋 [RECORDING DATA] === CONSTRUCTING RECORDING METADATA ===');
+              console.log('📋 [RECORDING DATA] Meeting code extracted:', meetingCode);
+              console.log('📋 [RECORDING DATA] File name:', fileName);
+              console.log('📋 [RECORDING DATA] Download URL available:', !!downloadURL);
+              console.log('📋 [RECORDING DATA] File size:', videoBlob.size);
+              console.log('📋 [RECORDING DATA] Duration:', duration);
+              console.log('📋 [RECORDING DATA] Recipient email:', this.recipientEmail || 'conference_participants');
+              
               const recordingData = {
                 meetingCode,
                 fileName,
@@ -1227,6 +1235,17 @@ export class AgoraStreamRecorder {
                 downloadedBy: [], // 🔒 Track who downloaded this recording
                 downloadAttempts: [] // 🔍 Track all download attempts with timestamps
               };
+              
+              console.log('📋 [RECORDING DATA] Final recording data constructed:', {
+                meetingCode: recordingData.meetingCode,
+                fileName: recordingData.fileName,
+                recipientEmail: recordingData.recipientEmail,
+                adminEmail: recordingData.adminEmail,
+                status: recordingData.status,
+                recordingType: recordingData.recordingType,
+                hasDownloadURL: !!recordingData.downloadURL,
+                createdAt: new Date(recordingData.createdAt).toISOString()
+              });
 
               // Save metadata to Firestore for search functionality
               await this.saveRecordingMetadata(recordingData, firestore);
@@ -1255,18 +1274,68 @@ export class AgoraStreamRecorder {
 
   async saveRecordingMetadata(recordingData, firestore) {
     try {
+      console.log('💾 [SAVE METADATA] === SAVING RECORDING METADATA ===');
+      console.log('💾 [SAVE METADATA] Recording data:', {
+        meetingCode: recordingData.meetingCode,
+        fileName: recordingData.fileName,
+        size: recordingData.size,
+        duration: recordingData.duration,
+        recipientEmail: recordingData.recipientEmail,
+        adminEmail: recordingData.adminEmail,
+        recordingType: recordingData.recordingType,
+        status: recordingData.status
+      });
+      
       // Import Firestore functions
       const { doc, setDoc } = await import('firebase/firestore');
       
       // 🎯 SAVE ONLY TO SimpleRecordings - single source of truth
       const simpleRecordingRef = doc(firestore, 'SimpleRecordings', recordingData.meetingCode);
+      
+      console.log('💾 [SAVE METADATA] Firestore document reference:', {
+        collection: 'SimpleRecordings',
+        documentId: recordingData.meetingCode,
+        documentPath: `SimpleRecordings/${recordingData.meetingCode}`
+      });
+      
       await setDoc(simpleRecordingRef, recordingData, { merge: true });
+      
+      console.log('✅ [SAVE METADATA] Successfully saved to Firestore SimpleRecordings');
       
       this.logger.success('📝 Recording metadata saved to SimpleRecordings', {
         meetingCode: recordingData.meetingCode,
-        collection: 'SimpleRecordings'
+        collection: 'SimpleRecordings',
+        documentPath: `SimpleRecordings/${recordingData.meetingCode}`,
+        dataSize: JSON.stringify(recordingData).length,
+        timestamp: new Date().toISOString()
       });
+      
+      // 🔍 VERIFY: Try to read back the saved data
+      try {
+        const { getDoc } = await import('firebase/firestore');
+        const savedDoc = await getDoc(simpleRecordingRef);
+        if (savedDoc.exists()) {
+          const savedData = savedDoc.data();
+          console.log('✅ [SAVE METADATA] VERIFICATION: Document successfully saved and retrieved:', {
+            meetingCode: savedData.meetingCode,
+            hasDownloadURL: !!savedData.downloadURL,
+            status: savedData.status,
+            recipientEmail: savedData.recipientEmail
+          });
+        } else {
+          console.error('❌ [SAVE METADATA] VERIFICATION FAILED: Document not found after save');
+        }
+      } catch (verifyError) {
+        console.error('⚠️ [SAVE METADATA] Could not verify save (may still be successful):', verifyError.message);
+      }
+      
     } catch (error) {
+      console.error('💥 [SAVE METADATA] === FAILED TO SAVE ===');
+      console.error('💥 [SAVE METADATA] Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       this.logger.error('❌ Failed to save recording metadata', error);
       throw error;
     }
@@ -1284,24 +1353,48 @@ export class AgoraStreamRecorder {
   getMeetingCode() {
     // Extract meeting code from URL or context
     if (typeof window !== 'undefined') {
+      console.log('🔍 [MEETING CODE] Extracting meeting code from URL:', window.location.href);
+      
       const urlParams = new URLSearchParams(window.location.search);
       const meetingCode = urlParams.get('meetingCode') || 
                          urlParams.get('meetingId') ||
                          urlParams.get('channelId');
       
       if (meetingCode) {
+        console.log('✅ [MEETING CODE] Found in URL params:', meetingCode);
         return meetingCode;
       }
       
       // Try to extract from pathname
       const pathParts = window.location.pathname.split('/');
       const lastPart = pathParts[pathParts.length - 1];
+      
+      console.log('🔍 [MEETING CODE] URL analysis:', {
+        pathname: window.location.pathname,
+        pathParts: pathParts,
+        lastPart: lastPart
+      });
+      
       if (lastPart && lastPart !== '') {
-        return lastPart;
+        // 🎯 CHECK IF THIS IS A GROUP CONFERENCE
+        const isGroupConference = window.location.pathname.includes('admin-conferinta-grup-video') || 
+                                  window.location.pathname.includes('conferinta-grup');
+        
+        if (isGroupConference) {
+          const groupMeetingCode = `group_${lastPart}`;
+          console.log('🎪 [MEETING CODE] Detected GROUP CONFERENCE, using:', groupMeetingCode);
+          console.log('🎪 [MEETING CODE] Path indicates group conference:', window.location.pathname);
+          return groupMeetingCode;
+        } else {
+          console.log('👤 [MEETING CODE] Detected INDIVIDUAL CONSULTATION, using:', lastPart);
+          return lastPart;
+        }
       }
     }
     
-    return `meeting_${Date.now()}`;
+    const fallbackCode = `meeting_${Date.now()}`;
+    console.log('⚠️ [MEETING CODE] Using fallback:', fallbackCode);
+    return fallbackCode;
   }
 
   cleanup() {
