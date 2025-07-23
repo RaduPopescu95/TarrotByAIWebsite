@@ -134,6 +134,19 @@ export default async function handler(req, res) {
                 </ol>
               </div>
 
+              <!-- DISCLAIMER REFUND -->
+              <div style="background-color: #ffebee; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336; margin-bottom: 25px;">
+                <h3 style="color: #c62828; margin-top: 0; margin-bottom: 15px;">ATENȚIE - CONDIȚII IMPORTANTE</h3>
+                <div style="color: #c62828; line-height: 1.6; font-size: 14px;">
+                  <p style="margin-bottom: 10px; font-weight: bold;">
+                    Intrarea la conferință se face la ora exact stabilită în programare.
+                  </p>
+                  <p style="margin-bottom: 0; font-weight: bold;">
+                    Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
+                  </p>
+                </div>
+              </div>
+
               <!-- Footer -->
               <div style="text-align: center; padding-top: 20px; border-top: 1px solid #ecf0f1;">
                 <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">

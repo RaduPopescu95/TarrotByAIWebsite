@@ -28,32 +28,41 @@ import { db } from "../../../firebase";
 
 moment.locale("ro");
 
+// Debug function that only logs in development
+const debugLog = (...args) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 const AdminConferintaGrupVideo = ({ conferenceId }) => {
-  console.log("🏗️ [ADMIN VIDEO] === COMPONENT INIT ===");
-  console.log("🏗️ [ADMIN VIDEO] conferenceId:", conferenceId);
+  debugLog("=== ADMIN CONFERINTA GRUP VIDEO COMPONENT LOADED ===");
+  debugLog("DEBUGGING: Component is starting with conferenceId:", conferenceId);
+  
+  // Only alert on client side
+  if (typeof window !== 'undefined') {
+    debugLog("✅ COMPONENT LOADED ON CLIENT - Check console for details");
+  }
+  
+  debugLog("🏗️ [ADMIN VIDEO] === COMPONENT INIT ===");
+  debugLog("🏗️ [ADMIN VIDEO] Props conferenceId:", conferenceId);
+  debugLog("🏗️ [ADMIN VIDEO] Props type:", typeof conferenceId);
   
   const router = useRouter();
+  debugLog("🏗️ [ADMIN VIDEO] Router query:", router.query);
+  debugLog("🏗️ [ADMIN VIDEO] Router.query.conferenceId:", router.query.conferenceId);
+  debugLog("🏗️ [ADMIN VIDEO] Router isReady:", router.isReady);
   
-  // 🔐 SIMPLE PASSWORD AUTH SYSTEM
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [authLoading, setAuthLoading] = useState(true);
-  const [showPassword, setShowPassword] = useState(false); // 👁️ Password visibility toggle
-  
-  const ADMIN_PASSWORD = "Cristina1994!";
-  const AUTH_STORAGE_KEY = "adminConsultatiiAuth"; // SAME AS ADMIN PANEL
-  
-  console.log("🏗️ [ADMIN VIDEO] Simple auth system initialized");
+  debugLog("🏗️ [ADMIN VIDEO] Component initialized - DIRECT ACCESS (no auth needed)");
   
   const [loading, setLoading] = useState(true);
   const [conferinta, setConferinta] = useState(null);
   const [error, setError] = useState(null);
   const [isInCall, setIsInCall] = useState(false);
   const [participantsOnline, setParticipantsOnline] = useState([]);
+  const [loadingAttempted, setLoadingAttempted] = useState(false);
 
-  console.log("🏗️ [ADMIN VIDEO] State inițial - loading:", loading, "error:", error);
+  debugLog("🏗️ [ADMIN VIDEO] State inițial - loading:", loading, "error:", error);
   
   // Agora settings pentru admin (HOST)
   const appID = "e17715cba7c84bfc9dbd1b5231b6f86f";
@@ -279,77 +288,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
   }, []);
 
-  // 🔐 CHECK STORED AUTHENTICATION ON COMPONENT MOUNT
-  useEffect(() => {
-    console.log("🔐 [SIMPLE AUTH] Checking stored authentication...");
-    
-    try {
-      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-      const storedTime = localStorage.getItem(AUTH_STORAGE_KEY + "_time");
-      
-      if (storedAuth && storedTime) {
-        const authTime = parseInt(storedTime);
-        const currentTime = Date.now();
-        const hoursPassed = (currentTime - authTime) / (1000 * 60 * 60);
-        
-        // Auth expires after 1 week (168 hours)
-        if (hoursPassed < 168) {
-          console.log("🔐 [SIMPLE AUTH] Valid stored auth found");
-          setIsAuthenticated(true);
-          setAuthLoading(false);
-          return;
-        } else {
-          console.log("🔐 [SIMPLE AUTH] Stored auth expired");
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
-        }
-      }
-      
-      console.log("🔐 [SIMPLE AUTH] No valid auth, showing password dialog");
-      setShowPasswordDialog(true);
-      setAuthLoading(false);
-      
-    } catch (error) {
-      console.error("🔐 [SIMPLE AUTH] Error checking stored auth:", error);
-      setShowPasswordDialog(true);
-      setAuthLoading(false);
-    }
-  }, []);
-
-  // 🔐 HANDLE PASSWORD SUBMISSION
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    
-    console.log("🔐 [SIMPLE AUTH] Password submitted");
-    
-    if (passwordInput === ADMIN_PASSWORD) {
-      console.log("🔐 [SIMPLE AUTH] Password correct, storing auth");
-      
-      // Store authentication
-      localStorage.setItem(AUTH_STORAGE_KEY, "authenticated");
-      localStorage.setItem(AUTH_STORAGE_KEY + "_time", Date.now().toString());
-      
-      setIsAuthenticated(true);
-      setShowPasswordDialog(false);
-      setPasswordInput("");
-      setPasswordError("");
-      
-      console.log("🔐 [SIMPLE AUTH] Authentication successful");
-    } else {
-      console.log("🔐 [SIMPLE AUTH] Password incorrect");
-      setPasswordError("Parolă incorectă!");
-      setPasswordInput("");
-    }
-  };
-
-  // 🔐 LOGOUT FUNCTION
-  const handleLogout = () => {
-    console.log("🔐 [SIMPLE AUTH] Logging out");
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
-    setIsAuthenticated(false);
-    setShowPasswordDialog(true);
-  };
+  // 🔥 ADMIN PAGE - NO AUTHENTICATION NEEDED (already authenticated to reach this page)
 
   // Timeout pentru debugging - dacă loading durează prea mult
   useEffect(() => {
@@ -359,72 +298,85 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         console.log("⏰ [ADMIN VIDEO] State curent:", {
           loading,
           error,
-          conferinta: conferinta ? "DA" : "NU",
-          isAuthenticated
+          conferinta: conferinta ? "DA" : "NU"
         });
       }
     }, 10000); // 10 secunde
 
     return () => clearTimeout(timeout);
-  }, [loading, error, conferinta, isAuthenticated]);
+  }, [loading, error, conferinta]);
 
-  // Load conference data - Wait for simple auth
+  // Load conference data - DIRECT LOADING (no auth check needed for admin page)
   useEffect(() => {
-    console.log("🚀 [ADMIN VIDEO] === useEffect TRIGGERED ===");
-    console.log("🚀 [ADMIN VIDEO] authLoading:", authLoading);
-    console.log("🚀 [ADMIN VIDEO] isAuthenticated:", isAuthenticated);
-    console.log("🚀 [ADMIN VIDEO] conferenceId:", conferenceId);
-    console.log("🚀 [ADMIN VIDEO] loading:", loading);
-    console.log("🚀 [ADMIN VIDEO] error:", error);
-    console.log("🚀 [ADMIN VIDEO] conferinta:", conferinta ? "LOADED" : "NULL");
+    console.log("🚀 [ADMIN VIDEO] === DIRECT DATA LOADING (NO AUTH CHECK) ===");
+    console.log("🚀 [ADMIN VIDEO] useEffect triggered with dependencies:", {
+      conferenceId: conferenceId,
+      conferenceIdType: typeof conferenceId,
+      conferenceIdExists: !!conferenceId,
+      routerQuery: router.query,
+      routerQueryId: router.query.conferenceId,
+      routerIsReady: router.isReady,
+      loadingAttempted: loadingAttempted
+    });
+    console.log("🚀 [ADMIN VIDEO] Current state:", {
+      loading: loading,
+      error: error ? error.toString() : null,
+      conferinta: conferinta ? "LOADED" : "NULL",
+      loadingAttempted: loadingAttempted
+    });
 
-    // 🔥 Wait for simple auth to complete
-    if (authLoading) {
-      console.log("⏳ [ADMIN VIDEO] Simple auth loading, wait...");
+    // Dacă deja a încercat să încarce sau are deja date, nu mai executa
+    if (loadingAttempted || conferinta || error) {
+      console.log("🛑 [ADMIN VIDEO] Skip useEffect - already attempted or has data");
+      console.log("🛑 [ADMIN VIDEO] Skip reason:", {
+        loadingAttempted: loadingAttempted,
+        conferintaExists: !!conferinta,
+        errorExists: !!error,
+        errorMessage: error
+      });
       return;
     }
 
-    // 🔥 Wait for authentication
-    if (!isAuthenticated) {
-      console.log("⏳ [ADMIN VIDEO] Not authenticated yet, wait...");
-      return;
-    }
+    // Verifică și router.query.conferenceId dacă props conferenceId nu există
+    const actualConferenceId = conferenceId || router.query.conferenceId;
+    console.log("🎯 [ADMIN VIDEO] Actual conferenceId to use:", actualConferenceId);
 
-    console.log("✅ [ADMIN VIDEO] Simple auth completed and authenticated!");
-
-    // Dacă deja încărcase sau are o eroare, nu mai executa
-    if (conferinta || error) {
-      console.log("🛑 [ADMIN VIDEO] Conferința deja încărcată sau există eroare, skip useEffect");
-      return;
-    }
-
-    if (conferenceId) {
-      console.log("🎯 [ADMIN VIDEO] PORNEȘTE ÎNCĂRCAREA pentru conferința:", conferenceId);
+    if (actualConferenceId) {
+      console.log("🎯 [ADMIN VIDEO] ✅ DIRECT LOADING - CALLING loadConferenceData()");
+      console.log("🎯 [ADMIN VIDEO] Using conferenceId:", actualConferenceId);
+      console.log("🎯 [ADMIN VIDEO] Source:", conferenceId ? "props" : "router.query");
+      setLoadingAttempted(true); // Mark that we're attempting to load
       loadConferenceData();
     } else {
-      console.log("⚠️ [ADMIN VIDEO] Nu există conferenceId");
-      setError("Conference ID lipsește");
+      console.log("⚠️ [ADMIN VIDEO] ❌ Nu există conferenceId în props sau router.query");
+      console.log("⚠️ [ADMIN VIDEO] Debug info:", {
+        propsConferenceId: conferenceId,
+        routerQueryConferenceId: router.query.conferenceId,
+        routerQuery: router.query,
+        routerIsReady: router.isReady
+      });
+      setError("Conference ID lipsește din URL");
       setLoading(false);
+      setLoadingAttempted(true);
     }
-  }, [conferenceId, authLoading, isAuthenticated, router]); // Wait for simple auth to complete
+  }, [conferenceId, router]); // Only depend on conferenceId and router
 
   // Debugging - afișează starea fără să forțeze reîncărcarea
   useEffect(() => {
     const debugTimeout = setTimeout(() => {
-      if (loading && conferenceId && isAuthenticated) {
+      if (loading && conferenceId) {
         console.log("🚨 [DEBUG] Încă se încarcă după 10 secunde...");
         console.log("🚨 [DEBUG] Stare:", {
           loading,
           error,
           conferinta: !!conferinta,
-          conferenceId,
-          isAuthenticated
+          conferenceId
         });
       }
     }, 10000);
 
     return () => clearTimeout(debugTimeout);
-  }, [loading, error, conferinta, conferenceId, isAuthenticated]);
+  }, [loading, error, conferinta, conferenceId]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -437,18 +389,23 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
   const loadConferenceData = async () => {
     try {
-      console.log("🔍 [ADMIN VIDEO] === ÎNCEPE ÎNCĂRCAREA ===");
+      // Determine the actual conference ID to use
+      const actualConferenceId = conferenceId || router.query.conferenceId;
       
-      // 🔥 DEBUG: Verifică starea auth în timp real
-      console.log("🔍 [AUTH DEBUG] Stare auth la început încărcare:", {
-        isAuthenticated,
-        authLoading,
-        simpleAuth: "CRISTINA ADMIN"
-      });
+      debugLog("🔍 [ADMIN VIDEO] === ÎNCEPE ÎNCĂRCAREA ===");
+      debugLog(`🚀 [CONFERENCE SEARCH] Loading conference data for ID: ${actualConferenceId}`);
+      debugLog(`🚀 [CONFERENCE SEARCH] ID source: ${conferenceId ? 'props' : 'router.query'}`);
+      debugLog(`🚀 DEBUGGING: Loading conference data for ID: ${actualConferenceId} (source: ${conferenceId ? 'props' : 'router.query'})`);
       
-      // Verifică dacă deja se încarcă pentru a evita multiple calls
-      if (loading) {
-        console.log("⚠️ [ADMIN VIDEO] Încărcarea deja în progres, skip...");
+      debugLog("🔍 [LOADING CHECK] Current loading state:", loading);
+      debugLog("🔍 [LOADING CHECK] Current error state:", error);
+      debugLog("🔍 [LOADING CHECK] Current conferinta state:", conferinta ? "LOADED" : "NULL");
+      
+      // Allow reloading if no conference is loaded yet
+      if (loading && !conferinta) {
+        debugLog("🔄 [ADMIN VIDEO] Loading in progress but no conference loaded, forcing reload...");
+      } else if (loading) {
+        debugLog("⚠️ [ADMIN VIDEO] Încărcarea deja în progres și conferința încărcată, skip...");
         return;
       }
       
@@ -456,22 +413,20 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       setError(null); // Clear previous errors
       
       console.log("🔍 [ADMIN VIDEO] Parametri pentru Firestore:", {
-        conferenceId,
-        simpleAuth: isAuthenticated,
+        propsConferenceId: conferenceId,
+        routerConferenceId: router.query.conferenceId,
+        actualConferenceId: actualConferenceId,
         adminUser: "Cristina Admin",
-        handleGetFirestore: typeof handleGetFirestore
+        conferenceIdType: typeof actualConferenceId,
+        conferenceIdLength: actualConferenceId?.length
       });
 
-      if (!conferenceId) {
-        throw new Error("Conference ID lipsește");
+      if (!actualConferenceId) {
+        throw new Error("Conference ID lipsește din props și router.query");
       }
 
-      // 🔥 DEBUG: Verifică starea simple auth înainte de Firestore
-      console.log("🔍 [AUTH DEBUG] Verifică auth înainte de Firestore:", {
-        isAuthenticated,
-        authLoading,
-        adminUser: "Cristina"
-      });
+      // 🔥 DEBUG: Start Firestore operation
+      console.log("🔍 [ADMIN VIDEO] Starting Firestore query...");
 
       console.log("📥 [ADMIN VIDEO] Apelează Firestore cu timeout...");
       const startTime = Date.now();
@@ -482,16 +437,42 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       });
       
       console.log("📥 [ADMIN VIDEO] Pornește handleGetFirestore('ConferinteGrup')...");
+      console.log("📥 [FIRESTORE] About to call getDocs on ConferinteGrup collection");
+      console.log("📥 [FIRESTORE] Database instance:", db ? "AVAILABLE" : "NULL");
+      
       // 🔥 IMPORTANT: Use manual Firestore call to ensure documentId is included
       const firestorePromise = getDocs(collection(db, "ConferinteGrup")).then(querySnapshot => {
+        console.log("📥 [FIRESTORE] getDocs completed successfully");
+        console.log("📥 [FIRESTORE] Query snapshot received:", querySnapshot ? "YES" : "NO");
+        console.log("📥 [FIRESTORE] Snapshot size:", querySnapshot.size);
+        console.log("📥 [FIRESTORE] Snapshot empty:", querySnapshot.empty);
+        
         const arr = [];
+        console.log(`🔍 [FIRESTORE] Processing ${querySnapshot.size} documents from ConferinteGrup`);
+        
         querySnapshot.forEach((doc) => {
-          arr.push({
+          const docData = {
             documentId: doc.id, // 🔥 Include documentId
             ...doc.data()
+          };
+          console.log(`🔍 [FIRESTORE] Document found:`, {
+            id: doc.id,
+            titlu: docData.titlu,
+            status: docData.status,
+            dataInceput: docData.dataInceput
           });
+          arr.push(docData);
         });
+        
+        console.log(`🔍 [FIRESTORE] Total documents processed: ${arr.length}`);
+        console.log(`🔍 [FIRESTORE] Returning array with ${arr.length} items`);
         return arr;
+      }).catch(firestoreError => {
+        console.error("💥 [FIRESTORE] getDocs failed:", firestoreError);
+        console.error("💥 [FIRESTORE] Error type:", firestoreError.constructor.name);
+        console.error("💥 [FIRESTORE] Error message:", firestoreError.message);
+        console.error("💥 [FIRESTORE] Error code:", firestoreError.code);
+        throw firestoreError;
       });
       
       console.log("📥 [ADMIN VIDEO] Așteaptă răspuns Firestore...");
@@ -502,13 +483,11 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.log("📦 [ADMIN VIDEO] Tip răspuns:", typeof conferinte);
       console.log("📦 [ADMIN VIDEO] Este array:", Array.isArray(conferinte));
       console.log("📦 [ADMIN VIDEO] Conferințe găsite:", conferinte?.length || 0);
+      
+      console.log(`📦 DEBUGGING: Firestore response: ${conferinte?.length || 0} conferences found`);
 
-      // 🔥 DEBUG: Verifică din nou auth după Firestore call
-      console.log("🔍 [AUTH DEBUG] Verifică auth după Firestore:", {
-        isAuthenticated,
-        authLoading,
-        adminUser: "Cristina"
-      });
+      // 🔥 DEBUG: Firestore call completed successfully
+      console.log("🔍 [ADMIN VIDEO] Firestore call completed successfully");
 
       if (!conferinte) {
         console.error("💥 [ADMIN VIDEO] Conferinte este null/undefined");
@@ -525,34 +504,71 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         throw new Error("Nu există conferințe în baza de date");
       }
 
-      console.log("🔍 [ADMIN VIDEO] Caută conferința cu ID:", conferenceId);
-      console.log("🔍 [ADMIN VIDEO] IDs disponibile:", conferinte.map(c => {
-        console.log("📋 Conferință:", c.documentId, "-", c.titlu);
-        return c.documentId;
-      }));
-
-      const conferintaFound = conferinte.find(c => c.documentId === conferenceId);
+      console.log("🔍 [CONFERENCE SEARCH] === DETAILED SEARCH ANALYSIS ===");
+      console.log(`🔍 [CONFERENCE SEARCH] Searching for ID: "${actualConferenceId}"`);
+      console.log(`🔍 [CONFERENCE SEARCH] ID length: ${actualConferenceId.length}`);
+      console.log(`🔍 [CONFERENCE SEARCH] ID type: ${typeof actualConferenceId}`);
+      
+      // Log toate conferințele disponibile cu detalii complete
+      console.log("🔍 [CONFERENCE SEARCH] Available conferences:");
+      conferinte.forEach((conf, index) => {
+        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID: "${conf.documentId}" (length: ${conf.documentId?.length}) - Title: "${conf.titlu}" - Status: "${conf.status}"`);
+        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID === actualConferenceId: ${conf.documentId === actualConferenceId}`);
+        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID comparison chars:`, {
+          confId: conf.documentId.split(''),
+          searchId: actualConferenceId.split('')
+        });
+      });
+      
+      // Încercăm să găsim conferința cu logging detaliat
+      console.log("🔍 [CONFERENCE SEARCH] Starting find operation...");
+      const conferintaFound = conferinte.find((c, index) => {
+        const match = c.documentId === actualConferenceId;
+        console.log(`🔍 [CONFERENCE SEARCH] Checking [${index}]: "${c.documentId}" === "${actualConferenceId}" = ${match}`);
+        return match;
+      });
       
       if (!conferintaFound) {
-        console.error("💥 [ADMIN VIDEO] Conferința NU a fost găsită!");
-        console.error("💥 [ADMIN VIDEO] ID căutat:", conferenceId);
-        console.error("💥 [ADMIN VIDEO] IDs disponibile:", conferinte.map(c => c.documentId));
-        throw new Error(`Conferința cu ID ${conferenceId} nu a fost găsită în ${conferinte.length} conferințe`);
+        console.error("💥 [CONFERENCE SEARCH] === CONFERENCE NOT FOUND ===");
+        console.error("💥 [CONFERENCE SEARCH] Searched ID:", `"${actualConferenceId}"`);
+        console.error("💥 [CONFERENCE SEARCH] Available IDs:", conferinte.map(c => `"${c.documentId}"`));
+        console.error("💥 [CONFERENCE SEARCH] Total conferences searched:", conferinte.length);
+        
+        // Check for similar IDs
+        const similarIds = conferinte.filter(c => 
+          c.documentId.includes(actualConferenceId) || 
+          actualConferenceId.includes(c.documentId) ||
+          c.documentId.toLowerCase() === actualConferenceId.toLowerCase()
+        );
+        
+        if (similarIds.length > 0) {
+          console.error("💥 [CONFERENCE SEARCH] Similar IDs found:", similarIds.map(c => c.documentId));
+          console.error(`❌ DEBUGGING: Conference NOT FOUND! Searching for: "${actualConferenceId}". Similar found: ${similarIds.map(c => c.documentId).join(', ')}`);
+        } else {
+          console.error(`❌ DEBUGGING: Conference NOT FOUND! Searching for: "${actualConferenceId}". Available: ${conferinte.map(c => c.documentId).join(', ')}`);
+        }
+        
+        throw new Error(`Conferința cu ID "${actualConferenceId}" nu a fost găsită în ${conferinte.length} conferințe`);
       }
 
-      console.log("✅ [ADMIN VIDEO] Conferința găsită:", conferintaFound.titlu);
-      console.log("✅ [ADMIN VIDEO] Detalii conferință:", {
+      console.log("✅ [CONFERENCE SEARCH] === CONFERENCE FOUND ===");
+      console.log("✅ [CONFERENCE SEARCH] Found conference:", conferintaFound.titlu);
+      console.log("✅ [CONFERENCE SEARCH] Conference details:", {
+        id: conferintaFound.documentId,
         titlu: conferintaFound.titlu,
         status: conferintaFound.status,
-        participanti: conferintaFound.participanti?.length || 0
+        participanti: conferintaFound.participanti?.length || 0,
+        dataInceput: conferintaFound.dataInceput
       });
+      
+      console.log(`✅ DEBUGGING: Conference found: "${conferintaFound.titlu}" (ID: ${conferintaFound.documentId})`);
 
       setConferinta(conferintaFound);
       setConferenceStarted(true); // Simplificat pentru debug
 
       // Ascultă pentru actualizări în timp real
       console.log("🔗 [ADMIN VIDEO] Inițializează ascultarea actualizărilor...");
-      listenToConferenceUpdates(conferenceId);
+      listenToConferenceUpdates(actualConferenceId);
 
       console.log("🎉 [ADMIN VIDEO] === ÎNCĂRCARE COMPLETĂ ===");
 
@@ -562,14 +578,16 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       console.error("💥 [ADMIN VIDEO] Mesaj:", error.message);
       console.error("💥 [ADMIN VIDEO] Stack:", error.stack);
       
-      // 🔥 DEBUG: Verifică auth la eroare
-      console.log("🔍 [AUTH DEBUG] Stare auth la eroare:", {
-        isAuthenticated,
-        authLoading,
+      // 🔥 DEBUG: Error details
+      console.log("🔍 [ADMIN VIDEO] Error context:", {
         adminUser: "Cristina",
+        propsConferenceId: conferenceId,
+        routerConferenceId: router.query.conferenceId,
+        actualConferenceId: actualConferenceId,
         error: error.message
       });
       
+      console.error(`❌ DEBUGGING: ERROR - ${error.message}`);
       setError(`Eroare: ${error.message}`);
     } finally {
       console.log("🏁 [ADMIN VIDEO] Finalizează loading");
@@ -1193,87 +1211,7 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     }
   };
 
-  // 🔐 PASSWORD AUTHENTICATION DIALOG
-  if (showPasswordDialog) {
-    return (
-      <>
-        <Home1Header />
-        <div className="content" style={{ paddingTop: "100px", position: "relative" }}>
-          <div className="container">
-            <div className="row justify-content-center">
-              <div className="col-lg-4">
-                <div className="card shadow-lg">
-                  <div className="card-header bg-primary text-white text-center">
-                    <h4 className="mb-0">
-                      <i className="fa fa-lock me-2"></i>
-                      Acces Admin Conferințe
-                    </h4>
-                  </div>
-                  <div className="card-body">
-                                         <form onSubmit={handlePasswordSubmit}>
-                       <div className="mb-3">
-                         <label htmlFor="adminPassword" className="form-label">
-                           Parolă Administrator:
-                         </label>
-                         <div className="position-relative">
-                           <input
-                             type={showPassword ? "text" : "password"}
-                             className="form-control pe-5"
-                             id="adminPassword"
-                             value={passwordInput}
-                             onChange={(e) => setPasswordInput(e.target.value)}
-                             placeholder="Introduceți parola de admin"
-                             required
-                             autoFocus
-                           />
-                           
-                           {/* 👁️ Password visibility toggle button */}
-                           <button
-                             type="button"
-                             className="btn btn-link position-absolute"
-                             style={{
-                               right: '10px',
-                               top: '50%',
-                               transform: 'translateY(-50%)',
-                               border: 'none',
-                               background: 'none',
-                               color: '#6c757d',
-                               padding: '0',
-                               zIndex: 10
-                             }}
-                             onClick={() => setShowPassword(!showPassword)}
-                             title={showPassword ? "Ascunde parola" : "Arată parola"}
-                           >
-                             <i className={`fa ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                           </button>
-                         </div>
-                       </div>
-                      
-                      {passwordError && (
-                        <div className="alert alert-danger" role="alert">
-                          <i className="fa fa-exclamation-triangle me-2"></i>
-                          {passwordError}
-                        </div>
-                      )}
-                      
-                      <button 
-                        type="submit" 
-                        className="btn btn-primary w-100"
-                        disabled={!passwordInput.trim()}
-                      >
-                        <i className="fa fa-sign-in-alt me-2"></i>
-                        Autentificare
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
+  // 🔥 NO AUTHENTICATION DIALOG NEEDED - DIRECT ACCESS FOR ADMIN
 
   // Loading state
   if (loading) {
@@ -1741,14 +1679,14 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
                         )}
                       </h3>
                     </div>
-                    <button
+                    {/* <button
                       onClick={handleLogout}
                       className="btn btn-outline-light btn-sm"
                       title="Deconectare"
                     >
                       <i className="fa fa-sign-out-alt me-1"></i>
                       Logout
-                    </button>
+                    </button> */}
                   </div>
                 </div>
                 <div className="card-body text-center py-5">

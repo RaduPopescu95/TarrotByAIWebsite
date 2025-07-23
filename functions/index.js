@@ -83,7 +83,10 @@ exports.sendNotificationOnNewReservation = functions.firestore
     const emailMessage = `Rezervarea dumneavoastră cu Cristina Zurba a fost realizată.\n` +
       `Vă rugăm să accesați:\n` +
       `https://www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}\n` +
-      `la data de ${formatSelectedSlot(day)} la ora ${time}.\n` +
+      `la data de ${formatSelectedSlot(day)} la ora ${time}.\n\n` +
+      `ATENȚIE - CONDIȚII IMPORTANTE:\n` +
+      `- Intrarea la consultație se face la ora exact stabilită în programare.\n` +
+      `- Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.\n\n` +
       `Dacă întâmpinați dificultăți în utilizarea platformei, ` +
       `nu ezitați să contactați echipa de dezvoltare la ` +
       `https://www.webappdynamicx.ro/contact`;

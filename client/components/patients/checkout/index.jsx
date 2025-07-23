@@ -517,6 +517,28 @@ const Checkout = (props) => {
                       Paypal
                     </label>
                   </div> */}
+                      {/* ⚠️ DISCLAIMER IMPORTANT ÎNAINTE DE PLATĂ */}
+                      <div className="alert alert-danger border-danger mb-4" style={{
+                        backgroundColor: '#ffebee',
+                        border: '2px solid #f44336',
+                        borderRadius: '8px',
+                        padding: '20px'
+                      }}>
+                        <div className="text-center">
+                          <h4 className="text-danger fw-bold mb-3" style={{ fontSize: '1.4rem' }}>
+                            ATENȚIE - CONDIȚII IMPORTANTE
+                          </h4>
+                          <div className="text-danger" style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
+                            <p className="fw-bold mb-2">
+                              Intrarea la consultație se face la ora exact stabilită în programare.
+                            </p>
+                            <p className="fw-bold mb-0">
+                              Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="terms-accept">
                         <div className="custom-checkbox">
                           <input
@@ -531,7 +553,7 @@ const Checkout = (props) => {
                             <Link href="/politica-platforma">
                               Termenii &amp; si Conditiile
                             </Link>{" "}
-                            platformei
+                            platformei ȘI condiții importante de mai sus
                           </label>
                         </div>
                       </div>

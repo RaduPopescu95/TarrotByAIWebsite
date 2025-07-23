@@ -155,6 +155,19 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
                     </ul>
                 </div>
 
+        <!-- DISCLAIMER REFUND -->
+        <div style="background-color: #ffebee; border-radius: 8px; border-left: 4px solid #f44336; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #c62828; margin: 0 0 15px 0; font-size: 18px;">ATENȚIE - CONDIȚII IMPORTANTE</h3>
+          <div style="color: #c62828; line-height: 1.6; font-size: 14px;">
+            <p style="margin-bottom: 10px; font-weight: bold;">
+              Intrarea la ${tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare.
+            </p>
+            <p style="margin-bottom: 0; font-weight: bold;">
+              Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
+            </p>
+          </div>
+        </div>
+
         <!-- Contact -->
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
           <h4 style="color: #333; margin: 0 0 10px 0; font-size: 16px;">📞 Ai întrebări?</h4>
@@ -244,6 +257,10 @@ export default async function handler(req, res) {
         - Preț: ${conferintaData.pretParticipare} RON ${isTestMode ? '(SIMULAT)' : ''}
         
         Link de acces: ${baseUrl}/conferinta-grup/${accessLink}
+        
+        ATENȚIE - CONDIȚII IMPORTANTE:
+        - Intrarea la ${conferintaData.tipConferinta === 'course' ? 'curs' : 'conferință'} se face la ora exact stabilită în programare.
+        - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
         
         Mulțumim!
       `

@@ -73,6 +73,10 @@ exports.sendNotificationOnNewReservation = functions.firestore
       Vă rugăm să accesați
       www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
+
+      ATENȚIE - CONDIȚII IMPORTANTE:
+      - Intrarea la consultație se face la ora exact stabilită în programare.
+      - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
     `;
 
       // Construcția mesajului de SMS/WhatsApp
@@ -81,6 +85,10 @@ exports.sendNotificationOnNewReservation = functions.firestore
       Vă rugăm să accesați
       www.cristinazurba.com/meeting?meetingCode=${meetingCode}__${documentId}
       la data de ${formatSelectedSlot(day, year)} la ora ${time}.
+
+      ATENȚIE - CONDIȚII IMPORTANTE:
+      - Intrarea la consultație se face la ora exact stabilită în programare.
+      - Nu se acordă rambursări în cazul în care clientul nu se prezintă la programarea stabilită.
     `;
 
       // Trimiterea e-mailului
