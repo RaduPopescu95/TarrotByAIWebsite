@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createApiLogger } from '../../../utils/logger';
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -14,7 +13,6 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const logger = createApiLogger('STATUS');
 
 // Agora Cloud Recording Configuration
 const AGORA_CONFIG = {
@@ -34,7 +32,7 @@ async function queryAgoraRecording(resourceId, sid) {
   const startTime = Date.now();
   const queryUrl = `https://api.agora.io/v1/apps/${AGORA_CONFIG.appId}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/query`;
   
-  logger.debug('Preparing Agora query request', {
+  console.log('📊 Preparing Agora query request', {
     resourceId: resourceId?.substring(0, 10) + '...',
     sid: sid?.substring(0, 10) + '...',
     url: queryUrl
@@ -52,7 +50,7 @@ async function queryAgoraRecording(resourceId, sid) {
   
   if (!response.ok) {
     const errorData = await response.text();
-    logger.error('Agora query failed', {
+    console.log('❌ Agora query failed', {
       status: response.status,
       error: errorData,
       responseTime,
@@ -63,7 +61,7 @@ async function queryAgoraRecording(resourceId, sid) {
   }
   
   const result = await response.json();
-  logger.agoraApiCall('QUERY', response.status, responseTime, {
+  console.log('📡 Agora API Query:', response.status, `${responseTime}ms`, {
     resourceId: resourceId?.substring(0, 10) + '...',
     sid: sid?.substring(0, 10) + '...',
     serverResponse: result.serverResponse ? 'present' : 'missing'
@@ -82,11 +80,10 @@ export default async function handler(req, res) {
   
   if (req.method !== 'GET' && req.method !== 'POST') {
     console.log('❌ [AGORA STATUS] Invalid method:', req.method);
-    logger.warn('Method not allowed', { method: req.method });
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  logger.info('Recording status check started', {
+  console.log('📊 Recording status check started', {
     method: req.method,
     userAgent: req.headers['user-agent']?.substring(0, 50),
     ip: req.headers['x-forwarded-for'] || req.connection?.remoteAddress
@@ -96,7 +93,7 @@ export default async function handler(req, res) {
     // Support both GET (with query params) and POST (with body)
     const { sid, meetingCode, resourceId } = req.method === 'GET' ? req.query : req.body;
 
-    logger.debug('Request parameters', {
+    console.log('📋 Request parameters', {
       hasSid: !!sid,
       sidLength: sid ? sid.length : 0,
       hasMeetingCode: !!meetingCode,
@@ -105,14 +102,14 @@ export default async function handler(req, res) {
     });
 
     if (!sid && !meetingCode) {
-      logger.warn('Missing required parameters');
+      console.log('❌ Missing required parameters');
       return res.status(400).json({ 
         message: 'SID or Meeting Code is required',
         success: false 
       });
     }
 
-    logger.info('Checking recording status', { 
+    console.log('🔍 Checking recording status', { 
       identifier: sid || meetingCode,
       searchBy: sid ? 'sid' : 'meetingCode'
     });
@@ -122,12 +119,12 @@ export default async function handler(req, res) {
     
     if (sid) {
       // Find by SID (most reliable)
-      logger.debug('Searching by SID in Firestore');
+      console.log('🔍 Searching by SID in Firestore');
       recordingRef = db.collection('AgoraRecordings').doc(sid);
       const recordingDoc = await recordingRef.get();
       
       if (!recordingDoc.exists) {
-        logger.warn('Recording not found by SID', { sid: sid.substring(0, 10) + '...' });
+        console.log('❌ Recording not found by SID', { sid: sid.substring(0, 10) + '...' });
         return res.status(404).json({
           success: false,
           message: 'Recording session not found'
@@ -135,14 +132,14 @@ export default async function handler(req, res) {
       }
       
       recordingData = recordingDoc.data();
-      logger.info('Recording found by SID', {
+      console.log('✅ Recording found by SID', {
         status: recordingData.status,
         recordingType: recordingData.recordingType,
         startTime: recordingData.startTime
       });
     } else {
       // Find by meeting code if SID not provided
-      logger.debug('Searching by meeting code in Firestore');
+      console.log('🔍 Searching by meeting code in Firestore');
       const query = await db.collection('AgoraRecordings')
         .where('meetingCode', '==', meetingCode)
         .where('status', 'in', ['recording', 'completed'])
@@ -151,7 +148,7 @@ export default async function handler(req, res) {
         .get();
     
       if (query.empty) {
-        logger.warn('Recording not found by meeting code', { meetingCode });
+        console.log('❌ Recording not found by meeting code', { meetingCode });
         return res.status(404).json({
           success: false,
           message: 'No recording session found'
@@ -160,7 +157,7 @@ export default async function handler(req, res) {
 
       recordingRef = query.docs[0].ref;
       recordingData = query.docs[0].data();
-      logger.info('Recording found by meeting code', {
+      console.log('✅ Recording found by meeting code', {
         status: recordingData.status,
         recordingType: recordingData.recordingType,
         documentId: query.docs[0].id
@@ -177,16 +174,16 @@ export default async function handler(req, res) {
     // Only query Agora if recording is still active
     if (recordingData.status === 'recording' && finalResourceId && finalSid) {
       try {
-        logger.info('Querying live Agora status', {
+        console.log('📡 Querying live Agora status', {
           resourceId: finalResourceId.substring(0, 10) + '...',
           sid: finalSid.substring(0, 10) + '...'
         });
         agoraStatus = await queryAgoraRecording(finalResourceId, finalSid);
-        logger.info('Agora status retrieved successfully', {
+        console.log('✅ Agora status retrieved successfully', {
           hasServerResponse: !!agoraStatus.serverResponse
         });
       } catch (error) {
-        logger.error('Failed to query Agora status', {
+        console.log('❌ Failed to query Agora status', {
           error: error.message,
           resourceId: finalResourceId?.substring(0, 10) + '...',
           sid: finalSid?.substring(0, 10) + '...'
@@ -195,7 +192,7 @@ export default async function handler(req, res) {
         
         // If Agora query fails with 404, recording might have ended unexpectedly
         if (error.message.includes('404')) {
-          logger.warn('Recording ended unexpectedly, updating status to failed');
+          console.log('⚠️ Recording ended unexpectedly, updating status to failed');
           await recordingRef.update({
             status: 'failed',
             errorMessage: 'Recording ended unexpectedly',
@@ -204,7 +201,7 @@ export default async function handler(req, res) {
         }
       }
     } else {
-      logger.debug('Skipping Agora query', {
+      console.log('⏭️ Skipping Agora query', {
         reason: recordingData.status !== 'recording' ? 'not_recording' : 'missing_ids',
         status: recordingData.status,
         hasResourceId: !!finalResourceId,
@@ -217,7 +214,7 @@ export default async function handler(req, res) {
     if (recordingData.startTimestamp) {
       const endTime = recordingData.endTimestamp || Date.now();
       currentDuration = Math.floor((endTime - recordingData.startTimestamp) / 1000);
-      logger.debug('Duration calculated', {
+      console.log('⏱️ Duration calculated', {
         currentDuration,
         isActive: !recordingData.endTimestamp
       });
@@ -247,25 +244,26 @@ export default async function handler(req, res) {
         sid: agoraStatus.sid,
         serverResponse: agoraStatus.serverResponse
       };
-      logger.debug('Added live Agora status to response');
+      console.log('📊 Added live Agora status to response');
     }
 
     // Add error info if present
     if (agoraError) {
       response.agoraError = agoraError;
-      logger.debug('Added Agora error to response');
+      console.log('⚠️ Added Agora error to response');
     }
 
     // Add file information if recording is completed
     if (recordingData.status === 'completed' && recordingData.stopResponse) {
       response.fileList = recordingData.stopResponse.serverResponse?.fileList || [];
-      logger.info('Added file list to response', {
+      console.log('📁 Added file list to response', {
         fileCount: response.fileList.length
       });
     }
 
     const processingTime = Date.now() - requestStart;
-    logger.performance('Status check completed', processingTime, {
+    console.log('✅ Status check completed', {
+      processingTime: `${processingTime}ms`,
       status: recordingData.status,
       hasAgoraStatus: !!agoraStatus,
       hasError: !!agoraError,
@@ -276,10 +274,10 @@ export default async function handler(req, res) {
 
   } catch (error) {
     const processingTime = Date.now() - requestStart;
-    logger.error('Status check failed', {
+    console.log('❌ Status check failed', {
       error: error.message,
       stack: error.stack,
-      processingTime
+      processingTime: `${processingTime}ms`
     });
     res.status(500).json({
       success: false,

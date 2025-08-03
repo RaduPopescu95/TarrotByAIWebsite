@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createApiLogger } from '../../../utils/logger';
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -14,7 +13,6 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const logger = createApiLogger('START');
 
 // Agora Cloud Recording Configuration
 const AGORA_CONFIG = {
@@ -47,7 +45,7 @@ async function acquireAgoraResource(channelName, uid) {
     clientRequest: {}
   };
 
-  logger.info('🔄 Acquiring Agora resource', {
+  console.log('🔄 Acquiring Agora resource', {
     channelName,
     uid: uid.toString(),
     url: acquireUrl,
@@ -67,7 +65,7 @@ async function acquireAgoraResource(channelName, uid) {
   
   if (!response.ok) {
     const errorData = await response.text();
-    logger.error('❌ Agora resource acquisition failed', {
+    console.log('❌ Agora resource acquisition failed', {
       channelName,
       uid: uid.toString(),
       status: response.status,
@@ -80,8 +78,8 @@ async function acquireAgoraResource(channelName, uid) {
   
   const responseData = await response.json();
   
-  logger.agoraApiCall('POST', acquireUrl, requestData, responseData);
-  logger.info('✅ Agora resource acquired successfully', {
+  console.log('📡 Agora API Call POST:', acquireUrl, { requestData, responseData });
+  console.log('✅ Agora resource acquired successfully', {
     channelName,
     uid: uid.toString(),
     resourceId: responseData.resourceId,
@@ -118,7 +116,7 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
     }
   };
   
-  logger.info('🎬 Starting Agora Cloud Recording', {
+  console.log('🎬 Starting Agora Cloud Recording', {
     resourceId,
     channelName,
     uid: uid.toString(),
@@ -144,7 +142,7 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
   
   if (!response.ok) {
     const errorData = await response.text();
-    logger.error('❌ Agora recording start failed', {
+    console.log('❌ Agora recording start failed', {
       resourceId,
       channelName,
       uid: uid.toString(),
@@ -158,8 +156,9 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
   
   const responseData = await response.json();
   
-  logger.agoraApiCall('POST', startUrl, requestBody, responseData);
-  logger.recordingStart(channelName, {
+  console.log('📡 Agora API Call POST:', startUrl, { requestBody, responseData });
+  console.log('🎬 Recording started successfully:', {
+    channelName,
     resourceId,
     sid: responseData.sid,
     uid: uid.toString(),
@@ -180,14 +179,13 @@ export default async function handler(req, res) {
   
   if (req.method !== 'POST') {
     console.log('❌ [AGORA START] Invalid method:', req.method);
-    logger.warn('Invalid request method', { method: req.method });
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { meetingCode, userRole = 'participant', token = null } = req.body;
 
-    logger.info('📥 Recording start request received', {
+    console.log('📥 Recording start request received', {
       meetingCode,
       userRole,
       hasToken: !!token,
@@ -197,7 +195,6 @@ export default async function handler(req, res) {
 
     if (!meetingCode) {
       console.log('❌ [AGORA START] Missing meeting code!');
-      logger.warn('Missing meeting code in request', { requestBody: req.body });
       return res.status(400).json({ 
         message: 'Meeting code is required',
         success: false 
@@ -219,7 +216,7 @@ export default async function handler(req, res) {
     
     if (!AGORA_CONFIG.appId || !AGORA_CONFIG.customerId || !AGORA_CONFIG.customerSecret) {
       console.log('❌ [AGORA START] Configuration missing!');
-      logger.error('Agora Cloud Recording configuration missing', {
+      console.log('❌ [AGORA START] Config status:', {
         hasAppId: !!AGORA_CONFIG.appId,
         hasCustomerId: !!AGORA_CONFIG.customerId,
         hasCustomerSecret: !!AGORA_CONFIG.customerSecret,
@@ -231,7 +228,7 @@ export default async function handler(req, res) {
       });
     }
 
-    logger.info('✅ Configuration validation passed', {
+    console.log('✅ Configuration validation passed', {
       appId: AGORA_CONFIG.appId,
       storageVendor: 'gcs',
       storageBucket: AGORA_CONFIG.storageConfig.bucket
@@ -239,29 +236,27 @@ export default async function handler(req, res) {
 
     // Generate unique UID for recording service (must not conflict with existing users)
     const recordingUID = `999${Math.floor(Math.random() * 1e6).toString().padStart(6, '0')}`;    
-    logger.debug('Generated recording UID', { recordingUID, meetingCode });
+    console.log('Generated recording UID:', { recordingUID, meetingCode });
     
     // Step 1: Acquire resource ID from Agora
     console.log('🚀 [AGORA START] Step 1: Acquiring resource ID...');
     console.log('🚀 [AGORA START] Recording UID:', recordingUID);
-    logger.info('📋 Step 1: Acquiring Agora resource ID');
     const acquireResponse = await acquireAgoraResource(meetingCode, recordingUID);
     const resourceId = acquireResponse.resourceId;
     
     if (!resourceId) {
-      logger.error('Resource ID acquisition failed', { acquireResponse });
+      console.log('❌ Resource ID acquisition failed', { acquireResponse });
       throw new Error('Failed to acquire Agora resource ID');
     }
     
     // Step 2: Start cloud recording with resource ID
     console.log('🎬 [AGORA START] Step 2: Starting cloud recording...');
     console.log('🎬 [AGORA START] Resource ID:', resourceId);
-    logger.info('🎥 Step 2: Starting cloud recording', { resourceId });
     const startResponse = await startAgoraRecording(resourceId, meetingCode, recordingUID, token);
     const sid = startResponse.sid;
     
     if (!sid) {
-      logger.error('Recording start failed - no SID returned', { startResponse });
+      console.log('❌ Recording start failed - no SID returned', { startResponse });
       throw new Error('Failed to start Agora cloud recording');
     }
 
@@ -283,7 +278,7 @@ export default async function handler(req, res) {
       updatedAt: new Date()
     };
 
-    logger.info('💾 Saving recording session to Firestore', {
+    console.log('💾 Saving recording session to Firestore', {
       sid,
       meetingCode,
       resourceId,
@@ -296,7 +291,8 @@ export default async function handler(req, res) {
 
     const totalDuration = Date.now() - requestStartTime;
     
-    logger.performance('Recording start process completed', totalDuration, {
+    console.log('✅ Recording start process completed', {
+      totalDuration: `${totalDuration}ms`,
       meetingCode,
       sid,
       resourceId,
@@ -314,7 +310,7 @@ export default async function handler(req, res) {
       message: 'Agora Cloud Recording started successfully'
     };
 
-    logger.info('✅ Recording start request completed successfully', response);
+    console.log('✅ Recording start request completed successfully', response);
     
     console.log('✅ [AGORA START] === SUCCESS RESPONSE ===');
     console.log('✅ [AGORA START] SID:', sid);
@@ -331,7 +327,9 @@ export default async function handler(req, res) {
     console.log('❌ [AGORA START] Stack:', error.stack);
     console.log('❌ [AGORA START] Duration:', `${totalDuration}ms`);
     
-    logger.recordingError(req.body.meetingCode || 'unknown', error, {
+    console.log('❌ Recording error details:', {
+      meetingCode: req.body.meetingCode || 'unknown',
+      error: error.message,
       requestBody: req.body,
       processingDuration: `${totalDuration}ms`,
       operation: 'start_recording'
