@@ -92,7 +92,7 @@ export default async function handler(req, res) {
 
     console.log('🔍 [AGORA WEBHOOK] Looking up recording in Firestore...');
     console.log('🔍 [AGORA WEBHOOK] Query filters:', { sid: sid?.substring(0, 10) + '...', channelId });
-    
+
     // Find the recording in our database
     const recordingSnapshot = await db.collection('AgoraRecordings')
       .where('sid', '==', sid)

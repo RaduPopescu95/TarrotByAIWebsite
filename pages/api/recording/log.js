@@ -72,12 +72,12 @@ export default async function handler(req, res) {
       }
 
       console.log('💾 [LOG API] Collection:', collectionName);
-      
+
       const logRef = db.collection(collectionName).doc();
       await logRef.set(logData);
 
       console.log('✅ [LOG API] Log stored in Firestore:', logRef.id);
-      
+
       logger.info('Critical client log stored in Firestore', {
         collection: collectionName,
         logId: logRef.id,
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
     }
 
     console.log('✅ [LOG API] === LOG PROCESSED SUCCESSFULLY ===');
-    
+
     res.status(200).json({
       success: true,
       message: 'Log received and processed'

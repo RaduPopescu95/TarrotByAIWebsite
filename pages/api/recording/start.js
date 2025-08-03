@@ -174,9 +174,6 @@ export default async function handler(req, res) {
   const requestStartTime = Date.now();
   
   console.log('🎬 [AGORA START] === API CALLED ===');
-  console.log('🎬 [AGORA START] === API CALLED ===');
-  console.log('🎬 [AGORA START] === API CALLED ===');
-  console.log('🎬 [AGORA START] === API CALLED ===');
   console.log('🎬 [AGORA START] Method:', req.method);
   console.log('🎬 [AGORA START] Body:', JSON.stringify(req.body, null, 2));
   console.log('🎬 [AGORA START] Headers:', JSON.stringify(req.headers, null, 2));
@@ -205,7 +202,7 @@ export default async function handler(req, res) {
         message: 'Meeting code is required',
         success: false 
       });
-    }
+      }
 
     console.log('✅ [AGORA START] Meeting code:', meetingCode);
 

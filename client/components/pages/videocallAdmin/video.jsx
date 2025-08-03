@@ -130,7 +130,7 @@ const AdminVideoCall = () => {
       });
 
       console.log('🌐 [CLIENT] Calling /api/recording/start...');
-      
+
       const response = await fetch('/api/recording/start', {
         method: 'POST',
         headers: {
@@ -286,7 +286,7 @@ const AdminVideoCall = () => {
       });
 
       console.log('🌐 [CLIENT] Calling /api/recording/stop...');
-      
+
       const response = await fetch('/api/recording/stop', {
         method: 'POST',
         headers: {

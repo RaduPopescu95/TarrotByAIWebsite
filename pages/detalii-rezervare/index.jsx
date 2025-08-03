@@ -1,13 +1,7 @@
-import dynamic from 'next/dynamic';
-
-// Dynamic import pentru componenta care folosește Firebase
-const DoctorUpcomingAppointment = dynamic(
-  () => import("../../client/components/doctors/appointments/doctorUpcomingAppointment"),
-  { 
-    ssr: false, // Dezactivează SSR pentru această componentă
-    loading: () => <div>Loading...</div>
-  }
-);
+import DoctorUpcomingAppointment from "../../client/components/doctors/appointments/doctorUpcomingAppointment";
+import PatientAppointments from "../../client/components/patients/appointments";
+import AppointmentsAdmin from "../../client/components/patients/appointments-admin";
+import Booking from "../../client/components/patients/booking/booking1";
 
 export default function DetaliiRezervare() {
   return (

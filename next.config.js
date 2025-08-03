@@ -7,45 +7,27 @@ const nextConfig = {
   poweredByHeader: false,
   // Important: ensure proper static optimization
   reactStrictMode: true,
-  // Fix ES6 module import issues - OPTIMIZED FOR BUILD SPEED
-  transpilePackages: ['agora-react-uikit'], // Doar ce e absolut necesar
-  experimental: {
-    esmExternals: false, // Disable pentru viteza de build
-    serverComponentsExternalPackages: ['firebase-admin']
-  },
-  // Skip modular imports pentru viteza de build
   // Important: ensure proper image optimization
   images: {
     domains: ['firebasestorage.googleapis.com'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60
   },
-  // Skip compiler optimizations pentru viteza de build în development
-  // Important: ensure proper webpack configuration - OPTIMIZED FOR SPEED
+  // Important: ensure proper compilation
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn']
+    } : false
+  },
+  // Important: ensure proper webpack configuration
   webpack: (config, { dev, isServer }) => {
-    // Minimal configuration pentru viteza de build
+    // Optimize for production
     if (!dev && !isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@': __dirname,
       };
     }
-    
-    // Doar fallback-urile esențiale
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-    };
-
-    // Exclude doar Firebase critical din server bundle
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push('firebase/app');
-      config.externals.push('firebase/firestore');
-    }
-    
     return config;
   },
   // Important: ensure proper environment variables

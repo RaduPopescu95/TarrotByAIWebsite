@@ -1,4 +1,3 @@
-// Firebase initialization - SIMPLE AND FAST
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
@@ -18,13 +17,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
+// Initialize other Firebase services
 const storage = getStorage(app);
 const authentication = getAuth(app);
 const database = getDatabase(app);
+// Initialize Cloud Firestore and get a reference to the service
 const db = getFirestore(app);
+// Initialize Cloud Functions
 const functions = getFunctions(app);
 
 export { storage, authentication, database, db, functions };
