@@ -11,19 +11,20 @@ import Link from "next/link";
 import Footer from "../../footer";
 import Home1Header from "../../home/home-1/header";
 import { useRouter } from "next/router";
-import { handleQueryFirestore } from "../../../../utils/firestoreUtils";
+import { safeHandleQueryFirestore } from "../../../../utils/clientOnlyFirestore";
 import { formatSelectedSlot } from "../../../../utils/commonUtils";
 const DoctorUpcomingAppointment = (props) => {
   const router = useRouter();
   const { meetingId } = router.query;
   const [appointmentDetails, setAppointmentDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
       if (meetingId) {
         try {
-          // Aici se preiau datele din Firestore pe baza `meetingId`
-          const data = await handleQueryFirestore(
+          // Folosește wrapper-ul SSR-safe pentru Firebase
+          const data = await safeHandleQueryFirestore(
             "RezervariConsultatii",
             "documentId",
             meetingId
@@ -36,6 +37,7 @@ const DoctorUpcomingAppointment = (props) => {
           console.error("Failed to fetch appointment details:", error);
         }
       }
+      setLoading(false);
     };
 
     fetchAppointmentDetails();
@@ -53,7 +55,7 @@ const DoctorUpcomingAppointment = (props) => {
     }
   };
 
-  if (!appointmentDetails) {
+  if (loading || !appointmentDetails) {
     return <p>Se incarca informatiile....</p>;
   }
 
