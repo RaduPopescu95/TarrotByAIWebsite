@@ -19,6 +19,8 @@ if (!getApps().length) {
 }
 
 export default async function handler(req, res) {
+  console.log('🧪 [TEST CONFIG] === API CALLED ===');
+  console.log('🧪 [TEST CONFIG] Method:', req.method);
   console.log('🔍 Testing Firebase Admin configuration...');
   
   try {

@@ -133,13 +133,13 @@ Dacă întâmpini probleme:
 **Adaugă în `.env.local`:**
 ```bash
 # Agora Cloud Recording Configuration
-AGORA_APP_ID=e17715cba7c84bfc9dbd1b5231b6f86f
-AGORA_APP_CERTIFICATE=your-app-certificate-from-console
+PUBLIC_AGORA_APP_ID=e17715cba7c84bfc9dbd1b5231b6f86f
 AGORA_CUSTOMER_ID=your-customer-id-from-console  
 AGORA_CUSTOMER_SECRET=your-customer-secret-from-console
 
 # Google Cloud Storage Configuration
 AGORA_CLOUD_STORAGE_VENDOR=6  # 6 = Google Cloud Storage with HMAC
+AGORA_GCS_REGION=0  # 0 = Global region (obligatoriu pentru vendor=6)
 AGORA_CLOUD_STORAGE_BUCKET=cristina-zurba-recordings
 GCS_HMAC_ACCESS_KEY=your-hmac-access-key
 GCS_HMAC_SECRET_KEY=your-hmac-secret-key

@@ -5,8 +5,11 @@ import { useRouter } from "next/router";
 import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "../../../../firebase";
-import { AgoraStreamRecorder } from "../../../../utils/agoraStreamRecorder";
+import { createUILogger } from "../../../../utils/logger";
 import RecordingProgressWidget from "../../../../components/RecordingProgressWidget";
+
+// Initialize client-side logger
+const logger = createUILogger('ONE_TO_ONE_VIDEO');
 
 // Funcție pentru a obține timpul curent
 const getCurrentTime = () => Math.floor(Date.now() / 1000);
@@ -26,41 +29,60 @@ const AdminVideoCall = () => {
   const [browserCompatible, setBrowserCompatible] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   
-  // Recording states
+  // Agora Cloud Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [recordingError, setRecordingError] = useState("");
   const [recordingStatus, setRecordingStatus] = useState("");
-  const [recordingPermission, setRecordingPermission] = useState(true); // Admin has default permission
+  const [recordingPermission, setRecordingPermission] = useState(true);
   const [showRecordingModal, setShowRecordingModal] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isLoadingClientEmail, setIsLoadingClientEmail] = useState(false);
+  
+  // Agora Cloud Recording tracking
+  const [recordingSid, setRecordingSid] = useState(null);
+  const [recordingResourceId, setRecordingResourceId] = useState(null);
 
   const recordingIntervalRef = useRef(null);
+  const statusCheckIntervalRef = useRef(null);
+
+  // Log component initialization
+  useEffect(() => {
+    logger.info('One-to-one video component initialized', {
+      meetingCode,
+      userAgent: navigator.userAgent,
+      isSupported: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    });
+  }, [meetingCode]);
 
   // 🔍 Function to fetch client email from RezervariConsultatii
   const fetchClientEmail = async (meetingCode) => {
     try {
       setIsLoadingClientEmail(true);
+      logger.info('Fetching client email for meeting', { meetingCode });
       
       // First, try to find by document ID (from meetingCode format: code__documentId)
       if (meetingCode.includes('__')) {
         const documentId = meetingCode.split('__')[1];
+        logger.debug('Attempting to find by document ID', { documentId });
         const docRef = doc(db, 'RezervariConsultatii', documentId);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('📧 [ADMIN EMAIL] Found client email from document ID:', data.email);
+          logger.info('Client email found via document ID', { 
+            email: data.email ? 'present' : 'missing'
+          });
           return data.email;
         }
       }
       
       // Fallback: search by meetingCode field
+      logger.debug('Searching by meetingCode field');
       const q = query(
         collection(db, 'RezervariConsultatii'),
         where('meetingCode', '==', meetingCode),
@@ -71,140 +93,337 @@ const AdminVideoCall = () => {
       
       if (!querySnapshot.empty) {
         const data = querySnapshot.docs[0].data();
-        console.log('📧 [ADMIN EMAIL] Found client email from query:', data.email);
+        logger.info('Client email found via query', { 
+          email: data.email ? 'present' : 'missing'
+        });
         return data.email;
       }
       
-      console.log('⚠️ [ADMIN EMAIL] No client email found for meetingCode:', meetingCode);
+      logger.warn('No client email found', { meetingCode });
       return null;
       
     } catch (error) {
-      console.error('❌ [ADMIN EMAIL] Error fetching client email:', error);
+      logger.error('Error fetching client email', {
+        error: error.message,
+        meetingCode
+      });
       return null;
     } finally {
       setIsLoadingClientEmail(false);
     }
   };
 
-  // Initialize AgoraStreamRecorder for admin (no screen share dialog!)
-  const [recorder] = useState(() => {
-    return new AgoraStreamRecorder({
-      onProgress: (message) => {
-        console.log('🎥 [ADMIN RECORDING] Progress:', message);
-        setRecordingStatus(message);
-      },
-      onComplete: (data) => {
-        console.log('🎉 [ADMIN RECORDING] Completed:', data);
-        setRecordingStatus('Înregistrare completă! Pregătire email...');
-        setIsRecording(false);
-        setRecordingDuration(0);
+  // Start Agora Cloud Recording
+  const startRecording = async () => {
+    try {
+      console.log('🎬 [CLIENT] === STARTING AGORA CLOUD RECORDING ===');
+      console.log('🎬 [CLIENT] Meeting Code:', meetingCode);
+      console.log('🎬 [CLIENT] Document ID:', documentId);
+      
+      setRecordingError("");
+      setRecordingStatus("Inițializez înregistrarea...");
+      
+      logger.recordingStart('one_to_one', {
+        meetingCode,
+        documentId,
+        timestamp: Date.now()
+      });
+
+      console.log('🌐 [CLIENT] Calling /api/recording/start...');
+      
+      const response = await fetch('/api/recording/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingCode,
+          recordingType: 'one_to_one',
+          documentId
+        }),
+      });
+      
+      console.log('📡 [CLIENT] API Response Status:', response.status);
+
+      const data = await response.json();
+      
+      console.log('📋 [CLIENT] API Response Data:', data);
+      
+      if (data.success) {
+        console.log('✅ [CLIENT] Recording started successfully!');
+        console.log('✅ [CLIENT] SID:', data.sid);
+        console.log('✅ [CLIENT] Resource ID:', data.resourceId);
         
-        // Clear recording timer
-        if (recordingIntervalRef.current) {
-          clearInterval(recordingIntervalRef.current);
-          recordingIntervalRef.current = null;
-        }
+        setRecordingSid(data.sid);
+        setRecordingResourceId(data.resourceId);
+        setIsRecording(true);
+        setRecordingStartTime(Date.now());
+        setRecordingDuration(0);
+        setRecordingStatus("Înregistrare activă");
+        
+        logger.info('Agora Cloud Recording started successfully', {
+          sid: data.sid?.substring(0, 10) + '...',
+          resourceId: data.resourceId?.substring(0, 10) + '...',
+          meetingCode
+        });
 
-        // Send email with access link to public recordings page
-        if (recipientEmail.trim()) {
-          setRecordingStatus('📧 Se trimite emailul...');
-          
-          fetch('/api/recording/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              meetingCode: meetingCode,
-              recipientEmail: recipientEmail.trim(),
-              // No downloadURL - email will contain link to public access page only
-              duration: data.duration
-            })
-          })
-          .then(res => res.json())
-          .then(resp => {
-            if (resp.success) {
-              console.log('✅ Recording access email sent to:', recipientEmail.trim());
-              setRecordingStatus('✅ Email trimis cu succes!');
-              
-              // Reset UI after successful completion
-              setTimeout(() => {
-                setRecordingStatus('');
-                setRecipientEmail('');
-                setShowEmailDialog(false);
-                console.log('🔄 [UI RESET] Recording interface reset after completion');
-              }, 3000);
-              
-            } else {
-              console.error('Failed to send access email:', resp.message);
-              setRecordingStatus('❌ Eroare la trimiterea emailului');
-              
-              // Reset UI even on error
-              setTimeout(() => {
-                setRecordingStatus('');
-              }, 5000);
-            }
-          })
-          .catch(err => {
-            console.error('Error sending access email:', err);
-            setRecordingStatus('❌ Eroare la conexiune pentru email');
-            
-            // Reset UI on network error
-            setTimeout(() => {
-              setRecordingStatus('');
-            }, 5000);
-          });
-        } else {
-          // No email provided, reset immediately
-          setTimeout(() => {
-            setRecordingStatus('');
-            console.log('🔄 [UI RESET] Recording interface reset (no email)');
-          }, 2000);
-        }
+        // Start duration counter
+        recordingIntervalRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
 
-        // Update Firestore with recording completion
+        // Start status checking
+        statusCheckIntervalRef.current = setInterval(async () => {
+          await checkRecordingStatus();
+        }, 10000); // Check every 10 seconds
+
+        // Update Firestore with recording info
         if (documentId) {
-          updateDoc(doc(db, "RezervariConsultatii", documentId), {
+          await updateDoc(doc(db, "RezervariConsultatii", documentId), {
+            recording: {
+              isRecording: true,
+              startTime: Date.now(),
+              status: 'recording',
+              recordingType: 'agora_cloud',
+              sid: data.sid,
+              resourceId: data.resourceId
+            }
+          });
+          logger.debug('Firestore updated with recording info', { documentId });
+        }
+      } else {
+        console.log('❌ [CLIENT] Recording start failed:', data.error);
+        throw new Error(data.error || 'Failed to start recording');
+      }
+    } catch (error) {
+      console.log('💥 [CLIENT] === RECORDING START ERROR ===');
+      console.log('💥 [CLIENT] Error:', error.message);
+      console.log('💥 [CLIENT] Stack:', error.stack);
+      
+      logger.recordingError('start', {
+        error: error.message,
+        meetingCode,
+        timestamp: Date.now()
+      });
+      setRecordingError(`Eroare la pornirea înregistrării: ${error.message}`);
+      setRecordingStatus("");
+    }
+  };
+
+  // Check recording status
+  const checkRecordingStatus = async () => {
+    if (!recordingSid) return;
+
+    try {
+      const response = await fetch('/api/recording/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sid: recordingSid,
+          meetingCode
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        logger.debug('Recording status checked', {
+          status: data.status,
+          duration: data.duration,
+          hasAgoraStatus: !!data.agoraStatus
+        });
+
+        if (data.status === 'failed' || data.status === 'completed') {
+          // Recording ended unexpectedly
+          if (isRecording) {
+            logger.warn('Recording ended unexpectedly', {
+              status: data.status,
+              sid: recordingSid?.substring(0, 10) + '...'
+            });
+            setIsRecording(false);
+            setRecordingStatus(`Înregistrare ${data.status === 'failed' ? 'eșuată' : 'finalizată'}`);
+            clearIntervals();
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error checking recording status', {
+        error: error.message,
+        sid: recordingSid?.substring(0, 10) + '...'
+      });
+    }
+  };
+
+  // Stop Agora Cloud Recording
+  const confirmStopRecording = async () => {
+    console.log('🛑 [CLIENT] === STOPPING AGORA CLOUD RECORDING ===');
+    console.log('🛑 [CLIENT] SID:', recordingSid);
+    console.log('🛑 [CLIENT] Email:', recipientEmail?.substring(0, 5) + '...');
+    
+    if (!recipientEmail.trim()) {
+      console.log('❌ [CLIENT] Missing recipient email');
+      setEmailError('Introduceți un email pentru primirea linkului');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())) {
+      console.log('❌ [CLIENT] Invalid email format');
+      setEmailError('Format email invalid');
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      setRecordingStatus("Opresc înregistrarea...");
+      
+      logger.recordingStop('one_to_one', {
+        sid: recordingSid?.substring(0, 10) + '...',
+        meetingCode,
+        duration: recordingDuration,
+        recipientEmail: recipientEmail ? 'present' : 'missing'
+      });
+
+      console.log('🌐 [CLIENT] Calling /api/recording/stop...');
+      
+      const response = await fetch('/api/recording/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sid: recordingSid,
+          meetingCode,
+          recipientEmail: recipientEmail.trim()
+        }),
+      });
+
+      console.log('📡 [CLIENT] Stop API Response Status:', response.status);
+      const data = await response.json();
+      console.log('📋 [CLIENT] Stop API Response Data:', data);
+      
+      if (data.success) {
+        console.log('✅ [CLIENT] Recording stopped successfully!');
+        console.log('✅ [CLIENT] Duration:', data.duration);
+        console.log('✅ [CLIENT] Files:', data.fileList?.length || 0);
+        
+        setIsRecording(false);
+        setRecordingStatus("Înregistrare finalizată! Trimit email...");
+        clearIntervals();
+        
+        logger.info('Agora Cloud Recording stopped successfully', {
+          sid: recordingSid?.substring(0, 10) + '...',
+          duration: data.duration,
+          fileCount: data.fileList?.length || 0
+        });
+
+        // Send email notification
+        try {
+          const emailResponse = await fetch('/api/send-recording-notification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientEmail: recipientEmail.trim(),
+              meetingCode,
+              recordingData: data,
+              recordingType: 'one_to_one'
+            }),
+          });
+
+          const emailResult = await emailResponse.json();
+          
+          if (emailResult.success) {
+            setRecordingStatus("Email trimis cu succes!");
+            logger.info('Recording notification email sent', {
+              recipientEmail: recipientEmail ? 'present' : 'missing'
+            });
+          } else {
+            throw new Error(emailResult.error || 'Failed to send email');
+          }
+        } catch (emailError) {
+          logger.error('Failed to send recording notification', {
+            error: emailError.message,
+            recipientEmail: recipientEmail ? 'present' : 'missing'
+          });
+          setRecordingStatus("Înregistrare salvată, dar email-ul nu a putut fi trimis");
+        }
+
+        // Update Firestore
+        if (documentId) {
+          await updateDoc(doc(db, "RezervariConsultatii", documentId), {
             recording: {
               isRecording: false,
               endTime: Date.now(),
               status: 'completed',
-              recordingType: 'browser',
-              downloadURL: data.downloadURL,
-              fileName: data.fileName,
-              fileSize: data.size,
-              duration: data.duration
+              recordingType: 'agora_cloud',
+              sid: recordingSid,
+              duration: data.duration,
+              fileList: data.fileList
             }
-          }).catch(error => {
-            console.error('Error updating Firestore:', error);
           });
         }
-      },
-      onError: (error) => {
-        console.error('❌ [ADMIN RECORDING] Error:', error);
-        setRecordingError('Eroare la înregistrare: ' + error.message);
-        setIsRecording(false);
-        setRecordingStatus('');
-        
-        // Clear recording timer
-        if (recordingIntervalRef.current) {
-          clearInterval(recordingIntervalRef.current);
-          recordingIntervalRef.current = null;
-        }
-      }
-    });
-  });
 
-  // Check browser recording support
-  const isRecordingSupported = AgoraStreamRecorder.isSupported();
-  
-  // Log recording capabilities
+        // Reset UI after delay
+        setTimeout(() => {
+          setRecordingStatus('');
+          setRecipientEmail('');
+          setEmailError('');
+          setShowEmailDialog(false);
+          setRecordingSid(null);
+          setRecordingResourceId(null);
+        }, 5000);
+
+      } else {
+        throw new Error(data.error || 'Failed to stop recording');
+      }
+    } catch (error) {
+      logger.recordingError('stop', {
+        error: error.message,
+        sid: recordingSid?.substring(0, 10) + '...',
+        meetingCode
+      });
+      setRecordingError(`Eroare la oprirea înregistrării: ${error.message}`);
+      setRecordingStatus("");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // Clear all intervals
+  const clearIntervals = () => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
+      statusCheckIntervalRef.current = null;
+    }
+  };
+
+  // Cleanup intervals on unmount
   useEffect(() => {
-    console.log('🎥 [ADMIN] Recording capabilities:', {
-      isSupported: isRecordingSupported,
-      supportedMimeTypes: AgoraStreamRecorder.getSupportedMimeTypes(),
-      meetingCode,
-      userAgent: navigator.userAgent
-    });
-  }, [isRecordingSupported, meetingCode]);
+    return () => {
+      clearIntervals();
+    };
+  }, []);
+
+  // Auto-fetch client email when meetingCode is available
+  useEffect(() => {
+    if (meetingCode && !recipientEmail) {
+      fetchClientEmail(meetingCode).then(email => {
+        if (email) {
+          setRecipientEmail(email);
+          logger.debug('Auto-filled client email', { 
+            email: email ? 'present' : 'missing'
+          });
+        }
+      });
+    }
+  }, [meetingCode, recipientEmail]);
 
   // Verificarea compatibilității browserului
   useEffect(() => {
@@ -319,10 +538,14 @@ const AdminVideoCall = () => {
     }
   }, [meetingCode]);
 
-  // Function to capture existing Agora video streams from DOM
+  // TEMPORARILY DISABLED: Function to capture existing Agora video streams from DOM
+  // Using only Agora Cloud Recording now
   const captureExistingAgoraStreams = async () => {
+    console.log('🚫 [CANVAS RECORDING] Disabled temporarily - using Agora Cloud Recording only');
+    return 0;
+    /*
     try {
-      console.log('🔍 [ADMIN] Searching for existing Agora video streams in DOM...');
+      logger.debug('Attempting to capture existing Agora video streams from DOM...');
       
       // Find all video elements created by AgoraUIKit
       const videoElements = document.querySelectorAll('video');
@@ -337,7 +560,7 @@ const AdminVideoCall = () => {
             // Generate a unique ID for this stream
             const streamId = `agora_stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
-            console.log('📹 [ADMIN] Found video stream:', {
+            logger.debug('Found video stream in DOM', {
               streamId,
               videoTracks: videoTracks.length,
               audioTracks: stream.getAudioTracks().length,
@@ -358,9 +581,9 @@ const AdminVideoCall = () => {
             
             // Wait for video to be ready before adding to recorder
             if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-              console.log('✅ [ADMIN] Video element is ready for recording');
+              logger.debug('Video element is ready for recording');
             } else {
-              console.log('⏳ [ADMIN] Video element not ready, waiting...', {
+              logger.debug('Video element not ready, waiting...', {
                 readyState: videoElement.readyState,
                 expectedMinimum: 2
               });
@@ -371,7 +594,7 @@ const AdminVideoCall = () => {
                   resolve();
                 } else {
                   const onLoadedData = () => {
-                    console.log('📺 [ADMIN] Video element loaded data');
+                    logger.debug('Video element loaded data');
                     videoElement.removeEventListener('loadeddata', onLoadedData);
                     resolve();
                   };
@@ -379,7 +602,7 @@ const AdminVideoCall = () => {
                   
                   // Timeout fallback
                   setTimeout(() => {
-                    console.log('⏰ [ADMIN] Video load timeout, proceeding anyway');
+                    logger.debug('Video load timeout, proceeding anyway');
                     videoElement.removeEventListener('loadeddata', onLoadedData);
                     resolve();
                   }, 2000);
@@ -388,189 +611,27 @@ const AdminVideoCall = () => {
             }
             
             // Add stream to recorder
-            recorder.addVideoStream(streamId, stream, videoElement);
+            // recorder.addVideoStream(streamId, stream, videoElement); // This line is removed as per the new_code
             streamsCaptured++;
             
-            console.log(`✅ [ADMIN] Added stream ${streamId} to recorder`);
+            logger.debug(`Added stream ${streamId} to recorder (DOM capture)`);
           }
         }
       }
       
-      console.log(`🎯 [ADMIN] Captured ${streamsCaptured} video streams from DOM`);
+      logger.debug(`Captured ${streamsCaptured} video streams from DOM (for Agora Cloud Recording)`);
       return streamsCaptured;
       
     } catch (error) {
-      console.error('❌ [ADMIN] Error capturing existing streams:', error);
+      logger.error('Error capturing existing streams for Agora Cloud Recording', { error });
       return 0;
     }
+    */
   };
 
   // Recording functionality (Simple Browser Recording with Firebase Storage)
-  const startRecording = async () => {
-    try {
-      setRecordingError("");
-      setRecordingStatus("Pregătire înregistrare...");
-
-      // Check browser support
-              if (!AgoraStreamRecorder.isSupported()) {
-        setRecordingError("Browser-ul nu suportă înregistrarea video");
-        return;
-      }
-
-      console.log('🎬 [ADMIN] Starting recording process for meeting:', meetingCode);
-
-      // Capture all video streams from Agora
-      const streamsCaptured = await recorder.captureExistingAgoraStreams();
-      
-      if (streamsCaptured === 0) {
-        console.warn('⚠️ [ADMIN] No video streams found, waiting for participants...');
-        setRecordingStatus('Așteptare participanți cu video...');
-        // Continue anyway - streams might be added during recording via callbacks
-      }
-
-      // Start recording using AgoraStreamRecorder (no screen share dialog!)
-      const result = await recorder.startRecording();
-      
-      if (result.success) {
-        setIsRecording(true);
-        setRecordingStartTime(Date.now());
-        setRecordingStatus('Înregistrare activă - capturează toate streamurile');
-        
-        // Start recording duration timer
-        recordingIntervalRef.current = setInterval(() => {
-        setRecordingDuration((prev) => {
-          const newDuration = prev + 1;
-          
-          // Log recording progress every 10 seconds
-          if (newDuration % 10 === 0) {
-            console.log(`🎥 [ADMIN] Recording duration: ${newDuration} seconds`);
-          }
-          
-          return newDuration;
-        });
-        }, 1000);
-
-        // Update recording status in Firebase
-        if (documentId) {
-          const docRef = doc(db, "RezervariConsultatii", documentId);
-          await updateDoc(docRef, {
-            recording: {
-              isRecording: true,
-              startTime: Date.now(),
-              recordingType: 'browser',
-              status: 'recording'
-            }
-          });
-        }
-
-        console.log('✅ [ADMIN] Recording started successfully');
-      } else {
-        setRecordingError(result.message || "Eroare la pornirea înregistrării");
-        setRecordingStatus("");
-      }
-    } catch (error) {
-      console.error("❌ [ADMIN] Recording start error:", error);
-      setRecordingError("Eroare la pornirea înregistrării");
-      setRecordingStatus("");
-    }
-  };
-
-  const stopRecording = async () => {
-    // Show email dialog instead of stopping immediately
-    setEmailError("");
-    setRecipientEmail("");
-    setShowEmailDialog(true);
-    
-    // 🚀 Auto-populate client email from RezervariConsultatii
-    if (meetingCode) {
-      console.log('🔍 [ADMIN EMAIL] Fetching client email for meetingCode:', meetingCode);
-      const clientEmail = await fetchClientEmail(meetingCode);
-      
-      if (clientEmail) {
-        setRecipientEmail(clientEmail);
-        console.log('✅ [ADMIN EMAIL] Auto-populated client email:', clientEmail);
-      } else {
-        console.log('⚠️ [ADMIN EMAIL] Could not find client email, admin will need to enter manually');
-      }
-    }
-  };
-
-  const confirmStopRecording = async () => {
-    if (!recipientEmail.trim()) {
-      setEmailError("Vă rugăm să introduceți o adresă de email validă");
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(recipientEmail.trim())) {
-      setEmailError("Adresa de email nu este validă");
-      return;
-    }
-
-    try {
-      setIsSendingEmail(true);
-      setEmailError("");
-      setRecordingStatus("Oprire înregistrare...");
-      
-      console.log('🛑 [ADMIN] Stopping recording for meeting:', meetingCode);
-      console.log('📧 [ADMIN] Recipient email:', recipientEmail.trim());
-      
-      // 🎯 Set the recipient email in recorder BEFORE stopping
-      recorder.setRecipientEmail(recipientEmail.trim());
-      
-      // Stop recording using AgoraStreamRecorder
-      // The onComplete callback will handle Firebase updates and file upload
-      await recorder.stopRecording();
-      
-      // Close email dialog
-      setShowEmailDialog(false);
-      
-              // The AgoraStreamRecorder will handle:
-      // 1. Processing and uploading the video to Firebase Storage
-      // 2. Updating Firestore with completion status
-      // 3. Getting download URL
-      
-      // After recording completes, send notification email with the download URL
-      // This will be triggered from the onComplete callback
-      console.log('✅ [ADMIN] Recording stop process initiated');
-      
-      // Send notification email with recipient
-      await sendRecordingNotification();
-
-    } catch (error) {
-      console.error("❌ [ADMIN] Recording stop error:", error);
-      setRecordingError("Eroare la oprirea înregistrării");
-    } finally {
-      setIsSendingEmail(false);
-    }
-  };
-
-  const sendRecordingNotification = async () => {
-    try {
-      const response = await fetch('/api/recording/send-notification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode: meetingCode,
-          recipientEmail: recipientEmail.trim(),
-          duration: recordingDuration
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log("Notification email sent successfully");
-      } else {
-        console.error("Failed to send notification email:", data.message);
-      }
-    } catch (error) {
-      console.error("Error sending notification email:", error);
-    }
-  };
+  // This section is now replaced by Agora Cloud Recording API calls.
+  // The startRecording and confirmStopRecording functions handle the recording logic.
 
   const formatRecordingTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -617,15 +678,15 @@ const AdminVideoCall = () => {
 
       // Cleanup pentru recording dacă este activ
       if (isRecording) {
-        console.log('🎥 Stopping recording due to call end');
-        recorder.stopRecording();
-        setIsRecording(false);
+        logger.info('Call ended, stopping Agora Cloud Recording', { sid: recordingSid?.substring(0, 10) + '...' });
+        // The onComplete callback will handle Firebase updates and file upload
+        await confirmStopRecording(); // Use the new confirmStopRecording
       }
       
       // Cleanup recorder resources
-      if (recorder) {
-        recorder.cleanup();
-      }
+      // if (recorder) { // recorder is no longer used
+      //   recorder.cleanup();
+      // }
 
       // Setăm prezența adminului și a clientului la false în baza de date
       await updateDoc(docRef, {
@@ -730,7 +791,7 @@ const AdminVideoCall = () => {
                 )}
 
                 {/* Recording Controls - Main Control Button with Animations */}
-                {isRecordingSupported ? (
+                {/* isRecordingSupported is no longer relevant as we use Agora Cloud Recording */}
                 <div style={styles.recordingControls}>
 
                   <button
@@ -758,7 +819,7 @@ const AdminVideoCall = () => {
                         recordingStatus.includes('complet') ? "bounce 0.6s ease-in-out" :
                         isRecording ? "pulse 2s infinite" : "none",
                     }}
-                    onClick={isRecording ? stopRecording : startRecording}
+                    onClick={isRecording ? confirmStopRecording : startRecording}
                                          title={
                        recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? "Se încarcă înregistrarea..." :
                        recordingStatus.includes('Oprire înregistrare') ? "Se oprește înregistrarea..." :
@@ -830,12 +891,6 @@ const AdminVideoCall = () => {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div style={styles.recordingUnsupported}>
-                    <i className="fas fa-exclamation-triangle" style={{marginRight: '8px', color: '#ff6b6b'}}></i>
-                    <span>Înregistrarea video nu este suportată în acest browser</span>
-                  </div>
-                )}
 
                 <AgoraUIKit
                   rtcProps={{
@@ -870,35 +925,33 @@ const AdminVideoCall = () => {
                     },
                     'user-joined': (user) => {
                       console.log('👥 User joined:', user.uid);
-                      // Video will be captured automatically by captureExistingAgoraStreams
+                      // DISABLED: Using Agora Cloud Recording instead of canvas capture
                       if (isRecording) {
-                        console.log('🎥 User joined during recording, will be captured automatically');
-                        // Trigger a recheck for new videos
-                        setTimeout(() => recorder.recheckForVideos(), 1000);
+                        console.log('🎥 User joined during recording - handled by Agora Cloud Recording');
+                        // setTimeout(() => captureExistingAgoraStreams(), 1000); // DISABLED
                       }
                     },
                     'user-left': (user) => {
                       console.log('👥 User left:', user.uid);
                       // Remove user's video element from recorder
                       if (isRecording) {
-                        recorder.removeVideoElement(user.uid);
+                        // recorder.removeVideoElement(user.uid); // This line is removed as per the new_code
                         console.log('🎥 Removed video element for user:', user.uid);
                       }
                     },
                     'user-published': (user, mediaType) => {
                       console.log('📡 User published:', user.uid, mediaType);
-                      // Video will be captured automatically
+                      // DISABLED: Using Agora Cloud Recording instead
                       if (isRecording && mediaType === 'video') {
-                        console.log('🎥 User published video, will be captured automatically');
-                        // Trigger a recheck for new videos
-                        setTimeout(() => recorder.recheckForVideos(), 1000);
+                        console.log('🎥 User published video - handled by Agora Cloud Recording');
+                        // setTimeout(() => captureExistingAgoraStreams(), 1000); // DISABLED
                       }
                     },
                     'user-unpublished': (user, mediaType) => {
                       console.log('📡 User unpublished:', user.uid, mediaType);
                       // Remove video element when video is unpublished
                       if (isRecording && mediaType === 'video') {
-                        recorder.removeVideoElement(user.uid);
+                        // recorder.removeVideoElement(user.uid); // This line is removed as per the new_code
                         console.log('🎥 Removed video element for unpublished user:', user.uid);
                       }
                     },
@@ -1035,7 +1088,7 @@ const AdminVideoCall = () => {
               showCancelButton={false}
               showStartStopButtons={false}
               onCancel={() => {
-                recorder.cleanup();
+                // recorder.cleanup(); // This line is removed as per the new_code
                 setIsRecording(false);
                 setRecordingStatus('');
                 setRecordingError('');

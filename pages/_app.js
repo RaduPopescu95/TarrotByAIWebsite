@@ -30,6 +30,11 @@ require("../client/assets/scss/main.scss");
 require("../client/components/customstyleclient.css");
 require("../client/assets/css/feather.css");
 
+// Add real-time log monitor in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  import('../utils/realTimeLogMonitor');
+}
+
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
 function MyApp({ Component, pageProps }) {

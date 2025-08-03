@@ -87,16 +87,16 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----E
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
 
 # ⭐ AGORA CLOUD RECORDING - PRINCIPAL
-AGORA_APP_ID=e17715cba7c84bfc9dbd1b5231b6f86f
-AGORA_APP_CERTIFICATE=get-from-agora-console
-AGORA_REST_API_KEY=get-from-agora-console
-AGORA_REST_API_SECRET=get-from-agora-console
+PUBLIC_AGORA_APP_ID=e17715cba7c84bfc9dbd1b5231b6f86f
+AGORA_CUSTOMER_ID=get-from-agora-console
+AGORA_CUSTOMER_SECRET=get-from-agora-console
 
-# ⭐ CLOUD STORAGE pentru înregistrări
-AWS_S3_BUCKET=cristinazurba-recordings
-AWS_S3_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-aws-access-key
-AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+# ⭐ GOOGLE CLOUD STORAGE pentru înregistrări (înlocuiește AWS S3)
+AGORA_CLOUD_STORAGE_VENDOR=6  # 6 = Google Cloud Storage with HMAC
+AGORA_GCS_REGION=0  # 0 = Global region (obligatoriu pentru vendor=6)
+AGORA_CLOUD_STORAGE_BUCKET=cristina-zurba-recordings
+GCS_HMAC_ACCESS_KEY=your-hmac-access-key
+GCS_HMAC_SECRET_KEY=your-hmac-secret-key
 
 # Email pentru notificări
 EMAIL_USER=your-gmail@gmail.com

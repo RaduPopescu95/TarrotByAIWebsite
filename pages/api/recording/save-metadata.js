@@ -32,6 +32,10 @@ function logWithDetails(level, message, data = {}) {
 }
 
 export default async function handler(req, res) {
+  console.log('💾 [SAVE METADATA] === API CALLED ===');
+  console.log('💾 [SAVE METADATA] Method:', req.method);
+  console.log('💾 [SAVE METADATA] Body keys:', Object.keys(req.body || {}));
+  
   const requestStartTime = Date.now();
   const requestId = `req_${requestStartTime}_${Math.random().toString(36).substr(2, 6)}`;
   
