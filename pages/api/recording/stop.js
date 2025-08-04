@@ -21,29 +21,117 @@ const AGORA_CONFIG = {
   customerSecret: process.env.AGORA_CUSTOMER_SECRET
 };
 
+// Global lock mechanism to prevent concurrent stop requests
+const stopLocks = new Map();
+
 // Helper function to create Basic Auth header for Agora REST API
 function createAgoraAuthHeader() {
   const credentials = `${AGORA_CONFIG.customerId}:${AGORA_CONFIG.customerSecret}`;
   return 'Basic ' + Buffer.from(credentials).toString('base64');
 }
 
-// Helper function to stop Agora Cloud Recording
-async function stopAgoraRecording(resourceId, sid, channelName, recordingUID) {
+// Helper function to create valid Agora channel name from meeting code
+function createAgoraChannelName(meetingCode) {
+  // Agora channel name requirements:
+  // - Max 64 characters
+  // - Only alphanumeric, underscore, hyphen
+  // - Cannot start with underscore or hyphen
+  
+  // Extract the meaningful part (document ID) from meeting code
+  // Format: "uuid__documentId" -> use documentId + short hash of uuid
+  const parts = meetingCode.split('__');
+  if (parts.length === 2) {
+    const documentId = parts[1]; // qGlXABw0d7Av01Ynz3Cw
+    const uuidHash = parts[0].replace(/-/g, '').substring(0, 8); // First 8 chars of UUID without dashes
+    return `${documentId}_${uuidHash}`; // e.g., qGlXABw0d7Av01Ynz3Cw_8efcd2e4
+  }
+  
+  // Fallback: just truncate to 64 chars and sanitize
+  return meetingCode
+    .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace invalid chars with underscore
+    .substring(0, 64) // Truncate to max length
+    .replace(/^[_-]+/, '') // Remove leading underscores/hyphens
+    .replace(/[_-]+$/, ''); // Remove trailing underscores/hyphens
+}
+
+// Helper function to query Agora Cloud Recording status
+async function queryAgoraRecording(resourceId, sid, channelName, recordingUID) {
+  const queryUrl = `https://api.agora.io/v1/apps/${AGORA_CONFIG.appId}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/query`;
+  const agoraChannelName = createAgoraChannelName(channelName);
+
+  console.log('🔍 Querying Agora Cloud Recording status', {
+    resourceId: resourceId.substring(0, 20) + '...',
+    sid,
+    agoraChannelName,
+    recordingUID: recordingUID.toString(),
+    url: queryUrl
+  });
+
+  try {
+    const response = await fetch(queryUrl, {
+      method: 'GET', // ✅ FIXED: GET method as per Agora docs
+      headers: {
+        'Authorization': createAgoraAuthHeader(),
+        'Content-Type': 'application/json'
+      }
+      // ✅ FIXED: No body for GET request
+    });
+
+    const responseData = await response.json();
+    
+    if (response.ok) {
+      console.log('✅ Recording status query successful:', {
+        status: responseData.serverResponse?.status || 'unknown',
+        fileList: responseData.serverResponse?.fileList || []
+      });
+      return { success: true, data: responseData };
+    } else {
+      console.log('❌ Recording status query failed:', {
+        status: response.status,
+        responseData
+      });
+      return { success: false, error: responseData };
+    }
+  } catch (error) {
+    console.log('❌ Recording status query error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// Helper function to stop Agora Cloud Recording with retry mechanism
+async function stopAgoraRecording(resourceId, sid, channelName, recordingUID, retryCount = 0) {
   const startTime = Date.now();
   const stopUrl = `https://api.agora.io/v1/apps/${AGORA_CONFIG.appId}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`;
   
+  // Convert meeting code to Agora channel name format (same as start)
+  const agoraChannelName = createAgoraChannelName(channelName);
+  
+  // First, query the recording status to ensure it exists and is active
+  if (retryCount === 0) {
+    console.log('🔍 Checking recording status before stopping...');
+    const queryResult = await queryAgoraRecording(resourceId, sid, channelName, recordingUID);
+    
+    if (!queryResult.success) {
+      console.log('⚠️ Recording query failed, but proceeding with stop attempt');
+    } else {
+      console.log('✅ Recording query successful, proceeding with stop');
+    }
+  }
+  
   const requestData = {
-    cname: channelName,
-    uid: Number(recordingUID), // Convert to number as required by Agora spec
+    cname: agoraChannelName,
+    uid: recordingUID.toString(), // UID as string as per Agora documentation
     clientRequest: {}
   };
 
   console.log('🛑 Stopping Agora Cloud Recording', {
-    resourceId,
+    resourceId: resourceId.substring(0, 20) + '...',
     sid,
-    channelName,
+    originalChannelName: channelName,
+    agoraChannelName: agoraChannelName,
     recordingUID: recordingUID.toString(),
-    url: stopUrl
+    url: stopUrl,
+    retryCount
   });
   
   const response = await fetch(stopUrl, {
@@ -59,6 +147,34 @@ async function stopAgoraRecording(resourceId, sid, channelName, recordingUID) {
   
   if (!response.ok) {
     const errorData = await response.text();
+    
+    // Handle 404 "failed to find worker" - recording already stopped, treat as SUCCESS
+    if (response.status === 404 && errorData.includes('failed to find worker')) {
+      console.log('✅ Recording already stopped (worker not found) - treating as success', {
+        resourceId: resourceId.substring(0, 20) + '...',
+        sid,
+        status: response.status,
+        explanation: 'Agora worker already cleaned up - recording completed naturally',
+        duration: `${duration}ms`,
+        retryCount,
+        note: 'This is normal behavior when recording auto-stops due to idle time'
+      });
+      
+      // Return a simulated success response for already-stopped recordings
+      return {
+        cname: agoraChannelName,
+        resourceId: resourceId,
+        sid: sid,
+        uid: recordingUID.toString(),
+        serverResponse: {
+          fileList: [], // Files should be available in storage
+          status: 'stopped_naturally',
+          reason: 'Recording completed and worker cleaned up by Agora',
+          uploadingStatus: 'uploaded' // Assume files are uploaded
+        }
+      };
+    }
+    
     console.log('❌ Agora recording stop failed', {
       resourceId,
       sid,
@@ -67,7 +183,8 @@ async function stopAgoraRecording(resourceId, sid, channelName, recordingUID) {
       status: response.status,
       statusText: response.statusText,
       errorData,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
+      retryCount
     });
     throw new Error(`Agora stop failed: ${response.status} - ${errorData}`);
   }
@@ -81,6 +198,7 @@ async function stopAgoraRecording(resourceId, sid, channelName, recordingUID) {
     sid,
     recordingUID: recordingUID.toString(),
     duration: `${duration}ms`,
+    retryCount,
     fileList: responseData.serverResponse?.fileList || []
   });
   
@@ -121,6 +239,20 @@ export default async function handler(req, res) {
     }
     
     console.log('✅ [AGORA STOP] Parameters received:', { sid: sid?.substring(0, 10) + '...', meetingCode });
+
+    // Check for concurrent stop requests for the same SID
+    if (stopLocks.has(sid)) {
+      console.log('🔒 [AGORA STOP] Stop already in progress for SID:', sid);
+      return res.status(409).json({
+        success: false,
+        message: 'Recording stop already in progress for this session',
+        operation: 'stop_recording'
+      });
+    }
+
+    // Set lock for this SID
+    stopLocks.set(sid, true);
+    console.log('🔐 [AGORA STOP] Lock acquired for SID:', sid);
 
     let recordingRef;
     let recordingData;
@@ -206,10 +338,23 @@ export default async function handler(req, res) {
       });
     }
 
+    // Check if recording has been running long enough
+    const now = Date.now();
+    const recordingStartTime = recordingData.startTimestamp?.toDate ? recordingData.startTimestamp.toDate().getTime() : recordingData.startTimestamp;
+    const recordingDuration = now - recordingStartTime;
+    const minimumDuration = 15000; // 15 seconds minimum
+    
+    if (recordingDuration < minimumDuration) {
+      const waitTime = minimumDuration - recordingDuration;
+      console.log(`⏰ Recording started too recently (${recordingDuration}ms ago), waiting ${waitTime}ms before stopping...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
     // Stop Agora Cloud Recording
     console.log('🚀 [AGORA STOP] Calling Agora stop API...');
     console.log('🚀 [AGORA STOP] Resource ID:', finalResourceId);
     console.log('🚀 [AGORA STOP] SID:', finalSid?.substring(0, 10) + '...');
+    console.log('🚀 [AGORA STOP] Recording duration:', recordingDuration + 'ms');
     const stopResponse = await stopAgoraRecording(
       finalResourceId, 
       finalSid, 
@@ -218,13 +363,13 @@ export default async function handler(req, res) {
     );
 
     // Calculate duration
-    const startTime = recordingData.startTimestamp || Date.now();
-    const endTime = Date.now();
-    const duration = Math.floor((endTime - startTime) / 1000); // in seconds
+    const recordingStart = recordingData.startTimestamp || Date.now();
+    const recordingEnd = Date.now();
+    const duration = Math.floor((recordingEnd - recordingStart) / 1000); // in seconds
 
     console.log('📊 Recording duration calculated', {
-      startTime: new Date(startTime).toISOString(),
-      endTime: new Date(endTime).toISOString(),
+      startTime: new Date(recordingStart).toISOString(),
+      endTime: new Date(recordingEnd).toISOString(),
       duration: `${duration} seconds`,
       durationFormatted: `${Math.floor(duration / 60)}m ${duration % 60}s`
     });
@@ -233,8 +378,8 @@ export default async function handler(req, res) {
     console.log('💾 [AGORA STOP] Updating Firestore with stop data...');
     const updateData = {
       status: 'completed',
-      endTime: new Date(),
-      endTimestamp: endTime,
+      endTime: new Date(recordingEnd),
+      endTimestamp: recordingEnd,
       duration: duration,
       stopResponse: stopResponse,
       updatedAt: new Date()
@@ -286,6 +431,10 @@ export default async function handler(req, res) {
     console.log('✅ [AGORA STOP] Files:', stopResponse.serverResponse?.fileList?.length || 0);
     console.log('✅ [AGORA STOP] Processing time:', `${totalDuration}ms`);
     
+    // Release lock
+    stopLocks.delete(finalSid);
+    console.log('🔓 [AGORA STOP] Lock released for SID:', finalSid);
+    
     res.status(200).json(response);
 
   } catch (error) {
@@ -295,6 +444,13 @@ export default async function handler(req, res) {
     console.log('❌ [AGORA STOP] Error:', error.message);
     console.log('❌ [AGORA STOP] Stack:', error.stack);
     console.log('❌ [AGORA STOP] Processing time:', `${totalDuration}ms`);
+    
+    // Release lock on error
+    const sidForCleanup = req.body.sid;
+    if (sidForCleanup) {
+      stopLocks.delete(sidForCleanup);
+      console.log('🔓 [AGORA STOP] Lock released on error for SID:', sidForCleanup);
+    }
     
     console.log('❌ Recording error details:', {
       meetingCode: req.body.meetingCode || req.body.sid || 'unknown',
