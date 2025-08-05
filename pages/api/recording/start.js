@@ -152,6 +152,19 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
   const startTime = Date.now();
   const startUrl = `https://api.agora.io/v1/apps/${AGORA_CONFIG.appId}/cloud_recording/resourceid/${resourceId}/mode/mix/start`;
 
+  // Debug storage config
+  const cleanChannelName = channelName.replace(/[^a-zA-Z0-9]/g, "");
+  console.log('🗂️ [DEBUG] Storage Config:', {
+    vendor: AGORA_CONFIG.storageConfig.vendor,
+    region: AGORA_CONFIG.storageConfig.region,
+    bucket: AGORA_CONFIG.storageConfig.bucket,
+    hasAccessKey: !!AGORA_CONFIG.storageConfig.accessKey,
+    hasSecretKey: !!AGORA_CONFIG.storageConfig.secretKey,
+    fileNamePrefix: ["recordings", cleanChannelName],
+    originalChannelName: channelName,
+    cleanedChannelName: cleanChannelName
+  });
+
   const requestBody = {
     cname: channelName,
     uid: uid.toString(), // UID as string as per Agora documentation
@@ -159,7 +172,7 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
       ...(token && { token: token }), // Only include token if it exists
       storageConfig: {
         ...AGORA_CONFIG.storageConfig,
-        fileNamePrefix: ["recordings", channelName.replace(/[^a-zA-Z0-9]/g, "")] // Sanitize channel name for file path
+        fileNamePrefix: ["recordings", cleanChannelName] // Sanitize channel name for file path
       },
       recordingConfig: {
         channelType: 0, // Communication mode
@@ -167,9 +180,19 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
         audioProfile: parseInt(process.env.RECORDING_AUDIO_PROFILE || '0'),
         videoStreamType: parseInt(process.env.RECORDING_VIDEO_PROFILE || '0'),
         maxDurationSec: parseInt(process.env.RECORDING_MAX_DURATION || '7200'),
+        // 🔥 AGGRESSIVE STREAM CAPTURE SETTINGS
+        subscribeAudioUids: ["#allstream#"],
+        subscribeVideoUids: ["#allstream#"],
+        subscribeUidGroup: 0, // Record all UIDs
+        outputUID: uid.toString(),
+        
+        // 🔥 AGGRESSIVE CAPTURE: Record EVERYTHING 
+        streamSubscriptionMode: 0, // Subscribe to all streams (0 = auto, 1 = manual)
+        recordingFormat: ["m3u8", "mp4"], // Request both HLS and MP4 formats
+        
+        // 🔥 EXTENDED IDLE TIME + WAIT FOR STREAMS
         maxIdleTime: (() => {
           const baseTime = parseInt(process.env.RECORDING_MAX_IDLE_TIME || '300');
-          // In development mode, extend idle time significantly to prevent auto-stop during testing
           const isDevelopment = process.env.NODE_ENV === 'development' || process.env.AGORA_DEVELOPMENT_MODE === 'true';
           const finalTime = isDevelopment ? Math.max(baseTime, 900) : baseTime; // Min 15 minutes in dev
           console.log('🕐 [AGORA START] MaxIdleTime configured:', {
@@ -181,20 +204,19 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
             minutes: Math.round(finalTime / 60 * 10) / 10
           });
           return finalTime;
-        })(), // Extended idle time in development to prevent auto-stop during testing
-        subscribeAudioUids: ["#allstream#"],
-        subscribeVideoUids: ["#allstream#"],
-        // Development: Keep recording active even with empty channel
-        ...(process.env.NODE_ENV === 'development' && {
-          transcodingConfig: {
-            width: 640,
-            height: 480,
-            fps: 15,
-            bitrate: 500,
-            maxResolutionUid: uid.toString(),
-            mixedVideoLayout: 1
-          }
-        })
+        })(),
+        
+        // 🔥 FORCE VISUAL CONTENT EVEN IN EMPTY CHANNELS (ALWAYS ENABLED)
+        transcodingConfig: {
+          width: 640,
+          height: 480,
+          fps: 15,
+          bitrate: 500,
+          maxResolutionUid: uid.toString(),
+          mixedVideoLayout: 1,
+          backgroundColor: "#000000",
+          backgroundImage: "https://web-cdn.agora.io/doc-center/image/agora-logo.jpg"
+        }
       }
     }
   };
@@ -209,6 +231,17 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
     storageBucket: AGORA_CONFIG.storageConfig.bucket,
     fileNamePrefix: requestBody.clientRequest.storageConfig.fileNamePrefix,
     maxDuration: requestBody.clientRequest.recordingConfig.maxDurationSec,
+    streamTypes: requestBody.clientRequest.recordingConfig.streamTypes
+  });
+  
+  // Debug: Log full recording configuration
+  console.log('🔍 [DEBUG] Full Recording Config:', {
+    subscribeAudioUids: requestBody.clientRequest.recordingConfig.subscribeAudioUids,
+    subscribeVideoUids: requestBody.clientRequest.recordingConfig.subscribeVideoUids,
+    unSubscribeAudioUids: requestBody.clientRequest.recordingConfig.unSubscribeAudioUids,
+    unSubscribeVideoUids: requestBody.clientRequest.recordingConfig.unSubscribeVideoUids,
+    maxIdleTime: requestBody.clientRequest.recordingConfig.maxIdleTime,
+    hasTranscodingConfig: !!requestBody.clientRequest.recordingConfig.transcodingConfig,
     streamTypes: requestBody.clientRequest.recordingConfig.streamTypes
   });
   
@@ -252,6 +285,63 @@ async function startAgoraRecording(resourceId, channelName, uid, token = null) {
   return responseData;
 }
 
+// Helper function to verify GCS bucket access  
+async function verifyGcsBucketAccess(bucketName, accessKey, secretKey) {
+  console.log('🗂️ [GCS CHECK] Verifying bucket access:', bucketName);
+  
+  try {
+    // Simple verification - try to construct proper auth headers
+    if (!accessKey || !secretKey || !bucketName) {
+      console.log('❌ [GCS CHECK] Missing GCS credentials');
+      return false;
+    }
+    
+    if (accessKey.length < 20 || secretKey.length < 30) {
+      console.log('❌ [GCS CHECK] Invalid GCS credential format');
+      return false;
+    }
+    
+    console.log('✅ [GCS CHECK] Credentials format valid', {
+      bucketName,
+      accessKeyLength: accessKey.length,
+      secretKeyLength: secretKey.length
+    });
+    
+    return true;
+  } catch (error) {
+    console.log('❌ [GCS CHECK] Bucket verification failed:', error.message);
+    return false;
+  }
+}
+
+// Helper function to check if there are active streams in channel
+async function checkChannelActivity(channelName, timeout = 10000) {
+  console.log('🔍 [CHANNEL CHECK] Verifying active streams in channel:', channelName);
+  
+  const startTime = Date.now();
+  const maxWaitTime = timeout;
+  
+  // For development: simulate stream check (in production, you'd query Agora RTM or user presence)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment) {
+    console.log('🧪 [DEV MODE] Enhanced stream presence check...');
+    console.log('⏰ [DEV MODE] Waiting 5 seconds for users to join and enable media...');
+    
+    // Extended wait to ensure media streams are active
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    console.log('✅ [DEV MODE] Extended wait completed - proceeding with recording');
+    console.log('🎯 [DEV MODE] Recording will now capture all streams with aggressive settings');
+    return true;
+  }
+  
+  // In production, implement actual stream detection logic
+  // This could query Agora RTM API or check Firebase for user status
+  console.log('⚠️ [PRODUCTION] Stream detection not implemented - proceeding immediately');
+  return true;
+}
+
 export default async function handler(req, res) {
   const requestStartTime = Date.now();
   
@@ -267,7 +357,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { meetingCode, userRole = 'participant', token = null } = req.body;
+    const { meetingCode, userRole = 'participant', token = null, clientEmail = null, documentId = null } = req.body;
 
     console.log('📥 Recording start request received', {
       meetingCode,
@@ -326,8 +416,20 @@ export default async function handler(req, res) {
     const recordingUID = `999${Math.floor(Math.random() * 1e6).toString().padStart(6, '0')}`;    
     console.log('Generated recording UID:', { recordingUID, meetingCode });
     
-    // Step 1: Acquire resource ID from Agora
-    console.log('🚀 [AGORA START] Step 1: Acquiring resource ID...');
+    // Step 1: Verify GCS bucket access
+    console.log('🗂️ [AGORA START] Step 1: Verifying storage configuration...');
+    const gcsValid = await verifyGcsBucketAccess(
+      AGORA_CONFIG.storageConfig.bucket,
+      AGORA_CONFIG.storageConfig.accessKey, 
+      AGORA_CONFIG.storageConfig.secretKey
+    );
+    
+    if (!gcsValid) {
+      throw new Error('Google Cloud Storage configuration invalid');
+    }
+
+    // Step 2: Acquire resource ID from Agora
+    console.log('🚀 [AGORA START] Step 2: Acquiring resource ID...');
     console.log('🚀 [AGORA START] Recording UID:', recordingUID);
     const acquireResponse = await acquireAgoraResource(agoraChannelName, recordingUID);
     const resourceId = acquireResponse.resourceId;
@@ -337,8 +439,16 @@ export default async function handler(req, res) {
       throw new Error('Failed to acquire Agora resource ID');
     }
     
-    // Step 2: Start cloud recording with resource ID
-    console.log('🎬 [AGORA START] Step 2: Starting cloud recording...');
+    // Step 3: Wait for active streams in channel  
+    console.log('⏳ [AGORA START] Step 3: Waiting for active streams...');
+    const hasActiveStreams = await checkChannelActivity(agoraChannelName, 15000);
+    
+    if (!hasActiveStreams) {
+      console.log('⚠️ [AGORA START] No active streams detected, but proceeding with recording...');
+    }
+
+    // Step 4: Start cloud recording with resource ID
+    console.log('🎬 [AGORA START] Step 4: Starting cloud recording...');
     console.log('🎬 [AGORA START] Resource ID:', resourceId);
     const startResponse = await startAgoraRecording(resourceId, agoraChannelName, recordingUID, token);
     const sid = startResponse.sid;
@@ -347,6 +457,50 @@ export default async function handler(req, res) {
       console.log('❌ Recording start failed - no SID returned', { startResponse });
       throw new Error('Failed to start Agora cloud recording');
     }
+
+    // Add detailed logging right after the successful start response, before saving to Firestore
+
+    console.log('🔍 [DEBUG] FULL REQUEST BODY SENT TO AGORA:');
+    console.log('📡 [DEBUG] URL:', `https://api.agora.io/v1/apps/${AGORA_CONFIG.appId}/cloud_recording/resourceid/${resourceId}/mode/mix/start`);
+    console.log('📝 [DEBUG] Complete Request Body:', JSON.stringify({
+      cname: channelName,
+      uid: uid.toString(),
+      clientRequest: {
+        ...(token && { token: token }),
+        storageConfig: {
+          ...AGORA_CONFIG.storageConfig,
+          fileNamePrefix: ["recordings", cleanChannelName]
+        },
+        recordingConfig: {
+          channelType: 0,
+          streamTypes: 2,
+          audioProfile: parseInt(process.env.RECORDING_AUDIO_PROFILE || '0'),
+          videoStreamType: parseInt(process.env.RECORDING_VIDEO_PROFILE || '0'),
+          maxDurationSec: parseInt(process.env.RECORDING_MAX_DURATION || '7200'),
+          subscribeAudioUids: ["#allstream#"],
+          subscribeVideoUids: ["#allstream#"],
+          subscribeUidGroup: 0,
+                     outputUID: uid.toString(),
+           streamSubscriptionMode: 0,
+           recordingFormat: ["m3u8", "mp4"],
+          maxIdleTime: 900,
+          transcodingConfig: {
+            width: 640,
+            height: 480,
+            fps: 15,
+            bitrate: 500,
+            maxResolutionUid: uid.toString(),
+            mixedVideoLayout: 1,
+            backgroundColor: "#000000",
+            backgroundImage: "https://web-cdn.agora.io/doc-center/image/agora-logo.jpg"
+          }
+        }
+      }
+    }, null, 2));
+    
+    console.log('🎯 [DEBUG] Expected file location:', `recordings/${cleanChannelName}/`);
+    console.log('🗂️ [DEBUG] GCS Bucket:', AGORA_CONFIG.storageConfig.bucket);
+    console.log('🔑 [DEBUG] Access credentials present:', !!AGORA_CONFIG.storageConfig.accessKey && !!AGORA_CONFIG.storageConfig.secretKey);
 
     // Save recording session to Firestore
     const recordingData = {

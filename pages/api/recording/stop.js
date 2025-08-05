@@ -205,6 +205,64 @@ async function stopAgoraRecording(resourceId, sid, channelName, recordingUID, re
   return responseData;
 }
 
+// Save Agora recording to SimpleRecordings collection for search
+async function saveAgoraToSimpleRecordings(recordingData, stopResponse, duration, meetingCode, sid) {
+  try {
+    console.log('💾 [AGORA STOP] Saving to SimpleRecordings collection for search...');
+    
+    // Extract download URLs from fileList
+    const fileList = stopResponse.serverResponse?.fileList || [];
+    const downloadURL = fileList.length > 0 ? fileList[0] : null;
+    
+    const simpleRecordingData = {
+      meetingCode: meetingCode,
+      documentId: recordingData.documentId || meetingCode, // Use meetingCode as fallback
+      userEmail: recordingData.clientEmail || recordingData.userEmail || 'unknown@email.com',
+      adminEmail: 'cristina@tarotbyai.com',
+      downloadURL: downloadURL,
+      duration: duration,
+      fileSize: recordingData.fileSize || null,
+      status: 'completed',
+      type: 'one_to_one',
+      typeLabel: 'Consultație Individuală',
+      title: `Agora Cloud Recording - ${meetingCode}`,
+      recordingMethod: 'agora-cloud-recording',
+      recordedAt: recordingData.startTime ? new Date(recordingData.startTime) : new Date(),
+      createdAt: new Date(),
+      format: 'mp4', // Agora typically outputs MP4
+      downloadedBy: [],
+      downloadAttempts: [],
+      // Agora specific data
+      agoraData: {
+        sid: sid,
+        resourceId: recordingData.resourceId,
+        fileList: fileList,
+        uploadingStatus: stopResponse.serverResponse?.uploadingStatus
+      },
+      // Additional metadata for search
+      searchableEmails: [
+        (recordingData.clientEmail || recordingData.userEmail || 'unknown@email.com').toLowerCase().trim(),
+        'cristina@tarotbyai.com'
+      ]
+    };
+    
+    // Use meetingCode as document ID for easy retrieval
+    const recordingRef = db.collection('SimpleRecordings').doc(meetingCode);
+    await recordingRef.set(simpleRecordingData, { merge: true });
+    
+    console.log('✅ [AGORA STOP] Saved to SimpleRecordings successfully:', {
+      meetingCode,
+      userEmail: simpleRecordingData.userEmail,
+      hasDownloadURL: !!downloadURL,
+      fileCount: fileList.length
+    });
+    
+  } catch (error) {
+    console.error('❌ [AGORA STOP] Error saving to SimpleRecordings:', error);
+    // Don't throw - this is supplementary functionality
+  }
+}
+
 export default async function handler(req, res) {
   const requestStartTime = Date.now();
   
@@ -385,6 +443,28 @@ export default async function handler(req, res) {
       updatedAt: new Date()
     };
 
+    // 🔍 DETAILED DEBUGGING: Analyze stop response
+    console.log('🔍 [DEBUG] === DETAILED STOP RESPONSE ANALYSIS ===');
+    console.log('📋 [DEBUG] Full stopResponse structure:', JSON.stringify(stopResponse, null, 2));
+    console.log('📁 [DEBUG] serverResponse details:', {
+      hasServerResponse: !!stopResponse.serverResponse,
+      serverResponseKeys: stopResponse.serverResponse ? Object.keys(stopResponse.serverResponse) : 'none',
+      hasFileList: !!stopResponse.serverResponse?.fileList,
+      fileListType: typeof stopResponse.serverResponse?.fileList,
+      fileListLength: stopResponse.serverResponse?.fileList?.length || 0,
+      fileListContent: stopResponse.serverResponse?.fileList || 'none',
+      uploadingStatus: stopResponse.serverResponse?.uploadingStatus || 'unknown'
+    });
+    
+    if (stopResponse.serverResponse?.fileList && Array.isArray(stopResponse.serverResponse.fileList)) {
+      console.log('📄 [DEBUG] Individual files in fileList:');
+      stopResponse.serverResponse.fileList.forEach((file, index) => {
+        console.log(`  File ${index + 1}:`, file);
+      });
+    } else {
+      console.log('❌ [DEBUG] No valid fileList found in response!');
+    }
+
     console.log('💾 [AGORA STOP] Update data:', {
       status: updateData.status,
       duration: duration,
@@ -400,6 +480,9 @@ export default async function handler(req, res) {
 
     await recordingRef.update(updateData);
     console.log('✅ [AGORA STOP] Firestore updated successfully');
+
+    // Also save to SimpleRecordings collection for search functionality
+    await saveAgoraToSimpleRecordings(recordingData, stopResponse, duration, finalMeetingCode, finalSid);
 
     const totalDuration = Date.now() - requestStartTime;
     

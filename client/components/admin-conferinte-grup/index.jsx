@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Home1Header from "../home/home-1/header";
 import DoctorSidebar from "../doctors/sidebar";
@@ -17,7 +17,12 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../../../firebase";
 import QuillEditor from "../../../components/QuillForm";
+import { SimpleAgoraRecorder } from '../../../utils/simpleAgoraRecorder';
+import { createUILogger } from "../../../utils/logger";
 // Eliminat Firebase Functions - folosim API Next.js
+
+// Initialize logger
+const logger = createUILogger('ADMIN_CONFERINTE_GRUP');
 
 // Funcție utilitate pentru compatibilitate cu descrierile existente
 const getDescriptionText = (description) => {
@@ -70,6 +75,18 @@ const AdminConferinteGrup = () => {
   const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
   const [newlyAddedParticipant, setNewlyAddedParticipant] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
+
+  // Screen Recording states
+  const [simpleRecorder, setSimpleRecorder] = useState(null);
+  const [isSimpleRecording, setIsSimpleRecording] = useState(false);
+  const [simpleRecordingStatus, setSimpleRecordingStatus] = useState('');
+  const [simpleRecordingDuration, setSimpleRecordingDuration] = useState(0);
+  const [showSimpleEmailDialog, setShowSimpleEmailDialog] = useState(false);
+  const [simpleRecipientEmails, setSimpleRecipientEmails] = useState([]); // Array para mai multe emailuri
+  const [isSimpleProcessing, setIsSimpleProcessing] = useState(false);
+  const [simpleUploadProgress, setSimpleUploadProgress] = useState('');
+  const [currentRecordingConference, setCurrentRecordingConference] = useState(null);
+  const recordingIntervalRef = useRef(null);
 
   // Log pentru a verifica dacă funcțiile Firestore sunt importate corect
   console.log("🔧 [INIT] Funcții Firestore disponibile:", {
@@ -253,6 +270,21 @@ const AdminConferinteGrup = () => {
       return () => unsubscribe();
     }
   }, [selectedConferinta, activeTab]);
+
+  // Cleanup for Screen Recording on unmount
+  useEffect(() => {
+    return () => {
+      if (simpleRecorder) {
+        console.log('🧹 [CLEANUP] Cleaning up screen recorder on component unmount');
+        simpleRecorder.cleanup();
+      }
+      if (recordingIntervalRef.current) {
+        console.log('🧹 [CLEANUP] Clearing recording interval on component unmount');
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    };
+  }, [simpleRecorder]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -1301,6 +1333,164 @@ const AdminConferinteGrup = () => {
     }
   };
 
+  // ========================== SCREEN RECORDING FUNCTIONS ==========================
+  
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const startSimpleRecording = async (conferinta) => {
+    try {
+      console.log('🎬 [SIMPLE] Starting screen recording for conference:', conferinta.titlu);
+      setSimpleRecordingStatus('Inițializare...');
+      
+      // Check browser support
+      if (!SimpleAgoraRecorder.isSupported()) {
+        throw new Error('Browser-ul nu suportă înregistrarea video');
+      }
+
+      // Extract emails from conference participants
+      const participantEmails = conferinta.participanti?.map(p => p.email).filter(email => email) || [];
+      const uniqueEmails = [...new Set(participantEmails)]; // Remove duplicates
+      
+      // Set up recorder
+      const recorder = new SimpleAgoraRecorder({
+        meetingCode: `group_${conferinta.documentId}`,
+        documentId: conferinta.documentId,
+        onStatusChange: (status) => {
+          setSimpleRecordingStatus(status);
+        }
+      });
+
+      recorder.onProgress = (progress) => {
+        setSimpleUploadProgress(progress);
+      };
+
+      // Handle completion
+      recorder.onComplete = async () => {
+        setSimpleRecordingStatus('✅ Înregistrare finalizată și email trimis!');
+        setIsSimpleProcessing(false);
+        setCurrentRecordingConference(null);
+        
+        setTimeout(() => {
+          setSimpleRecordingStatus('');
+        }, 10000);
+      };
+
+      recorder.onError = (error) => {
+        setSimpleRecordingStatus(`❌ Eroare: ${error}`);
+        setIsSimpleProcessing(false);
+        setCurrentRecordingConference(null);
+        
+        setTimeout(() => {
+          setSimpleRecordingStatus('');
+        }, 8000);
+      };
+
+      setSimpleRecorder(recorder);
+      setCurrentRecordingConference(conferinta);
+      
+      const result = await recorder.startRecording();
+      
+      if (result.success) {
+        setIsSimpleRecording(true);
+        console.log('✅ [SIMPLE] Recording started successfully for conference');
+        
+        // Start duration counter
+        const startTime = Date.now();
+        recordingIntervalRef.current = setInterval(() => {
+          if (recorder.isRecording) {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            setSimpleRecordingDuration(elapsed);
+          } else {
+            clearInterval(recordingIntervalRef.current);
+            recordingIntervalRef.current = null;
+          }
+        }, 1000);
+        
+        // Pre-populate emails from conference participants
+        setSimpleRecipientEmails(uniqueEmails);
+        
+      } else {
+        throw new Error(result.error || 'Failed to start recording');
+      }
+      
+    } catch (error) {
+      console.error('❌ [SIMPLE] Error starting recording:', error);
+      setSimpleRecordingStatus(`❌ Eroare: ${error.message}`);
+      setCurrentRecordingConference(null);
+      
+      setTimeout(() => {
+        setSimpleRecordingStatus('');
+      }, 8000);
+    }
+  };
+
+  const stopSimpleRecording = () => {
+    console.log('🛑 [SIMPLE] User requested to stop recording');
+    
+    // Pre-fill emails if available from current recording conference
+    if (currentRecordingConference) {
+      const participantEmails = currentRecordingConference.participanti?.map(p => p.email).filter(email => email) || [];
+      const uniqueEmails = [...new Set(participantEmails)]; // Remove duplicates
+      setSimpleRecipientEmails(uniqueEmails);
+    }
+    
+    setShowSimpleEmailDialog(true);
+  };
+
+  const confirmStopSimpleRecording = async () => {
+    try {
+      console.log('✅ [SIMPLE] User confirmed stop with emails:', simpleRecipientEmails);
+      setIsSimpleProcessing(true);
+      setShowSimpleEmailDialog(false);
+      
+      if (simpleRecorder) {
+        // Update recorder with emails before stopping
+        simpleRecorder.recipientEmails = simpleRecipientEmails;
+        
+        // Add progress callback
+        simpleRecorder.onProgress = (progress) => {
+          setSimpleUploadProgress(progress);
+        };
+        
+        // Stop recording - this will trigger upload and email to multiple recipients
+        simpleRecorder.stopRecording();
+        setSimpleRecordingDuration(0);
+        
+        // Clear interval
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ [SIMPLE] Error stopping recording:', error);
+      setSimpleRecordingStatus(`❌ Eroare: ${error.message}`);
+      setIsSimpleProcessing(false);
+    }
+  };
+
+  const handleEmailChange = (index, value) => {
+    const newEmails = [...simpleRecipientEmails];
+    newEmails[index] = value;
+    setSimpleRecipientEmails(newEmails);
+  };
+
+  const addEmailField = () => {
+    setSimpleRecipientEmails([...simpleRecipientEmails, '']);
+  };
+
+  const removeEmailField = (index) => {
+    const newEmails = simpleRecipientEmails.filter((_, i) => i !== index);
+    setSimpleRecipientEmails(newEmails);
+  };
+
+  // ========================== END SCREEN RECORDING FUNCTIONS ==========================
+
   return (
     <>
       <Home1Header />
@@ -1710,7 +1900,7 @@ const AdminConferinteGrup = () => {
                             {/* Butoane de acțiune */}
                             <div className="mt-auto admin-conference-buttons">
                               <div className="row g-2 mb-2">
-                                <div className="col-3">
+                                <div className="col-2">
                                   <button
                                     className="btn btn-outline-primary btn-sm w-100"
                                     onClick={() => handleEdit(conferinta)}
@@ -1720,7 +1910,7 @@ const AdminConferinteGrup = () => {
                                     <i className="fa fa-edit"></i>
                                   </button>
                                 </div>
-                                <div className="col-3">
+                                <div className="col-2">
                                   <button
                                     className="btn btn-outline-info btn-sm w-100"
                                     onClick={() => handleViewParticipants(conferinta)}
@@ -1730,7 +1920,7 @@ const AdminConferinteGrup = () => {
                                     <i className="fa fa-users"></i>
                                   </button>
                                 </div>
-                                <div className="col-3">
+                                <div className="col-2">
                                   <button
                                     className={`btn btn-sm w-100 ${
                                       isConferenceActive(conferinta) ? "btn-success" : "btn-warning"
@@ -1745,6 +1935,7 @@ const AdminConferinteGrup = () => {
                                     <i className="fa fa-video"></i>
                                   </button>
                                 </div>
+                            
                                 <div className="col-3">
                                   <button
                                     className="btn btn-outline-danger btn-sm w-100"
@@ -2832,12 +3023,183 @@ const AdminConferinteGrup = () => {
         </div>
       )}
 
+      {/* Screen Recording Status Indicator */}
+      {(simpleRecordingStatus || isSimpleProcessing) && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 1050,
+          background: simpleRecordingStatus.includes('❌') ? 'rgba(220, 53, 69, 0.95)' : 'rgba(40, 167, 69, 0.95)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          maxWidth: '300px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className={`fa ${simpleRecordingStatus.includes('❌') ? 'fa-exclamation-triangle' : 'fa-desktop'}`}></i>
+            <span>{simpleRecordingStatus}</span>
+          </div>
+          {simpleUploadProgress && (
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+              {simpleUploadProgress}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Multi-Email Dialog for Screen Recording */}
+      {showSimpleEmailDialog && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="fa fa-desktop me-2"></i>
+                  Oprire Screen Recording și Trimitere Email
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowSimpleEmailDialog(false)}
+                  disabled={isSimpleProcessing}
+                ></button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="alert alert-info mb-4">
+                  <i className="fa fa-info-circle me-2"></i>
+                  <strong>Despre Screen Recording:</strong>
+                  <ul className="mb-0 mt-2" style={{ paddingLeft: '20px' }}>
+                    <li>Se înregistrează exact ce ați selectat pe ecran</li>
+                    <li>Calitate maximă 1080p, 30 FPS</li>
+                    <li>Include audio din microfon (dacă ați permis)</li>
+                    <li>Fișier format .webm (compatibil cu toate browserele)</li>
+                  </ul>
+                </div>
+                
+                <h6 className="mb-3">
+                  <i className="fa fa-envelope me-2"></i>
+                  Emailuri pentru primirea link-ului de descărcare:
+                </h6>
+                
+                {/* Pre-populated emails from conference participants */}
+                {currentRecordingConference && (
+                  <div className="alert alert-success mb-3">
+                    <i className="fa fa-users me-2"></i>
+                    <strong>Participanți conferință:</strong> {currentRecordingConference.titlu}
+                    <br />
+                    <small>Emailurile participanților au fost completate automat mai jos.</small>
+                  </div>
+                )}
+                
+                <div className="mb-3">
+                  {simpleRecipientEmails.map((email, index) => (
+                    <div key={index} className="input-group mb-2">
+                      <span className="input-group-text">
+                        <i className="fa fa-envelope"></i>
+                      </span>
+                      <input
+                        type="email"
+                        className="form-control"
+                        value={email}
+                        onChange={(e) => handleEmailChange(index, e.target.value)}
+                        placeholder={`Email participantului ${index + 1}`}
+                        disabled={isSimpleProcessing}
+                      />
+                      {simpleRecipientEmails.length > 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger"
+                          onClick={() => removeEmailField(index)}
+                          disabled={isSimpleProcessing}
+                          title="Elimină acest email"
+                        >
+                          <i className="fa fa-trash"></i>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary btn-sm"
+                    onClick={addEmailField}
+                    disabled={isSimpleProcessing}
+                  >
+                    <i className="fa fa-plus me-1"></i>
+                    Adaugă alt email
+                  </button>
+                </div>
+                
+                {/* Summary */}
+                <div className="bg-light p-3 rounded">
+                  <small className="text-muted">
+                    <i className="fa fa-info-circle me-1"></i>
+                    Înregistrarea va fi oprită și un email cu link-ul de descărcare va fi trimis la
+                    <strong> {simpleRecipientEmails.filter(e => e.trim()).length}</strong> adres
+                    {simpleRecipientEmails.filter(e => e.trim()).length === 1 ? 'ă' : 'e'} de email.
+                    <br />
+                    <strong>Importat:</strong> Fiecare participant poate descărca înregistrarea doar o dată!
+                  </small>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowSimpleEmailDialog(false)}
+                  disabled={isSimpleProcessing}
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={confirmStopSimpleRecording}
+                  disabled={isSimpleProcessing || simpleRecipientEmails.filter(e => e.trim()).length === 0}
+                >
+                  {isSimpleProcessing ? (
+                    <>
+                      <i className="fa fa-spinner fa-spin me-2"></i>
+                      Se procesează...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa fa-stop me-2"></i>
+                      Oprește și trimite email ({simpleRecipientEmails.filter(e => e.trim()).length})
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Overlay pentru modalele active */}
-      {(showAddParticipantModal || showEmailConfirmDialog) && (
+      {(showAddParticipantModal || showEmailConfirmDialog || showSimpleEmailDialog) && (
         <div className="modal-backdrop fade show"></div>
       )}
     </>
   );
 };
 
-export default AdminConferinteGrup; 
+export default AdminConferinteGrup;
+
+// Add CSS animations for recording button
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+} 

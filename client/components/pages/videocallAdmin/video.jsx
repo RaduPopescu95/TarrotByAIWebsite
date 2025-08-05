@@ -6,7 +6,8 @@ import Home1Header from "../../home/home-1/header";
 import { doc, onSnapshot, updateDoc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "../../../../firebase";
 import { createUILogger } from "../../../../utils/logger";
-import RecordingProgressWidget from "../../../../components/RecordingProgressWidget";
+
+import { SimpleAgoraRecorder } from '../../../../utils/simpleAgoraRecorder';
 
 // Initialize client-side logger
 const logger = createUILogger('ONE_TO_ONE_VIDEO');
@@ -29,26 +30,30 @@ const AdminVideoCall = () => {
   const [browserCompatible, setBrowserCompatible] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   
-  // Agora Cloud Recording states
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingStartTime, setRecordingStartTime] = useState(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingError, setRecordingError] = useState("");
-  const [recordingStatus, setRecordingStatus] = useState("");
+
+
   const [recordingPermission, setRecordingPermission] = useState(true);
   const [showRecordingModal, setShowRecordingModal] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
+
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   const [isLoadingClientEmail, setIsLoadingClientEmail] = useState(false);
   
-  // Agora Cloud Recording tracking
-  const [recordingSid, setRecordingSid] = useState(null);
-  const [recordingResourceId, setRecordingResourceId] = useState(null);
 
-  const recordingIntervalRef = useRef(null);
-  const statusCheckIntervalRef = useRef(null);
+
+
+
+
+  // Simple Recording states
+  const [simpleRecorder, setSimpleRecorder] = useState(null);
+  const [isSimpleRecording, setIsSimpleRecording] = useState(false);
+  const [simpleRecordingStatus, setSimpleRecordingStatus] = useState('');
+  const [simpleRecordingDuration, setSimpleRecordingDuration] = useState(0);
+  const [recordingMethod] = useState('simple'); // Only screen recording method
+  const [showSimpleEmailDialog, setShowSimpleEmailDialog] = useState(false);
+  const [simpleRecipientEmail, setSimpleRecipientEmail] = useState('');
+  const [isSimpleProcessing, setIsSimpleProcessing] = useState(false);
+  const [simpleUploadProgress, setSimpleUploadProgress] = useState('');
 
   // Log component initialization
   useEffect(() => {
@@ -113,303 +118,15 @@ const AdminVideoCall = () => {
     }
   };
 
-  // Start Agora Cloud Recording
-  const startRecording = async () => {
-    try {
-      console.log('🎬 [CLIENT] === STARTING AGORA CLOUD RECORDING ===');
-      console.log('🎬 [CLIENT] Meeting Code:', meetingCode);
-      console.log('🎬 [CLIENT] Document ID:', documentId);
-      
-      setRecordingError("");
-      setRecordingStatus("Inițializez înregistrarea...");
-      
-      logger.recordingStart('one_to_one', {
-        meetingCode,
-        documentId,
-        timestamp: Date.now()
-      });
 
-      console.log('🌐 [CLIENT] Calling /api/recording/start...');
 
-      const response = await fetch('/api/recording/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingCode,
-          recordingType: 'one_to_one',
-          documentId
-        }),
-      });
-      
-      console.log('📡 [CLIENT] API Response Status:', response.status);
 
-      const data = await response.json();
-      
-      console.log('📋 [CLIENT] API Response Data:', data);
-      
-      if (data.success) {
-        console.log('✅ [CLIENT] Recording started successfully!');
-        console.log('✅ [CLIENT] SID:', data.sid);
-        console.log('✅ [CLIENT] Resource ID:', data.resourceId);
-        
-        setRecordingSid(data.sid);
-        setRecordingResourceId(data.resourceId);
-        setIsRecording(true);
-        setRecordingStartTime(Date.now());
-        setRecordingDuration(0);
-        setRecordingStatus("Înregistrare activă");
-        
-        logger.info('Agora Cloud Recording started successfully', {
-          sid: data.sid?.substring(0, 10) + '...',
-          resourceId: data.resourceId?.substring(0, 10) + '...',
-          meetingCode
-        });
 
-        // Start duration counter
-        recordingIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
 
-        // Start status checking
-        statusCheckIntervalRef.current = setInterval(async () => {
-          await checkRecordingStatus();
-        }, 10000); // Check every 10 seconds
 
-        // Update Firestore with recording info
-        if (documentId) {
-          await updateDoc(doc(db, "RezervariConsultatii", documentId), {
-            recording: {
-              isRecording: true,
-              startTime: Date.now(),
-              status: 'recording',
-              recordingType: 'agora_cloud',
-              sid: data.sid,
-              resourceId: data.resourceId
-            }
-          });
-          logger.debug('Firestore updated with recording info', { documentId });
-        }
-      } else {
-        console.log('❌ [CLIENT] Recording start failed:', data.error);
-        throw new Error(data.error || 'Failed to start recording');
-      }
-    } catch (error) {
-      console.log('💥 [CLIENT] === RECORDING START ERROR ===');
-      console.log('💥 [CLIENT] Error:', error.message);
-      console.log('💥 [CLIENT] Stack:', error.stack);
-      
-      logger.recordingError('start', {
-        error: error.message,
-        meetingCode,
-        timestamp: Date.now()
-      });
-      setRecordingError(`Eroare la pornirea înregistrării: ${error.message}`);
-      setRecordingStatus("");
-    }
-  };
 
-  // Check recording status
-  const checkRecordingStatus = async () => {
-    if (!recordingSid) return;
 
-    try {
-      const response = await fetch('/api/recording/status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sid: recordingSid,
-          meetingCode
-        }),
-      });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        logger.debug('Recording status checked', {
-          status: data.status,
-          duration: data.duration,
-          hasAgoraStatus: !!data.agoraStatus
-        });
-
-        if (data.status === 'failed' || data.status === 'completed') {
-          // Recording ended unexpectedly
-          if (isRecording) {
-            logger.warn('Recording ended unexpectedly', {
-              status: data.status,
-              sid: recordingSid?.substring(0, 10) + '...'
-            });
-            setIsRecording(false);
-            setRecordingStatus(`Înregistrare ${data.status === 'failed' ? 'eșuată' : 'finalizată'}`);
-            clearIntervals();
-          }
-        }
-      }
-    } catch (error) {
-      logger.error('Error checking recording status', {
-        error: error.message,
-        sid: recordingSid?.substring(0, 10) + '...'
-      });
-    }
-  };
-
-  // Stop Agora Cloud Recording
-  const confirmStopRecording = async () => {
-    console.log('🛑 [CLIENT] === STOPPING AGORA CLOUD RECORDING ===');
-    console.log('🛑 [CLIENT] SID:', recordingSid);
-    console.log('🛑 [CLIENT] Email:', recipientEmail?.substring(0, 5) + '...');
-    
-    if (!recipientEmail.trim()) {
-      console.log('❌ [CLIENT] Missing recipient email');
-      setEmailError('Introduceți un email pentru primirea linkului');
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())) {
-      console.log('❌ [CLIENT] Invalid email format');
-      setEmailError('Format email invalid');
-      return;
-    }
-
-    try {
-      setIsSendingEmail(true);
-      setRecordingStatus("Opresc înregistrarea...");
-      
-      logger.recordingStop('one_to_one', {
-        sid: recordingSid?.substring(0, 10) + '...',
-        meetingCode,
-        duration: recordingDuration,
-        recipientEmail: recipientEmail ? 'present' : 'missing'
-      });
-
-      console.log('🌐 [CLIENT] Calling /api/recording/stop...');
-
-      const response = await fetch('/api/recording/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sid: recordingSid,
-          meetingCode,
-          recipientEmail: recipientEmail.trim()
-        }),
-      });
-
-      console.log('📡 [CLIENT] Stop API Response Status:', response.status);
-      const data = await response.json();
-      console.log('📋 [CLIENT] Stop API Response Data:', data);
-      
-      if (data.success) {
-        console.log('✅ [CLIENT] Recording stopped successfully!');
-        console.log('✅ [CLIENT] Duration:', data.duration);
-        console.log('✅ [CLIENT] Files:', data.fileList?.length || 0);
-        
-        setIsRecording(false);
-        setRecordingStatus("Înregistrare finalizată! Trimit email...");
-        clearIntervals();
-        
-        logger.info('Agora Cloud Recording stopped successfully', {
-          sid: recordingSid?.substring(0, 10) + '...',
-          duration: data.duration,
-          fileCount: data.fileList?.length || 0
-        });
-
-        // Send email notification
-        try {
-          const emailResponse = await fetch('/api/send-recording-notification', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              recipientEmail: recipientEmail.trim(),
-              meetingCode,
-              recordingData: data,
-              recordingType: 'one_to_one'
-            }),
-          });
-
-          const emailResult = await emailResponse.json();
-          
-          if (emailResult.success) {
-            setRecordingStatus("Email trimis cu succes!");
-            logger.info('Recording notification email sent', {
-              recipientEmail: recipientEmail ? 'present' : 'missing'
-            });
-          } else {
-            throw new Error(emailResult.error || 'Failed to send email');
-          }
-        } catch (emailError) {
-          logger.error('Failed to send recording notification', {
-            error: emailError.message,
-            recipientEmail: recipientEmail ? 'present' : 'missing'
-          });
-          setRecordingStatus("Înregistrare salvată, dar email-ul nu a putut fi trimis");
-        }
-
-        // Update Firestore
-        if (documentId) {
-          await updateDoc(doc(db, "RezervariConsultatii", documentId), {
-            recording: {
-              isRecording: false,
-              endTime: Date.now(),
-              status: 'completed',
-              recordingType: 'agora_cloud',
-              sid: recordingSid,
-              duration: data.duration,
-              fileList: data.fileList
-            }
-          });
-        }
-
-        // Reset UI after delay
-        setTimeout(() => {
-          setRecordingStatus('');
-          setRecipientEmail('');
-          setEmailError('');
-          setShowEmailDialog(false);
-          setRecordingSid(null);
-          setRecordingResourceId(null);
-        }, 5000);
-
-      } else {
-        throw new Error(data.error || 'Failed to stop recording');
-      }
-    } catch (error) {
-      logger.recordingError('stop', {
-        error: error.message,
-        sid: recordingSid?.substring(0, 10) + '...',
-        meetingCode
-      });
-      setRecordingError(`Eroare la oprirea înregistrării: ${error.message}`);
-      setRecordingStatus("");
-    } finally {
-      setIsSendingEmail(false);
-    }
-  };
-
-  // Clear all intervals
-  const clearIntervals = () => {
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current);
-      recordingIntervalRef.current = null;
-    }
-    if (statusCheckIntervalRef.current) {
-      clearInterval(statusCheckIntervalRef.current);
-      statusCheckIntervalRef.current = null;
-    }
-  };
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      clearIntervals();
-    };
-  }, []);
 
   // Auto-fetch client email when meetingCode is available
   useEffect(() => {
@@ -538,106 +255,9 @@ const AdminVideoCall = () => {
     }
   }, [meetingCode]);
 
-  // TEMPORARILY DISABLED: Function to capture existing Agora video streams from DOM
-  // Using only Agora Cloud Recording now
-  const captureExistingAgoraStreams = async () => {
-    console.log('🚫 [CANVAS RECORDING] Disabled temporarily - using Agora Cloud Recording only');
-    return 0;
-    /*
-    try {
-      logger.debug('Attempting to capture existing Agora video streams from DOM...');
-      
-      // Find all video elements created by AgoraUIKit
-      const videoElements = document.querySelectorAll('video');
-      let streamsCaptured = 0;
-      
-      for (const videoElement of videoElements) {
-        if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
-          const stream = videoElement.srcObject;
-          const videoTracks = stream.getVideoTracks();
-          
-          if (videoTracks.length > 0) {
-            // Generate a unique ID for this stream
-            const streamId = `agora_stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
-            logger.debug('Found video stream in DOM', {
-              streamId,
-              videoTracks: videoTracks.length,
-              audioTracks: stream.getAudioTracks().length,
-              videoElement: {
-                width: videoElement.videoWidth,
-                height: videoElement.videoHeight,
-                readyState: videoElement.readyState,
-                videoWidth: videoElement.videoWidth,
-                videoHeight: videoElement.videoHeight,
-                currentTime: videoElement.currentTime,
-                duration: videoElement.duration,
-                paused: videoElement.paused,
-                muted: videoElement.muted,
-                className: videoElement.className,
-                id: videoElement.id
-              }
-            });
-            
-            // Wait for video to be ready before adding to recorder
-            if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-              logger.debug('Video element is ready for recording');
-            } else {
-              logger.debug('Video element not ready, waiting...', {
-                readyState: videoElement.readyState,
-                expectedMinimum: 2
-              });
-              
-              // Wait for video to load
-              await new Promise((resolve) => {
-                if (videoElement.readyState >= 2) {
-                  resolve();
-                } else {
-                  const onLoadedData = () => {
-                    logger.debug('Video element loaded data');
-                    videoElement.removeEventListener('loadeddata', onLoadedData);
-                    resolve();
-                  };
-                  videoElement.addEventListener('loadeddata', onLoadedData);
-                  
-                  // Timeout fallback
-                  setTimeout(() => {
-                    logger.debug('Video load timeout, proceeding anyway');
-                    videoElement.removeEventListener('loadeddata', onLoadedData);
-                    resolve();
-                  }, 2000);
-                }
-              });
-            }
-            
-            // Add stream to recorder
-            // recorder.addVideoStream(streamId, stream, videoElement); // This line is removed as per the new_code
-            streamsCaptured++;
-            
-            logger.debug(`Added stream ${streamId} to recorder (DOM capture)`);
-          }
-        }
-      }
-      
-      logger.debug(`Captured ${streamsCaptured} video streams from DOM (for Agora Cloud Recording)`);
-      return streamsCaptured;
-      
-    } catch (error) {
-      logger.error('Error capturing existing streams for Agora Cloud Recording', { error });
-      return 0;
-    }
-    */
-  };
 
-  // Recording functionality (Simple Browser Recording with Firebase Storage)
-  // This section is now replaced by Agora Cloud Recording API calls.
-  // The startRecording and confirmStopRecording functions handle the recording logic.
 
-  const formatRecordingTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+
 
   // Funcție pentru a intra în fullscreen
   const handleFullscreen = () => {
@@ -676,11 +296,14 @@ const AdminVideoCall = () => {
         intervalRef.current = null;
       }
 
-      // Cleanup pentru recording dacă este activ
-      if (isRecording) {
-        logger.info('Call ended, stopping Agora Cloud Recording', { sid: recordingSid?.substring(0, 10) + '...' });
-        // The onComplete callback will handle Firebase updates and file upload
-        await confirmStopRecording(); // Use the new confirmStopRecording
+      // Cleanup pentru Simple Recording dacă este activ
+      if (isSimpleRecording && simpleRecorder) {
+        logger.info('Call ended, stopping Simple Recording');
+        try {
+          await simpleRecorder.stopRecording();
+        } catch (error) {
+          logger.error('Error stopping Simple Recording during cleanup', { error: error.message });
+        }
       }
       
       // Cleanup recorder resources
@@ -710,7 +333,145 @@ const AdminVideoCall = () => {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [documentId]);
+      }, [documentId]);
+
+    // Cleanup Simple Recording on component unmount
+    useEffect(() => {
+      return () => {
+        if (simpleRecorder) {
+          console.log('🧹 [SIMPLE] Component unmounting - cleaning up recorder');
+          simpleRecorder.cleanup();
+        }
+      };
+    }, [simpleRecorder]);
+
+  // Simple Recording functions
+  const startSimpleRecording = async () => {
+    try {
+      console.log('🎬 [SIMPLE] Starting simple browser recording...');
+      setSimpleRecordingStatus('Inițializare...');
+      
+      if (!SimpleAgoraRecorder.isSupported()) {
+        throw new Error('Browser-ul nu suportă înregistrarea video');
+      }
+
+      const recorder = new SimpleAgoraRecorder({
+        meetingCode,
+        documentId,
+        recipientEmail,
+        onStatusChange: (status) => {
+          console.log('📊 [SIMPLE] Status:', status);
+          setSimpleRecordingStatus(status);
+        },
+        onProgress: (progress) => {
+          console.log('📈 [SIMPLE] Progress:', progress);
+        },
+        onComplete: (result) => {
+          console.log('✅ [SIMPLE] Recording completed:', result);
+          setIsSimpleRecording(false);
+          setIsSimpleProcessing(false);
+          setSimpleUploadProgress('');
+          setSimpleRecordingStatus('✅ Înregistrare finalizată și email trimis!');
+          
+          // Show success message
+          setTimeout(() => {
+            setSimpleRecordingStatus('');
+          }, 8000);
+        },
+        onError: (error) => {
+          console.error('❌ [SIMPLE] Error:', error);
+          setIsSimpleRecording(false);
+          setIsSimpleProcessing(false);
+          setSimpleUploadProgress('');
+          setSimpleRecordingStatus(`❌ Eroare: ${error}`);
+          
+          // Cleanup recorder
+          if (simpleRecorder) {
+            simpleRecorder.cleanup();
+          }
+          
+          // Clear error after 10 seconds
+          setTimeout(() => {
+            setSimpleRecordingStatus('');
+          }, 10000);
+        }
+      });
+
+      setSimpleRecorder(recorder);
+      
+      const result = await recorder.startRecording();
+      
+      if (result.success) {
+        setIsSimpleRecording(true);
+        console.log('✅ [SIMPLE] Recording started successfully');
+        
+        // Start duration counter
+        const startTime = Date.now();
+        const durationInterval = setInterval(() => {
+          if (recorder.isRecording) {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            setSimpleRecordingDuration(elapsed);
+          } else {
+            clearInterval(durationInterval);
+          }
+        }, 1000);
+      } else {
+        throw new Error(result.error || 'Nu s-a putut începe înregistrarea');
+      }
+
+    } catch (error) {
+      console.error('❌ [SIMPLE] Start recording error:', error);
+      setSimpleRecordingStatus(`❌ Eroare: ${error.message}`);
+      
+      setTimeout(() => {
+        setSimpleRecordingStatus('');
+      }, 5000);
+    }
+  };
+
+  const stopSimpleRecording = () => {
+    console.log('🛑 [SIMPLE] User clicked stop - showing email dialog...');
+    
+    // Pre-fill email if available from reservation
+    if (recipientEmail && !simpleRecipientEmail) {
+      setSimpleRecipientEmail(recipientEmail);
+    }
+    
+    setShowSimpleEmailDialog(true);
+  };
+
+  const confirmStopSimpleRecording = async () => {
+    try {
+      console.log('✅ [SIMPLE] User confirmed stop with email:', simpleRecipientEmail);
+      setIsSimpleProcessing(true);
+      setShowSimpleEmailDialog(false);
+      
+      if (simpleRecorder) {
+        // Update recorder with email before stopping
+        simpleRecorder.recipientEmail = simpleRecipientEmail;
+        
+        // Add progress callback
+        simpleRecorder.onProgress = (progress) => {
+          setSimpleUploadProgress(progress);
+        };
+        
+        // Stop recording - this will trigger upload and email
+        simpleRecorder.stopRecording();
+        setSimpleRecordingDuration(0);
+      }
+      
+    } catch (error) {
+      console.error('❌ [SIMPLE] Error stopping recording:', error);
+      setSimpleRecordingStatus(`❌ Eroare: ${error.message}`);
+      setIsSimpleProcessing(false);
+    }
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <>
@@ -790,107 +551,7 @@ const AdminVideoCall = () => {
                   </button>
                 )}
 
-                {/* Recording Controls - Main Control Button with Animations */}
-                {/* isRecordingSupported is no longer relevant as we use Agora Cloud Recording */}
-                <div style={styles.recordingControls}>
 
-                  <button
-                    style={{
-                      ...styles.recordButton,
-                      backgroundColor: 
-                        recordingStatus.includes('Upload:') ? "#3742fa" :
-                        recordingStatus.includes('Oprire înregistrare') ? "#e67e22" :
-                        recordingStatus.includes('Procesare video') ? "#9b59b6" :
-                        recordingStatus.includes('Încărcare video') ? "#3742fa" :
-                        recordingStatus.includes('Salvare metadata') ? "#17a2b8" :
-                        recordingStatus.includes('Pregătire trimitere email') ? "#fd7e14" :
-                        recordingStatus.includes('Trimitere email în curs') ? "#ffc107" :
-                        recordingStatus.includes('Email trimis') ? "#28a745" :
-                        recordingStatus.includes('Proces finalizat') ? "#20c997" :
-                        recordingStatus.includes('complet') ? "#2ecc71" :
-                        isRecording ? "#ff4757" : "#e74c3c",
-                      animation: 
-                        recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? "shimmer 2s infinite" :
-                        recordingStatus.includes('Oprire înregistrare') ? "pulse 1s ease-in-out 3" :
-                        recordingStatus.includes('Procesare video') ? "rotate 2s linear infinite" :
-                        recordingStatus.includes('Salvare metadata') ? "bounce 1s ease-in-out infinite" :
-                        recordingStatus.includes('Pregătire trimitere email') || recordingStatus.includes('Trimitere email în curs') ? "pulse 1.5s ease-in-out infinite" :
-                        recordingStatus.includes('Email trimis') || recordingStatus.includes('Proces finalizat') ? "checkmark 1s ease-in-out" :
-                        recordingStatus.includes('complet') ? "bounce 0.6s ease-in-out" :
-                        isRecording ? "pulse 2s infinite" : "none",
-                    }}
-                    onClick={isRecording ? confirmStopRecording : startRecording}
-                                         title={
-                       recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? "Se încarcă înregistrarea..." :
-                       recordingStatus.includes('Oprire înregistrare') ? "Se oprește înregistrarea..." :
-                       recordingStatus.includes('Procesare video') ? "Se procesează video-ul..." :
-                       recordingStatus.includes('Salvare metadata') ? "Se salvează informațiile..." :
-                       recordingStatus.includes('Pregătire trimitere email') ? "Se pregătește emailul..." :
-                       recordingStatus.includes('Trimitere email în curs') ? "Se trimite emailul..." :
-                       recordingStatus.includes('Email trimis') ? "Email trimis cu succes!" :
-                       recordingStatus.includes('Proces finalizat') ? "Procesul s-a finalizat!" :
-                       recordingStatus.includes('complet') ? "Înregistrare completă!" :
-                       isRecording ? "Oprește înregistrarea" : "Începe înregistrarea"
-                     }
-                     disabled={recordingStatus && !isRecording}
-                  >
-                                         {recordingStatus.includes('Upload:') || recordingStatus.includes('Încărcare video') ? (
-                       <i className="fas fa-cloud-upload-alt" />
-                     ) : recordingStatus.includes('Oprire înregistrare') ? (
-                       <i className="fas fa-stop-circle" />
-                     ) : recordingStatus.includes('Procesare video') ? (
-                       <i className="fas fa-cog" />
-                     ) : recordingStatus.includes('Salvare metadata') ? (
-                       <i className="fas fa-database" />
-                     ) : recordingStatus.includes('Pregătire trimitere email') ? (
-                       <i className="fas fa-envelope" />
-                     ) : recordingStatus.includes('Trimitere email în curs') ? (
-                       <i className="fas fa-paper-plane" />
-                     ) : recordingStatus.includes('Email trimis') ? (
-                       <i className="fas fa-envelope-check" />
-                     ) : recordingStatus.includes('Proces finalizat') ? (
-                       <i className="fas fa-trophy" />
-                     ) : recordingStatus.includes('complet') ? (
-                       <i className="fas fa-check-circle" />
-                     ) : (
-                       <i className={`fas ${isRecording ? "fa-stop-circle" : "fa-circle"}`} />
-                     )}
-                  </button>
-                  
-                  {isRecording && (
-                    <div style={styles.recordingInfo}>
-                      <div style={styles.recordingIndicator}>
-                        <div style={styles.recordingDot}></div>
-                        <span>REC</span>
-                      </div>
-                      <div style={styles.recordingTime}>
-                        {formatRecordingTime(recordingDuration)}
-                      </div>
-                    </div>
-                  )}
-
-                    {recordingStatus && (
-                      <div style={styles.recordingStatus}>
-                        <i className="fas fa-info-circle" style={{marginRight: '8px'}}></i>
-                        {recordingStatus}
-                        
-                        {/* Progress Bar for Upload */}
-                        {recordingStatus.includes('Upload:') && (
-                          <div style={styles.progressBarContainer}>
-                            <div 
-                              style={{
-                                ...styles.progressBar,
-                                width: `${recordingStatus.match(/(\d+)%/)?.[1] || 0}%`
-                              }}
-                            />
-                            <div style={styles.progressText}>
-                              {recordingStatus.match(/(\d+)%/)?.[1] || 0}%
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
                 <AgoraUIKit
                   rtcProps={{
@@ -925,35 +586,15 @@ const AdminVideoCall = () => {
                     },
                     'user-joined': (user) => {
                       console.log('👥 User joined:', user.uid);
-                      // DISABLED: Using Agora Cloud Recording instead of canvas capture
-                      if (isRecording) {
-                        console.log('🎥 User joined during recording - handled by Agora Cloud Recording');
-                        // setTimeout(() => captureExistingAgoraStreams(), 1000); // DISABLED
-                      }
                     },
                     'user-left': (user) => {
                       console.log('👥 User left:', user.uid);
-                      // Remove user's video element from recorder
-                      if (isRecording) {
-                        // recorder.removeVideoElement(user.uid); // This line is removed as per the new_code
-                        console.log('🎥 Removed video element for user:', user.uid);
-                      }
                     },
                     'user-published': (user, mediaType) => {
                       console.log('📡 User published:', user.uid, mediaType);
-                      // DISABLED: Using Agora Cloud Recording instead
-                      if (isRecording && mediaType === 'video') {
-                        console.log('🎥 User published video - handled by Agora Cloud Recording');
-                        // setTimeout(() => captureExistingAgoraStreams(), 1000); // DISABLED
-                      }
                     },
                     'user-unpublished': (user, mediaType) => {
                       console.log('📡 User unpublished:', user.uid, mediaType);
-                      // Remove video element when video is unpublished
-                      if (isRecording && mediaType === 'video') {
-                        // recorder.removeVideoElement(user.uid); // This line is removed as per the new_code
-                        console.log('🎥 Removed video element for unpublished user:', user.uid);
-                      }
                     },
                   }}
                   styleProps={{
@@ -1079,76 +720,197 @@ const AdminVideoCall = () => {
               </div>
             )}
 
-            {/* Compact Recording Progress Monitor - Bottom Right */}
-            {/* <RecordingProgressWidget
-              isRecording={isRecording}
-              recordingDuration={recordingDuration}
-              recordingStatus={recordingStatus}
-              recordingError={recordingError}
-              showCancelButton={false}
-              showStartStopButtons={false}
-              onCancel={() => {
-                // recorder.cleanup(); // This line is removed as per the new_code
-                setIsRecording(false);
-                setRecordingStatus('');
-                setRecordingError('');
-                if (recordingIntervalRef.current) {
-                  clearInterval(recordingIntervalRef.current);
-                  recordingIntervalRef.current = null;
-                }
-              }}
-            /> */}
+                        {/* Compact Screen Recording Button - Top Right */}
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              zIndex: 1000,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: '8px'
+            }}>
 
-            {/* Email Dialog for Recording */}
-            {showEmailDialog && (
+                                           {/* Compact Screen Recording Button */}
+                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                   {/* Compact Recording Button */}
+                   {!isSimpleRecording ? (
+                     <button
+                       onClick={startSimpleRecording}
+                       disabled={!SimpleAgoraRecorder.isSupported()}
+                       style={{
+                         width: '50px',
+                         height: '50px',
+                         borderRadius: '50%',
+                         border: '3px solid rgba(255,255,255,0.8)',
+                         backgroundColor: SimpleAgoraRecorder.isSupported() ? '#6c757d' : '#495057',
+                         color: 'white',
+                         fontSize: '16px',
+                         cursor: SimpleAgoraRecorder.isSupported() ? 'pointer' : 'not-allowed',
+                         display: 'flex',
+                         alignItems: 'center',
+                         justifyContent: 'center',
+                         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                         transition: 'all 0.2s ease',
+                         opacity: SimpleAgoraRecorder.isSupported() ? 1 : 0.6
+                       }}
+                       title={SimpleAgoraRecorder.isSupported() ? 'Start Screen Recording' : 'Screen Recording not supported'}
+                     >
+                       <i className="fas fa-desktop"></i>
+                     </button>
+                   ) : (
+                     <button
+                       onClick={stopSimpleRecording}
+                       disabled={isSimpleProcessing}
+                       style={{
+                         width: '50px',
+                         height: '50px',
+                         borderRadius: '50%',
+                         border: '3px solid rgba(255,255,255,0.9)',
+                         backgroundColor: isSimpleProcessing ? '#6c757d' : '#dc3545',
+                         color: 'white',
+                         fontSize: '16px',
+                         cursor: isSimpleProcessing ? 'not-allowed' : 'pointer',
+                         display: 'flex',
+                         alignItems: 'center',
+                         justifyContent: 'center',
+                         boxShadow: isSimpleProcessing ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(220,53,69,0.4)',
+                         animation: isSimpleProcessing ? 'none' : 'pulse 1.5s infinite'
+                       }}
+                       title={isSimpleProcessing ? 'Processing...' : `Recording: ${formatDuration(simpleRecordingDuration)} - Click to stop & send email`}
+                     >
+                       <i className={isSimpleProcessing ? "fas fa-spinner fa-spin" : "fas fa-envelope"}></i>
+                     </button>
+                   )}
+                   
+                   {/* Status - Only during recording */}
+                   {isSimpleRecording && (
+                     <div style={{
+                       background: 'rgba(0, 0, 0, 0.8)',
+                       padding: '4px 8px',
+                       borderRadius: '12px',
+                       color: 'white',
+                       fontSize: '11px',
+                       textAlign: 'center'
+                     }}>
+                       {formatDuration(simpleRecordingDuration)}
+                     </div>
+                   )}
+                   
+                   {/* Processing Info - Only when stopping */}
+                   {isSimpleProcessing && (
+                     <div style={{
+                       background: 'rgba(40, 167, 69, 0.9)',
+                       padding: '6px 10px',
+                       borderRadius: '12px',
+                       color: 'white',
+                       fontSize: '11px',
+                       textAlign: 'center',
+                       maxWidth: '200px'
+                     }}>
+                       {simpleRecordingStatus || 'Procesare în curs...'}
+                     </div>
+                   )}
+                   
+                   {/* Upload Progress */}
+                   {simpleUploadProgress && (
+                     <div style={{
+                       background: 'rgba(255, 235, 59, 0.9)',
+                       padding: '6px 10px',
+                       borderRadius: '12px',
+                       color: '#333',
+                       fontSize: '10px',
+                       textAlign: 'center',
+                       maxWidth: '180px',
+                       fontWeight: 'bold'
+                     }}>
+                       {simpleUploadProgress}
+                     </div>
+                   )}
+                   
+                   {/* Success/Error Messages */}
+                   {simpleRecordingStatus && !isSimpleRecording && !isSimpleProcessing && (
+                     <div style={{
+                       background: simpleRecordingStatus.includes('❌') ? 'rgba(220, 53, 69, 0.9)' : 'rgba(40, 167, 69, 0.9)',
+                       padding: '6px 10px',
+                       borderRadius: '12px',
+                       color: 'white',
+                       fontSize: '11px',
+                       textAlign: 'center',
+                       maxWidth: '200px'
+                     }}>
+                       {simpleRecordingStatus}
+                     </div>
+                   )}
+                 </div>
+            </div>
+
+
+
+
+
+            {/* Simple Recording Email Dialog */}
+            {showSimpleEmailDialog && (
               <div style={styles.emailDialogOverlay}>
                 <div style={styles.emailDialog}>
                   <div style={styles.emailDialogHeader}>
                     <h3 style={styles.emailDialogTitle}>
                       <i className="fas fa-envelope" style={{marginRight: '8px'}}></i>
-                      Oprire înregistrare și trimitere email
+                      🖥️ Oprire Screen Recording și trimitere email
                     </h3>
                     <button
                       style={styles.emailDialogCloseButton}
-                      onClick={() => setShowEmailDialog(false)}
-                      disabled={isSendingEmail}
+                      onClick={() => setShowSimpleEmailDialog(false)}
+                      disabled={isSimpleProcessing}
                     >
                       <i className="fas fa-times"></i>
                     </button>
-          </div>
+                  </div>
                   
                   <div style={styles.emailDialogBody}>
                     <p style={styles.emailDialogDescription}>
-                      Înregistrarea va fi oprită și un email cu link-ul de descărcare va fi trimis la adresa specificată.
+                      <strong>Screen Recording</strong> va fi oprită și procesată. 
+                      Un email cu link-ul de descărcare va fi trimis la adresa specificată.
                     </p>
+                    
+                    <div style={{
+                      background: '#e3f2fd',
+                      padding: '12px',
+                      borderRadius: '6px',
+                      margin: '15px 0',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      <div style={{ fontSize: '14px', color: '#1976d2', marginBottom: '8px' }}>
+                        <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
+                        <strong>Despre Screen Recording:</strong>
+                      </div>
+                      <ul style={{ margin: '0', paddingLeft: '20px', color: '#1565c0', fontSize: '13px' }}>
+                        <li>Se înregistrează exact ce ați selectat pe ecran</li>
+                        <li>Calitate maximă 1080p, 30 FPS</li>
+                        <li>Include audio din microfon (dacă ați permis)</li>
+                        <li>Fișier format .webm (compatibil cu toate browserele)</li>
+                      </ul>
+                    </div>
                     
                     <div style={styles.emailInputContainer}>
                       <label style={styles.emailInputLabel}>
-                        Adresa de email pentru înregistrare:
-                        {isLoadingClientEmail && (
-                          <span style={{marginLeft: '8px', color: '#667eea', fontSize: '14px'}}>
-                            <i className="fas fa-spinner fa-spin" style={{marginRight: '4px'}}></i>
-                            Se caută emailul clientului...
-                          </span>
-                        )}
+                        Email pentru primirea link-ului de descărcare:
                       </label>
                       <input
                         type="email"
-                        style={{
-                          ...styles.emailInput,
-                          backgroundColor: isLoadingClientEmail ? '#f8f9fa' : 'white'
-                        }}
-                        value={recipientEmail}
-                        onChange={(e) => setRecipientEmail(e.target.value)}
-                        placeholder={isLoadingClientEmail ? "Se caută emailul..." : "client@example.com"}
-                        disabled={isSendingEmail || isLoadingClientEmail}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && !isSendingEmail && !isLoadingClientEmail) {
-                            confirmStopRecording();
+                        style={styles.emailInput}
+                        value={simpleRecipientEmail}
+                        onChange={(e) => setSimpleRecipientEmail(e.target.value)}
+                        placeholder="exemplu@email.com"
+                        disabled={isSimpleProcessing}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isSimpleProcessing && simpleRecipientEmail.trim()) {
+                            confirmStopSimpleRecording();
                           }
                         }}
                       />
-                      {recipientEmail && !isLoadingClientEmail && (
+                      {simpleRecipientEmail && recipientEmail && simpleRecipientEmail === recipientEmail && (
                         <div style={{
                           marginTop: '8px',
                           padding: '8px 12px',
@@ -1159,46 +921,34 @@ const AdminVideoCall = () => {
                           color: '#155724'
                         }}>
                           <i className="fas fa-check-circle" style={{marginRight: '6px', color: '#28a745'}}></i>
-                          Email găsit automat din rezervare. Poți modifica dacă dorești să trimiți la alt email.
+                          Email găsit automat din rezervare.
                         </div>
                       )}
-        </div>
-                    
-                    {emailError && (
-                      <div style={styles.emailError}>
-                        <i className="fas fa-exclamation-triangle" style={{marginRight: '8px'}}></i>
-                        {emailError}
-                      </div>
-                    )}
+                    </div>
                   </div>
                   
                   <div style={styles.emailDialogFooter}>
                     <button
                       style={styles.emailDialogCancelButton}
-                      onClick={() => setShowEmailDialog(false)}
-                      disabled={isSendingEmail}
+                      onClick={() => setShowSimpleEmailDialog(false)}
+                      disabled={isSimpleProcessing}
                     >
                       Anulează
                     </button>
                     <button
                       style={styles.emailDialogConfirmButton}
-                      onClick={confirmStopRecording}
-                      disabled={isSendingEmail || isLoadingClientEmail || !recipientEmail.trim()}
+                      onClick={confirmStopSimpleRecording}
+                      disabled={isSimpleProcessing || !simpleRecipientEmail.trim()}
                     >
-                      {isSendingEmail ? (
+                      {isSimpleProcessing ? (
                         <>
                           <i className="fas fa-spinner fa-spin" style={{marginRight: '8px'}}></i>
                           Se procesează...
                         </>
-                      ) : isLoadingClientEmail ? (
-                        <>
-                          <i className="fas fa-search fa-spin" style={{marginRight: '8px'}}></i>
-                          Se caută emailul...
-                        </>
                       ) : (
                         <>
-                          <i className="fas fa-stop" style={{marginRight: '8px'}}></i>
-                          Oprește și trimite email
+                          <i className="fas fa-desktop" style={{marginRight: '8px'}}></i>
+                          Stop Recording & Send Email
                         </>
                       )}
                     </button>
@@ -1359,58 +1109,7 @@ const styles = {
     cursor: "pointer",
     fontSize: "16px",
   },
-  recordingControls: {
-    position: "absolute",
-    top: "20px",
-    right: "20px",
-    display: "flex",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: "25px",
-    padding: "10px 20px",
-    zIndex: 1000,
-    color: "#ffffff",
-  },
-  recordButton: {
-    backgroundColor: "#e74c3c",
-    color: "#ffffff",
-    borderRadius: "50%",
-    border: "none",
-    width: "50px",
-    height: "50px",
-    fontSize: "18px",
-    cursor: "pointer",
-    marginRight: "15px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.3s ease",
-  },
-  recordingInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  recordingIndicator: {
-    display: "flex",
-    alignItems: "center",
-    gap: "5px",
-    color: "#ffffff",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  recordingDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    backgroundColor: "#ff4757",
-    animation: "blink 1s infinite",
-  },
-  recordingTime: {
-    fontSize: "16px",
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
+
   errorNotification: {
     position: "absolute",
     top: "10%",
@@ -1511,16 +1210,7 @@ const styles = {
     transition: "border-color 0.2s ease",
     outline: "none",
   },
-  emailError: {
-    color: "#e74c3c",
-    fontSize: "13px",
-    display: "flex",
-    alignItems: "center",
-    backgroundColor: "#fdf2f2",
-    padding: "8px 12px",
-    borderRadius: "6px",
-    border: "1px solid #fecaca",
-  },
+
   emailDialogFooter: {
     padding: "16px 24px",
     backgroundColor: "#f8f9fa",
