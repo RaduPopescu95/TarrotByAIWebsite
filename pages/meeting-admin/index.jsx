@@ -1,19 +1,59 @@
-import DoctorDashboard from "../../client/components/doctors/dashboard";
-import LoginContainer from "../../client/components/login/login";
-import LoginClient from "../../client/components/loginClient/LoginClient";
-// import VideoCall from "../../client/components/pages/videocallAdmin";
-import Booking from "../../client/components/patients/booking/booking1";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 
-const VideoCall = dynamic(
-  () => import("../../client/components/pages/videocallAdmin"),
+const DailyAdmin = dynamic(
+  () => import("../../components/Daily/DailyAdmin"),
   { ssr: false }
 );
 
 export default function Meeting() {
+  const router = useRouter();
+  const { meetingCode, useDaily } = router.query;
+
+  // Check if we should use Daily.co or fallback to Agora
+  // Default to Daily.co if Daily credentials are available, unless explicitly disabled
+  const shouldUseDaily = useDaily !== 'false' && (useDaily === 'true' || process.env.NEXT_PUBLIC_USE_DAILY_BY_DEFAULT === 'true' || process.env.NEXT_PUBLIC_DAILY_DOMAIN);
+
+  useEffect(() => {
+    // If meetingCode is present and we should use Daily, redirect to Daily meeting
+    if (meetingCode && shouldUseDaily) {
+      // Use Daily.co - render DailyAdmin component
+      return;
+    } else if (meetingCode && !shouldUseDaily) {
+      // Use legacy Agora system - redirect to existing meeting page
+      router.push(`/meeting-admin-agora?meetingCode=${meetingCode}`);
+      return;
+    }
+  }, [meetingCode, shouldUseDaily, router]);
+
+  if (meetingCode && shouldUseDaily) {
+    return <DailyAdmin />;
+  }
+
   return (
-    <>
-      <VideoCall />
-    </>
+    <div style={styles.container}>
+      <div style={styles.content}>
+        <h3>Se încarcă interfața video (Admin)...</h3>
+        <p>Vă rugăm să așteptați</p>
+      </div>
+    </div>
   );
 }
+
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#f8f9fa',
+  },
+  content: {
+    textAlign: 'center',
+    backgroundColor: '#ffffff',
+    padding: '40px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+  },
+};

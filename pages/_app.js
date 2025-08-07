@@ -29,6 +29,7 @@ require("../client/assets/icons/feather/css/iconfont.css");
 require("../client/assets/scss/main.scss");
 require("../client/components/customstyleclient.css");
 require("../client/assets/css/feather.css");
+require("../styles/daily-components.css");
 
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 

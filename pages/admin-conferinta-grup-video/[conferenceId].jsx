@@ -8,9 +8,9 @@ const debugLog = (...args) => {
   }
 };
 
-// Import dinamic pentru a evita problema SSR cu Agora
-const AdminConferintaGrupVideo = dynamic(
-  () => import("../../client/components/admin-conferinta-grup-video"),
+// Import Daily.co component for conference admin
+const DailyAdmin = dynamic(
+  () => import("../../components/Daily/DailyAdmin"),
   { 
     ssr: false,
     loading: () => (
@@ -24,7 +24,7 @@ const AdminConferintaGrupVideo = dynamic(
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Se încarcă...</span>
         </div>
-        <p className="mt-3">Se încarcă interfața video...</p>
+        <p className="mt-3">Se pregătește conferința video...</p>
       </div>
     )
   }
@@ -34,7 +34,7 @@ export default function AdminConferintaGrupVideoPage() {
   const router = useRouter();
   const { conferenceId } = router.query;
 
-  debugLog("=== PAGE LOADED ===");
+  debugLog("=== DAILY CONFERENCE ADMIN PAGE LOADED ===");
   debugLog("conferenceId from router:", conferenceId);
   debugLog("DEBUGGING: Router isReady:", router.isReady);
   debugLog("DEBUGGING: Router query:", router.query);
@@ -48,16 +48,16 @@ export default function AdminConferintaGrupVideoPage() {
     }
   }
 
-  debugLog("🌟 [PAGE] === ADMIN CONFERENCE PAGE INIT ===");
-  debugLog("🌟 [PAGE] Router query:", router.query);
-  debugLog("🌟 [PAGE] conferenceId from query:", conferenceId);
-  debugLog("🌟 [PAGE] conferenceId type:", typeof conferenceId);
-  debugLog("🌟 [PAGE] Router isReady:", router.isReady);
-  debugLog("🌟 [PAGE] Router pathname:", router.pathname);
-  debugLog("🌟 [PAGE] Router asPath:", router.asPath);
+  debugLog("🌟 [DAILY-CONFERENCE] === ADMIN CONFERENCE PAGE INIT ===");
+  debugLog("🌟 [DAILY-CONFERENCE] Router query:", router.query);
+  debugLog("🌟 [DAILY-CONFERENCE] conferenceId from query:", conferenceId);
+  debugLog("🌟 [DAILY-CONFERENCE] conferenceId type:", typeof conferenceId);
+  debugLog("🌟 [DAILY-CONFERENCE] Router isReady:", router.isReady);
+  debugLog("🌟 [DAILY-CONFERENCE] Router pathname:", router.pathname);
+  debugLog("🌟 [DAILY-CONFERENCE] Router asPath:", router.asPath);
 
   if (!conferenceId) {
-    debugLog("⚠️ [PAGE] No conferenceId, showing spinner...");
+    debugLog("⚠️ [DAILY-CONFERENCE] No conferenceId, showing spinner...");
     return (
       <div style={{ 
         display: 'flex', 
@@ -72,6 +72,18 @@ export default function AdminConferintaGrupVideoPage() {
     );
   }
 
-  debugLog("✅ [PAGE] Conference ID found, rendering component with:", conferenceId);
-  return <AdminConferintaGrupVideo conferenceId={conferenceId} />;
+  debugLog("✅ [DAILY-CONFERENCE] Conference ID found, rendering Daily.co admin with:", conferenceId);
+  
+  // Mock meetingCode structure similar to consultations
+  const mockMeetingCode = `conference-${conferenceId}__${conferenceId}`;
+  
+  // Add meetingCode to router query so DailyAdmin can use it
+  if (typeof window !== 'undefined' && router.isReady && !router.query.meetingCode) {
+    router.replace({
+      pathname: router.pathname,
+      query: { ...router.query, meetingCode: mockMeetingCode }
+    }, undefined, { shallow: true });
+  }
+  
+  return <DailyAdmin />;
 } 

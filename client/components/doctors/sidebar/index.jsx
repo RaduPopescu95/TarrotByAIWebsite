@@ -185,6 +185,12 @@ const DoctorSidebar = () => {
                   <span>Conferințe de Grup</span>
                 </Link>
               </li>
+              <li className={false ? "active" : ""}>
+                <Link href="/admin-recordings">
+                  <i className="fa-solid fa-video me-2" />
+                  <span>Înregistrări Video</span>
+                </Link>
+              </li>
               {/* <li
                 className={pathnames.includes("/doctor/review") ? "active" : ""}
               >
