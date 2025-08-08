@@ -175,7 +175,7 @@ async function sendCustomRecordingEmail({
           
           <!-- Header -->
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #667eea; margin: 0; font-size: 28px;">🎥 Înregistrare Tarot by AI</h1>
+            <h1 style="color: #667eea; margin: 0; font-size: 28px;">🎥 înregistrare Ședință - Cristina Zurba</h1>
             <div style="width: 60px; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 15px auto; border-radius: 2px;"></div>
           </div>
           
@@ -225,14 +225,7 @@ async function sendCustomRecordingEmail({
 
           <!-- Expiry Warning -->
           <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 25px;">
-            <h4 style="color: #856404; margin-top: 0; font-size: 14px;">🔒 Confidențialitate și Securitate</h4>
-            <ul style="color: #856404; margin: 0 0 15px 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
-              <li>Înregistrarea este stocată securizat și criptat</li>
-              <li>Link-ul de descărcare este personal și confidențial</li>
-              <li>Nu împărți acest link cu alte persoane</li>
-              <li>Poți descărca fișierul de câte ori dorești în perioada validă</li>
-            </ul>
-            ${expiryDate ? `
+                  ${expiryDate ? `
             <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-top: 15px;">
               <p style="color: #721c24; margin: 0; line-height: 1.6; font-size: 14px; font-weight: 600;">
                 ⏰ <strong>ATENȚIE - LINK TEMPORAR!</strong><br/>
@@ -249,6 +242,14 @@ async function sendCustomRecordingEmail({
               </p>
             </div>
             `}
+            <h4 style="color: #856404; margin-top: 0; font-size: 14px;">🔒 Confidențialitate și Securitate</h4>
+            <ul style="color: #856404; margin: 0 0 15px 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
+              <li>Înregistrarea este stocată securizat și criptat</li>
+              <li>Link-ul de descărcare este personal și confidențial</li>
+              <li>Nu împărți acest link cu alte persoane</li>
+              <li>Poți descărca fișierul de câte ori dorești în perioada validă</li>
+            </ul>
+    
           </div>
 
           <!-- Support -->
@@ -274,7 +275,7 @@ async function sendCustomRecordingEmail({
     `;
 
     const mailOptions = {
-      from: `"Tarot by AI - Înregistrări" <${process.env.EMAIL_USER}>`,
+      from: `"Înregistrări Ședință - Cristina Zurba" <${process.env.EMAIL_USER}>`,
       to: customEmail,
       subject: `🎥 Înregistrarea ta de la ${sessionTypeDisplay} - ${recordingId.substring(0, 8)}...`,
       html: emailContent

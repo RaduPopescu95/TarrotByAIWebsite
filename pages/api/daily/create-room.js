@@ -1,9 +1,36 @@
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin once
+if (!getApps().length) {
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
+    });
+  } catch (e) {
+    // avoid crashing if envs missing; we'll only use Firestore when possible
+    console.error('Firebase Admin init failed (non-fatal for Daily room creation):', e.message);
+  }
+}
+
+const adminDb = (() => {
+  try {
+    return getFirestore();
+  } catch {
+    return null;
+  }
+})();
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { documentId, isOwner, userRole, sessionType } = req.body;
+  const { documentId, isOwner, userRole, sessionType, clientName, fullMeetingCode } = req.body;
 
   if (!documentId) {
     return res.status(400).json({ error: 'documentId is required' });
@@ -105,6 +132,34 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to check room status' });
     }
 
+    // Try to resolve client name from Firestore if not provided and session is consultation
+    let resolvedClientName = clientName || null;
+    if (!resolvedClientName && userRole === 'client' && sessionType !== 'conference' && adminDb) {
+      try {
+        // 1) Direct document lookup in RezervariConsultatii by documentId
+        const directDoc = await adminDb.collection('RezervariConsultatii').doc(documentId).get();
+        if (directDoc.exists) {
+          const data = directDoc.data();
+          resolvedClientName = data?.nume || data?.name || null;
+        }
+        // 2) Fallback: query by meetingCode (first part before __)
+        if (!resolvedClientName && typeof fullMeetingCode === 'string') {
+          const meetingCodePart = fullMeetingCode.split('__')[0];
+          const qSnap = await adminDb
+            .collection('RezervariConsultatii')
+            .where('meetingCode', '==', meetingCodePart)
+            .limit(1)
+            .get();
+          if (!qSnap.empty) {
+            const data = qSnap.docs[0].data();
+            resolvedClientName = data?.nume || data?.name || null;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to resolve client name from Firestore:', e.message);
+      }
+    }
+
     // Generate meeting token for this user
     const tokenResponse = await fetch('https://api.daily.co/v1/meeting-tokens', {
       method: 'POST',
@@ -116,10 +171,9 @@ export default async function handler(req, res) {
         properties: {
           room_name: roomName,
           is_owner: isOwner,
-          // Admin gets predefined name, client will be prompted via prejoin UI
-          ...(userRole === 'admin' && {
-            user_name: 'Cristina Zurba'
-          }),
+          // Prefer explicit names when available
+          ...((userRole === 'admin') && { user_name: 'Cristina Zurba' }),
+          ...((userRole === 'client' && (resolvedClientName || clientName)) && { user_name: resolvedClientName || clientName }),
           exp: Math.floor(Date.now() / 1000) + (4 * 60 * 60), // 4 hours from now
           start_video_off: false,
           start_audio_off: false,

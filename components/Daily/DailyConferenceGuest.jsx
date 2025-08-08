@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Home1Header from '../../client/components/home/home-1/header';
+import { useAuth } from '../../context/AuthContext';
 
 const DailyConferenceGuest = () => {
   const router = useRouter();
@@ -8,6 +9,17 @@ const DailyConferenceGuest = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [documentId, setDocumentId] = useState(null);
+  const { currentUser, userData } = useAuth();
+
+  const clientName = useMemo(() => {
+    if (userData?.first_name || userData?.last_name) {
+      return `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim();
+    }
+    if (currentUser?.displayName) {
+      return currentUser.displayName;
+    }
+    return null;
+  }, [currentUser, userData]);
 
   useEffect(() => {
     if (accessLink) {
@@ -44,7 +56,9 @@ const DailyConferenceGuest = () => {
             documentId: documentId,
             isOwner: false, // Guest is not owner
             userRole: 'client', // Guest has client permissions
-            sessionType: 'conference' // This is a conference session
+            sessionType: 'conference', // This is a conference session
+            clientName: clientName || undefined,
+            fullMeetingCode: accessLink
           }),
         });
 

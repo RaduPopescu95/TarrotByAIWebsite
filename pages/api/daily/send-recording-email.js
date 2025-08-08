@@ -305,7 +305,7 @@ async function sendDailyRecordingEmail({ clientEmail, clientName, recordingUrl, 
     `;
 
     const mailOptions = {
-      from: `"Tarot by AI - Înregistrări" <${process.env.EMAIL_USER}>`,
+      from: `"Înregistrări Ședință - Cristina Zurba" <${process.env.EMAIL_USER}>`,
       to: clientEmail,
       subject: `🎥 Înregistrarea consultației tale este gata - ${reservationData.categorie?.nume || 'Video Call'}`,
       html: emailContent

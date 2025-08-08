@@ -566,7 +566,7 @@ async function sendSimpleRecordingEmail(meetingCode, recipientEmail, duration, r
     `;
 
     const mailOptions = {
-      from: `"Tarot by AI - Înregistrări" <${process.env.EMAIL_USER}>`,
+      from: `"Înregistrări Ședință - Cristina Zurba" <${process.env.EMAIL_USER}>`,
       to: recipientEmail,
       subject: '🎥 Înregistrarea consultației dvs. este pregătită',
       html: emailContent
