@@ -61,7 +61,9 @@ const Booking = (props) => {
   const updateYearlySlotsWithReservations = (yearlySlots, rezervari) => {
     // Iterăm prin fiecare rezervare
     rezervari.forEach((rezervare) => {
+      if (!rezervare || !rezervare.selectedSlot) return;
       const { day, slot } = rezervare.selectedSlot;
+      if (!day || !slot) return;
       // Separăm luna și ziua din `day` (exemplu: "8-9" -> luna 8, ziua 9)
       const [month, dayOfMonth] = day.split("-").map(Number);
 
