@@ -11,12 +11,15 @@ import Link from "next/link";
 import Footer from "../../footer";
 import Home1Header from "../../home/home-1/header";
 import { useRouter } from "next/router";
-import { handleQueryFirestore } from "../../../../utils/firestoreUtils";
+import { handleQueryFirestore, handleUpdateFirestore } from "../../../../utils/firestoreUtils";
 import { formatSelectedSlot } from "../../../../utils/commonUtils";
 const DoctorUpcomingAppointment = (props) => {
   const router = useRouter();
   const { meetingId } = router.query;
   const [appointmentDetails, setAppointmentDetails] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [slotDraft, setSlotDraft] = useState({ dateISO: '', timeHHmm: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
@@ -193,14 +196,32 @@ const DoctorUpcomingAppointment = (props) => {
                   <ul className="detail-card-bottom-info">
                     <li>
                       <h6>Data &amp; Ora</h6>
-                      <span>
-                        {" "}
-                        {formatSelectedSlot(
-                          appointmentDetails?.selectedSlot?.day,
-                          appointmentDetails?.selectedSlot?.currentYear
-                        )}{" "}
-                        ; {appointmentDetails?.selectedSlot?.slot}
-                      </span>
+                      {!editing ? (
+                        <span>
+                          {formatSelectedSlot(
+                            appointmentDetails?.selectedSlot?.day,
+                            appointmentDetails?.selectedSlot?.currentYear
+                          )}
+                          ; {appointmentDetails?.selectedSlot?.slot}
+                        </span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input
+                            type="date"
+                            value={slotDraft.dateISO}
+                            onChange={(e) => setSlotDraft({ ...slotDraft, dateISO: e.target.value })}
+                            className="form-control"
+                            style={{ maxWidth: 180 }}
+                          />
+                          <input
+                            type="time"
+                            value={slotDraft.timeHHmm}
+                            onChange={(e) => setSlotDraft({ ...slotDraft, timeHHmm: e.target.value })}
+                            className="form-control"
+                            style={{ maxWidth: 140 }}
+                          />
+                        </div>
+                      )}
                     </li>
                     <li>
                       <h6>Tip Consultatie</h6>
@@ -215,7 +236,109 @@ const DoctorUpcomingAppointment = (props) => {
                       <span> {appointmentDetails?.categorie?.price} RON</span>
                     </li>
                     <li>
-                      <div className="start-btn">
+                      <div className="start-btn" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {!editing ? (
+                          <button
+                            className="btn btn-outline-primary"
+                            onClick={() => {
+                              setEditing(true);
+                              const original = appointmentDetails.selectedSlot || {};
+                              const year = original.currentYear || new Date().getFullYear();
+                              let mm = '';
+                              let dd = '';
+                              if (original.day && typeof original.day === 'string') {
+                                const parts = original.day.split('-');
+                                if (parts.length === 2) {
+                                  const m = parseInt(parts[0], 10) || 0;
+                                  const d = parseInt(parts[1], 10) || 0;
+                                  mm = String(m).padStart(2, '0');
+                                  dd = String(d).padStart(2, '0');
+                                }
+                              }
+                              const dateISO = mm && dd ? `${year}-${mm}-${dd}` : '';
+                              const timeHHmm = original.slot || '';
+                              setSlotDraft({ dateISO, timeHHmm });
+                            }}
+                          >
+                            Editează data
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="btn btn-success"
+                              disabled={saving || !slotDraft.dateISO || !slotDraft.timeHHmm}
+                              onClick={async () => {
+                                try {
+                                  setSaving(true);
+                                  // Detect change vs original
+                                  const original = appointmentDetails.selectedSlot || {};
+                                  const originalYear = original.currentYear || new Date().getFullYear();
+                                  const [origMStr, origDStr] = (original.day || '').split('-');
+                                  const origM = parseInt(origMStr || '0', 10) || 0;
+                                  const origD = parseInt(origDStr || '0', 10) || 0;
+
+                                  const d = new Date(slotDraft.dateISO);
+                                  const year = d.getFullYear();
+                                  const month = d.getMonth() + 1; // 1-based
+                                  const day = d.getDate();
+                                  const newDayField = `${month}-${day}`; // store as M-D (no zero padding)
+                                  const newSlot = {
+                                    day: newDayField,
+                                    slot: slotDraft.timeHHmm,
+                                    currentYear: year,
+                                  };
+
+                                  const changed = (
+                                    year !== originalYear ||
+                                    month !== origM ||
+                                    day !== origD ||
+                                    (slotDraft.timeHHmm !== (original.slot || ''))
+                                  );
+
+                                  await handleUpdateFirestore(`RezervariConsultatii/${appointmentDetails.documentId}`, {
+                                    selectedSlot: newSlot
+                                  });
+                                  setAppointmentDetails(prev => ({ ...prev, selectedSlot: newSlot }));
+
+                                  if (changed) {
+                                    const confirmNotify = window.confirm('Doriți să trimiteți email de înștiințare privind modificarea datei?');
+                                    if (confirmNotify) {
+                                      const resp = await fetch('/api/consultation/send-update-email', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ documentId: appointmentDetails.documentId })
+                                      });
+                                      const result = await resp.json();
+                                      if (resp.ok && result.success) {
+                                        alert('✅ Email de reprogramare trimis către client.');
+                                      } else {
+                                        alert('⚠️ Emailul nu a putut fi trimis.');
+                                      }
+                                    }
+                                  }
+                                } catch (e) {
+                                  console.error('Save slot error', e);
+                                  alert('Eroare la salvare.');
+                                } finally {
+                                  setSaving(false);
+                                  setEditing(false);
+                                }
+                              }}
+                            >
+                              {saving ? '⏳ Salvare...' : '💾 Salvează'}
+                            </button>
+                            <button
+                              className="btn btn-outline-secondary"
+                              disabled={saving}
+                              onClick={() => {
+                                setEditing(false);
+                                setSlotDraft({ dateISO: '', timeHHmm: '' });
+                              }}
+                            >
+                              Anulează
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn btn-secondary"
                           onClick={() => {
@@ -223,12 +346,7 @@ const DoctorUpcomingAppointment = (props) => {
                             navigator.clipboard
                               .writeText(link)
                               .then(() => alert("Link copiat în clipboard!"))
-                              .catch((err) =>
-                                console.error(
-                                  "Eroare la copierea link-ului:",
-                                  err
-                                )
-                              );
+                              .catch((err) => console.error("Eroare la copierea link-ului:", err));
                           }}
                         >
                           Link întâlnire

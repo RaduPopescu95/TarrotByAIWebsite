@@ -433,7 +433,8 @@ const AdminConferinteGrup = () => {
          }
        }
       
-      const conferintaData = {
+      // Construim baza datelor conferinței (fără participanti)
+      const conferintaBaseData = {
         titlu: formData.titlu,
         descriere: formData.descriere,
         dataInceput: formData.dataInceput,
@@ -448,10 +449,14 @@ const AdminConferinteGrup = () => {
         accessLink: editingConferinta?.accessLink || generateConferenceAccessLink(), // Generez accessLink pentru conferință
         hasPassword: formData.hasPassword,
         password: formData.hasPassword ? formData.password.trim() : null,
-        participanti: [],
         creatDe: userData?.owner_uid || "admin",
         dataCreare: moment().format("YYYY-MM-DD HH:mm:ss")
       };
+
+      // IMPORTANT: nu rescriem participanții la editare
+      const conferintaData = editingConferinta
+        ? { ...conferintaBaseData }
+        : { ...conferintaBaseData, participanti: [] };
 
       console.log("📦 [CONFERINTA] Date pregătite pentru salvare:", conferintaData);
       console.log("👤 [CONFERINTA] UserData disponibil:", userData);
@@ -461,6 +466,15 @@ const AdminConferinteGrup = () => {
         console.log("📝 [CONFERINTA] Încep actualizarea conferinței existente...");
         console.log("🆔 [CONFERINTA] ID conferință de editat:", editingConferinta.documentId);
         
+        // Determin dacă s-au schimbat data/ora și dacă există participanți
+        const hadParticipants = Array.isArray(editingConferinta?.participanti) && editingConferinta.participanti.length > 0;
+        const datesChanged = (
+          editingConferinta.dataInceput !== conferintaData.dataInceput ||
+          (editingConferinta.dataFinal || '') !== (conferintaData.dataFinal || '') ||
+          editingConferinta.oraInceput !== conferintaData.oraInceput ||
+          (editingConferinta.oraFinal || '') !== (conferintaData.oraFinal || '')
+        );
+
         // Update existing
         const updateResult = await handleUpdateFirestore(
           `ConferinteGrup/${editingConferinta.documentId}`,
@@ -468,6 +482,35 @@ const AdminConferinteGrup = () => {
         );
         console.log("✅ [CONFERINTA] Rezultat actualizare:", updateResult);
         showAlert("success", "Conferința a fost actualizată cu succes!");
+
+        if (hadParticipants && datesChanged) {
+          const confirmMsg = `Conferința are ${editingConferinta.participanti.length} participanți.\nDoriți să trimiteți email de înștiințare privind modificarea datei?`;
+          const shouldNotify = window.confirm(confirmMsg);
+          if (shouldNotify) {
+            try {
+              setLoading(true);
+              const resp = await fetch('/api/conference/send-update-emails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conferenceId: editingConferinta.documentId })
+              });
+              const result = await resp.json();
+              if (resp.ok && result.success) {
+                showAlert('success', `Email de reprogramare trimis la ${result.sent} participanți.`);
+              } else {
+                console.error('❌ [CONFERINTA] Eroare trimitere update email:', result.error);
+                showAlert('warning', 'Emailurile nu au putut fi trimise tuturor participanților.');
+              }
+            } catch (e) {
+              console.error('❌ [CONFERINTA] Excepție la trimiterea emailurilor de update:', e);
+              showAlert('warning', 'Trimiterea emailurilor a întâmpinat o eroare.');
+            } finally {
+              setLoading(false);
+            }
+          } else {
+            showAlert('info', 'Notificarea participanților a fost omisă.');
+          }
+        }
       } else {
         console.log("➕ [CONFERINTA] Încep crearea conferinței noi...");
         
@@ -2308,15 +2351,29 @@ const AdminConferinteGrup = () => {
                         <div className="col-md-6">
                           <div className="form-group mb-3">
                             <label className="form-label">Tip Conferință</label>
-                            <select
-                              className="form-control"
-                              name="tipConferinta"
-                              value={formData.tipConferinta}
-                              onChange={handleInputChange}
-                            >
-                              <option value="single">Conferință Unică</option>
-                              <option value="course">Curs pe Mai Multe Zile</option>
-                            </select>
+                            {(() => {
+                              const hasParticipants = Array.isArray(editingConferinta?.participanti) && editingConferinta.participanti.length > 0;
+                              const disabled = !!editingConferinta && hasParticipants;
+                              return (
+                                <>
+                                  <select
+                                    className="form-control"
+                                    name="tipConferinta"
+                                    value={formData.tipConferinta}
+                                    onChange={handleInputChange}
+                                    disabled={disabled}
+                                  >
+                                    <option value="single">Conferință Unică</option>
+                                    <option value="course">Curs pe Mai Multe Zile</option>
+                                  </select>
+                                  {disabled && (
+                                    <small className="text-muted">
+                                      Tipul conferinței nu poate fi schimbat deoarece există deja participanți înscriși.
+                                    </small>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

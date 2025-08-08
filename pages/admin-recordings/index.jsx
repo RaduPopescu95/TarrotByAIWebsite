@@ -24,6 +24,9 @@ const AdminRecordings = () => {
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [emailModal, setEmailModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+  const [resendingDefault, setResendingDefault] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -129,6 +132,35 @@ const AdminRecordings = () => {
       alert(`❌ Error sending email: ${err.message}`);
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  // Resend email to default recipients based on session type
+  const resendDefaultEmails = async (recordingId) => {
+    try {
+      setResendingDefault(true);
+      setResendingId(recordingId);
+      setToast({ visible: true, type: 'info', message: '⏳ Se trimite emailul...' });
+
+      const response = await fetch('/api/daily/resend-recording-default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordingId })
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setToast({ visible: true, type: 'success', message: `✅ Email trimis ${result.sessionType === 'conference' ? `către ${result.recipients} participanți` : 'către client'}.` });
+        setTimeout(() => setToast({ visible: false, message: '', type: 'success' }), 3000);
+      } else {
+        setToast({ visible: true, type: 'error', message: `❌ Eroare trimitere: ${result.error || 'necunoscută'}` });
+        setTimeout(() => setToast({ visible: false, message: '', type: 'error' }), 3500);
+      }
+    } catch (err) {
+      setToast({ visible: true, type: 'error', message: `❌ Eroare: ${err.message}` });
+      setTimeout(() => setToast({ visible: false, message: '', type: 'error' }), 3500);
+    } finally {
+      setResendingDefault(false);
+      setResendingId(null);
     }
   };
 
@@ -351,6 +383,13 @@ const AdminRecordings = () => {
                         🔍 Detalii Complete
                       </button>
                       <button
+                        onClick={() => resendDefaultEmails(recording.id)}
+                        style={{...styles.actionButton, background: '#28a745', opacity: resendingDefault && resendingId === recording.id ? 0.7 : 1}}
+                        disabled={recording.status !== 'finished' || (resendingDefault && resendingId === recording.id)}
+                      >
+                        {resendingDefault && resendingId === recording.id ? '⏳ Se trimite...' : '📧 Trimite automat'}
+                      </button>
+                      <button
                         onClick={() => {
                           setSelectedRecording(recording);
                           setEmailModal(true);
@@ -437,6 +476,49 @@ const AdminRecordings = () => {
                     </div>
                   </div>
 
+                  {selectedRecordingDetails.firestore && (
+                    <div style={styles.detailsSection}>
+                      <h4>🗄️ Informatii suplimentare</h4>
+                      {selectedRecordingDetails.firestore.type === 'consultation' ? (
+                        <div style={styles.detailsGrid}>
+                          <div><strong>Nume client:</strong> {selectedRecordingDetails.firestore.data.nume || 'N/A'}</div>
+                          <div><strong>Prenume:</strong> {selectedRecordingDetails.firestore.data.prenume || 'N/A'}</div>
+                          <div><strong>Email:</strong> {selectedRecordingDetails.firestore.data.email || 'N/A'}</div>
+                          <div><strong>Telefon:</strong> {selectedRecordingDetails.firestore.data.telefon || 'N/A'}</div>
+                          <div><strong>Categorie:</strong> {selectedRecordingDetails.firestore.data.categorie?.nume || 'N/A'}</div>
+                          <div><strong>Tip consultatie:</strong> {selectedRecordingDetails.firestore.data.tipConsultatie || 'N/A'}</div>
+                          <div><strong>Slot:</strong> {selectedRecordingDetails.firestore.data.selectedSlot ? `${selectedRecordingDetails.firestore.data.selectedSlot.day} ${selectedRecordingDetails.firestore.data.selectedSlot.slot}` : 'N/A'}</div>
+                          <div><strong>Cost:</strong> {selectedRecordingDetails.firestore.data.costConsultatie || 'N/A'}</div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={styles.detailsGrid}>
+                            <div><strong>Titlu conferință:</strong> {selectedRecordingDetails.firestore.data.titlu || 'N/A'}</div>
+                            <div><strong>Data început:</strong> {selectedRecordingDetails.firestore.data.dataInceput || 'N/A'}</div>
+                            <div><strong>Ora început:</strong> {selectedRecordingDetails.firestore.data.oraInceput || 'N/A'}</div>
+                            <div><strong>Participanți:</strong> {selectedRecordingDetails.firestore.data.participanti?.length || 0}</div>
+                          </div>
+                          {Array.isArray(selectedRecordingDetails.firestore.data.participanti) && selectedRecordingDetails.firestore.data.participanti.length > 0 && (
+                            <div style={{ marginTop: '12px' }}>
+                              <h5 style={{ margin: '8px 0' }}>👥 Lista participanți</h5>
+                              <div style={styles.tracksContainer}>
+                                {selectedRecordingDetails.firestore.data.participanti.map((p, idx) => (
+                                  <div key={idx} style={styles.trackItem}>
+                                    <div><strong>Nume:</strong> {p?.nume || 'N/A'}</div>
+                                    <div><strong>Email:</strong> {p?.email || 'N/A'}</div>
+                                    {p?.isGuestUser !== undefined && (
+                                      <div><strong>Guest:</strong> {p.isGuestUser ? 'Da' : 'Nu'}</div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Timing Info */}
                   <div style={styles.detailsSection}>
                     <h4>⏰ Informații timp</h4>
@@ -516,8 +598,23 @@ const AdminRecordings = () => {
                     Închide
                   </button>
                   <button 
+                    onClick={() => resendDefaultEmails(selectedRecordingDetails.id)}
+                    style={{...styles.sendButton, background: '#28a745', opacity: resendingDefault ? 0.7 : 1}}
+                    disabled={selectedRecordingDetails.status !== 'finished' || resendingDefault}
+                  >
+                    {resendingDefault ? '⏳ Se trimite...' : '📧 Trimite automat'}
+                  </button>
+                  <button 
                     onClick={() => {
                       setSelectedRecording(selectedRecordingDetails);
+                      // Prefill email for consultation if available
+                      if (selectedRecordingDetails.firestore?.type === 'consultation') {
+                        setEmailForm((prev) => ({
+                          ...prev,
+                          customEmail: selectedRecordingDetails.firestore.data.email || prev.customEmail,
+                          customName: selectedRecordingDetails.firestore.data.nume || prev.customName
+                        }));
+                      }
                       setDetailsModal(false);
                       setEmailModal(true);
                     }}
@@ -610,6 +707,20 @@ const AdminRecordings = () => {
           </div>
         )}
       </div>
+      {toast.visible && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,
+          background: toast.type === 'success' ? '#28a745' : toast.type === 'error' ? '#dc3545' : '#17a2b8',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: 8,
+          boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+        }}>
+          {toast.message}
+        </div>
+      )}
     </>
   );
 };

@@ -1,3 +1,30 @@
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin if not already initialized
+if (!getApps().length) {
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
+    });
+  } catch (e) {
+    // non-fatal
+    console.error('[RECORDING-DETAILS] Firebase Admin init failed:', e.message);
+  }
+}
+
+const adminDb = (() => {
+  try {
+    return getFirestore();
+  } catch {
+    return null;
+  }
+})();
+
 export default async function handler(req, res) {
   const { id } = req.query;
 
@@ -131,6 +158,55 @@ async function getRecordingDetails(req, res, recordingId) {
       // Complete raw data
       rawData: recording
     };
+
+    // Optionally enrich with Firestore data
+    if (adminDb && documentId && sessionType !== 'unknown') {
+      try {
+        if (sessionType === 'consultation') {
+          const docRef = adminDb.collection('RezervariConsultatii').doc(documentId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            const data = snap.data();
+            detailedInfo.firestore = {
+              type: 'consultation',
+              data: {
+                nume: data.nume || null,
+                prenume: data.prenume || null,
+                email: data.email || null,
+                telefon: data.telefon || null,
+                categorie: data.categorie || null,
+                tipConsultatie: data.tipConsultatie || null,
+                selectedSlot: data.selectedSlot || null,
+                adresaClient: data.adresaClient || null,
+                costConsultatie: data.costConsultatie || null,
+                meetingCode: data.meetingCode || null,
+                session_id: data.session_id || null,
+                recording: data.recording || null
+              }
+            };
+          }
+        } else if (sessionType === 'conference') {
+          const confRef = adminDb.collection('ConferinteGrup').doc(documentId);
+          const snap = await confRef.get();
+          if (snap.exists) {
+            const data = snap.data();
+            detailedInfo.firestore = {
+              type: 'conference',
+              data: {
+                titlu: data.titlu || null,
+                descriere: data.descriere || null,
+                dataInceput: data.dataInceput || data.dataIncepere || null,
+                oraInceput: data.oraInceput || data.oraIncepere || null,
+                participanti: Array.isArray(data.participanti) ? data.participanti : [],
+                recording: data.recording || null
+              }
+            };
+          }
+        }
+      } catch (e) {
+        console.error('💥 [RECORDING-DETAILS] Firestore enrichment failed:', e.message);
+      }
+    }
 
     console.log('✅ [RECORDING-DETAILS] Successfully fetched detailed info:', {
       recordingId,
