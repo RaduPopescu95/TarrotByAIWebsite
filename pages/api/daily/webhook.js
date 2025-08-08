@@ -155,7 +155,7 @@ async function handleRecordingReadyToDownload(webhookData) {
     });
 
     // Generate temporary download link (12 hours validity)
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cristinazurba.com' || 'http://localhost:3000';
     const linkResponse = await fetch(`${baseUrl}/api/daily/get-recording-link`, {
       method: 'POST',
       headers: {
@@ -188,60 +188,138 @@ async function handleRecordingReadyToDownload(webhookData) {
       // Continue anyway - we'll update Firebase and try to send email without link
     }
 
-    // Update Firebase with recording ready status
-    const reservationRef = db.collection('RezervariConsultatii').doc(documentId);
-    await reservationRef.update({
-      'recording.status': 'ready',
-      'recording.dailyRecordingId': recordingId,
-      'recording.downloadUrl': downloadLink || 'LINK_GENERATION_FAILED',
-      'recording.linkExpires': linkExpires ? new Date(linkExpires * 1000) : null,
-      'recording.duration': recording.duration || null,
-      'recording.readyAt': new Date(),
-      'recording.webhookProcessed': true
-    });
+    // Determine session type from roomName
+    const isConference = roomName?.startsWith('conference-');
 
-    logWithDetails('SUCCESS', 'Updated Firebase with recording ready status', {
-      documentId,
-      recordingId: recordingId,
-      downloadLink: downloadLink ? 'PRESENT' : 'MISSING',
-      linkExpires: linkExpires ? new Date(linkExpires * 1000).toISOString() : 'NO_EXPIRY'
-    });
-
-    // Send email to client with recording download link (only if we have a valid link)
-    if (downloadLink) {
-      const emailResponse = await fetch(`${baseUrl}/api/daily/send-recording-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          documentId: documentId,
-          recordingUrl: downloadLink,
-          roomName: roomName,
-          duration: recording.duration,
-          linkExpires: linkExpires
-        }),
+    if (!isConference) {
+      // ===== CONSULTATION FLOW =====
+      const reservationRef = db.collection('RezervariConsultatii').doc(documentId);
+      await reservationRef.update({
+        'recording.status': 'ready',
+        'recording.dailyRecordingId': recordingId,
+        'recording.downloadUrl': downloadLink || 'LINK_GENERATION_FAILED',
+        'recording.linkExpires': linkExpires ? new Date(linkExpires * 1000) : null,
+        'recording.duration': recording.duration || null,
+        'recording.readyAt': new Date(),
+        'recording.webhookProcessed': true
       });
 
-      const emailResult = await emailResponse.json();
-      
-      if (emailResult.success) {
-        logWithDetails('SUCCESS', 'Recording email sent successfully', {
-          documentId,
-          messageId: emailResult.messageId,
-          recipientEmail: emailResult.recipientEmail
+      logWithDetails('SUCCESS', 'Updated Firebase with recording ready status (consultation)', {
+        documentId,
+        recordingId: recordingId,
+        downloadLink: downloadLink ? 'PRESENT' : 'MISSING',
+        linkExpires: linkExpires ? new Date(linkExpires * 1000).toISOString() : 'NO_EXPIRY'
+      });
+
+      // Send email to client with recording download link (only if we have a valid link)
+      if (downloadLink) {
+        const emailResponse = await fetch(`${baseUrl}/api/daily/send-recording-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            documentId: documentId,
+            recordingUrl: downloadLink,
+            roomName: roomName,
+            duration: recording.duration,
+            linkExpires: linkExpires
+          }),
         });
+
+        const emailResult = await emailResponse.json();
+        
+        if (emailResult.success) {
+          logWithDetails('SUCCESS', 'Recording email sent successfully (consultation)', {
+            documentId,
+            messageId: emailResult.messageId,
+            recipientEmail: emailResult.recipientEmail
+          });
+        } else {
+          logWithDetails('ERROR', 'Failed to send recording email (consultation)', {
+            documentId,
+            error: emailResult.error
+          });
+        }
       } else {
-        logWithDetails('ERROR', 'Failed to send recording email', {
+        logWithDetails('ERROR', 'Cannot send email - no valid download link generated (consultation)', {
           documentId,
-          error: emailResult.error
+          recordingId: recordingId
         });
       }
     } else {
-      logWithDetails('ERROR', 'Cannot send email - no valid download link generated', {
+      // ===== CONFERENCE FLOW =====
+      // Update conference doc with recording meta
+      const conferenceRef = db.collection('ConferinteGrup').doc(documentId);
+      await conferenceRef.update({
+        'recording.status': 'ready',
+        'recording.dailyRecordingId': recordingId,
+        'recording.downloadUrl': downloadLink || 'LINK_GENERATION_FAILED',
+        'recording.linkExpires': linkExpires ? new Date(linkExpires * 1000) : null,
+        'recording.duration': recording.duration || null,
+        'recording.readyAt': new Date(),
+        'recording.webhookProcessed': true
+      });
+
+      logWithDetails('SUCCESS', 'Updated Firebase with recording ready status (conference)', {
         documentId,
         recordingId: recordingId
       });
+
+      // Send email to all participants in ConferinteGrup.participanti
+      const confDoc = await conferenceRef.get();
+      const confData = confDoc.exists ? confDoc.data() : null;
+      const participants = Array.isArray(confData?.participanti) ? confData.participanti : [];
+
+      if (!participants.length) {
+        logWithDetails('WARNING', 'No participants found in conference document', { documentId });
+      }
+
+      if (downloadLink && participants.length) {
+        for (const p of participants) {
+          const email = p?.email;
+          if (!email) continue;
+          try {
+            // Reuse existing endpoint that generates a fresh access link per email
+            const resp = await fetch(`${baseUrl}/api/daily/send-recording-custom`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                recordingId: recordingId,
+                customEmail: email,
+                customName: p?.nume || 'Participant',
+                roomName: roomName,
+                duration: recording.duration
+              })
+            });
+            const result = await resp.json();
+            if (resp.ok && result.success) {
+              logWithDetails('SUCCESS', 'Conference recording email sent', {
+                documentId,
+                participantEmail: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
+                messageId: result.messageId
+              });
+            } else {
+              logWithDetails('ERROR', 'Failed to send conference recording email', {
+                documentId,
+                participantEmail: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
+                error: result.error || 'unknown'
+              });
+            }
+          } catch (e) {
+            logWithDetails('ERROR', 'Exception sending conference recording email', {
+              documentId,
+              participantEmail: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
+              error: e.message
+            });
+          }
+        }
+      } else if (!downloadLink) {
+        logWithDetails('ERROR', 'Cannot send conference emails - no valid download link generated', {
+          documentId,
+          recordingId: recordingId
+        });
+      }
     }
 
   } catch (error) {
