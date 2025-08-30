@@ -2,6 +2,7 @@
 // Bypass-ează restricțiile de autentificare client-side
 
 import { getDatabase } from "firebase-admin/database";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 
 // Initialize Firebase Admin SDK
@@ -52,6 +53,24 @@ export default async function handler(req, res) {
     }
 
     console.log(`✅ [API] Successfully fetched ${arr.length} items for ${category}/${key}`);
+
+    // Firestore logging: only date/time and an incrementing counter per (category,key)
+    try {
+      const fs = getFirestore();
+      const docId = `${category}__${key}`.replace(/[\s/]+/g, "_");
+      await fs
+        .collection('PublicTarotFetchesWebsite')
+        .doc(docId)
+        .set(
+          {
+            count: FieldValue.increment(1),
+            lastFetchedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+    } catch (logError) {
+      console.error('⚠️ [API] Failed to write fetch log to Firestore:', logError.message);
+    }
     
     res.status(200).json({ arr });
   } catch (error) {
