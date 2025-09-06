@@ -8,9 +8,21 @@ function Copyright() {
   const { t } = useTranslation("common");
 
   return (
-    <p style={styles.copyright}>
-      &copy;&nbsp; 2024. Cristina Zurba. {t("allRightsReserved")}.
-    </p>
+    <>
+      <p style={styles.copyright}>
+        &copy;&nbsp; 2024. Cristina Zurba. {t("allRightsReserved")}.
+      </p>
+      <p style={{ ...styles.copyright, marginTop: 6 }}>
+        <a
+          href="https://www.webdynamicx.ro"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#ffffff", textDecoration: "underline" }}
+        >
+          Dezvoltat de catre WebDynamicx
+        </a>
+      </p>
+    </>
   );
 }
 

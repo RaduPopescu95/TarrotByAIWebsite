@@ -120,6 +120,10 @@ const Footer = (props) => {
                         Cristina Zurba.
                       </Link>{" "}
                       Toate drepturile rezervate
+                      {" "}- {" "}
+                      <a href="https://www.webdynamicx.ro" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                        Dezvoltat de catre WebDynamicx
+                      </a>
                     </p>
                   </div>
                 </div>
