@@ -40,12 +40,8 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { handleSignOut } from "../../utils/signout";
 import { Avatar } from "@mui/material";
 import Image from "next/image";
-import { authentication } from "../../firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { handleLogout } from "../../utils/authUtils";
 import { useParams, useSearchParams } from "next/navigation";
-import { useAuth } from "../../context/AuthContext";
-import { ADMIN_UIDS } from "../../data/constants";
+import LocalPasswordGate, { clearDashboardAccess } from "./LocalPasswordGate";
 
 const drawerWidth = 240;
 
@@ -104,9 +100,6 @@ export default function CustomDrawer(props) {
   const [drawerText, setDrawerText] = React.useState(
     props.selectedItem ? props.selectedItem : ""
   );
-  const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth()
-
-
   const router = useRouter();
   const toggleDrawer = () => {
     setOpen(!open);
@@ -126,32 +119,7 @@ export default function CustomDrawer(props) {
     }
   };
 
-  React.useEffect(() => {
-    const authenticated = authentication;
-    onAuthStateChanged(authenticated, (user) => {
-      if (user) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/auth.user
-        const uid = user.uid;
-        console.log("is user.......");
-        if (ADMIN_UIDS.includes(uid)) {
-          router.push(router.asPath);
-        } else {
-          // setCurrentUser(null);
-          // setUserData(null);
-          // handleLogout();
-          // router.push("/signin");
-        }
-        // ...
-      } else {
-        console.log("is user......no.");
-        // router.push("/signin");
-
-        // User is signed out
-        // ...
-      }
-    });
-  }, []);
+  // Firebase checks removed; access is handled by LocalPasswordGate
 
   return (
     <ThemeProvider theme={defaultTheme}>
@@ -573,11 +541,7 @@ export default function CustomDrawer(props) {
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({ screen: "Log out", text: "Log out" })
-                }
-              >
+              <ListItemButton onClick={() => { clearDashboardAccess(); router.replace("/dashboard"); }}>
                 <ListItemIcon
                   sx={{
                     color: "white",

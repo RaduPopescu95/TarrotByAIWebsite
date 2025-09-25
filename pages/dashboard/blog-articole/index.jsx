@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
+import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 import Head from "next/head";
 import BlogArticole from "../../../components/Tables/BlogArticole";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
@@ -50,9 +51,11 @@ export default function index(props) {
       <Head>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <CustomDrawer selectedItem={"Articole"} drawerText={"Articole"}>
-        <BlogArticole articles={articles} />
-      </CustomDrawer>
+      <LocalPasswordGate>
+        <CustomDrawer selectedItem={"Articole"} drawerText={"Articole"}>
+          <BlogArticole articles={articles} />
+        </CustomDrawer>
+      </LocalPasswordGate>
     </>
   );
 }

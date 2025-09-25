@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
+import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
 import Head from "next/head";
 import CartiViitorTable from "../../../components/Tables/CartiViitorTable";
@@ -11,12 +12,14 @@ export default function index() {
       <Head>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <CustomDrawer
-        selectedItem={"Poza API Elai.io"}
-        drawerText={"Poza API Elai.io"}
-      >
-        <PozaApi />
-      </CustomDrawer>
+      <LocalPasswordGate>
+        <CustomDrawer
+          selectedItem={"Poza API Elai.io"}
+          drawerText={"Poza API Elai.io"}
+        >
+          <PozaApi />
+        </CustomDrawer>
+      </LocalPasswordGate>
     </>
   );
 }
