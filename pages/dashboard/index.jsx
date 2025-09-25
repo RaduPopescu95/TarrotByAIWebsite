@@ -1,17 +1,7 @@
-import { CssBaseline, Box } from "@mui/material";
+import { CssBaseline } from "@mui/material";
 import Head from "next/head";
 import LocalPasswordGate from "../../components/Dashboard/LocalPasswordGate";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
-
-function Redirector() {
-  const router = useRouter();
-  useEffect(() => {
-    router.prefetch("/dashboard/blog-articole");
-    router.replace("/dashboard/blog-articole");
-  }, [router]);
-  return null;
-}
+import CustomDrawer from "../../components/Dashboard/CustomDrawer";
 
 export default function MainScreen() {
   return (
@@ -20,7 +10,8 @@ export default function MainScreen() {
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <LocalPasswordGate>
-        <Redirector />
+        <CssBaseline />
+        <CustomDrawer />
       </LocalPasswordGate>
     </>
   );

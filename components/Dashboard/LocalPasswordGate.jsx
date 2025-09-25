@@ -34,7 +34,7 @@ function clearToken() {
   } catch (_) {}
 }
 
-export default function LocalPasswordGate({ children, ttlMinutes = 20160 }) {
+export default function LocalPasswordGate({ children, ttlMinutes = 20160, onGranted }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [granted, setGranted] = useState(false);
@@ -66,6 +66,11 @@ export default function LocalPasswordGate({ children, ttlMinutes = 20160 }) {
       writeToken(ttlMinutes);
       setGranted(true);
       setPassword("");
+      try {
+        if (typeof onGranted === "function") {
+          onGranted();
+        }
+      } catch (_) {}
     } else {
       setError("Parolă incorectă");
     }
