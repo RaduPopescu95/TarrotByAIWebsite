@@ -43,6 +43,40 @@ export default function BlogArticole({ articles }) {
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
 
+  // Helper pt. sortare desc după dataProgramata+timpProgramat cu fallback pe firstUploadDate/time sau firstUploadTimestamp
+  const toMs = (x) => {
+    try {
+      if (
+        x?.dataProgramata &&
+        x?.dataProgramata.length > 0 &&
+        x?.timpProgramat &&
+        x?.timpProgramat.length > 0
+      ) {
+        const [dd, mm, yyyy] = x.dataProgramata.split("-").map(Number);
+        const [hh, min] = x.timpProgramat.split(":").map(Number);
+        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
+      }
+      if (x?.firstUploadDate && x?.firstUploadtime) {
+        const [dd, mm, yyyy] = x.firstUploadDate.split("-").map(Number);
+        const [hh, min] = x.firstUploadtime.split(":").map(Number);
+        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
+      }
+      if (x?.firstUploadTimestamp) {
+        if (typeof x.firstUploadTimestamp === "string") {
+          const ms = Date.parse(x.firstUploadTimestamp);
+          if (!Number.isNaN(ms)) return ms;
+        }
+        if (x.firstUploadTimestamp.seconds) {
+          return x.firstUploadTimestamp.seconds * 1000;
+        }
+        if (typeof x.firstUploadTimestamp.toDate === "function") {
+          return x.firstUploadTimestamp.toDate().getTime();
+        }
+      }
+    } catch (e) {}
+    return 0;
+  };
+
   const handleSearchFilter = (value) => {
     const lowerCaseValue = value.toLowerCase();
     const filteredDb = db.filter((item) =>
@@ -199,6 +233,7 @@ export default function BlogArticole({ articles }) {
     timpProgramat,
     dataProgramata
   ) => {
+    console.log("[BlogArticole] handleEdit start");
     console.log("youtubeLink....");
     console.log(youtubeLink);
 
@@ -309,10 +344,12 @@ export default function BlogArticole({ articles }) {
       });
       // Use Promise.all to wait for all promises in the map to resolve
       const updatedData = await Promise.all(updateData);
-      setDb([...updatedData]);
+      console.log("[BlogArticole] handleEdit updatedData length:", updatedData.length);
+      const sorted = [...updatedData].sort((a, b) => toMs(b) - toMs(a));
+      setDb(sorted);
       handleShowDialog();
     } catch (err) {
-      console.log("Error handleEdit...", err);
+      console.log("[BlogArticole] Error handleEdit...", err);
     }
   };
 
@@ -324,6 +361,7 @@ export default function BlogArticole({ articles }) {
     timpProgramat,
     dataProgramata
   ) => {
+    console.log("[BlogArticole] handleUpload start");
     try {
       const image = await uploadImage(
         selectedImages,
@@ -344,18 +382,21 @@ export default function BlogArticole({ articles }) {
         dataProgramata,
       };
 
-      // Folosește await pentru a aștepta finalizarea promisiunii
+      console.log("[BlogArticole] handleUpload payload:", data);
       const dataReturned = await handleUploadFirestore(data, "BlogArticole");
+      console.log("[BlogArticole] handleUpload dataReturned:", dataReturned);
 
       let newData = db;
 
       newData.push(dataReturned);
 
-      setDb([...newData]);
+      const sorted = [...newData].sort((a, b) => toMs(b) - toMs(a));
+      console.log("[BlogArticole] handleUpload new length:", sorted.length);
+      setDb(sorted);
 
       setShowSettings(!showSettings);
     } catch (err) {
-      console.log("Error handleUpload......", err);
+      console.log("[BlogArticole] Error handleUpload......", err);
     }
   };
 
@@ -411,7 +452,7 @@ export default function BlogArticole({ articles }) {
                   <CustomTableContainer
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
-                    db={articles}
+                    db={db}
                     searchedDb={searchedDb}
                     searchValue={searchValue}
                     handleShowDialog={handleShowDialog}

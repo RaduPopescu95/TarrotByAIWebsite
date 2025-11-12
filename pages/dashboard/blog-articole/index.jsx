@@ -13,16 +13,42 @@ export async function getServerSideProps(context) {
 
     const data = await handleGetFirestore("BlogArticole");
 
-    let rawData = [...data];
-    const articles = rawData
-      .filter((article) => article.firstUploadTimestamp) // Filtrăm doar articolele cu firstUploadTimestamp
-      .map((article) => ({
-        ...article,
-        firstUploadTimestamp: new Date(
-          article.firstUploadTimestamp.seconds * 1000
-        ).toISOString(), // Conversie din Firestore Timestamp
-      }))
-      .sort((a, b) => a.id - b.id); // Sortare după ID
+    // Sortează descrescător după data programată (dataProgramata + timpProgramat)
+    // cu fallback pe firstUploadDate/firstUploadtime sau firstUploadTimestamp
+    const toMs = (x) => {
+      try {
+        if (
+          x?.dataProgramata &&
+          x?.dataProgramata.length > 0 &&
+          x?.timpProgramat &&
+          x?.timpProgramat.length > 0
+        ) {
+          const [dd, mm, yyyy] = x.dataProgramata.split("-").map(Number);
+          const [hh, min] = x.timpProgramat.split(":").map(Number);
+          return new Date(yyyy, mm - 1, dd, hh, min).getTime();
+        }
+        if (x?.firstUploadDate && x?.firstUploadtime) {
+          const [dd, mm, yyyy] = x.firstUploadDate.split("-").map(Number);
+          const [hh, min] = x.firstUploadtime.split(":").map(Number);
+          return new Date(yyyy, mm - 1, dd, hh, min).getTime();
+        }
+        if (x?.firstUploadTimestamp) {
+          if (typeof x.firstUploadTimestamp === "string") {
+            const ms = Date.parse(x.firstUploadTimestamp);
+            if (!Number.isNaN(ms)) return ms;
+          }
+          if (x.firstUploadTimestamp.seconds) {
+            return x.firstUploadTimestamp.seconds * 1000;
+          }
+          if (typeof x.firstUploadTimestamp.toDate === "function") {
+            return x.firstUploadTimestamp.toDate().getTime();
+          }
+        }
+      } catch (e) {}
+      return 0;
+    };
+
+    const articles = [...data].sort((a, b) => toMs(b) - toMs(a));
 
     console.log("articles.....", articles[0]);
     return {

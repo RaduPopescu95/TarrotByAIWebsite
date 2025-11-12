@@ -201,8 +201,14 @@ const AvailableTimings = () => {
     setIsLoading(true);
     const data = { yearlySlots, currentYear: activeYear };
     console.log("yearly slots...", data);
-    await handleUploadFirestoreGeneral(data, "YearlySlots").then(() => {
+    await handleUploadFirestoreGeneral(data, "YearlySlots").then((result) => {
       setIsLoading(false);
+      // Actualizăm initialYearlySlots pentru a reseta detecția modificărilor
+      setInitialYearlySlots(JSON.parse(JSON.stringify(yearlySlots)));
+      // Setăm isUpdate cu documentId-ul returnat pentru viitoarele actualizări
+      if (result?.documentId) {
+        setIsUpdate(result.documentId);
+      }
     });
   };
   const handleUpdateInfo = async () => {
@@ -211,6 +217,8 @@ const AvailableTimings = () => {
     console.log("yearly slots...", data);
     await handleUpdateFirestore(`YearlySlots/${isUpdate}`, data).then(() => {
       setIsLoading(false);
+      // Actualizăm initialYearlySlots pentru a reseta detecția modificărilor
+      setInitialYearlySlots(JSON.parse(JSON.stringify(yearlySlots)));
     });
   };
 

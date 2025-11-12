@@ -14,6 +14,7 @@ import { useAuth } from "../../../../context/AuthContext";
 moment.locale("ro");
 
 const Booking = (props) => {
+  console.log("🎯🎯🎯 BOOKING COMPONENT LOADED 🎯🎯🎯");
   const [activeYear, setActiveYear] = useState(new Date().getFullYear()); // Anul activ curent
   const [yearlySlots, setYearlySlots] = useState({}); // inițializăm cu null pentru a verifica dacă sloturile sunt generate
   const [activeDay, setActiveDay] = useState(null); // ziua curentă pentru modalul de adăugare slot
@@ -58,19 +59,46 @@ const Booking = (props) => {
   };
 
   // Function to update yearlySlots with reservedSlots
-  const updateYearlySlotsWithReservations = (yearlySlots, rezervari) => {
+  const updateYearlySlotsWithReservations = (yearlySlots, rezervari, targetYear) => {
+    // Facem o copie deep a yearlySlots pentru a nu modifica obiectul original
+    const updatedSlots = JSON.parse(JSON.stringify(yearlySlots));
+    
+    // Filtrăm rezervările doar pentru anul țintă
+    const rezervariForYear = rezervari.filter((rezervare) => {
+      if (!rezervare || !rezervare.selectedSlot) return false;
+      
+      const selectedSlot = rezervare.selectedSlot;
+      
+      // Dacă rezervarea are currentYear definit, verificăm dacă se potrivește
+      if (selectedSlot.currentYear !== undefined && selectedSlot.currentYear !== null) {
+        // Convertim ambele la numere pentru a evita probleme de tip (string vs number)
+        const rezervareYear = parseInt(selectedSlot.currentYear, 10);
+        const targetYearNum = parseInt(targetYear, 10);
+        return rezervareYear === targetYearNum;
+      }
+      
+      // Pentru rezervările vechi fără currentYear:
+      // Le afișăm DOAR pentru anul CURENT (presupunem că sunt din anul curent sau trecut)
+      // NU le afișăm pentru anii viitori (2026+)
+      const currentYear = new Date().getFullYear();
+      return targetYear === currentYear;
+    });
+
+    console.log(`[updateYearlySlotsWithReservations] Procesăm ${rezervariForYear.length} rezervări pentru anul ${targetYear}`);
+    
     // Iterăm prin fiecare rezervare
-    rezervari.forEach((rezervare) => {
+    let rezervariProcesate = 0;
+    rezervariForYear.forEach((rezervare) => {
       if (!rezervare || !rezervare.selectedSlot) return;
       const { day, slot } = rezervare.selectedSlot;
       if (!day || !slot) return;
       // Separăm luna și ziua din `day` (exemplu: "8-9" -> luna 8, ziua 9)
       const [month, dayOfMonth] = day.split("-").map(Number);
 
-      // Căutăm luna corespunzătoare în `yearlySlots`
-      if (yearlySlots[month]) {
+      // Căutăm luna corespunzătoare în `updatedSlots`
+      if (updatedSlots[month]) {
         // Căutăm ziua corespunzătoare în lista de zile din luna respectivă
-        const dayObject = yearlySlots[month].find((d) => d.day === dayOfMonth);
+        const dayObject = updatedSlots[month].find((d) => d.day === dayOfMonth);
 
         if (dayObject) {
           // Adăugăm `reservedSlots` dacă nu există deja
@@ -81,12 +109,14 @@ const Booking = (props) => {
           // Adăugăm ora rezervată în `reservedSlots`
           if (!dayObject.reservedSlots.includes(slot)) {
             dayObject.reservedSlots.push(slot);
+            rezervariProcesate++;
           }
         }
       }
     });
 
-    return yearlySlots;
+    console.log(`[updateYearlySlotsWithReservations] Am adăugat ${rezervariProcesate} sloturi rezervate`);
+    return updatedSlots;
   };
 
   useEffect(() => {
@@ -95,9 +125,26 @@ const Booking = (props) => {
       const data = await handleGetYearlySlots();
       const rezervari = await handleReservedSlots();
 
+      console.log(`[Calendar] Total rezervări în baza de date: ${rezervari.length}`);
+      console.log(`[Calendar] Anul activ: ${activeYear}`);
+      
+      // Verificăm câte rezervări au currentYear setat
+      const rezervariCuAn = rezervari.filter(r => r.selectedSlot?.currentYear).length;
+      const rezervariFaraAn = rezervari.length - rezervariCuAn;
+      console.log(`[Calendar] Rezervări cu currentYear: ${rezervariCuAn}, fără currentYear: ${rezervariFaraAn}`);
+      
+      // Verificăm distribuția pe ani
+      const aniDistributie = {};
+      rezervari.forEach(r => {
+        const an = r.selectedSlot?.currentYear || 'FĂRĂ AN';
+        aniDistributie[an] = (aniDistributie[an] || 0) + 1;
+      });
+      console.log(`[Calendar] Distribuție rezervări pe ani:`, JSON.stringify(aniDistributie, null, 2));
+
       const updatedYearlySlots = updateYearlySlotsWithReservations(
         data ? data.yearlySlots : generateEmptyYearWithSlots(activeYear),
-        rezervari
+        rezervari,
+        activeYear  // Pasăm anul activ pentru filtrare
       );
       setYearlySlots(updatedYearlySlots);
       setIsLoading(false);
