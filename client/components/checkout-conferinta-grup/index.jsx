@@ -33,6 +33,18 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
   const maintenanceKey = router.query?.maintenance_key;
   const hasBypassKey = !!maintenanceKey;
 
+  // Show maintenance banner immediately (not only after clicking "pay")
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (maintenanceEnabled && !hasBypassKey) {
+      setMaintenanceMessage(
+        "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+      );
+      return;
+    }
+    setMaintenanceMessage("");
+  }, [router.isReady, maintenanceEnabled, hasBypassKey]);
+
   // Form data pentru participare
   const [formData, setFormData] = useState({
     nume: "",
@@ -999,8 +1011,18 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                               type="button"
                               className={`btn ${!termsAccepted ? 'btn-secondary' : 'btn-primary'} btn-lg w-100`}
                               onClick={createStripeCheckoutSession}
-                              disabled={processing || !termsAccepted}
-                              title={!termsAccepted ? "Trebuie să acceptați termenii și condițiile pentru a continua" : ""}
+                              disabled={
+                                processing ||
+                                !termsAccepted ||
+                                (maintenanceEnabled && !hasBypassKey)
+                              }
+                              title={
+                                maintenanceEnabled && !hasBypassKey
+                                  ? "Plățile sunt momentan în mentenanță"
+                                  : !termsAccepted
+                                    ? "Trebuie să acceptați termenii și condițiile pentru a continua"
+                                    : ""
+                              }
                             >
                               {processing ? (
                                 <>

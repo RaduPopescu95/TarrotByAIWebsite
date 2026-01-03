@@ -72,6 +72,18 @@ const Checkout = (props) => {
   const maintenanceKey = router.query?.maintenance_key;
   const hasBypassKey = !!maintenanceKey;
 
+  // Show maintenance banner immediately (not only after clicking "pay")
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (maintenanceEnabled && !hasBypassKey) {
+      setMaintenanceMessage(
+        "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+      );
+      return;
+    }
+    setMaintenanceMessage("");
+  }, [router.isReady, maintenanceEnabled, hasBypassKey]);
+
   const handleGetCategories = async () => {
     const data = await handleGetFirestore("CategoriiConsultatii");
     return data[0];
@@ -744,7 +756,9 @@ const Checkout = (props) => {
                         <button
                           type="submit"
                           className="btn btn-primary submit-btn"
-                          disabled={!termsAccepted} // Disable dacă checkbox-ul nu e bifat
+                          disabled={
+                            !termsAccepted || (maintenanceEnabled && !hasBypassKey)
+                          } // Disable dacă checkbox-ul nu e bifat sau e mentenanță
                         >
                           Finalizeaza rezervare
                         </button>
