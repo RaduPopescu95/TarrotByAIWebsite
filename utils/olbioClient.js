@@ -68,15 +68,14 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 				? Number(process.env.OLBIO_DEFAULT_VAT_RATE)
 				: 19;
 
-		// Gross amount (RON)
-		const grossAmount =
+		// Gross amount (RON) – keep 2 decimals to avoid mismatch vs Stripe
+		const grossAmountRaw =
 			typeof session?.amount_total === "number"
-				? Math.round(session.amount_total / 100)
+				? session.amount_total / 100
 				: rezervareData?.costConsultatie
 				? Number(rezervareData.costConsultatie)
 				: 0;
-		// Net (without VAT) with 4 decimals
-		const netPrice = Math.round((grossAmount / (1 + vatRate / 100)) * 10000) / 10000;
+		const grossAmount = Math.round((Number(grossAmountRaw) || 0) * 100) / 100;
 
 		// Customer data (corporate vs individual)
 		const buyerType = m.buyerType || ""; // company | person
@@ -104,7 +103,7 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 		const clientCounty = m.buyerCounty || "";
 		const clientCountry = m.buyerCountry || "Romania";
 
-		// Product line (displayed on invoice)
+		// Product line (displayed on invoice) – keep it short (no extra "Categorie/Tip/Zi/Ora" lines)
 		const categorieName =
 			rezervareData?.categorie?.about ||
 			rezervareData?.categorie?.name ||
@@ -117,10 +116,7 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 				? `Consultație tip conferință pentru ${conferinta?.titlu || "Conferință"}`
 				: `Consultație pentru ${categorieName}${tipConsultatieLabel ? ` (${tipConsultatieLabel})` : ""}`;
 
-		const description =
-			type === "conferinta"
-				? `Consultație tip conferință.\nTitlu: ${conferinta?.titlu || ""}\nPerioadă: ${conferinta?.dataInceput || ""} - ${conferinta?.dataFinal || ""}\nInterval orar: ${conferinta?.oraInceput || ""} - ${conferinta?.oraFinal || ""}`
-				: `Consultație individuală.\nCategorie: ${categorieName}\nTip: ${tipConsultatieLabel}\nZi: ${rezervareData?.selectedSlot?.day || ""}\nOra: ${rezervareData?.selectedSlot?.slot || ""}`;
+		const description = "";
 
 		// Build client block per Oblio schema
 		const clientBlock =
@@ -162,11 +158,12 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 				{
 					name: itemName,
 					description,
-					price: netPrice, // without VAT
+					// Send gross with VAT included so invoice total matches Stripe exactly (e.g. 2.00 stays 2.00)
+					price: grossAmount,
 					measuringUnit: m.measureUnit || "bucată",
 					vatName: "Normala",
 					vatPercentage: vatRate,
-					vatIncluded: false,
+					vatIncluded: 1,
 					quantity: 1,
 					productType: "Serviciu",
 				},
