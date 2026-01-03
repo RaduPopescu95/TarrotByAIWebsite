@@ -3,8 +3,31 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function isMaintenanceEnabled() {
+  return String(process.env.PAYMENTS_MAINTENANCE_ENABLED || "").toLowerCase() === "true";
+}
+
+function getMaintenanceKeyFromReq(req) {
+  const q = req.query?.maintenance_key;
+  if (Array.isArray(q)) return q[0] || "";
+  return q || "";
+}
+
 export default async (req, res) => {
   if (req.method === "POST") {
+    // Maintenance gate (server-side hard block)
+    if (isMaintenanceEnabled()) {
+      const expected = process.env.PAYMENTS_MAINTENANCE_KEY || "";
+      const provided = getMaintenanceKeyFromReq(req);
+      if (!expected || provided !== expected) {
+        return res.status(503).json({
+          error: "maintenance",
+          message:
+            "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu.",
+        });
+      }
+    }
+
     const {
       costConsultatie,
       nume,
@@ -16,6 +39,32 @@ export default async (req, res) => {
       selectedSlot,
       owner_uid,
       adresaClient,
+      // Optional buyer/company metadata for invoicing/e-Factura
+      buyerType, // "company" | "person"
+      buyerCif,
+      buyerCnp,
+      buyerCompanyName,
+      buyerRegCom,
+      buyerVatPayer, // boolean
+      buyerStreet,
+      buyerCity,
+      buyerCounty,
+      buyerPostalCode,
+      buyerCountry,
+      buyerContactName,
+      buyerEmail: buyerEmailMeta,
+      buyerPhone: buyerPhoneMeta,
+      buyerIBAN,
+      buyerBankName,
+      // Line/item and invoice options
+      serviceCode,
+      vatRate,
+      measureUnit,
+      measureCode,
+      paymentMethod,
+      sendInvoiceEmail,
+      eInvoice,
+      dueDays,
     } = req.body;
 
     try {
@@ -55,6 +104,32 @@ export default async (req, res) => {
           selectedSlot: JSON.stringify(selectedSlot),
           owner_uid,
           adresaClient,
+          // Buyer/company metadata (only simple strings/booleans allowed in Stripe metadata)
+          ...(buyerType ? { buyerType } : {}),
+          ...(buyerCif ? { buyerCif } : {}),
+          ...(buyerCnp ? { buyerCnp } : {}),
+          ...(buyerCompanyName ? { buyerCompanyName } : {}),
+          ...(buyerRegCom ? { buyerRegCom } : {}),
+          ...(typeof buyerVatPayer !== "undefined" ? { buyerVatPayer: String(!!buyerVatPayer) } : {}),
+          ...(buyerStreet ? { buyerStreet } : {}),
+          ...(buyerCity ? { buyerCity } : {}),
+          ...(buyerCounty ? { buyerCounty } : {}),
+          ...(buyerPostalCode ? { buyerPostalCode } : {}),
+          ...(buyerCountry ? { buyerCountry } : {}),
+          ...(buyerContactName ? { buyerContactName } : {}),
+          ...(buyerEmailMeta ? { buyerEmail: buyerEmailMeta } : {}),
+          ...(buyerPhoneMeta ? { buyerPhone: buyerPhoneMeta } : {}),
+          ...(buyerIBAN ? { buyerIBAN } : {}),
+          ...(buyerBankName ? { buyerBankName } : {}),
+          // Line and invoice options
+          ...(serviceCode ? { serviceCode } : {}),
+          ...(typeof vatRate !== "undefined" ? { vatRate: String(vatRate) } : {}),
+          ...(measureUnit ? { measureUnit } : {}),
+          ...(measureCode ? { measureCode } : {}),
+          ...(paymentMethod ? { paymentMethod } : {}),
+          ...(typeof sendInvoiceEmail !== "undefined" ? { sendInvoiceEmail: String(!!sendInvoiceEmail) } : {}),
+          ...(typeof eInvoice !== "undefined" ? { eInvoice: String(!!eInvoice) } : {}),
+          ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {}),
         },
         // Adaugă opțiunea pentru crearea unei facturi
         invoice_creation: {

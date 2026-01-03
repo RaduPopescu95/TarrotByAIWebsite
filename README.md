@@ -32,3 +32,24 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+## Payments maintenance mode (Stripe)
+
+You can temporarily disable Stripe checkout session creation (both individual consultations and group conferences) while doing maintenance/testing.
+
+### Environment variables
+
+- `PAYMENTS_MAINTENANCE_ENABLED`: `true` or `false`
+- `PAYMENTS_MAINTENANCE_KEY`: a long random string used as a bypass password via URL query param
+- `NEXT_PUBLIC_PAYMENTS_MAINTENANCE_ENABLED`: `true` or `false` (optional, used only to show the maintenance banner in the UI without calling the API)
+
+### How it works
+
+- When maintenance is enabled, the API endpoints will return `503` unless a correct bypass key is provided:
+  - `/api/create-checkout-session?maintenance_key=...`
+  - `/api/create-checkout-session-conferinta?maintenance_key=...`
+
+- To bypass in the browser during testing, open the checkout page with:
+  - `?maintenance_key=<PAYMENTS_MAINTENANCE_KEY>`
+
+Users without the key will see a maintenance message and will be prevented from starting payment.

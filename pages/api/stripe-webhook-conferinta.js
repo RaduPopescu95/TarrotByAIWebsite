@@ -1,6 +1,7 @@
 import { buffer } from "micro";
 import Stripe from 'stripe';
 import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestoreGeneral } from '../../utils/firestoreUtils';
+import { createOlbioInvoice } from '../../utils/olbioClient';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
@@ -286,6 +287,25 @@ async function handleSuccessfulPayment(session, requestId) {
       console.error(`💥 [${requestId}] [${paymentId}] Eroare la salvarea plății:`, paymentError.message);
       console.error(`💥 [${requestId}] [${paymentId}] Payment error stack:`, paymentError.stack);
       // Nu opresc procesul pentru această eroare
+    }
+
+    // 6.1. Creează factura în Olbio (fail-safe)
+    try {
+      console.log(`🧾 [${requestId}] [${paymentId}] Creez factură în Olbio (conferinta)...`);
+      const invoice = await createOlbioInvoice({
+        type: "conferinta",
+        rezervareData: null,
+        session,
+        conferinta,
+        participant: newParticipant
+      });
+      if (invoice?.id || invoice?.documentId) {
+        console.log(`🧾 [${requestId}] [${paymentId}] Factură creată cu succes în Olbio`, invoice?.id || invoice?.documentId);
+      } else {
+        console.log(`🧾 [${requestId}] [${paymentId}] Factură Olbio nu a returnat ID (verifică logs/config).`);
+      }
+    } catch (olbioErr) {
+      console.error(`💥 [${requestId}] [${paymentId}] Eroare creare factură Olbio:`, olbioErr?.message || olbioErr);
     }
 
     // 7. Trimit email de confirmare cu link-ul de acces

@@ -36,6 +36,15 @@ const Checkout = (props) => {
   const [tipConsultatie, setTipConsultatie] = useState("");
   const [costConsultatie, setCostConsultatie] = useState("100");
   const [adresa, setAdresa] = useState("");
+  // Date facturare (Oblio)
+  const [billingType, setBillingType] = useState("individual"); // "individual" | "corporate"
+  const [billingCity, setBillingCity] = useState("");
+  const [billingCounty, setBillingCounty] = useState("");
+  const [billingCountry, setBillingCountry] = useState("Romania");
+  const [companyName, setCompanyName] = useState("");
+  const [companyVAT, setCompanyVAT] = useState("");
+  const [companyReg, setCompanyReg] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
   const [language, setLanguage] = useState("ro"); // Poate fi "ro" pentru română sau "en" pentru engleză
 
   const [nume, setNume] = useState(
@@ -52,10 +61,16 @@ const Checkout = (props) => {
   const router = useRouter();
   const { activeYear } = router.query; // Extrage activeYear din query
   const [alert, setAlert] = useState({ type: "", message: "" });
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
 
   const stripePromise = loadStripe(
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   );
+  const maintenanceEnabled =
+    String(process.env.NEXT_PUBLIC_PAYMENTS_MAINTENANCE_ENABLED || "").toLowerCase() ===
+    "true";
+  const maintenanceKey = router.query?.maintenance_key;
+  const hasBypassKey = !!maintenanceKey;
 
   const handleGetCategories = async () => {
     const data = await handleGetFirestore("CategoriiConsultatii");
@@ -116,6 +131,13 @@ const Checkout = (props) => {
     if (!categorie?.about) newErrors.categorie = true;
     if (!tipConsultatie) newErrors.tipConsultatie = true;
     if (!adresa) newErrors.adresa = true;
+    if (!billingCity) newErrors.billingCity = true;
+    if (!billingCounty) newErrors.billingCounty = true;
+    if (billingType === "corporate") {
+      if (!companyName) newErrors.companyName = true;
+      if (!companyVAT) newErrors.companyVAT = true;
+      if (!companyAddress) newErrors.companyAddress = true;
+    }
 
     // Validare număr de telefon cu sugestii de format
     let prefixSugerat = "";
@@ -148,6 +170,14 @@ const Checkout = (props) => {
       return;
     }
 
+    // UI maintenance block (prevents calling API; server also blocks)
+    if (maintenanceEnabled && !hasBypassKey) {
+      setMaintenanceMessage(
+        "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+      );
+      return;
+    }
+
     // Continuă cu trimiterea formularului dacă nu există erori
     setIsLoading(true);
     const stripe = await stripePromise;
@@ -172,7 +202,13 @@ const Checkout = (props) => {
         owner_uid,
         adresaClient: adresa,
       });
-      const response = await fetch("/api/create-checkout-session", {
+      const apiUrl = hasBypassKey
+        ? `/api/create-checkout-session?maintenance_key=${encodeURIComponent(
+            String(maintenanceKey)
+          )}`
+        : "/api/create-checkout-session";
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -188,8 +224,37 @@ const Checkout = (props) => {
           selectedSlot,
           owner_uid,
           adresaClient: adresa,
+          // Oblio buyer data
+          buyerType: billingType === "corporate" ? "company" : "person",
+          buyerCompanyName: billingType === "corporate" ? companyName : undefined,
+          buyerCif: billingType === "corporate" ? companyVAT : undefined,
+          buyerRegCom: billingType === "corporate" ? companyReg : undefined,
+          buyerStreet: billingType === "corporate" ? companyAddress : adresa,
+          buyerCity: billingCity,
+          buyerCounty: billingCounty,
+          buyerCountry: billingCountry,
+          buyerEmail: email,
+          buyerPhone: telefon,
+          buyerContactName: nume,
+          // Invoice options
+          vatRate: 19,
+          measureUnit: "bucată",
+          sendInvoiceEmail: true,
+          eInvoice: true,
         }),
       });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        if (response.status === 503 && errJson?.error === "maintenance") {
+          setMaintenanceMessage(
+            errJson?.message ||
+              "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+          );
+          setIsLoading(false);
+          return;
+        }
+      }
 
       const { id } = await response.json();
       const { error } = await stripe.redirectToCheckout({ sessionId: id });
@@ -242,6 +307,11 @@ const Checkout = (props) => {
             <div className="col-md-7 col-lg-8">
               <div className="card">
                 <div className="card-body">
+                  {maintenanceMessage && (
+                    <div className="alert alert-warning">
+                      {maintenanceMessage}
+                    </div>
+                  )}
                   {/* Checkout Form */}
                   <form onSubmit={handleSubmit}>
                     {/* Personal Information */}
@@ -364,6 +434,119 @@ const Checkout = (props) => {
                                   adresa: false,
                                 }));
                               }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Date facturare pentru Oblio */}
+                        <div className="col-md-12 col-sm-12">
+                          <div className="form-group card-label">
+                            <label>Facturare</label>
+                            <select
+                              className="form-control"
+                              value={billingType}
+                              onChange={(e) => setBillingType(e.target.value)}
+                            >
+                              <option value="individual">Persoană fizică</option>
+                              <option value="corporate">Firmă</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {billingType === "corporate" && (
+                          <>
+                            <div className="col-md-6 col-sm-12">
+                              <div className={`form-group card-label ${errors.companyName ? "border-danger" : ""}`}>
+                                <label>Denumire firmă</label>
+                                <input
+                                  className={`form-control ${errors.companyName ? "border-danger" : ""}`}
+                                  type="text"
+                                  value={companyName}
+                                  onChange={(e) => {
+                                    setCompanyName(e.target.value);
+                                    setErrors((prev) => ({ ...prev, companyName: false }));
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-md-6 col-sm-12">
+                              <div className={`form-group card-label ${errors.companyVAT ? "border-danger" : ""}`}>
+                                <label>CUI / CIF</label>
+                                <input
+                                  className={`form-control ${errors.companyVAT ? "border-danger" : ""}`}
+                                  type="text"
+                                  value={companyVAT}
+                                  onChange={(e) => {
+                                    setCompanyVAT(e.target.value);
+                                    setErrors((prev) => ({ ...prev, companyVAT: false }));
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-md-6 col-sm-12">
+                              <div className="form-group card-label">
+                                <label>Nr. Reg. Com. (opțional)</label>
+                                <input
+                                  className="form-control"
+                                  type="text"
+                                  value={companyReg}
+                                  onChange={(e) => setCompanyReg(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-md-6 col-sm-12">
+                              <div className={`form-group card-label ${errors.companyAddress ? "border-danger" : ""}`}>
+                                <label>Adresă firmă</label>
+                                <input
+                                  className={`form-control ${errors.companyAddress ? "border-danger" : ""}`}
+                                  type="text"
+                                  value={companyAddress}
+                                  onChange={(e) => {
+                                    setCompanyAddress(e.target.value);
+                                    setErrors((prev) => ({ ...prev, companyAddress: false }));
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="col-md-4 col-sm-12">
+                          <div className={`form-group card-label ${errors.billingCity ? "border-danger" : ""}`}>
+                            <label>Oraș</label>
+                            <input
+                              className={`form-control ${errors.billingCity ? "border-danger" : ""}`}
+                              type="text"
+                              value={billingCity}
+                              onChange={(e) => {
+                                setBillingCity(e.target.value);
+                                setErrors((prev) => ({ ...prev, billingCity: false }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-4 col-sm-12">
+                          <div className={`form-group card-label ${errors.billingCounty ? "border-danger" : ""}`}>
+                            <label>Județ</label>
+                            <input
+                              className={`form-control ${errors.billingCounty ? "border-danger" : ""}`}
+                              type="text"
+                              value={billingCounty}
+                              onChange={(e) => {
+                                setBillingCounty(e.target.value);
+                                setErrors((prev) => ({ ...prev, billingCounty: false }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-4 col-sm-12">
+                          <div className="form-group card-label">
+                            <label>Țară</label>
+                            <input
+                              className="form-control"
+                              type="text"
+                              value={billingCountry}
+                              onChange={(e) => setBillingCountry(e.target.value)}
                             />
                           </div>
                         </div>

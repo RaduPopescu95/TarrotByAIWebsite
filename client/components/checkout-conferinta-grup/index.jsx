@@ -25,6 +25,13 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [alert, setAlert] = useState({ type: "", message: "", visible: false });
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+
+  const maintenanceEnabled =
+    String(process.env.NEXT_PUBLIC_PAYMENTS_MAINTENANCE_ENABLED || "").toLowerCase() ===
+    "true";
+  const maintenanceKey = router.query?.maintenance_key;
+  const hasBypassKey = !!maintenanceKey;
 
   // Form data pentru participare
   const [formData, setFormData] = useState({
@@ -33,7 +40,16 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     email: "",
     telefon: "",
     observatii: "",
-    password: ""
+    password: "",
+    // Date facturare (Oblio)
+    billingType: "individual", // "individual" | "corporate"
+    billingCity: "",
+    billingCounty: "",
+    billingCountry: "Romania",
+    companyName: "",
+    companyVAT: "",
+    companyReg: "",
+    companyAddress: ""
   });
 
   // Test mode pentru simulare fără Stripe
@@ -154,6 +170,30 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     if (!termsAccepted) {
       showAlert("danger", "Trebuie să acceptați termenii și condițiile pentru a continua");
       return false;
+    }
+
+    // Date minime pentru factură (Oblio)
+    if (!formData.billingCity?.trim()) {
+      showAlert("danger", "Orașul (pentru factură) este obligatoriu");
+      return false;
+    }
+    if (!formData.billingCounty?.trim()) {
+      showAlert("danger", "Județul (pentru factură) este obligatoriu");
+      return false;
+    }
+    if (formData.billingType === "corporate") {
+      if (!formData.companyName?.trim()) {
+        showAlert("danger", "Denumirea firmei este obligatorie pentru facturare pe firmă");
+        return false;
+      }
+      if (!formData.companyVAT?.trim()) {
+        showAlert("danger", "CUI/CIF este obligatoriu pentru facturare pe firmă");
+        return false;
+      }
+      if (!formData.companyAddress?.trim()) {
+        showAlert("danger", "Adresa firmei este obligatorie pentru facturare pe firmă");
+        return false;
+      }
     }
 
     return true;
@@ -294,6 +334,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         return;
       }
 
+      // UI maintenance block (server also blocks in the API)
+      if (maintenanceEnabled && !hasBypassKey) {
+        setMaintenanceMessage(
+          "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+        );
+        setProcessing(false);
+        return;
+      }
+
       // Verifică din nou dacă mai sunt locuri disponibile
       const conferinte = await handleGetFirestore("ConferinteGrup");
       const conferintaUpdated = conferinte.find(c => c.documentId === conferintaId);
@@ -321,11 +370,34 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         dataFinal: conferinta.dataFinal,
         oraInceput: conferinta.oraInceput,
         oraFinal: conferinta.oraFinal,
-        isGuestUser: !currentUser
+        isGuestUser: !currentUser,
+        // Oblio buyer data (top-level so API can put into Stripe metadata)
+        buyerType: formData.billingType === "corporate" ? "company" : "person",
+        buyerCompanyName: formData.billingType === "corporate" ? formData.companyName : undefined,
+        buyerCif: formData.billingType === "corporate" ? formData.companyVAT : undefined,
+        buyerRegCom: formData.billingType === "corporate" ? formData.companyReg : undefined,
+        buyerStreet: formData.billingType === "corporate" ? formData.companyAddress : undefined,
+        buyerCity: formData.billingCity,
+        buyerCounty: formData.billingCounty,
+        buyerCountry: formData.billingCountry,
+        buyerEmail: formData.email,
+        buyerPhone: formData.telefon,
+        buyerContactName: `${formData.prenume} ${formData.nume}`,
+        // Invoice options
+        vatRate: 19,
+        measureUnit: "bucată",
+        sendInvoiceEmail: true,
+        eInvoice: true
       };
 
       // Call API pentru a crea Stripe session
-      const response = await fetch('/api/create-checkout-session-conferinta', {
+      const apiUrl = hasBypassKey
+        ? `/api/create-checkout-session-conferinta?maintenance_key=${encodeURIComponent(
+            String(maintenanceKey)
+          )}`
+        : "/api/create-checkout-session-conferinta";
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -333,7 +405,17 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         body: JSON.stringify(checkoutData),
       });
 
-      const { sessionId, error } = await response.json();
+      const json = await response.json().catch(() => ({}));
+      const { sessionId, error } = json;
+
+      if (response.status === 503 && json?.error === "maintenance") {
+        setMaintenanceMessage(
+          json?.message ||
+            "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+        );
+        setProcessing(false);
+        return;
+      }
 
       if (error) {
         showAlert("danger", "Eroare la crearea sesiunii de plată: " + error);
@@ -442,6 +524,11 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
       <div className="content">
         <div className="container">
+          {maintenanceMessage && (
+            <div className="alert alert-warning">
+              {maintenanceMessage}
+            </div>
+          )}
           {alert.visible && (
             <AlertMessage type={alert.type} message={alert.message} />
           )}
@@ -676,6 +763,126 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                         rows="3"
                         placeholder="Întrebări sau observații speciale..."
                       />
+                    </div>
+
+                    {/* Date facturare (Oblio) */}
+                    <div className="form-group mb-4">
+                      <div className="card">
+                        <div className="card-header">
+                          <h6 className="mb-0">
+                            <i className="fa fa-file-invoice me-2"></i>
+                            Date pentru factură
+                          </h6>
+                        </div>
+                        <div className="card-body">
+                          <div className="row">
+                            <div className="col-md-12">
+                              <div className="form-group mb-3">
+                                <label className="form-label">Tip facturare</label>
+                                <select
+                                  className="form-control"
+                                  name="billingType"
+                                  value={formData.billingType}
+                                  onChange={handleInputChange}
+                                >
+                                  <option value="individual">Persoană fizică</option>
+                                  <option value="corporate">Firmă</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {formData.billingType === "corporate" && (
+                              <>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">Denumire firmă *</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="companyName"
+                                      value={formData.companyName}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">CUI / CIF *</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="companyVAT"
+                                      value={formData.companyVAT}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">Nr. Reg. Com. (opțional)</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="companyReg"
+                                      value={formData.companyReg}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">Adresă firmă *</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="companyAddress"
+                                      value={formData.companyAddress}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            <div className="col-md-4">
+                              <div className="form-group mb-3">
+                                <label className="form-label">Oraș *</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  name="billingCity"
+                                  value={formData.billingCity}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-md-4">
+                              <div className="form-group mb-3">
+                                <label className="form-label">Județ *</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  name="billingCounty"
+                                  value={formData.billingCounty}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-md-4">
+                              <div className="form-group mb-3">
+                                <label className="form-label">Țară</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  name="billingCountry"
+                                  value={formData.billingCountry}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="payment-section">

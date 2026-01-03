@@ -2,6 +2,7 @@
 import { buffer } from "micro";
 import Stripe from "stripe";
 import { handleUploadFirestoreGeneral, handleGetFirestore } from "../../utils/firestoreUtils";
+import { createOlbioInvoice } from "../../utils/olbioClient";
 import { v4 as uuidv4 } from "uuid"; // Pentru generarea meetingCode identic cu frontend-ul
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -128,8 +129,22 @@ export default async (req, res) => {
           console.log(`✅ [${requestId}] Rezervarea salvată cu documentId: ${data.documentId}`);
           console.log(`✅ [${requestId}] Procesare completă pentru: ${rezervareData.email}`);
 
-          // TODO: Aici se pot adăuga email-uri automate în viitor dacă e necesar
-          // Momentan păstrăm exact comportamentul actual
+          // ✅ OLBIO: creează factura după plată reușită (fail-safe, nu oprește webhook-ul)
+          try {
+            console.log(`🧾 [${requestId}] Creez factură în Olbio (consultatie)...`);
+            const invoice = await createOlbioInvoice({
+              type: "consultatie",
+              rezervareData,
+              session
+            });
+            if (invoice?.id || invoice?.documentId) {
+              console.log(`🧾 [${requestId}] Factură creată cu succes în Olbio`, invoice?.id || invoice?.documentId);
+            } else {
+              console.log(`🧾 [${requestId}] Factură Olbio nu a returnat ID (verifică logs/config).`);
+            }
+          } catch (olbioErr) {
+            console.error(`💥 [${requestId}] Eroare creare factură Olbio:`, olbioErr?.message || olbioErr);
+          }
 
         } catch (error) {
           console.error(`💥 [${requestId}] Eroare la procesarea rezervării:`, error.message);

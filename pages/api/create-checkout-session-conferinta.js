@@ -3,6 +3,16 @@ import { handleUploadFirestoreGeneral, handleUpdateFirestore } from '../../utils
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function isMaintenanceEnabled() {
+  return String(process.env.PAYMENTS_MAINTENANCE_ENABLED || "").toLowerCase() === "true";
+}
+
+function getMaintenanceKeyFromReq(req) {
+  const q = req.query?.maintenance_key;
+  if (Array.isArray(q)) return q[0] || "";
+  return q || "";
+}
+
 export default async function handler(req, res) {
   const checkoutId = `CHECKOUT_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   
@@ -18,6 +28,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Maintenance gate (server-side hard block)
+    if (isMaintenanceEnabled()) {
+      const expected = process.env.PAYMENTS_MAINTENANCE_KEY || "";
+      const provided = getMaintenanceKeyFromReq(req);
+      if (!expected || provided !== expected) {
+        console.log(`🛠️ [${checkoutId}] Maintenance enabled - blocking checkout`);
+        return res.status(503).json({
+          error: "maintenance",
+          message:
+            "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu.",
+        });
+      }
+      console.log(`🛠️ [${checkoutId}] Maintenance bypass accepted`);
+    }
+
     console.log(`💳 [${checkoutId}] Parsez datele din request body...`);
     const {
       conferintaId,
@@ -30,7 +55,33 @@ export default async function handler(req, res) {
       dataInceput,
       dataFinal,
       oraInceput,
-      oraFinal
+      oraFinal,
+      // Optional buyer/company metadata for invoicing/e-Factura (passed through Stripe metadata)
+      buyerType, // "company" | "person"
+      buyerCif,
+      buyerCnp,
+      buyerCompanyName,
+      buyerRegCom,
+      buyerVatPayer, // boolean
+      buyerStreet,
+      buyerCity,
+      buyerCounty,
+      buyerPostalCode,
+      buyerCountry,
+      buyerContactName,
+      buyerEmail: buyerEmailMeta,
+      buyerPhone: buyerPhoneMeta,
+      buyerIBAN,
+      buyerBankName,
+      // Line/item and invoice options
+      serviceCode,
+      vatRate,
+      measureUnit,
+      measureCode,
+      paymentMethod,
+      sendInvoiceEmail,
+      eInvoice,
+      dueDays
     } = req.body;
 
     console.log(`💳 [${checkoutId}] Date primite:`, {
@@ -92,7 +143,33 @@ export default async function handler(req, res) {
       participantEmail: participantData.email,
       participantPhone: participantData.telefon,
       observatii: participantData.observatii || '',
-      tipConferinta: tipConferinta
+      tipConferinta: tipConferinta,
+      // Buyer/company metadata (Stripe metadata supports only strings)
+      ...(buyerType ? { buyerType } : {}),
+      ...(buyerCif ? { buyerCif } : {}),
+      ...(buyerCnp ? { buyerCnp } : {}),
+      ...(buyerCompanyName ? { buyerCompanyName } : {}),
+      ...(buyerRegCom ? { buyerRegCom } : {}),
+      ...(typeof buyerVatPayer !== "undefined" ? { buyerVatPayer: String(!!buyerVatPayer) } : {}),
+      ...(buyerStreet ? { buyerStreet } : {}),
+      ...(buyerCity ? { buyerCity } : {}),
+      ...(buyerCounty ? { buyerCounty } : {}),
+      ...(buyerPostalCode ? { buyerPostalCode } : {}),
+      ...(buyerCountry ? { buyerCountry } : {}),
+      ...(buyerContactName ? { buyerContactName } : {}),
+      ...(buyerEmailMeta ? { buyerEmail: buyerEmailMeta } : {}),
+      ...(buyerPhoneMeta ? { buyerPhone: buyerPhoneMeta } : {}),
+      ...(buyerIBAN ? { buyerIBAN } : {}),
+      ...(buyerBankName ? { buyerBankName } : {}),
+      // Line and invoice options
+      ...(serviceCode ? { serviceCode } : {}),
+      ...(typeof vatRate !== "undefined" ? { vatRate: String(vatRate) } : {}),
+      ...(measureUnit ? { measureUnit } : {}),
+      ...(measureCode ? { measureCode } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
+      ...(typeof sendInvoiceEmail !== "undefined" ? { sendInvoiceEmail: String(!!sendInvoiceEmail) } : {}),
+      ...(typeof eInvoice !== "undefined" ? { eInvoice: String(!!eInvoice) } : {}),
+      ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {})
     };
 
     console.log(`💳 [${checkoutId}] Metadata pregătită pentru Stripe:`, metadata);
