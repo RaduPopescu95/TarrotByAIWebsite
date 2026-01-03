@@ -104,15 +104,23 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 		const clientCounty = m.buyerCounty || "";
 		const clientCountry = m.buyerCountry || "Romania";
 
-		// Product line
+		// Product line (displayed on invoice)
+		const categorieName =
+			rezervareData?.categorie?.about ||
+			rezervareData?.categorie?.name ||
+			rezervareData?.categorie?.title ||
+			"Consultație";
+		const tipConsultatieLabel = rezervareData?.tipConsultatie ? String(rezervareData.tipConsultatie) : "";
+
 		const itemName =
 			type === "conferinta"
-				? conferinta?.titlu || "Conferință"
-				: rezervareData?.tipConsultatie || rezervareData?.categorie?.about || "Consultatie individuală";
+				? `Consultație tip conferință pentru ${conferinta?.titlu || "Conferință"}`
+				: `Consultație pentru ${categorieName}${tipConsultatieLabel ? ` (${tipConsultatieLabel})` : ""}`;
+
 		const description =
 			type === "conferinta"
-				? `Bilet conferință ${conferinta?.titlu || ""}`
-				: `Rezervare consultatie.\nZi: ${rezervareData?.selectedSlot?.day || ""}\nOra: ${rezervareData?.selectedSlot?.slot || ""}`;
+				? `Consultație tip conferință.\nTitlu: ${conferinta?.titlu || ""}\nPerioadă: ${conferinta?.dataInceput || ""} - ${conferinta?.dataFinal || ""}\nInterval orar: ${conferinta?.oraInceput || ""} - ${conferinta?.oraFinal || ""}`
+				: `Consultație individuală.\nCategorie: ${categorieName}\nTip: ${tipConsultatieLabel}\nZi: ${rezervareData?.selectedSlot?.day || ""}\nOra: ${rezervareData?.selectedSlot?.slot || ""}`;
 
 		// Build client block per Oblio schema
 		const clientBlock =
@@ -235,7 +243,7 @@ export async function createOlbioInvoiceFromPayload({ invoicePayload, requestId 
 				resp.status,
 				text
 			);
-			return null;
+			return { status: resp.status, data: null, errorText: text };
 		}
 
 		let data = {};
@@ -250,13 +258,13 @@ export async function createOlbioInvoiceFromPayload({ invoicePayload, requestId 
 			}
 		}
 		console.log(`[OBLIO] [${requestId || "no_requestId"}] Invoice created:`, data);
-		return data;
+		return { status: resp.status, data };
 	} catch (err) {
 		console.error(
 			`[OBLIO] [${requestId || "no_requestId"}] Unexpected error:`,
 			err?.message || err
 		);
-		return null;
+		return { status: 0, data: null, errorText: String(err?.message || err) };
 	}
 }
 

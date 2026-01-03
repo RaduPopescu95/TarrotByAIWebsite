@@ -19,6 +19,12 @@ function toNumber(val, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function roundTo(val, decimals = 2) {
+  const n = toNumber(val, 0);
+  const m = Math.pow(10, decimals);
+  return Math.round(n * m) / m;
+}
+
 export default async function handler(req, res) {
   const requestId =
     (req.body && req.body.requestId) ||
@@ -140,7 +146,7 @@ export default async function handler(req, res) {
     const piStatus = pi?.status;
     const piCurrency = (pi?.currency || "").toLowerCase();
     const piAmount = typeof pi?.amount_received === "number" ? pi.amount_received : pi?.amount;
-    const amountRON = Math.round(toNumber(piAmount, 0)) / 100;
+    const amountRON = roundTo(Math.round(toNumber(piAmount, 0)) / 100, 2);
 
     console.log(`[OBLIO_API] [${requestId}] Stripe status=${piStatus} currency=${piCurrency} amount=${amountRON}`);
 
@@ -207,7 +213,7 @@ export default async function handler(req, res) {
       description: `Serviciu digital (${productCode})`
     };
 
-    // To avoid rounding mismatches, use vatIncluded:true and price=gross
+    // To avoid rounding mismatches, use vatIncluded=1 and price=gross (Oblio expects 0/1 reliably)
     const products = [
       {
         name: mapped.name,
@@ -216,7 +222,7 @@ export default async function handler(req, res) {
         measuringUnit: "bucată",
         vatName: "Normala",
         vatPercentage,
-        vatIncluded: true,
+        vatIncluded: 1,
         quantity: 1,
         productType: "Serviciu"
       }
