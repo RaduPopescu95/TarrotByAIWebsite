@@ -4,6 +4,31 @@ import { handleQueryFirestore, handleUpdateFirestore } from "../../../utils/fire
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function isTruthyEnv(val) {
+  if (typeof val !== "string") return false;
+  return ["1", "true", "yes", "y", "on"].includes(val.trim().toLowerCase());
+}
+
+function getSellerVatConfig() {
+  const sellerVatPayer = isTruthyEnv(process.env.OBLIO_SELLER_VAT_PAYER || process.env.OBLIO_VAT_PAYER);
+  const envDefaultVat =
+    process.env.OBLIO_DEFAULT_VAT_RATE ??
+    process.env.OLBIO_DEFAULT_VAT_RATE ??
+    "19";
+
+  if (!sellerVatPayer) {
+    return { sellerVatPayer: false, vatPercentage: 0, vatIncluded: 0, vatName: "Neplatitor" };
+  }
+
+  const vatPercentage = Number(envDefaultVat);
+  return {
+    sellerVatPayer: true,
+    vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
+    vatIncluded: 1,
+    vatName: "Normala"
+  };
+}
+
 function getBearerToken(req) {
   const h = req.headers?.authorization || "";
   const m = h.match(/^Bearer\s+(.+)$/i);
@@ -186,8 +211,7 @@ export default async function handler(req, res) {
     const precision = typeof invoice?.precision === "number" ? invoice.precision : 2;
     const sendEmail = invoice?.sendEmail === false ? 0 : 1;
 
-    // Contract: TVA = 21%
-    const vatPercentage = 21;
+    const vatCfg = getSellerVatConfig();
 
     // Map productCode/meta.feature -> invoice line
     const productMap = {
@@ -220,9 +244,9 @@ export default async function handler(req, res) {
         description: mapped.description,
         price: amountRON,
         measuringUnit: "bucată",
-        vatName: "Normala",
-        vatPercentage,
-        vatIncluded: 1,
+        vatName: vatCfg.vatName,
+        vatPercentage: vatCfg.vatPercentage,
+        vatIncluded: vatCfg.vatIncluded,
         quantity: 1,
         productType: "Serviciu"
       }

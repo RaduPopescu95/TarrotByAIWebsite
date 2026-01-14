@@ -10,6 +10,41 @@ let OBLIO_TOKEN_CACHE = {
 	expiresAtMs: 0,
 };
 
+function isTruthyEnv(val) {
+	if (typeof val !== "string") return false;
+	return ["1", "true", "yes", "y", "on"].includes(val.trim().toLowerCase());
+}
+
+function getSellerVatConfig(sessionMetadata) {
+	// IMPORTANT:
+	// Oblio can "normalize" prices depending on seller VAT settings.
+	// If the seller is NOT VAT payer, sending vatIncluded=1 with a non-zero VAT
+	// can cause Oblio to back out VAT (e.g. 300 -> 252.10) and keep total net.
+	//
+	// To ensure invoice total always matches Stripe amount paid:
+	// - If seller VAT payer: send vatIncluded=1 and vatPercentage>0 (gross in `price`)
+	// - If seller NOT VAT payer: force vatPercentage=0 and vatIncluded=0 (gross in `price`)
+	const sellerVatPayer = isTruthyEnv(process.env.OBLIO_SELLER_VAT_PAYER || process.env.OBLIO_VAT_PAYER);
+	const envDefaultVat =
+		process.env.OBLIO_DEFAULT_VAT_RATE ??
+		process.env.OLBIO_DEFAULT_VAT_RATE ??
+		"19";
+
+	if (!sellerVatPayer) {
+		return { sellerVatPayer: false, vatPercentage: 0, vatIncluded: 0, vatName: "Neplatitor" };
+	}
+
+	const metaVat =
+		typeof sessionMetadata?.vatRate !== "undefined" ? Number(sessionMetadata.vatRate) : undefined;
+	const vatPercentage = Number.isFinite(metaVat) ? metaVat : Number(envDefaultVat);
+	return {
+		sellerVatPayer: true,
+		vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
+		vatIncluded: 1,
+		vatName: "Normala",
+	};
+}
+
 async function oblioAuthenticate() {
 	// Support both naming variants:
 	// - OBLIO_CLIENT_ID / OBLIO_CLIENT_SECRET (from many integrations/examples)
@@ -61,12 +96,7 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 
 		// Metadata
 		const m = session?.metadata || {};
-		const vatRate =
-			typeof m.vatRate !== "undefined"
-				? Number(m.vatRate)
-				: process.env.OLBIO_DEFAULT_VAT_RATE
-				? Number(process.env.OLBIO_DEFAULT_VAT_RATE)
-				: 19;
+		const vatCfg = getSellerVatConfig(m);
 
 		// Gross amount (RON) – keep 2 decimals to avoid mismatch vs Stripe
 		const grossAmountRaw =
@@ -161,9 +191,9 @@ export async function createOlbioInvoice({ type, rezervareData, session, conferi
 					// Send gross with VAT included so invoice total matches Stripe exactly (e.g. 2.00 stays 2.00)
 					price: grossAmount,
 					measuringUnit: m.measureUnit || "bucată",
-					vatName: "Normala",
-					vatPercentage: vatRate,
-					vatIncluded: 1,
+					vatName: vatCfg.vatName,
+					vatPercentage: vatCfg.vatPercentage,
+					vatIncluded: vatCfg.vatIncluded,
 					quantity: 1,
 					productType: "Serviciu",
 				},
