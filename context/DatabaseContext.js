@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { handleGetArticles } from "../utils/realtimeUtils";
 import languageDetector from "../lib/languageDetector";
-import { handleGetFirestore } from "../utils/firestoreUtils";
+import { handleGetFirestorePaginatedCached } from "../utils/firestoreUtils";
 
 export const DatabaseContext = createContext({
   articles: {},
@@ -22,7 +22,22 @@ export const DatabaseProvider = ({ children }) => {
 
   const handleData = async (setter) => {
     try {
-      const articlesData = await handleGetFirestore("BlogArticole");
+      const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      // IMPORTANT: this context is used across the whole site. Avoid full collection reads.
+      // We only need a small subset for “latest articles” widgets.
+      const PAGE_SIZE = 50;
+      const result = await handleGetFirestorePaginatedCached(
+        "BlogArticole",
+        PAGE_SIZE,
+        null,
+        "firstUploadTimestamp",
+        "desc"
+      );
+      const articlesData = result?.data || [];
+      const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      console.log(
+        `[DatabaseContext] BlogArticole fetched in ${Math.round(t1 - t0)}ms, docs: ${articlesData.length}`
+      );
 
       console.log(articlesData);
       // Sortarea articolelor după data și ora lor

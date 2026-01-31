@@ -31,6 +31,43 @@ require("../client/components/customstyleclient.css");
 require("../client/assets/css/feather.css");
 require("../styles/daily-components.css");
 
+// Optional log filter for dev: keep console clean for Firestore read optimization
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  const logFilterEnabled = process.env.NEXT_PUBLIC_LOG_FILTER !== "off";
+  if (logFilterEnabled && !window.__FIRESTORE_LOG_FILTER__) {
+    window.__FIRESTORE_LOG_FILTER__ = true;
+    const allowlist = [
+      "[CACHE",
+      "📥 [CACHE",
+      "🧩 [INFLIGHT",
+      "📄 [PAGINATED",
+      "✅ [PAGINATED",
+      "[BlogArticoleAdmin]",
+      "[AfirmatiiPozitive]",
+      "[NotificariManuale]",
+      "[DatabaseContext]",
+    ];
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalDebug = console.debug;
+
+    const shouldAllow = (args) =>
+      args.some((arg) =>
+        typeof arg === "string" ? allowlist.some((key) => arg.includes(key)) : false
+      );
+
+    console.log = (...args) => {
+      if (shouldAllow(args)) originalLog(...args);
+    };
+    console.info = (...args) => {
+      if (shouldAllow(args)) originalInfo(...args);
+    };
+    console.debug = (...args) => {
+      if (shouldAllow(args)) originalDebug(...args);
+    };
+  }
+}
+
 const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 
 function MyApp({ Component, pageProps }) {

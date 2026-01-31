@@ -569,8 +569,8 @@ export default function VideoLibraryAdminScreen() {
               onTogglePublish={handleTogglePublish}
               onOpen={handleOpen}
               onCopy={handleCopy}
-              onPreview={handlePreview}
-            />
+            onPreview={handlePreview}
+          />
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-gray-600">
@@ -743,7 +743,7 @@ export default function VideoLibraryAdminScreen() {
                   Se încarcă categoriile...
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-gray-500">Nu există categorii salvate încă.</p>
+              <p className="mt-2 text-sm text-gray-500">Nu există categorii salvate încă.</p>
               )
             ) : (
               <div className="mt-4 flex flex-wrap gap-2">

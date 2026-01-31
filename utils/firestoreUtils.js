@@ -27,6 +27,22 @@ import { filterArticlesBeforeCurrentTime } from "./commonUtils";
 import { getCurrentDateTime } from "../utils/timeUtils";
 
 const auth = authentication;
+const firestoreCache = new Map();
+const firestoreInFlight = new Map();
+
+const getCacheEntry = (key, cacheMs) => {
+  const cached = firestoreCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > cacheMs) {
+    firestoreCache.delete(key);
+    return null;
+  }
+  return cached;
+};
+
+const setCacheEntry = (key, payload) => {
+  firestoreCache.set(key, { ...payload, timestamp: Date.now() });
+};
 export const userLocation = `Users/${
   auth.currentUser ? auth.currentUser.uid : ""
 }`; // Calea către document
@@ -272,6 +288,39 @@ export const handleGetFirestoreWithLimit = async (location, limitCount = 50, ord
   }
 };
 
+// Cached version for first page (safe for admin lists). Cache is in-memory for 60s by default.
+export const handleGetFirestoreWithLimitCached = async (
+  location,
+  limitCount = 50,
+  orderByField = null,
+  orderDirection = "desc",
+  cacheMs = 60000
+) => {
+  const cacheKey = `limit:${location}:${limitCount}:${orderByField || "none"}:${orderDirection}`;
+  const cached = getCacheEntry(cacheKey, cacheMs);
+  if (cached) {
+    console.log(`✅ [CACHE HIT] ${cacheKey}`);
+    return cached.data;
+  }
+  const inFlight = firestoreInFlight.get(cacheKey);
+  if (inFlight) {
+    console.log(`🧩 [INFLIGHT HIT] ${cacheKey}`);
+    return await inFlight;
+  }
+  console.log(`📥 [CACHE MISS] ${cacheKey}`);
+  const promise = (async () => {
+    try {
+      const data = await handleGetFirestoreWithLimit(location, limitCount, orderByField, orderDirection);
+      setCacheEntry(cacheKey, { data });
+      return data;
+    } finally {
+      firestoreInFlight.delete(cacheKey);
+    }
+  })();
+  firestoreInFlight.set(cacheKey, promise);
+  return await promise;
+};
+
 //get firestore docs with pagination - versiune pentru încărcare progresivă
 export const handleGetFirestorePaginated = async (location, limitCount = 20, lastVisible = null, orderByField = 'createdAt', orderDirection = 'desc') => {
   console.log(`📄 [PAGINATED] Fetching from ${location} - page size: ${limitCount}`);
@@ -317,6 +366,56 @@ export const handleGetFirestorePaginated = async (location, limitCount = 20, las
       hasMore: false
     };
   }
+};
+
+// Cached first page for paginated lists (lastVisible must be null).
+export const handleGetFirestorePaginatedCached = async (
+  location,
+  limitCount = 20,
+  lastVisible = null,
+  orderByField = "createdAt",
+  orderDirection = "desc",
+  cacheMs = 60000
+) => {
+  if (lastVisible) {
+    console.log(`📄 [PAGINATED] skip cache (page>1) for ${location}`);
+    return await handleGetFirestorePaginated(
+      location,
+      limitCount,
+      lastVisible,
+      orderByField,
+      orderDirection
+    );
+  }
+  const cacheKey = `page1:${location}:${limitCount}:${orderByField}:${orderDirection}`;
+  const cached = getCacheEntry(cacheKey, cacheMs);
+  if (cached) {
+    console.log(`✅ [CACHE HIT] ${cacheKey}`);
+    return cached.data;
+  }
+  const inFlight = firestoreInFlight.get(cacheKey);
+  if (inFlight) {
+    console.log(`🧩 [INFLIGHT HIT] ${cacheKey}`);
+    return await inFlight;
+  }
+  console.log(`📥 [CACHE MISS] ${cacheKey}`);
+  const promise = (async () => {
+    try {
+      const data = await handleGetFirestorePaginated(
+        location,
+        limitCount,
+        null,
+        orderByField,
+        orderDirection
+      );
+      setCacheEntry(cacheKey, { data });
+      return data;
+    } finally {
+      firestoreInFlight.delete(cacheKey);
+    }
+  })();
+  firestoreInFlight.set(cacheKey, promise);
+  return await promise;
 };
 
 //get active conferences with limit and ordering - versiune îmbunătățită
