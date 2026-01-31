@@ -82,49 +82,48 @@ export default function LocalPasswordGate({ children, ttlMinutes = 20160, onGran
   };
 
   if (granted) {
-    return (
-      <>
-        {children}
-      </>
-    );
+    return <>{children}</>;
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#303030" }}>
-      <form onSubmit={handleSubmit} style={{ background: "#1f1f1f", padding: 24, borderRadius: 12, width: "100%", maxWidth: 360 }}>
-        <h2 style={{ color: "#fff", marginBottom: 16 }}>Acces Dashboard</h2>
-        <label style={{ color: "#bbb", fontSize: 14, display: "block", marginBottom: 8 }}>Introduceți parola</label>
-        <div style={{ position: "relative" }}>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-xl"
+      >
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">Acces Dashboard</h2>
+        <p className="mb-6 text-sm text-gray-600">Introduceți parola pentru a accesa dashboard-ul</p>
+        <label className="mb-2 block text-sm font-medium text-gray-700">
+          Parolă
+        </label>
+        <div className="relative">
           <input
             type={show ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Parola"
+            placeholder="Introduceți parola"
             autoFocus
-            style={{ width: "100%", padding: "10px 44px 10px 12px", borderRadius: 8, border: "1px solid #444", background: "#2a2a2a", color: "#fff" }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 shadow-sm placeholder:text-gray-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
             aria-label={show ? "Ascunde parola" : "Afișează parola"}
-            style={{
-              position: "absolute",
-              right: 8,
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "transparent",
-              color: "#bbb",
-              border: 0,
-              cursor: "pointer",
-              padding: 4,
-            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-1.5 text-gray-500 transition-colors hover:text-gray-700"
           >
-            {show ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+            {show ? <FiEyeOff size={20} /> : <FiEye size={20} />}
           </button>
         </div>
-        {error && <div style={{ color: "#ff6b6b", marginTop: 8, fontSize: 13 }}>{error}</div>}
-        <button type="submit" style={{ marginTop: 16, width: "100%", background: "#1976d2", color: "#fff", border: 0, borderRadius: 8, padding: "10px 12px", cursor: "pointer" }}>Confirmă</button>
-       </form>
+        {error && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{error}</div>
+        )}
+        <button
+          type="submit"
+          className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Confirmă
+        </button>
+      </form>
     </div>
   );
 }

@@ -460,6 +460,26 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
+                    screen: "videos",
+                    text: "Videoclipuri",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Videoclipuri" ? "#ffc045" : "white",
+                  }}
+                >
+                  <LibraryBooksIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Videoclipuri"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
                     screen: "culori-norocoase",
                     text: "Culori Norocoase",
                   })
