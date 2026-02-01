@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 import { handleGetArticles } from "../utils/realtimeUtils";
 import languageDetector from "../lib/languageDetector";
 import { handleGetFirestorePaginatedCached } from "../utils/firestoreUtils";
+import { useRouter } from "next/router";
 
 export const DatabaseContext = createContext({
   articles: {},
@@ -12,6 +13,7 @@ export const DatabaseContext = createContext({
 });
 
 export const DatabaseProvider = ({ children }) => {
+  const router = useRouter();
   const [articles, setArticles] = useState({});
   const [article, setArticle] = useState({});
   const [services, setServices] = useState([]);
@@ -92,8 +94,17 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
+    const path = router.pathname || "";
+    const isAdminRoute =
+      path.startsWith("/dashboard") || path.startsWith("/admin") || path.startsWith("/login-admin");
+    if (isAdminRoute) {
+      console.log(`[DatabaseContext] Skip BlogArticole fetch on admin route: ${path}`);
+      setIsLoading(false);
+      return;
+    }
     handleArticles();
-  }, []);
+  }, [router.isReady, router.pathname]);
 
   return (
     <DatabaseContext.Provider

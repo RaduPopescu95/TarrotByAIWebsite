@@ -19,7 +19,7 @@ import DoctorFooter from "../../common/doctorFooter";
 import Link from "next/link";
 import Home1Header from "../../home/home-1/header";
 import Footer from "../../footer";
-import { handleGetFirestore } from "../../../../utils/firestoreUtils";
+import { handleGetFirestoreCached } from "../../../../utils/firestoreUtils";
 import moment from "moment";
 import { useAuth } from "../../../../context/AuthContext";
 import { formatSelectedSlot } from "../../../../utils/commonUtils";
@@ -39,9 +39,8 @@ const DoctorDashboard = (props) => {
   
   const { loading } = useAuth();
 
-  const handleGetUserReservations = async () => {
-    // Fetch the reservations data from Firestore
-    const data = await handleGetFirestore("RezervariConsultatii");
+  const handleGetUserReservations = async (data) => {
+    // reuse already-fetched data to avoid extra reads
     console.log("rezervari....data...", data);
 
     // Crearea array-urilor separate pentru rezervările din ziua curentă și săptămâna curentă
@@ -134,8 +133,7 @@ const DoctorDashboard = (props) => {
   };
 
   // Funție pentru a găsi următoarea rezervare în funcție de ora și ziua curentă
-  const handleGetNextReservation = async () => {
-    const data = await handleGetFirestore("RezervariConsultatii");
+  const handleGetNextReservation = async (data) => {
     const now = moment();
 
     // Filtrăm doar rezervările viitoare în funcție de data și ora curente
@@ -166,12 +164,9 @@ const DoctorDashboard = (props) => {
   };
 
   // Funcții pentru conferințele de grup
-  const handleGetGroupConferences = async () => {
+  const handleGetGroupConferences = async (conferenceData, paymentData) => {
     try {
       console.log("Fetching group conferences...");
-      const conferenceData = await handleGetFirestore("ConferinteGrup");
-      const paymentData = await handleGetFirestore("PlatiConferinteGrup");
-      
       console.log("Conference data:", conferenceData);
       console.log("Payment data:", paymentData);
 
@@ -228,9 +223,8 @@ const DoctorDashboard = (props) => {
   };
 
   // Funcție pentru următoarea conferință de grup
-  const handleGetNextGroupConference = async () => {
+  const handleGetNextGroupConference = async (data) => {
     try {
-      const data = await handleGetFirestore("ConferinteGrup");
       const now = moment();
 
       // Filtrăm doar conferințele viitoare
@@ -262,10 +256,38 @@ const DoctorDashboard = (props) => {
   // revenue chart
   const chartRef1 = useRef(null);
   useEffect(() => {
-    handleGetNextReservation();
-    handleGetUserReservations();
-    handleGetGroupConferences();
-    handleGetNextGroupConference();
+    const loadDashboardData = async () => {
+      const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const rezervari = await handleGetFirestoreCached("RezervariConsultatii");
+      const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      console.log(
+        `[AdminConsultatii] RezervariConsultatii fetched in ${Math.round(t1 - t0)}ms, docs: ${
+          rezervari?.length || 0
+        }`
+      );
+      await handleGetUserReservations(rezervari);
+      await handleGetNextReservation(rezervari);
+
+      const t2 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const [conferinte, plati] = await Promise.all([
+        handleGetFirestoreCached("ConferinteGrup"),
+        handleGetFirestoreCached("PlatiConferinteGrup"),
+      ]);
+      const t3 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      console.log(
+        `[AdminConsultatii] ConferinteGrup fetched in ${Math.round(t3 - t2)}ms, docs: ${
+          conferinte?.length || 0
+        }`
+      );
+      console.log(
+        `[AdminConsultatii] PlatiConferinteGrup fetched in ${Math.round(t3 - t2)}ms, docs: ${
+          plati?.length || 0
+        }`
+      );
+      await handleGetGroupConferences(conferinte, plati);
+      await handleGetNextGroupConference(conferinte);
+    };
+    loadDashboardData();
     if (chartRef1.current) {
       const sCol = {
         chart: {

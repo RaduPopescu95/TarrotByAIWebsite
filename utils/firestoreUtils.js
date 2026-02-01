@@ -250,6 +250,33 @@ export const handleGetFirestore = async (location) => {
   return arr;
 };
 
+// Cached full collection read (use only when you must keep full dataset)
+export const handleGetFirestoreCached = async (location, cacheMs = 60000) => {
+  const cacheKey = `full:${location}`;
+  const cached = getCacheEntry(cacheKey, cacheMs);
+  if (cached) {
+    console.log(`✅ [CACHE HIT] ${cacheKey}`);
+    return cached.data;
+  }
+  const inFlight = firestoreInFlight.get(cacheKey);
+  if (inFlight) {
+    console.log(`🧩 [INFLIGHT HIT] ${cacheKey}`);
+    return await inFlight;
+  }
+  console.log(`📥 [CACHE MISS] ${cacheKey}`);
+  const promise = (async () => {
+    try {
+      const data = await handleGetFirestore(location);
+      setCacheEntry(cacheKey, { data });
+      return data;
+    } finally {
+      firestoreInFlight.delete(cacheKey);
+    }
+  })();
+  firestoreInFlight.set(cacheKey, promise);
+  return await promise;
+};
+
 // 🚀 OPTIMIZED VERSIONS - Versiuni cu limite pentru reducerea read-urilor
 // PĂSTREAZĂ FUNCȚIA ORIGINALĂ NESCHIMBATĂ PENTRU COMPATIBILITATE
 

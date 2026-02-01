@@ -91,6 +91,22 @@ const Drawer = styled(MuiDrawer, {
 
 // TODO remove, this demo shouldn't need to reset the theme.
 const defaultTheme = createTheme();
+const dashboardPrefetchScreens = [
+  "notificari-manuale",
+  "afirmatii-pozitive",
+  "blog-articole",
+  "citire-viitor-carti",
+  "citire-viitor-categorii",
+  "citire-personalizata-carti",
+  "citire-personalizata-categorii",
+  "citire-personalizata-variantecarti",
+  "citate-motivationale",
+  "videos",
+  "culori-norocoase",
+  "numere-norocoase",
+  "ore-norocoase",
+  "poza-api",
+];
 
 export default function CustomDrawer(props) {
   const [open, setOpen] = React.useState(true);
@@ -101,6 +117,15 @@ export default function CustomDrawer(props) {
     props.selectedItem ? props.selectedItem : ""
   );
   const router = useRouter();
+  const hasPrefetchedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!router.isReady || hasPrefetchedRef.current) return;
+    hasPrefetchedRef.current = true;
+    dashboardPrefetchScreens.forEach((screen) => {
+      router.prefetch(`/dashboard/${screen}`);
+    });
+  }, [router.isReady, router]);
   const toggleDrawer = () => {
     setOpen(!open);
   };
