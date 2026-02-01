@@ -59,7 +59,23 @@ const MyPatient = (props) => {
   );
 
   const pageCount = Math.ceil(filteredClients.length / itemsPerPage);
-  const pages = Array.from({ length: pageCount }, (_, i) => i + 1);
+  const pages = (() => {
+    const totalPages = Math.max(1, pageCount);
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    // Smart pagination:
+    // - near start: 1 2 3 4 … last
+    // - near end:   1 … last-3 last-2 last-1 last
+    // - middle:     1 … current-1 current current+1 … last
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, "ellipsis", totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
+  })();
 
   return (
     <div>
@@ -443,18 +459,50 @@ const MyPatient = (props) => {
               </div>
 
               {/* Pagination */}
-              <div className="pagination dashboard-pagination">
-                {pages.map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    onClick={() => setCurrentPage(pageNumber)}
-                    className={`page-link ${
-                      currentPage === pageNumber ? "active" : ""
-                    }`}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
+              <div
+                className="pagination dashboard-pagination"
+                style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}
+              >
+                <button
+                  type="button"
+                  className="page-link"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                >
+                  «
+                </button>
+                {pages.map((item, idx) => {
+                  if (item === "ellipsis") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="page-link"
+                        style={{ pointerEvents: "none", opacity: 0.6 }}
+                      >
+                        …
+                      </span>
+                    );
+                  }
+                  const pageNumber = item;
+                  return (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`page-link ${currentPage === pageNumber ? "active" : ""}`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="page-link"
+                  disabled={currentPage >= pageCount}
+                  onClick={() => setCurrentPage(Math.min(pageCount, currentPage + 1))}
+                >
+                  »
+                </button>
               </div>
             </div>
           </div>

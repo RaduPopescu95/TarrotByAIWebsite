@@ -103,10 +103,25 @@ const AppointmentsAdmin = () => {
     ).length / itemsPerPage
   );
 
-  const generatePageNumbers = () => {
-    const pageCount =
-      activeTab === "upcoming" ? totalUpcomingPages : totalCompletedPages;
-    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  const getPageCount = () =>
+    activeTab === "upcoming" ? totalUpcomingPages : totalCompletedPages;
+
+  const generatePageItems = () => {
+    const pageCount = Math.max(1, getPageCount());
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, index) => index + 1);
+    }
+    // Smart pagination:
+    // - near start: 1 2 3 4 … last
+    // - near end:   1 … last-3 last-2 last-1 last
+    // - middle:     1 … current-1 current current+1 … last
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, "ellipsis", pageCount];
+    }
+    if (currentPage >= pageCount - 3) {
+      return [1, "ellipsis", pageCount - 3, pageCount - 2, pageCount - 1, pageCount];
+    }
+    return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", pageCount];
   };
 
   const upcomingReservations = filteredReservations
@@ -314,20 +329,50 @@ const AppointmentsAdmin = () => {
                 )}
               </div>
 
-              <div className="pagination dashboard-pagination">
-                {generatePageNumbers().map(
-                  (pageNumber) =>
-                    pageNumber ? (
-                      <Link
-                        key={pageNumber}
-                        href="#"
-                        className={`page-link ${currentPage === pageNumber ? "active" : ""}`}
-                        onClick={() => handlePageChange(pageNumber)}
+              <div
+                className="pagination dashboard-pagination"
+                style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}
+              >
+                <button
+                  type="button"
+                  className="page-link"
+                  disabled={currentPage <= 1}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                >
+                  «
+                </button>
+                {generatePageItems().map((item, idx) => {
+                  if (item === "ellipsis") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="page-link"
+                        style={{ pointerEvents: "none", opacity: 0.6 }}
                       >
-                        {pageNumber}
-                      </Link>
-                    ) : null // Rendează doar dacă `pageNumber` există
-                )}
+                        …
+                      </span>
+                    );
+                  }
+                  const pageNumber = item;
+                  return (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={`page-link ${currentPage === pageNumber ? "active" : ""}`}
+                      onClick={() => handlePageChange(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="page-link"
+                  disabled={currentPage >= getPageCount()}
+                  onClick={() => handlePageChange(Math.min(getPageCount(), currentPage + 1))}
+                >
+                  »
+                </button>
               </div>
             </div>
           </div>
