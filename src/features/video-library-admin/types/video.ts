@@ -20,6 +20,7 @@ export type VideoDoc = {
   category?: string;
   createdAt: Timestamp | null;
   updatedAt?: Timestamp;
+  publishAt?: Timestamp | null;
   isPublished: boolean;
   isPremium?: boolean;
   order?: number | null;
@@ -41,6 +42,7 @@ export type VideoCreateInput = {
   videoUrl: string;
   thumbnailUrl?: string;
   category?: string;
+  publishAt?: Timestamp | null;
   isPublished?: boolean;
   isPremium?: boolean;
   order?: number;

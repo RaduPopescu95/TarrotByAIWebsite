@@ -56,6 +56,7 @@ export default function VideoTable({
               <th className="px-6 py-4">Titlu</th>
               <th className="px-6 py-4">Platformă</th>
               <th className="px-6 py-4">Categorie</th>
+              <th className="px-6 py-4">Publicare</th>
               <th className="px-6 py-4">Publicat</th>
               <th className="px-6 py-4">Creat</th>
               <th className="px-6 py-4 text-right">Acțiuni</th>
@@ -85,6 +86,28 @@ export default function VideoTable({
                     </span>
                   ) : (
                     "—"
+                  )}
+                </td>
+                <td className="px-6 py-4 text-gray-600">
+                  {video.publishAt ? (
+                    <div className="flex flex-col gap-1">
+                      <span>{formatTimestamp(video.publishAt)}</span>
+                      <span
+                        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                          video.publishAt.toDate && video.publishAt.toDate() > new Date()
+                            ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                            : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                        }`}
+                      >
+                        {video.publishAt.toDate && video.publishAt.toDate() > new Date()
+                          ? "Programat"
+                          : "Activ"}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">
+                      Activ
+                    </span>
                   )}
                 </td>
                 <td className="px-6 py-4">

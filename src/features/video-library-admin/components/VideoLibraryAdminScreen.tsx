@@ -18,6 +18,8 @@ import { gTranslateFetch } from "../../../../utils/apiUtils";
 
 type PublishFilter = "all" | "published" | "unpublished";
 type PremiumFilter = "all" | "premium" | "nonPremium";
+type ScheduleFilter = "all" | "scheduled" | "active";
+type SortOption = "default" | "publishAtAsc" | "publishAtDesc";
 
 export default function VideoLibraryAdminScreen() {
   const [videos, setVideos] = useState<VideoDoc[]>([]);
@@ -30,6 +32,8 @@ export default function VideoLibraryAdminScreen() {
   const [platformFilter, setPlatformFilter] = useState<VideoPlatform | "all">("all");
   const [publishFilter, setPublishFilter] = useState<PublishFilter>("all");
   const [premiumFilter, setPremiumFilter] = useState<PremiumFilter>("all");
+  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("default");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -92,7 +96,8 @@ export default function VideoLibraryAdminScreen() {
 
   const filteredVideos = useMemo(() => {
     const lower = searchValue.trim().toLowerCase();
-    return videos.filter((video) => {
+    const now = new Date();
+    const result = videos.filter((video) => {
       const matchesSearch = lower.length === 0 || video.title.toLowerCase().includes(lower);
       const matchesPlatform = platformFilter === "all" || video.platform === platformFilter;
       const matchesPublish =
@@ -101,9 +106,26 @@ export default function VideoLibraryAdminScreen() {
       const matchesPremium =
         premiumFilter === "all" ||
         (premiumFilter === "premium" ? !!video.isPremium : !video.isPremium);
-      return matchesSearch && matchesPlatform && matchesPublish && matchesPremium;
+      const publishAtDate = video.publishAt?.toDate ? video.publishAt.toDate() : null;
+      const isScheduled = publishAtDate ? publishAtDate > now : false;
+      const matchesSchedule =
+        scheduleFilter === "all" ||
+        (scheduleFilter === "scheduled" ? isScheduled : !isScheduled);
+      return matchesSearch && matchesPlatform && matchesPublish && matchesPremium && matchesSchedule;
     });
-  }, [videos, searchValue, platformFilter, publishFilter, premiumFilter]);
+    if (sortOption === "default") {
+      return result;
+    }
+    const direction = sortOption === "publishAtAsc" ? 1 : -1;
+    return [...result].sort((a, b) => {
+      const aTime = a.publishAt?.toDate ? a.publishAt.toDate().getTime() : null;
+      const bTime = b.publishAt?.toDate ? b.publishAt.toDate().getTime() : null;
+      if (aTime === null && bTime === null) return 0;
+      if (aTime === null) return 1; // nulls last
+      if (bTime === null) return -1;
+      return (aTime - bTime) * direction;
+    });
+  }, [videos, searchValue, platformFilter, publishFilter, premiumFilter, scheduleFilter, sortOption]);
 
   const totalPages = Math.max(1, Math.ceil(filteredVideos.length / pageSize));
   const pagedVideos = useMemo(() => {
@@ -517,12 +539,32 @@ export default function VideoLibraryAdminScreen() {
                   <option value="premium">Premium</option>
                   <option value="nonPremium">Nepremium</option>
                 </select>
+                <select
+                  value={scheduleFilter}
+                  onChange={(e) => setScheduleFilter(e.target.value as ScheduleFilter)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="all">Toate programările</option>
+                  <option value="active">Active acum</option>
+                  <option value="scheduled">Programate</option>
+                </select>
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as SortOption)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="default">Sortare implicită</option>
+                  <option value="publishAtAsc">PublishAt ascendent</option>
+                  <option value="publishAtDesc">PublishAt descendent</option>
+                </select>
                 <button
                   onClick={() => {
                     setSearchValue("");
                     setPlatformFilter("all");
                     setPublishFilter("all");
                     setPremiumFilter("all");
+                    setScheduleFilter("all");
+                    setSortOption("default");
                   }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50"
                 >

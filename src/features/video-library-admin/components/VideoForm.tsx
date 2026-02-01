@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Timestamp } from "firebase/firestore";
 import type { VideoCreateInput, VideoDoc, VideoLocales, VideoPlatform } from "../types/video";
 import { validateVideoInput, type VideoValidationErrors } from "../utils/videoValidation";
 import { listVideoCategories } from "../services/videos.service";
@@ -27,6 +28,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     order: undefined,
     isPublished: false,
     isPremium: false,
+    publishAt: null,
   });
   const [errors, setErrors] = useState<VideoValidationErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -36,6 +38,17 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [translateMessage, setTranslateMessage] = useState("");
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const uiLocked = submitting || isTranslating;
+  const [publishAtInput, setPublishAtInput] = useState("");
+
+  const formatDateTimeLocal = (date: Date) => {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
 
   // Load existing categories
   useEffect(() => {
@@ -74,11 +87,24 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         order: initialValue.order,
         isPublished: initialValue.isPublished,
         isPremium: initialValue.isPremium ?? false,
+        publishAt: initialValue.publishAt ?? null,
       });
       setErrors({});
       setLocales(initialValue.locales);
       setTranslateMessage("");
+      if (initialValue.publishAt) {
+        setPublishAtInput(formatDateTimeLocal(initialValue.publishAt.toDate()));
+      } else {
+        setPublishAtInput("");
+      }
     }
+  }, [initialValue]);
+
+  useEffect(() => {
+    if (initialValue) return;
+    const now = new Date();
+    setPublishAtInput(formatDateTimeLocal(now));
+    setForm((prev) => ({ ...prev, publishAt: Timestamp.fromDate(now) }));
   }, [initialValue]);
 
   const titleText = useMemo(
@@ -88,6 +114,19 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
 
   const handleChange = (key: keyof VideoCreateInput, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePublishAtChange = (value: string) => {
+    setPublishAtInput(value);
+    if (!value) {
+      setForm((prev) => ({ ...prev, publishAt: null }));
+      return;
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, publishAt: Timestamp.fromDate(parsed) }));
   };
 
   const generateLocales = async (): Promise<VideoLocales | undefined> => {
@@ -277,6 +316,20 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                   placeholder="Ex: 1"
                   min={0}
                 />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Publică la</label>
+                <input
+                  type="datetime-local"
+                  value={publishAtInput}
+                  onChange={(e) => handlePublishAtChange(e.target.value)}
+                  disabled={uiLocked}
+                  className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Data/ora (UTC) când videoclipul devine vizibil în aplicație.
+                </p>
               </div>
             </div>
 
