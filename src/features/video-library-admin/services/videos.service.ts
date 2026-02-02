@@ -26,7 +26,7 @@ const COLLECTION_NAME = "videosVideoModule";
 const CATEGORY_COLLECTION_NAME = "videoCategories";
 const videosCollection = collection(db, COLLECTION_NAME);
 const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
-const metaDocRef = doc(db, COLLECTION_NAME, "__meta__");
+const metaDocRef = doc(db, COLLECTION_NAME, "_meta");
 
 const getNextOrder = async (): Promise<number> => {
   const metaSnapshot = await getDoc(metaDocRef);

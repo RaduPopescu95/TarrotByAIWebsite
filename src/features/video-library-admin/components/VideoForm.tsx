@@ -173,6 +173,10 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const submitForm = async (localesToSubmit?: VideoLocales) => {
     setSubmitting(true);
     try {
+      console.log("[VideoForm] Submitting payload", {
+        ...form,
+        locales: localesToSubmit ? Object.keys(localesToSubmit) : [],
+      });
       await onSubmit({
         ...form,
         title: form.title.trim(),
@@ -181,6 +185,10 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         category: form.category?.trim() || "",
         locales: localesToSubmit,
       });
+      console.log("[VideoForm] Submit resolved");
+    } catch (error) {
+      console.error("[VideoForm] Submit failed", error);
+      throw error;
     } finally {
       setSubmitting(false);
     }
@@ -195,11 +203,21 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[VideoForm] Submit clicked", {
+      isEditing,
+      form,
+      publishAtInput,
+      localesKeys: locales ? Object.keys(locales) : [],
+    });
     const validation = validateVideoInput(form);
     setErrors(validation);
-    if (Object.keys(validation).length > 0) return;
+    if (Object.keys(validation).length > 0) {
+      console.warn("[VideoForm] Validation failed", validation);
+      return;
+    }
     const needsLocales = !locales || Object.keys(locales).length === 0;
     if (needsLocales) {
+      console.log("[VideoForm] No locales, showing confirm dialog");
       setShowTranslateConfirm(true);
       return;
     }

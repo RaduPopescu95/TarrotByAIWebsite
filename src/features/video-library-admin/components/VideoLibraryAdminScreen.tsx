@@ -218,6 +218,10 @@ export default function VideoLibraryAdminScreen() {
     setErrorMessage("");
     setSuccessMessage("");
     try {
+      console.log("[VideoLibraryAdminScreen] Form submit", {
+        mode: editingVideo ? "edit" : "create",
+        data,
+      });
       if (editingVideo) {
         await updateVideo(editingVideo.id, data);
         setSuccessMessage("Videoclip actualizat.");
@@ -229,7 +233,8 @@ export default function VideoLibraryAdminScreen() {
       setEditingVideo(null);
       await refreshVideos();
       await refreshCategories();
-    } catch (_) {
+    } catch (error) {
+      console.error("[VideoLibraryAdminScreen] Save failed", error);
       setErrorMessage("Salvarea a eșuat.");
     } finally {
       setLoading(false);
