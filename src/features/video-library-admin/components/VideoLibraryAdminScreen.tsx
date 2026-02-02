@@ -393,7 +393,7 @@ export default function VideoLibraryAdminScreen() {
   }, [videos]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto w-full max-w-none space-y-8">
       <div className="flex w-full max-w-md rounded-lg bg-gray-100 p-1 text-sm text-gray-700">
         <button
           type="button"

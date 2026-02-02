@@ -9,7 +9,7 @@ export default function VideosDashboardPage() {
   return (
     <LocalPasswordGate onGranted={() => {}}>
       <div className="min-h-screen bg-gray-50">
-        <main className="px-8 py-8">
+        <main className="px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8 flex items-center gap-4">
             <button
               onClick={() => router.push("/dashboard")}
