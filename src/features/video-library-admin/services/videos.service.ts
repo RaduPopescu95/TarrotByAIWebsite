@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -28,20 +29,32 @@ const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
 const metaDocRef = doc(db, COLLECTION_NAME, "__meta__");
 
 const getNextOrder = async (): Promise<number> => {
-  return await runTransaction(db, async (tx) => {
-    const metaSnap = await tx.get(metaDocRef);
-    if (metaSnap.exists()) {
+  const metaSnapshot = await getDoc(metaDocRef);
+  if (metaSnapshot.exists()) {
+    return await runTransaction(db, async (tx) => {
+      const metaSnap = await tx.get(metaDocRef);
       const lastOrder = metaSnap.data()?.lastOrder;
       const nextOrder = typeof lastOrder === "number" ? lastOrder + 1 : 1;
       tx.set(metaDocRef, { lastOrder: nextOrder }, { merge: true });
       return nextOrder;
-    }
+    });
+  }
 
-    const lastOrderQuery = query(videosCollection, orderBy("order", "desc"), limit(1));
-    const lastSnap = await tx.get(lastOrderQuery);
-    const lastDoc = lastSnap.docs[0];
-    const lastOrder = lastDoc?.data()?.order;
-    const nextOrder = typeof lastOrder === "number" ? lastOrder + 1 : 1;
+  const lastOrderQuery = query(videosCollection, orderBy("order", "desc"), limit(1));
+  const lastSnap = await getDocs(lastOrderQuery);
+  const lastDoc = lastSnap.docs[0];
+  const lastOrder = lastDoc?.data()?.order;
+  const baseOrder = typeof lastOrder === "number" ? lastOrder : 0;
+
+  return await runTransaction(db, async (tx) => {
+    const metaSnap = await tx.get(metaDocRef);
+    if (metaSnap.exists()) {
+      const existingOrder = metaSnap.data()?.lastOrder;
+      const nextOrder = typeof existingOrder === "number" ? existingOrder + 1 : baseOrder + 1;
+      tx.set(metaDocRef, { lastOrder: nextOrder }, { merge: true });
+      return nextOrder;
+    }
+    const nextOrder = baseOrder + 1;
     tx.set(metaDocRef, { lastOrder: nextOrder }, { merge: true });
     return nextOrder;
   });
