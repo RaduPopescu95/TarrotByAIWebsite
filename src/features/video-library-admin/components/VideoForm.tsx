@@ -306,19 +306,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Ordine</label>
-                <input
-                  type="number"
-                  value={form.order ?? ""}
-                  onChange={(e) => handleChange("order", e.target.value ? Number(e.target.value) : undefined)}
-                  disabled={uiLocked}
-                  className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
-                  placeholder="Ex: 1"
-                  min={0}
-                />
-              </div>
-
-              <div>
                 <label className="text-sm font-medium text-gray-700">Publică la</label>
                 <input
                   type="datetime-local"

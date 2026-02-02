@@ -4,6 +4,10 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -21,6 +25,27 @@ const COLLECTION_NAME = "videosVideoModule";
 const CATEGORY_COLLECTION_NAME = "videoCategories";
 const videosCollection = collection(db, COLLECTION_NAME);
 const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
+const metaDocRef = doc(db, COLLECTION_NAME, "__meta__");
+
+const getNextOrder = async (): Promise<number> => {
+  return await runTransaction(db, async (tx) => {
+    const metaSnap = await tx.get(metaDocRef);
+    if (metaSnap.exists()) {
+      const lastOrder = metaSnap.data()?.lastOrder;
+      const nextOrder = typeof lastOrder === "number" ? lastOrder + 1 : 1;
+      tx.set(metaDocRef, { lastOrder: nextOrder }, { merge: true });
+      return nextOrder;
+    }
+
+    const lastOrderQuery = query(videosCollection, orderBy("order", "desc"), limit(1));
+    const lastSnap = await tx.get(lastOrderQuery);
+    const lastDoc = lastSnap.docs[0];
+    const lastOrder = lastDoc?.data()?.order;
+    const nextOrder = typeof lastOrder === "number" ? lastOrder + 1 : 1;
+    tx.set(metaDocRef, { lastOrder: nextOrder }, { merge: true });
+    return nextOrder;
+  });
+};
 
 export async function listVideos(): Promise<VideoDoc[]> {
   const snapshot = await getDocs(videosCollection);
@@ -32,9 +57,11 @@ export async function listVideos(): Promise<VideoDoc[]> {
 }
 
 export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
+  const nextOrder = input.order ?? (await getNextOrder());
   const payload = {
     ...input,
     isPublished: !!input.isPublished,
+    order: nextOrder,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
