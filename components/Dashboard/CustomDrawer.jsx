@@ -101,6 +101,7 @@ const dashboardPrefetchScreens = [
   "citire-personalizata-categorii",
   "citire-personalizata-variantecarti",
   "citate-motivationale",
+  "courses",
   "videos",
   "culori-norocoase",
   "numere-norocoase",
@@ -499,6 +500,26 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText
                   primary="Videoclipuri"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "courses",
+                    text: "Cursuri video",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Cursuri video" ? "#ffc045" : "white",
+                  }}
+                >
+                  <LibraryBooksIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Cursuri video"
                   sx={{ color: "white" }}
                 />
               </ListItemButton>

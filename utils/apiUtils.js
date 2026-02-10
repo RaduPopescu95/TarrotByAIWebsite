@@ -9,72 +9,26 @@ import { getUrlImageApi } from "./storageUtils";
 
 let finalArr = [];
 
-// export const gTranslateFetch = async (text, target) => {
-//   const url = `https://translation.googleapis.com/language/translate/v2?key=AIzaSyBRgP4D08BVgzw4oyWfZZ9Rx2mjNouePj4`;
-
-//   const body = {
-//     q: text,
-//     target: target,
-//     format: "text",
-//   };
-
-//   try {
-//     const response = await fetch(url, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(body),
-//     });
-
-//     if (!response.ok) {
-//       throw new Error("Translation request failed");
-//     }
-
-//     const result = await response.json();
-//     console.log("----------Translation result--------");
-//     console.log("Translation result:", text);
-//     console.log("Translation result:", target);
-//     console.log(
-//       "Translation result:",
-//       result.data.translations[0].translatedText
-//     );
-//     return result.data.translations[0].translatedText;
-//   } catch (error) {
-//     console.error("Error on gTranslateFetch:", error);
-//     return null;
-//   }
-// };
-
 export const gTranslateFetch = async (text, target) => {
-  const url = 'https://google-translate113.p.rapidapi.com/api/v1/translator/text';
-
-  const body = {
-    from: 'auto', // detectează automat limba sursă
-    to: target,
-    text: text,
-  };
-
-  const options = {
-    method: 'POST',
-    headers: {
-      'x-rapidapi-key': 'fdb30fac7dmshee22c632d48569ap1d9819jsna577a39fffd6', // 🔐 nu uita să muți cheia în .env în producție
-      'x-rapidapi-host': 'google-translate113.p.rapidapi.com',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  };
-
+  const trimmedText = typeof text === "string" ? text.trim() : "";
+  const targetLang = typeof target === "string" ? target.trim() : "";
+  if (!trimmedText || !targetLang) return null;
   try {
-    const response = await fetch(url, options);
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: trimmedText,
+        target: targetLang,
+      }),
+    });
     const result = await response.json();
-
-    console.log("----------Translation result--------");
-    console.log("Translation result:", text);
-    console.log("Translation result:", target);
-    console.log("Translation result:", result.trans);
-
-    return result.trans; // păstrăm același return value ca înainte
+    if (!response.ok) {
+      throw new Error(result?.error || "Translation request failed");
+    }
+    return result?.translation || result?.trans || null;
   } catch (error) {
     console.error("Error on gTranslateFetch:", error);
     return null;

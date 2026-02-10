@@ -12,6 +12,7 @@ import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
+import { sanitizeInternalReturnUrl } from "../../lib/navigation";
 
 function Copyright(props) {
   return (
@@ -50,6 +51,13 @@ export default function SignInSide() {
 
   const { t } = useTranslation("common");
   const router = useRouter();
+  const rawReturnUrl = Array.isArray(router.query?.returnUrl)
+    ? router.query.returnUrl[0]
+    : router.query?.returnUrl;
+  const safeReturnUrl = React.useMemo(
+    () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
+    [rawReturnUrl]
+  );
 
   // Check if mobile
   React.useEffect(() => {
@@ -78,7 +86,7 @@ export default function SignInSide() {
       .then(async (userCredentials) => {
         setCurrentUser(userCredentials);
         console.log("userCredentials...", userCredentials.user.uid);
-        router.push("/");
+        router.push(safeReturnUrl);
         setIsLoading(false);
       })
       .catch((error) => {
@@ -95,7 +103,7 @@ export default function SignInSide() {
   const handleLoginAsGuest = async () => {
     try {
       setAsGuestUser(true);
-      router.push("/");
+      router.push(safeReturnUrl);
       console.log("Utilizatorul este acum setat ca guest user.");
     } catch (error) {
       console.error(
@@ -224,7 +232,11 @@ export default function SignInSide() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => router.push("/register")}
+                      onClick={() =>
+                        router.push(
+                          `/register?returnUrl=${encodeURIComponent(safeReturnUrl)}`
+                        )
+                      }
                       style={styles.link}
                     >
                       Înregistrează-te

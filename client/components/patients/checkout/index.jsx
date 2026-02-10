@@ -626,7 +626,7 @@ const Checkout = (props) => {
                               <option value="">
                                 Selectati tipul consultatiei
                               </option>
-                              <option value="Audio">Audio</option>
+                      
                               <option value="Video">Video</option>
                             </select>
                           </div>

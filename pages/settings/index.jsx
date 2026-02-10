@@ -282,6 +282,12 @@ export default function SignInSide() {
                   >
                     {t("historyFuture")}
                   </button>
+                  <button
+                    onClick={() => router.push("/courses/purchased")}
+                    style={styles.historyLinkSecondary}
+                  >
+                    {t("settingsPurchasedCourses")}
+                  </button>
                 </div>
 
                 <form onSubmit={handleSubmit} style={styles.settingsForm}>

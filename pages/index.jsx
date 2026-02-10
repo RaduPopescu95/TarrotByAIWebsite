@@ -22,6 +22,7 @@ import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { useDatabase } from "../context/DatabaseContext";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
+import CourseCard from "../components/Courses/CourseCard";
 import {
   collection,
   doc,
@@ -111,6 +112,19 @@ export async function getServerSideProps({ locale }) {
   };
 }
 
+function getCourseGridClass(courseCount = 0) {
+  if (courseCount <= 1) {
+    return "mx-auto grid w-full max-w-5xl grid-cols-1 gap-7";
+  }
+  if (courseCount === 2) {
+    return "mx-auto grid w-full max-w-6xl grid-cols-1 gap-7 md:grid-cols-2";
+  }
+  if (courseCount === 3) {
+    return "mx-auto grid w-full max-w-[96rem] grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3";
+  }
+  return "mx-auto grid w-full max-w-[120rem] grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
+}
+
 function Landing(props) {
   const { articles: arti } = useDatabase();
   const { currentUser, isGuestUser } = useAuth();
@@ -174,6 +188,18 @@ function Landing(props) {
   );
 
   const [filterItem, setFilterItem] = useState("All");
+  const [homeCoursesLoading, setHomeCoursesLoading] = useState(true);
+  const [homeCoursesError, setHomeCoursesError] = useState("");
+  const [homeCourses, setHomeCourses] = useState({
+    latestCourses: [],
+    featuredCourses: [],
+  });
+  const hasAnyHomeCourses =
+    homeCourses.latestCourses.length > 0 || homeCourses.featuredCourses.length > 0;
+  const shouldRenderHomeCoursesSection =
+    homeCoursesLoading || Boolean(homeCoursesError) || hasAnyHomeCourses;
+  const latestCourseCardsGridClass = getCourseGridClass(homeCourses.latestCourses.length);
+  const featuredCourseCardsGridClass = getCourseGridClass(homeCourses.featuredCourses.length);
 
   const handleNextPage = () => {
     const newStartIndex = currentPage * itemsPerPage;
@@ -239,6 +265,51 @@ function Landing(props) {
 
     loadInitialLastVisible();
   }, [lastVisibleId]); // Dependența de lastVisibleId asigură că efectul se rulează la încărcarea componentei
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadHomeCourses = async () => {
+      setHomeCoursesLoading(true);
+      setHomeCoursesError("");
+      try {
+        const locale = router.locale || "ro";
+        const response = await fetch(`/api/courses/home?locale=${encodeURIComponent(locale)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || "home_courses_failed");
+        }
+
+        const latestCourses = Array.isArray(data?.latestCourses) ? data.latestCourses : [];
+        const featuredCourses = Array.isArray(data?.featuredCourses) ? data.featuredCourses : [];
+
+        if (mounted) {
+          setHomeCourses({ latestCourses, featuredCourses });
+        }
+      } catch (err) {
+        console.error("[home.courses] load_fail", {
+          locale: router.locale || "ro",
+          message: err?.message || "unknown_error",
+        });
+        if (mounted) {
+          setHomeCourses({ latestCourses: [], featuredCourses: [] });
+          setHomeCoursesError(t("coursesHomeError"));
+        }
+      } finally {
+        if (mounted) setHomeCoursesLoading(false);
+      }
+    };
+
+    loadHomeCourses();
+    return () => {
+      mounted = false;
+    };
+  }, [router.locale, t]);
 
   // Loading state component
   const LoadingSpinner = () => (
@@ -359,6 +430,19 @@ function Landing(props) {
                     </span>
                   </Link>
                   
+                </div>
+
+                <div className="mt-6">
+                  <Link
+                    href="/courses"
+                    className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-indigo-200 bg-white/90 px-6 py-3 font-semibold text-indigo-700 shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422A12.083 12.083 0 0112 21c-2.331 0-4.507-.66-6.16-1.8L12 14z" />
+                    </svg>
+                    {t("coursesHeading")}
+                  </Link>
                 </div>
               </div>
                              {/* Right column – Hero image */}
@@ -630,6 +714,88 @@ function Landing(props) {
                   </div>
                 </div>
               </section>
+            )}
+
+            {shouldRenderHomeCoursesSection && (
+            <section className="bg-transparent">
+              <div className="w-full space-y-10 px-4 py-16 sm:px-6 lg:px-8">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="max-w-3xl">
+                    <h2 className="text-3xl font-bold tracking-tight text-slate-900">{t("coursesHeading")}</h2>
+                    <p className="mt-2 text-base leading-relaxed text-slate-600">{t("coursesSubtitle")}</p>
+                  </div>
+                  <Link
+                    href="/courses"
+                    className="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+                  >
+                    {t("coursesHomeBrowseCta")}
+                  </Link>
+                </div>
+
+                {homeCoursesLoading ? (
+                  <div className="text-sm text-slate-600">{t("coursesLoading")}</div>
+                ) : homeCoursesError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {homeCoursesError}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <article className="w-full space-y-6">
+                      <div>
+                        <h3 className="text-2xl font-semibold text-slate-900">{t("coursesHomeLatestTitle")}</h3>
+                        <p className="mt-1 text-sm text-slate-600">{t("coursesHomeLatestSubtitle")}</p>
+                      </div>
+
+                      {homeCourses.latestCourses.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm text-slate-600">
+                          {t("coursesHomeLatestEmpty")}
+                        </div>
+                      ) : (
+                        <div className={latestCourseCardsGridClass}>
+                          {homeCourses.latestCourses.map((course) => (
+                            <CourseCard
+                              key={`latest-${course.id}`}
+                              course={course}
+                              onClick={() => router.push(`/courses/${course.id}`)}
+                              noImageLabel={t("coursesCardNoImage")}
+                              openLabel={t("coursesHomeOpenCourse")}
+                              priceLocale={router.locale || "ro-RO"}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </article>
+
+                    <article className="w-full space-y-6">
+                      <div>
+                        <h3 className="text-2xl font-semibold text-slate-900">{t("coursesHomeFeaturedTitle")}</h3>
+                        <p className="mt-1 text-sm text-slate-600">{t("coursesHomeFeaturedSubtitle")}</p>
+                      </div>
+
+                      {homeCourses.featuredCourses.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm text-slate-600">
+                          {t("coursesHomeFeaturedEmpty")}
+                        </div>
+                      ) : (
+                        <div className={featuredCourseCardsGridClass}>
+                          {homeCourses.featuredCourses.map((course) => (
+                            <CourseCard
+                              key={`featured-${course.id}`}
+                              course={course}
+                              onClick={() => router.push(`/courses/${course.id}`)}
+                              noImageLabel={t("coursesCardNoImage")}
+                              openLabel={t("coursesHomeOpenCourse")}
+                              featuredLabel={t("coursesHomeFeaturedBadge")}
+                              priceLocale={router.locale || "ro-RO"}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  </div>
+                )}
+              </div>
+            </section>
             )}
         </main>
       </div>
@@ -1152,4 +1318,3 @@ const styles = {
 // CSS animations are now handled in global styles to avoid hydration issues
 
 export default Landing;
-

@@ -1,40 +1,65 @@
-// Importul necesar pentru a lucra cu cereri și răspunsuri în Next.js
-import { NextRequest } from "next/server";
-
 export default async function handler(req, res) {
-  if (req.method === "POST") {
-    // Primiți textul și limba țintă din corpul cererii
-    const { text, target } = req.body;
+  if (req.method !== "POST") {
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
 
-    // Adresa URL și opțiunile pentru noua API de traducere
-    const url =
-      "https://google-translate113.p.rapidapi.com/api/v1/translator/text";
-    const options = {
+  const { text, target, source } = req.body || {};
+  const trimmedText = typeof text === "string" ? text.trim() : "";
+  const targetLang = typeof target === "string" ? target.trim() : "";
+  const sourceLang = typeof source === "string" ? source.trim() : "auto";
+
+  if (!trimmedText) {
+    return res.status(400).json({ error: "Missing text" });
+  }
+  if (!targetLang) {
+    return res.status(400).json({ error: "Missing target language" });
+  }
+
+  const rapidApiKey = process.env.RAPIDAPI_TRANSLATE_KEY;
+  const rapidApiHost =
+    process.env.RAPIDAPI_TRANSLATE_HOST || "google-translate113.p.rapidapi.com";
+
+  if (!rapidApiKey) {
+    return res.status(500).json({ error: "Translation service is not configured" });
+  }
+
+  try {
+    const response = await fetch(`https://${rapidApiHost}/api/v1/translator/text`, {
       method: "POST",
       headers: {
-        "content-type": "application/x-www-form-urlencoded",
-        "X-RapidAPI-Key": "fdb30fac7dmshee22c632d48569ap1d9819jsna577a39fffd6",
-        "X-RapidAPI-Host": "google-translate113.p.rapidapi.com",
+        "Content-Type": "application/json",
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": rapidApiHost,
       },
-      body: new URLSearchParams({
-        from: "ro", // Limba sursă setată la Română
-        to: target, // Utilizează limba țintă primită
-        text: text, // Utilizează textul primit
+      body: JSON.stringify({
+        from: sourceLang || "auto",
+        to: targetLang,
+        text: trimmedText,
       }),
-    };
+    });
 
-    try {
-      // Efectuați cererea la API-ul de traducere
-      const response = await fetch(url, options);
-      const result = await response.json(); // Assuming the response is in JSON format
-      res.status(200).json(result); // Send back the response data
-    } catch (error) {
-      console.error("API error:", error);
-      res.status(500).json({ error: error.message });
+    const result = await response.json().catch(() => ({}));
+    const translated =
+      (typeof result?.trans === "string" && result.trans) ||
+      (typeof result?.translation === "string" && result.translation) ||
+      "";
+
+    if (!response.ok || !translated) {
+      return res.status(502).json({
+        error: "Translation failed",
+        details: result?.message || result?.error || null,
+      });
     }
-  } else {
-    // Răspundeți cu 405 pentru cererile non-POST
-    res.setHeader("Allow", ["POST"]);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    return res.status(200).json({
+      translation: translated,
+      trans: translated,
+      target: targetLang,
+      source: sourceLang || "auto",
+      provider: "rapidapi",
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Translation request failed" });
   }
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const STORAGE_KEY = "dashboard_access_token";
@@ -34,11 +35,18 @@ function clearToken() {
   } catch (_) {}
 }
 
-export default function LocalPasswordGate({ children, ttlMinutes = 20160, onGranted }) {
+export default function LocalPasswordGate({
+  children,
+  ttlMinutes = 20160,
+  onGranted,
+  redirectTo,
+}) {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [granted, setGranted] = useState(false);
   const [show, setShow] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   // Check token on mount and on interval
   useEffect(() => {
@@ -48,16 +56,26 @@ export default function LocalPasswordGate({ children, ttlMinutes = 20160, onGran
         if (token.expiresAt > getNowMs()) {
           setGranted(true);
           setError("");
+          setHasChecked(true);
           return;
         }
       }
       clearToken();
       setGranted(false);
+      setHasChecked(true);
     };
     check();
     const id = setInterval(check, 30 * 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!redirectTo) return;
+    if (!hasChecked) return;
+    if (granted) return;
+    if (router?.pathname === redirectTo) return;
+    router.replace(redirectTo);
+  }, [redirectTo, hasChecked, granted, router]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -83,6 +101,10 @@ export default function LocalPasswordGate({ children, ttlMinutes = 20160, onGran
 
   if (granted) {
     return <>{children}</>;
+  }
+
+  if (redirectTo) {
+    return null;
   }
 
   return (

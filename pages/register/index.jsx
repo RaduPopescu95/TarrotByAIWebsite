@@ -12,6 +12,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Head from "next/head";
+import { sanitizeInternalReturnUrl } from "../../lib/navigation";
 
 function Copyright(props) {
   return (
@@ -52,6 +53,13 @@ export default function SignInSide() {
   const { t } = useTranslation("common");
   const { setUserData } = useAuth();
   const router = useRouter();
+  const rawReturnUrl = Array.isArray(router.query?.returnUrl)
+    ? router.query.returnUrl[0]
+    : router.query?.returnUrl;
+  const safeReturnUrl = React.useMemo(
+    () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
+    [rawReturnUrl]
+  );
   const [formData, setFormData] = React.useState({
     email: "",
     password: "",
@@ -149,7 +157,7 @@ export default function SignInSide() {
       })
       .then(() => {})
       .then(() => {
-        router.push("/");
+        router.push(safeReturnUrl);
         setIsLoading(false);
       })
       .catch((error) => {
@@ -318,7 +326,11 @@ export default function SignInSide() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => router.push("/login")}
+                      onClick={() =>
+                        router.push(
+                          `/login?returnUrl=${encodeURIComponent(safeReturnUrl)}`
+                        )
+                      }
                       style={styles.link}
                     >
                       Autentificare
