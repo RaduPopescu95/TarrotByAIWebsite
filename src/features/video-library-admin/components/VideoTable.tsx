@@ -1,10 +1,13 @@
 import React from "react";
-import type { VideoDoc } from "../types/video";
+import type { VideoDoc, VideoSortDirection, VideoSortField } from "../types/video";
 import { formatTimestamp } from "../utils/videoFormat";
 
 type Props = {
   videos: VideoDoc[];
   loading?: boolean;
+  sortField: VideoSortField;
+  sortDirection: VideoSortDirection;
+  onSortChange: (field: VideoSortField) => void;
   onEdit: (video: VideoDoc) => void;
   onDelete: (video: VideoDoc) => void;
   onTogglePublish: (video: VideoDoc, nextValue: boolean) => void;
@@ -16,6 +19,9 @@ type Props = {
 export default function VideoTable({
   videos,
   loading = false,
+  sortField,
+  sortDirection,
+  onSortChange,
   onEdit,
   onDelete,
   onTogglePublish,
@@ -23,6 +29,19 @@ export default function VideoTable({
   onCopy,
   onPreview,
 }: Props) {
+  const getAriaSort = (field: VideoSortField): "ascending" | "descending" | "none" => {
+    if (sortField !== field) return "none";
+    return sortDirection === "asc" ? "ascending" : "descending";
+  };
+
+  const getSortIndicator = (field: VideoSortField): string => {
+    if (sortField !== field) return "↕";
+    return sortDirection === "asc" ? "↑" : "↓";
+  };
+
+  const sortHeaderButtonClass =
+    "inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:text-gray-900";
+
   if (videos.length === 0) {
     if (loading) {
       return (
@@ -52,13 +71,76 @@ export default function VideoTable({
         <table className="min-w-full text-left text-sm">
           <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-700">
             <tr>
-              <th className="px-6 py-4">Ordine</th>
-              <th className="px-6 py-4">Titlu</th>
-              <th className="px-6 py-4">Platformă</th>
-              <th className="px-6 py-4">Categorie</th>
-              <th className="px-6 py-4">Publicare</th>
-              <th className="px-6 py-4">Publicat</th>
-              <th className="px-6 py-4">Creat</th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("order")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("order")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Ordine</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("order")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("title")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("title")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Titlu</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("title")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("platform")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("platform")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Platformă</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("platform")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("category")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("category")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Categorie</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("category")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("publishAt")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("publishAt")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Publicare</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("publishAt")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("isPublished")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("isPublished")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Publicat</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("isPublished")}</span>
+                </button>
+              </th>
+              <th className="px-6 py-4" aria-sort={getAriaSort("createdAt")}>
+                <button
+                  type="button"
+                  onClick={() => onSortChange("createdAt")}
+                  className={sortHeaderButtonClass}
+                >
+                  <span>Creat</span>
+                  <span className="text-[10px] text-gray-500">{getSortIndicator("createdAt")}</span>
+                </button>
+              </th>
               <th className="px-6 py-4 text-right">Acțiuni</th>
             </tr>
           </thead>

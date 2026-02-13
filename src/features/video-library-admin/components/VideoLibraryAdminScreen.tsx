@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
-import type { VideoCategoryDoc, VideoCreateInput, VideoDoc, VideoPlatform } from "../types/video";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { Timestamp } from "firebase/firestore";
+import type {
+  VideoCategoryDoc,
+  VideoCreateInput,
+  VideoDoc,
+  VideoPlatform,
+  VideoSortDirection,
+  VideoSortField,
+} from "../types/video";
 import {
   createVideo,
   deleteVideo,
@@ -10,6 +18,7 @@ import {
   togglePublish,
   updateVideo,
 } from "../services/videos.service";
+import { flushAdminUiLogQueue, logAdminUiEvent } from "../services/adminUiLogs.client";
 import VideoForm from "./VideoForm";
 import VideoTable from "./VideoTable";
 import Modal from "./Modal";
@@ -19,7 +28,138 @@ import { gTranslateFetch } from "../../../../utils/apiUtils";
 type PublishFilter = "all" | "published" | "unpublished";
 type PremiumFilter = "all" | "premium" | "nonPremium";
 type ScheduleFilter = "all" | "scheduled" | "active";
-type SortOption = "default" | "publishAtAsc" | "publishAtDesc";
+
+const DEFAULT_SORT_FIELD: VideoSortField = "createdAt";
+const DEFAULT_SORT_DIRECTION: VideoSortDirection = "desc";
+const CREATE_CLICK_FEEDBACK_MS = 600;
+const CREATE_MODAL_OPEN_TIMEOUT_MS = 800;
+const DESC_FIRST_FIELDS: ReadonlySet<VideoSortField> = new Set<VideoSortField>([
+  "createdAt",
+  "publishAt",
+  "order",
+  "isPublished",
+]);
+
+const buildCreateSessionId = (): string =>
+  `videos-create-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const getStackTop = (value: unknown): string | undefined => {
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
+  const [firstLine] = value.split("\n");
+  return firstLine?.trim() || undefined;
+};
+
+const timestampToMs = (value?: Timestamp | null): number | null => {
+  if (!value) return null;
+  try {
+    if (typeof value.toDate === "function") return value.toDate().getTime();
+    const parsed = value as unknown as { seconds?: number };
+    return typeof parsed.seconds === "number" ? parsed.seconds * 1000 : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const compareString = (a: string, b: string, direction: VideoSortDirection): number => {
+  const result = a.localeCompare(b, "ro-RO", { sensitivity: "base" });
+  if (result === 0) return 0;
+  return direction === "asc" ? result : -result;
+};
+
+const compareNullableNumber = (
+  a: number | null,
+  b: number | null,
+  direction: VideoSortDirection,
+  nullsLast = false
+): number => {
+  const aMissing = a === null;
+  const bMissing = b === null;
+  if (aMissing && bMissing) return 0;
+  if (aMissing || bMissing) {
+    if (!nullsLast) return aMissing ? -1 : 1;
+    return aMissing ? 1 : -1;
+  }
+  if (a === b) return 0;
+  if (direction === "asc") return a < b ? -1 : 1;
+  return a > b ? -1 : 1;
+};
+
+const compareVideosByTieBreakers = (a: VideoDoc, b: VideoDoc): number => {
+  const createdComparison = compareNullableNumber(
+    timestampToMs(a.createdAt),
+    timestampToMs(b.createdAt),
+    "desc",
+    true
+  );
+  if (createdComparison !== 0) return createdComparison;
+
+  const orderComparison = compareNullableNumber(a.order ?? null, b.order ?? null, "desc", true);
+  if (orderComparison !== 0) return orderComparison;
+
+  const titleComparison = compareString(a.title ?? "", b.title ?? "", "asc");
+  if (titleComparison !== 0) return titleComparison;
+
+  return a.id.localeCompare(b.id, "ro-RO");
+};
+
+const sortVideosForAdminTable = (
+  items: VideoDoc[],
+  sortField: VideoSortField,
+  sortDirection: VideoSortDirection
+): VideoDoc[] => {
+  return [...items].sort((a, b) => {
+    let primaryComparison = 0;
+
+    switch (sortField) {
+      case "createdAt":
+        primaryComparison = compareNullableNumber(
+          timestampToMs(a.createdAt),
+          timestampToMs(b.createdAt),
+          sortDirection,
+          true
+        );
+        break;
+      case "publishAt":
+        primaryComparison = compareNullableNumber(
+          timestampToMs(a.publishAt),
+          timestampToMs(b.publishAt),
+          sortDirection,
+          true
+        );
+        break;
+      case "title":
+        primaryComparison = compareString(a.title ?? "", b.title ?? "", sortDirection);
+        break;
+      case "order":
+        primaryComparison = compareNullableNumber(
+          a.order ?? null,
+          b.order ?? null,
+          sortDirection,
+          true
+        );
+        break;
+      case "platform":
+        primaryComparison = compareString(a.platform ?? "", b.platform ?? "", sortDirection);
+        break;
+      case "category":
+        primaryComparison = compareString(a.category ?? "", b.category ?? "", sortDirection);
+        break;
+      case "isPublished":
+        primaryComparison = compareNullableNumber(
+          a.isPublished ? 1 : 0,
+          b.isPublished ? 1 : 0,
+          sortDirection
+        );
+        break;
+      default:
+        primaryComparison = 0;
+        break;
+    }
+
+    if (primaryComparison !== 0) return primaryComparison;
+    return compareVideosByTieBreakers(a, b);
+  });
+};
 
 export default function VideoLibraryAdminScreen() {
   const [videos, setVideos] = useState<VideoDoc[]>([]);
@@ -33,7 +173,8 @@ export default function VideoLibraryAdminScreen() {
   const [publishFilter, setPublishFilter] = useState<PublishFilter>("all");
   const [premiumFilter, setPremiumFilter] = useState<PremiumFilter>("all");
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>("all");
-  const [sortOption, setSortOption] = useState<SortOption>("default");
+  const [sortField, setSortField] = useState<VideoSortField>(DEFAULT_SORT_FIELD);
+  const [sortDirection, setSortDirection] = useState<VideoSortDirection>(DEFAULT_SORT_DIRECTION);
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -51,6 +192,54 @@ export default function VideoLibraryAdminScreen() {
   const [pendingCategoryName, setPendingCategoryName] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<VideoCategoryDoc | null>(null);
   const [showCategoryDetails, setShowCategoryDetails] = useState(false);
+  const [isCreateOpening, setIsCreateOpening] = useState(false);
+  const [createOpenWarning, setCreateOpenWarning] = useState("");
+
+  const createSessionIdRef = useRef<string>(buildCreateSessionId());
+  const showFormRef = useRef(showForm);
+  const loadingRef = useRef(loading);
+  const activeTabRef = useRef(activeTab);
+  const previousShowFormRef = useRef(showForm);
+  const createClickTimerRef = useRef<number | null>(null);
+  const createOpenWatchdogRef = useRef<number | null>(null);
+
+  const clearCreateTimers = () => {
+    if (createClickTimerRef.current) {
+      window.clearTimeout(createClickTimerRef.current);
+      createClickTimerRef.current = null;
+    }
+    if (createOpenWatchdogRef.current) {
+      window.clearTimeout(createOpenWatchdogRef.current);
+      createOpenWatchdogRef.current = null;
+    }
+  };
+
+  const logCreateEvent = (
+    event: "create_button_pointerdown" | "create_button_click" | "create_modal_opened" | "create_modal_closed" | "create_modal_open_timeout" | "create_runtime_error" | "create_submit_start" | "create_submit_success" | "create_submit_error",
+    level: "info" | "warn" | "error",
+    message: string,
+    options?: {
+      error?: { name?: string; message?: string; stackTop?: string };
+      meta?: Record<string, unknown>;
+    }
+  ) => {
+    void logAdminUiEvent({
+      source: "videos.create",
+      event,
+      level,
+      message,
+      clientTs: Date.now(),
+      sessionId: createSessionIdRef.current,
+      pagePath: typeof window !== "undefined" ? window.location.pathname : "/dashboard/videos",
+      uiState: {
+        loading: loadingRef.current,
+        activeTab: activeTabRef.current,
+        showForm: showFormRef.current,
+      },
+      ...(options?.error ? { error: options.error } : {}),
+      ...(options?.meta ? { meta: options.meta } : {}),
+    });
+  };
 
   const refreshVideos = async () => {
     setLoading(true);
@@ -94,10 +283,88 @@ export default function VideoLibraryAdminScreen() {
     return () => window.clearTimeout(id);
   }, [successMessage]);
 
+  useEffect(() => {
+    showFormRef.current = showForm;
+  }, [showForm]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    const previous = previousShowFormRef.current;
+    if (showForm && !previous) {
+      clearCreateTimers();
+      setIsCreateOpening(false);
+      setCreateOpenWarning("");
+      logCreateEvent("create_modal_opened", "info", "Create video modal opened.");
+    } else if (!showForm && previous) {
+      logCreateEvent("create_modal_closed", "info", "Create video modal closed.");
+    }
+    previousShowFormRef.current = showForm;
+  }, [showForm]);
+
+  useEffect(() => {
+    void flushAdminUiLogQueue(30);
+
+    const onGlobalError = (event: ErrorEvent) => {
+      logCreateEvent("create_runtime_error", "error", "window.onerror captured on videos dashboard.", {
+        error: {
+          name: event.error?.name || "Error",
+          message: event.message || event.error?.message || "Unknown runtime error.",
+          stackTop: getStackTop(event.error?.stack),
+        },
+        meta: {
+          filename: event.filename || "",
+          lineno: event.lineno || null,
+          colno: event.colno || null,
+        },
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const reasonMessage =
+        typeof reason === "string"
+          ? reason
+          : typeof reason?.message === "string"
+            ? reason.message
+            : "Unhandled rejection on videos dashboard.";
+      logCreateEvent(
+        "create_runtime_error",
+        "error",
+        "unhandledrejection captured on videos dashboard.",
+        {
+          error: {
+            name:
+              typeof reason?.name === "string"
+                ? reason.name
+                : reason?.constructor?.name || "UnhandledRejection",
+            message: reasonMessage,
+            stackTop: getStackTop(reason?.stack),
+          },
+        }
+      );
+    };
+
+    window.addEventListener("error", onGlobalError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      clearCreateTimers();
+      window.removeEventListener("error", onGlobalError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+  }, []);
+
   const filteredVideos = useMemo(() => {
     const lower = searchValue.trim().toLowerCase();
     const now = new Date();
-    const result = videos.filter((video) => {
+    return videos.filter((video) => {
       const matchesSearch = lower.length === 0 || video.title.toLowerCase().includes(lower);
       const matchesPlatform = platformFilter === "all" || video.platform === platformFilter;
       const matchesPublish =
@@ -113,25 +380,18 @@ export default function VideoLibraryAdminScreen() {
         (scheduleFilter === "scheduled" ? isScheduled : !isScheduled);
       return matchesSearch && matchesPlatform && matchesPublish && matchesPremium && matchesSchedule;
     });
-    if (sortOption === "default") {
-      return result;
-    }
-    const direction = sortOption === "publishAtAsc" ? 1 : -1;
-    return [...result].sort((a, b) => {
-      const aTime = a.publishAt?.toDate ? a.publishAt.toDate().getTime() : null;
-      const bTime = b.publishAt?.toDate ? b.publishAt.toDate().getTime() : null;
-      if (aTime === null && bTime === null) return 0;
-      if (aTime === null) return 1; // nulls last
-      if (bTime === null) return -1;
-      return (aTime - bTime) * direction;
-    });
-  }, [videos, searchValue, platformFilter, publishFilter, premiumFilter, scheduleFilter, sortOption]);
+  }, [videos, searchValue, platformFilter, publishFilter, premiumFilter, scheduleFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / pageSize));
+  const sortedVideos = useMemo(
+    () => sortVideosForAdminTable(filteredVideos, sortField, sortDirection),
+    [filteredVideos, sortField, sortDirection]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedVideos.length / pageSize));
   const pagedVideos = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return filteredVideos.slice(start, start + pageSize);
-  }, [filteredVideos, page, pageSize]);
+    return sortedVideos.slice(start, start + pageSize);
+  }, [sortedVideos, page, pageSize]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -166,7 +426,37 @@ export default function VideoLibraryAdminScreen() {
     });
   }, [page, totalPages]);
 
+  const handleCreatePointerDown = () => {
+    logCreateEvent("create_button_pointerdown", "info", "Create video button pointerdown.");
+  };
+
   const handleCreateClick = () => {
+    logCreateEvent("create_button_click", "info", "Create video button clicked.");
+    clearCreateTimers();
+    setCreateOpenWarning("");
+    setIsCreateOpening(true);
+
+    createClickTimerRef.current = window.setTimeout(() => {
+      setIsCreateOpening(false);
+      createClickTimerRef.current = null;
+    }, CREATE_CLICK_FEEDBACK_MS);
+
+    createOpenWatchdogRef.current = window.setTimeout(() => {
+      if (showFormRef.current) return;
+      setCreateOpenWarning(
+        "A apărut o întârziere la deschiderea formularului. Încearcă din nou sau reîncarcă pagina."
+      );
+      logCreateEvent(
+        "create_modal_open_timeout",
+        "warn",
+        "Create modal did not open inside watchdog window.",
+        {
+          meta: { timeoutMs: CREATE_MODAL_OPEN_TIMEOUT_MS },
+        }
+      );
+      createOpenWatchdogRef.current = null;
+    }, CREATE_MODAL_OPEN_TIMEOUT_MS);
+
     setEditingVideo(null);
     setShowForm(true);
   };
@@ -177,6 +467,8 @@ export default function VideoLibraryAdminScreen() {
   };
 
   const closeForm = () => {
+    clearCreateTimers();
+    setIsCreateOpening(false);
     setShowForm(false);
     setEditingVideo(null);
   };
@@ -214,6 +506,18 @@ export default function VideoLibraryAdminScreen() {
   };
 
   const handleFormSubmit = async (data: VideoCreateInput) => {
+    logCreateEvent(
+      "create_submit_start",
+      "info",
+      editingVideo ? "Edit video submit started." : "Create video submit started.",
+      {
+        meta: {
+          mode: editingVideo ? "edit" : "create",
+          hasPublishAt: !!data.publishAt,
+          platform: data.platform,
+        },
+      }
+    );
     setLoading(true);
     setErrorMessage("");
     setSuccessMessage("");
@@ -229,12 +533,48 @@ export default function VideoLibraryAdminScreen() {
         await createVideo(data);
         setSuccessMessage("Videoclip creat.");
       }
+      logCreateEvent(
+        "create_submit_success",
+        "info",
+        editingVideo ? "Edit video submit succeeded." : "Create video submit succeeded.",
+        {
+          meta: { mode: editingVideo ? "edit" : "create" },
+        }
+      );
       setShowForm(false);
       setEditingVideo(null);
       await refreshVideos();
       await refreshCategories();
     } catch (error) {
       console.error("[VideoLibraryAdminScreen] Save failed", error);
+      logCreateEvent(
+        "create_submit_error",
+        "error",
+        editingVideo ? "Edit video submit failed." : "Create video submit failed.",
+        {
+          error: {
+            name:
+              error && typeof error === "object" && "name" in error && typeof error.name === "string"
+                ? error.name
+                : "Error",
+            message:
+              error &&
+              typeof error === "object" &&
+              "message" in error &&
+              typeof error.message === "string"
+                ? error.message
+                : "Unknown submit error.",
+            stackTop:
+              error &&
+              typeof error === "object" &&
+              "stack" in error &&
+              typeof error.stack === "string"
+                ? getStackTop(error.stack)
+                : undefined,
+          },
+          meta: { mode: editingVideo ? "edit" : "create" },
+        }
+      );
       setErrorMessage("Salvarea a eșuat.");
     } finally {
       setLoading(false);
@@ -362,6 +702,17 @@ export default function VideoLibraryAdminScreen() {
     setPreviewVideo(video);
   };
 
+  const handleSortChange = (field: VideoSortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      setPage(1);
+      return;
+    }
+    setSortField(field);
+    setSortDirection(DESC_FIRST_FIELDS.has(field) ? "desc" : "asc");
+    setPage(1);
+  };
+
   const getEmbedUrl = (video: VideoDoc) => {
     const raw = video.videoUrl?.trim();
     if (!raw) return null;
@@ -442,17 +793,23 @@ export default function VideoLibraryAdminScreen() {
               </div>
         <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={refreshVideos}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow"
                 >
                   Reîncarcă
                 </button>
                 <button
+                  type="button"
+                  onPointerDown={handleCreatePointerDown}
                   onClick={handleCreateClick}
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md"
                 >
-                  + Adaugă videoclip
+                  {isCreateOpening ? "Se deschide..." : "+ Adaugă videoclip"}
                 </button>
+                {createOpenWarning ? (
+                  <div className="max-w-md text-sm font-medium text-amber-700">{createOpenWarning}</div>
+                ) : null}
               </div>
             </div>
 
@@ -553,15 +910,6 @@ export default function VideoLibraryAdminScreen() {
                   <option value="active">Active acum</option>
                   <option value="scheduled">Programate</option>
                 </select>
-                <select
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value as SortOption)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="default">Sortare implicită</option>
-                  <option value="publishAtAsc">PublishAt ascendent</option>
-                  <option value="publishAtDesc">PublishAt descendent</option>
-                </select>
                 <button
                   onClick={() => {
                     setSearchValue("");
@@ -569,7 +917,9 @@ export default function VideoLibraryAdminScreen() {
                     setPublishFilter("all");
                     setPremiumFilter("all");
                     setScheduleFilter("all");
-                    setSortOption("default");
+                    setSortField(DEFAULT_SORT_FIELD);
+                    setSortDirection(DEFAULT_SORT_DIRECTION);
+                    setPage(1);
                   }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50"
                 >
@@ -577,7 +927,7 @@ export default function VideoLibraryAdminScreen() {
                 </button>
           <div className="ml-auto flex items-center gap-4">
             <div className="text-sm text-gray-600">
-              Afișate: <span className="font-semibold text-gray-900">{filteredVideos.length}</span>
+              Afișate: <span className="font-semibold text-gray-900">{sortedVideos.length}</span>
                   </div>
             {loading && <span className="text-sm text-blue-600">Se încarcă...</span>}
                 </div>
@@ -603,14 +953,17 @@ export default function VideoLibraryAdminScreen() {
                 </select>
               </div>
               <div className="text-gray-600">
-                {filteredVideos.length === 0 ? 0 : (page - 1) * pageSize + 1}-
-                {Math.min(page * pageSize, filteredVideos.length)} din {filteredVideos.length}
+                {sortedVideos.length === 0 ? 0 : (page - 1) * pageSize + 1}-
+                {Math.min(page * pageSize, sortedVideos.length)} din {sortedVideos.length}
               </div>
             </div>
 
             <VideoTable
               videos={pagedVideos}
               loading={loading}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onTogglePublish={handleTogglePublish}

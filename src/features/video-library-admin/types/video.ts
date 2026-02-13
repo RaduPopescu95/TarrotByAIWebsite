@@ -9,6 +9,16 @@ export type VideoLocaleFields = {
 
 export type VideoLocales = Record<string, VideoLocaleFields>;
 export type VideoCategoryLocales = Record<string, string>;
+export type VideoSortField =
+  | "createdAt"
+  | "publishAt"
+  | "title"
+  | "order"
+  | "platform"
+  | "category"
+  | "isPublished";
+
+export type VideoSortDirection = "asc" | "desc";
 
 export type VideoDoc = {
   id: string;

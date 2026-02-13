@@ -120,11 +120,27 @@ export default function CoursesDashboardPage() {
   // Tab state
   const [viewTab, setViewTab] = useState("courses");
 
+  // Subtitles tab state
+  const [subtitleFile, setSubtitleFile] = useState(null);
+  const [subtitleLoading, setSubtitleLoading] = useState(false);
+  const [subtitleError, setSubtitleError] = useState("");
+  const [subtitlePreview, setSubtitlePreview] = useState("");
+  const [subtitleDownloadUrl, setSubtitleDownloadUrl] = useState("");
+  const [subtitleDownloadName, setSubtitleDownloadName] = useState("subtitrare.ro.srt");
+
   // Delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [courseToPreview, setCourseToPreview] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (subtitleDownloadUrl) {
+        URL.revokeObjectURL(subtitleDownloadUrl);
+      }
+    };
+  }, [subtitleDownloadUrl]);
 
   // Load courses
   useEffect(() => {
@@ -363,6 +379,71 @@ export default function CoursesDashboardPage() {
     setPage(1);
   };
 
+  const handleSubtitleFileChange = (event) => {
+    const nextFile = event.target.files?.[0] || null;
+    setSubtitleFile(nextFile);
+    setSubtitleError("");
+    setSubtitlePreview("");
+
+    if (subtitleDownloadUrl) {
+      URL.revokeObjectURL(subtitleDownloadUrl);
+      setSubtitleDownloadUrl("");
+    }
+  };
+
+  const handleGenerateSubtitles = async (event) => {
+    event.preventDefault();
+    if (!subtitleFile) {
+      setSubtitleError("Selectează un fișier video/audio.");
+      return;
+    }
+
+    setSubtitleLoading(true);
+    setSubtitleError("");
+    setSubtitlePreview("");
+
+    try {
+      const formData = new FormData();
+      formData.append("video", subtitleFile);
+
+      const response = await fetch("/api/transcribe-ro-srt", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = "Generarea subtitrării a eșuat.";
+        const rawError = await response.text();
+        try {
+          const parsed = JSON.parse(rawError);
+          message = parsed?.error || rawError || message;
+        } catch (_) {
+          message = rawError || message;
+        }
+        throw new Error(message);
+      }
+
+      const outputBlob = await response.blob();
+      const contentDisposition = response.headers.get("content-disposition");
+      const matchedFilename = contentDisposition?.match(/filename="([^"]+)"/i);
+      const suggestedFilename = matchedFilename?.[1] || "subtitrare.ro.srt";
+
+      if (subtitleDownloadUrl) {
+        URL.revokeObjectURL(subtitleDownloadUrl);
+      }
+      const nextUrl = URL.createObjectURL(outputBlob);
+      setSubtitleDownloadUrl(nextUrl);
+      setSubtitleDownloadName(suggestedFilename);
+
+      const srtText = await outputBlob.text();
+      setSubtitlePreview(srtText.slice(0, 3000));
+    } catch (err) {
+      setSubtitleError(err.message || "Eroare neașteptată.");
+    } finally {
+      setSubtitleLoading(false);
+    }
+  };
+
   // Category handlers
   const refreshCategories = async () => {
     setCategoriesLoading(true);
@@ -523,6 +604,7 @@ export default function CoursesDashboardPage() {
                   <TabsList>
                     <TabsTrigger value="courses">Cursuri</TabsTrigger>
                     <TabsTrigger value="categories">Categorii</TabsTrigger>
+                    <TabsTrigger value="subtitles">Subtitrări SRT</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -659,7 +741,7 @@ export default function CoursesDashboardPage() {
                   <CoursesOverview stats={stats} />
                 </div>
               </div>
-            ) : (
+            ) : viewTab === "categories" ? (
               // Categories Tab
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
@@ -748,6 +830,75 @@ export default function CoursesDashboardPage() {
                         ))}
                       </TableBody>
                     </Table>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              // Subtitles Tab
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Generator subtitrări SRT (RO)</CardTitle>
+                  <CardDescription>
+                    Încarcă un fișier video/audio, iar OpenAI îți generează subtitrare în română.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <form onSubmit={handleGenerateSubtitles} className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="subtitle-upload"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Fișier video/audio
+                      </label>
+                      <input
+                        id="subtitle-upload"
+                        type="file"
+                        accept="video/*,audio/*"
+                        onChange={handleSubtitleFileChange}
+                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {subtitleFile
+                          ? `${subtitleFile.name} • ${(subtitleFile.size / (1024 * 1024)).toFixed(
+                              2
+                            )} MB`
+                          : "Nu ai selectat încă un fișier."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button type="submit" disabled={subtitleLoading}>
+                        {subtitleLoading ? "Se generează..." : "Generează subtitrarea"}
+                      </Button>
+                      {subtitleDownloadUrl && (
+                        <Button asChild variant="outline">
+                          <a href={subtitleDownloadUrl} download={subtitleDownloadName}>
+                            Descarcă .srt
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </form>
+
+                  {subtitleError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {subtitleError}
+                    </div>
+                  )}
+
+                  {subtitlePreview && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">
+                          Preview subtitrare (primele 3000 caractere)
+                        </p>
+                        <pre className="max-h-80 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-700">
+                          {subtitlePreview}
+                        </pre>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
