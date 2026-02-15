@@ -5,6 +5,7 @@ import { requireAuth } from "../../../../lib/requireAuth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
+const DEFAULT_MOBILE_CHECKOUT_DEEP_LINK_BASE = "com.cristina.zurba.tarot://courses/checkout";
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
@@ -55,6 +56,34 @@ function sanitizeString(value, maxLength = 255) {
   const normalized = value.trim();
   if (!normalized) return "";
   return normalized.slice(0, maxLength);
+}
+
+function isMobilePlatform(value) {
+  const normalized = sanitizeString(value, 32).toLowerCase();
+  return normalized === "expo" || normalized === "mobile" || normalized === "react-native";
+}
+
+function resolveMobileCheckoutDeepLinkBase() {
+  const configured = sanitizeString(
+    process.env.COURSES_MOBILE_CHECKOUT_DEEP_LINK_BASE || "",
+    2048
+  );
+  const fallback = configured || DEFAULT_MOBILE_CHECKOUT_DEEP_LINK_BASE;
+  return fallback.replace(/\/+$/, "");
+}
+
+function buildMobileReturnUrls() {
+  const mobileBase = resolveMobileCheckoutDeepLinkBase();
+  return {
+    successUrl: `${mobileBase}?checkout=success`,
+    cancelUrl: `${mobileBase}?checkout=cancel`,
+  };
+}
+
+function detectProtocol(urlValue) {
+  const candidate = sanitizeString(urlValue, 2048);
+  const match = candidate.match(/^([a-z][a-z0-9+.-]*):/i);
+  return match ? match[1].toLowerCase() : "";
 }
 
 function normalizeAllowedPrefix(value) {
@@ -156,6 +185,7 @@ function parseAllowedReturnUrlPrefixes() {
   const joined = [
     process.env.COURSES_CHECKOUT_ALLOWED_RETURN_URL_PREFIXES || "",
     process.env.MOBILE_DEEP_LINK_ALLOWED_PREFIXES || "",
+    resolveMobileCheckoutDeepLinkBase(),
   ]
     .map((value) => sanitizeString(value, 2048))
     .filter(Boolean)
@@ -177,17 +207,13 @@ function isValidReturnUrl(urlValue, baseUrl, allowedPrefixes) {
   if (!urlValue) return false;
   const candidate = sanitizeString(urlValue, 2048);
   if (!candidate) return false;
+  const protocol = detectProtocol(candidate);
+  if (!protocol) return false;
 
-  let parsed;
-  try {
-    parsed = new URL(candidate);
-  } catch (_) {
-    return false;
-  }
-
-  const protocol = parsed.protocol.toLowerCase();
-  if (protocol === "http:" || protocol === "https:") {
+  if (protocol === "http" || protocol === "https") {
+    let parsed;
     try {
+      parsed = new URL(candidate);
       return parsed.origin === new URL(baseUrl).origin;
     } catch (_) {
       return false;
@@ -213,11 +239,13 @@ function createValidationError(message) {
   return error;
 }
 
-function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
-  const defaults = {
+function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl, sourcePlatform }) {
+  const webDefaults = {
     successUrl: `${baseUrl}/courses/${courseId}?success=1`,
     cancelUrl: `${baseUrl}/courses/${courseId}?canceled=1`,
   };
+  const mobileDefaults = buildMobileReturnUrls();
+  const defaults = isMobilePlatform(sourcePlatform) ? mobileDefaults : webDefaults;
 
   const requestedSuccessUrl = sanitizeString(successUrl, 2048);
   const requestedCancelUrl = sanitizeString(cancelUrl, 2048);
@@ -225,6 +253,8 @@ function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
     console.info("[courses.checkout] return_urls_defaults", {
       courseId,
       baseUrl,
+      sourcePlatform,
+      mode: isMobilePlatform(sourcePlatform) ? "mobile" : "web",
       successUrl: defaults.successUrl,
       cancelUrl: defaults.cancelUrl,
     });
@@ -256,6 +286,8 @@ function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
 
   console.info("[courses.checkout] return_urls_custom", {
     courseId,
+    sourcePlatform,
+    mode: isMobilePlatform(sourcePlatform) ? "mobile" : "web",
     requestedSuccessUrl: requestedSuccessUrl || defaults.successUrl,
     requestedCancelUrl: requestedCancelUrl || defaults.cancelUrl,
   });
@@ -355,6 +387,7 @@ export default async function handler(req, res) {
       courseId,
       successUrl: rawSuccessUrl,
       cancelUrl: rawCancelUrl,
+      sourcePlatform,
     });
     console.info("[courses.checkout] return_urls_resolved", {
       uid: maskUid(authUser.uid),

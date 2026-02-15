@@ -12,6 +12,28 @@ const HANDLED_EVENTS = new Set([
 ]);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
 
+function resolveWebhookSecret() {
+  if (process.env.STRIPE_WEBHOOK_SECRET_COURSES) {
+    return {
+      value: process.env.STRIPE_WEBHOOK_SECRET_COURSES,
+      source: "STRIPE_WEBHOOK_SECRET_COURSES",
+    };
+  }
+  if (process.env.STRIPE_WEBHOOK_SECRET_COURSES_TEST) {
+    return {
+      value: process.env.STRIPE_WEBHOOK_SECRET_COURSES_TEST,
+      source: "STRIPE_WEBHOOK_SECRET_COURSES_TEST",
+    };
+  }
+  if (process.env.STRIPE_WEBHOOK_SECRET_TEST) {
+    return {
+      value: process.env.STRIPE_WEBHOOK_SECRET_TEST,
+      source: "STRIPE_WEBHOOK_SECRET_TEST",
+    };
+  }
+  return { value: "", source: "none" };
+}
+
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
   if (value.length <= 6) return value;
@@ -740,10 +762,13 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
-  if (!process.env.STRIPE_WEBHOOK_SECRET_COURSES) {
+  const webhookSecret = resolveWebhookSecret();
+  if (!webhookSecret.value) {
     console.error("[courses.webhook] missing_env_secret", {
       hasStripeSecretKey: Boolean(process.env.STRIPE_SECRET_KEY),
       hasWebhookSecretCourses: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES),
+      hasWebhookSecretCoursesTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES_TEST),
+      hasWebhookSecretTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_TEST),
     });
     return res.status(500).json({ error: "Missing STRIPE_WEBHOOK_SECRET_COURSES" });
   }
@@ -756,10 +781,13 @@ export default async function handler(req, res) {
       console.warn("[courses.webhook] missing_signature");
       return res.status(400).send("Webhook Error: Missing stripe-signature header");
     }
+    console.info("[courses.webhook] secret_source", {
+      source: webhookSecret.source,
+    });
     event = stripe.webhooks.constructEvent(
       buf,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET_COURSES
+      webhookSecret.value
     );
   } catch (err) {
     console.warn("[courses.webhook] signature_verification_failed", {
