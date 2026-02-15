@@ -51,6 +51,13 @@ function mapCheckoutError(status, t) {
   return t("coursesErrorsCheckoutStart");
 }
 
+function mapCertificateError(status, t) {
+  if (status === 401) return t("coursesErrorsCertificateAuthRequired");
+  if (status === 403) return t("coursesErrorsCertificateAccessDenied");
+  if (status === 404) return t("coursesErrorsCertificateNotFound");
+  return t("coursesErrorsCertificateDownload");
+}
+
 function toGoogleCalendarDate(value) {
   return value.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
@@ -76,6 +83,8 @@ export default function CourseDetailPage() {
   const [activeTab, setActiveTab] = useState("materials");
   const [activeLessonId, setActiveLessonId] = useState("");
   const [shareFeedback, setShareFeedback] = useState("");
+  const [certificateLoading, setCertificateLoading] = useState(false);
+  const [certificateError, setCertificateError] = useState("");
 
   const getAuthHeaders = useCallback(async () => {
     const user = authentication.currentUser;
@@ -103,6 +112,7 @@ export default function CourseDetailPage() {
       if (withSpinner) setLoading(true);
       setPageError("");
       setCheckoutError("");
+      setCertificateError("");
 
       try {
         const authHeaders = await getAuthHeaders();
@@ -485,6 +495,63 @@ export default function CourseDetailPage() {
     return () => clearTimeout(timeoutId);
   }, [shareFeedback]);
 
+  const handleDownloadCertificate = useCallback(async () => {
+    if (!normalizedCourseId) return;
+
+    const currentAuthUser = authentication.currentUser;
+    if (!currentAuthUser) {
+      setCertificateError(t("coursesErrorsCertificateAuthRequired"));
+      return;
+    }
+
+    setCertificateLoading(true);
+    setCertificateError("");
+    try {
+      const token = await currentAuthUser.getIdToken();
+      const locale = router.locale || "ro";
+      const response = await fetch(
+        `/api/courses/${normalizedCourseId}/certificate?locale=${encodeURIComponent(locale)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(mapCertificateError(response.status, t));
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const quotedMatch = disposition.match(/filename=\"([^\"]+)\"/i);
+      const fallbackName = `certificat-${normalizedCourseId}-${locale}.pdf`;
+      const filename = utf8Match?.[1]
+        ? decodeURIComponent(utf8Match[1])
+        : quotedMatch?.[1] || fallbackName;
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1200);
+    } catch (err) {
+      console.error("[courses.detail] certificate_download_fail", {
+        courseId: normalizedCourseId,
+        locale: router.locale || "ro",
+        message: err?.message || "unknown_error",
+      });
+      setCertificateError(err.message || t("coursesErrorsCertificateDownload"));
+    } finally {
+      setCertificateLoading(false);
+    }
+  }, [normalizedCourseId, router.locale, t]);
+
   return (
     <>
       <Head>
@@ -546,6 +613,12 @@ export default function CourseDetailPage() {
               {checkoutError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {checkoutError}
+                </div>
+              )}
+
+              {certificateError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {certificateError}
                 </div>
               )}
 
@@ -722,9 +795,15 @@ export default function CourseDetailPage() {
                   })}
                   finalTestLabel={t("coursesDetailFinalTest")}
                   finalTestHint={t("coursesDetailFinalTestHint")}
-                  downloadCertificateLabel={t("coursesDetailDownloadCertificate")}
+                  downloadCertificateLabel={
+                    certificateLoading
+                      ? t("coursesDetailCertificateDownloading")
+                      : t("coursesDetailDownloadCertificate")
+                  }
                   certificateLockedLabel={t("coursesDetailCertificateLocked")}
                   isCertificateEnabled={hasAccess}
+                  onDownloadCertificate={handleDownloadCertificate}
+                  isCertificateLoading={certificateLoading}
                   emptyLabel={t("coursesDetailLessonsEmptyDescription")}
                 />
               </div>

@@ -126,6 +126,7 @@ export default function CoursesDashboardPage() {
   const [subtitleError, setSubtitleError] = useState("");
   const [subtitlePreview, setSubtitlePreview] = useState("");
   const [subtitleDownloadUrl, setSubtitleDownloadUrl] = useState("");
+  const [subtitleLanguage, setSubtitleLanguage] = useState("ro");
   const [subtitleDownloadName, setSubtitleDownloadName] = useState("subtitrare.ro.srt");
 
   // Delete confirmation dialog
@@ -391,6 +392,20 @@ export default function CoursesDashboardPage() {
     }
   };
 
+  const handleSubtitleLanguageChange = (event) => {
+    const nextLanguage = event.target.value === "en" ? "en" : "ro";
+    setSubtitleLanguage(nextLanguage);
+    setSubtitleError("");
+    setSubtitlePreview("");
+
+    if (subtitleDownloadUrl) {
+      URL.revokeObjectURL(subtitleDownloadUrl);
+      setSubtitleDownloadUrl("");
+    }
+
+    setSubtitleDownloadName(`subtitrare.${nextLanguage}.srt`);
+  };
+
   const handleGenerateSubtitles = async (event) => {
     event.preventDefault();
     if (!subtitleFile) {
@@ -405,6 +420,7 @@ export default function CoursesDashboardPage() {
     try {
       const formData = new FormData();
       formData.append("video", subtitleFile);
+      formData.append("language", subtitleLanguage);
 
       const response = await fetch("/api/transcribe-ro-srt", {
         method: "POST",
@@ -426,7 +442,7 @@ export default function CoursesDashboardPage() {
       const outputBlob = await response.blob();
       const contentDisposition = response.headers.get("content-disposition");
       const matchedFilename = contentDisposition?.match(/filename="([^"]+)"/i);
-      const suggestedFilename = matchedFilename?.[1] || "subtitrare.ro.srt";
+      const suggestedFilename = matchedFilename?.[1] || `subtitrare.${subtitleLanguage}.srt`;
 
       if (subtitleDownloadUrl) {
         URL.revokeObjectURL(subtitleDownloadUrl);
@@ -837,13 +853,34 @@ export default function CoursesDashboardPage() {
               // Subtitles Tab
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Generator subtitrări SRT (RO)</CardTitle>
+                  <CardTitle className="text-lg">
+                    Generator subtitrări SRT ({subtitleLanguage.toUpperCase()})
+                  </CardTitle>
                   <CardDescription>
-                    Încarcă un fișier video/audio, iar OpenAI îți generează subtitrare în română.
+                    Încarcă un fișier video/audio, iar OpenAI îți generează subtitrare în{" "}
+                    {subtitleLanguage === "en" ? "engleză" : "română"}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <form onSubmit={handleGenerateSubtitles} className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="subtitle-language"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Limba subtitrării
+                      </label>
+                      <select
+                        id="subtitle-language"
+                        value={subtitleLanguage}
+                        onChange={handleSubtitleLanguageChange}
+                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                      >
+                        <option value="ro">Română (RO)</option>
+                        <option value="en">English (EN)</option>
+                      </select>
+                    </div>
+
                     <div className="space-y-2">
                       <label
                         htmlFor="subtitle-upload"

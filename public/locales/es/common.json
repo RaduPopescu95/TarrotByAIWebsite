@@ -317,7 +317,7 @@
   "coursesDetailFinalTest": "Final test",
   "coursesDetailFinalTestHint": "Unlock the test after completing all lessons.",
   "coursesDetailDownloadCertificate": "Download certificate",
-  "coursesDetailCertificateLocked": "Certificate unlocks after full completion.",
+  "coursesDetailCertificateLocked": "Certificate unlocks after purchase.",
   "coursesDetailLessonTitleTemplate": "Lesson {{index}}",
   "coursesDetailLessonDurationTemplate": "{{minutes}} min",
   "coursesDetailLessonSummary": "This lesson covers practical concepts you can apply immediately.",

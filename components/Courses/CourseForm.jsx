@@ -2,6 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CheckCircle2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { gTranslateFetch } from "../../utils/apiUtils";
 
@@ -107,6 +115,53 @@ function buildOptionalString(value) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+const GENERAL_ERROR_FIELDS = [
+  "title",
+  "description",
+  "vimeoUrl",
+  "price",
+  "currency",
+  "status",
+  "scheduledAt",
+  "thumbnailUrl",
+];
+
+function normalizeLessonIdForPayload(lesson, index) {
+  if (typeof lesson?.id === "string" && lesson.id.trim()) return lesson.id.trim();
+  return `lesson-${index + 1}`;
+}
+
+function buildLocalizedLessonMap(lessonLocales) {
+  if (!Array.isArray(lessonLocales)) return new Map();
+  const normalizedLessons = lessonLocales
+    .map((lesson) => {
+      if (!lesson || typeof lesson !== "object" || Array.isArray(lesson)) return null;
+      const id = typeof lesson.id === "string" ? lesson.id.trim() : "";
+      if (!id) return null;
+      return {
+        id,
+        title: buildOptionalString(lesson.title),
+        summary: buildOptionalString(lesson.summary),
+      };
+    })
+    .filter(Boolean);
+  return new Map(normalizedLessons.map((lesson) => [lesson.id, lesson]));
+}
+
+function mergeLocalizedLessonsForLanguage(entry, baseLessons) {
+  const localizedLessonMap = buildLocalizedLessonMap(entry?.curriculumLessons);
+  return baseLessons.map((lesson) => {
+    const localizedLesson = localizedLessonMap.get(lesson.id);
+    const title = localizedLesson?.title || lesson.title;
+    const summary = localizedLesson?.summary || lesson.summary;
+    return {
+      id: lesson.id,
+      title,
+      ...(summary ? { summary } : {}),
+    };
+  });
+}
+
 export default function CourseForm({ initialValue, onSubmit, onCancel, loading, categories }) {
   const [activeTab, setActiveTab] = useState("general");
   const [form, setForm] = useState(() => ({
@@ -129,6 +184,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
   const [locales, setLocales] = useState(initialValue?.locales);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateMessage, setTranslateMessage] = useState("");
+  const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const uiLocked = loading || isTranslating;
 
   useEffect(() => {
@@ -151,10 +207,15 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     setErrors({});
     setLocales(initialValue?.locales);
     setTranslateMessage("");
+    setShowTranslateConfirm(false);
     setActiveTab("general");
   }, [initialValue]);
 
   const vimeoId = useMemo(() => extractVimeoId(form.vimeoUrl), [form.vimeoUrl]);
+  const invalidateLocales = () => {
+    setLocales(undefined);
+    if (translateMessage) setTranslateMessage("");
+  };
 
   const handleChange = (field) => (event) => {
     const value = event.target.value;
@@ -165,8 +226,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       field === "notesContent" ||
       field === "contactContent"
     ) {
-      setLocales(undefined);
-      if (translateMessage) setTranslateMessage("");
+      invalidateLocales();
     }
     if (errors[field]) {
       setErrors((prev) => {
@@ -193,6 +253,9 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         lessonIndex === index ? { ...lesson, [field]: value } : lesson
       ),
     }));
+    if (field === "title" || field === "summary") {
+      invalidateLocales();
+    }
     if (errors.curriculumLessons) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -207,6 +270,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       ...prev,
       curriculumLessons: [...prev.curriculumLessons, createEmptyLesson(prev.curriculumLessons.length)],
     }));
+    invalidateLocales();
   };
 
   const removeLesson = (index) => {
@@ -214,6 +278,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       ...prev,
       curriculumLessons: reorderLessons(prev.curriculumLessons.filter((_, lessonIndex) => lessonIndex !== index)),
     }));
+    invalidateLocales();
   };
 
   const moveLesson = (index, direction) => {
@@ -231,7 +296,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     });
   };
 
-  const validate = () => {
+  const validateForm = ({ generalOnly = false } = {}) => {
     const nextErrors = {};
 
     if (!form.title.trim()) nextErrors.title = "Titlul este obligatoriu.";
@@ -259,7 +324,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       nextErrors.thumbnailUrl = "URL invalid.";
     }
 
-    if (Array.isArray(form.curriculumLessons)) {
+    if (!generalOnly && Array.isArray(form.curriculumLessons)) {
       for (const lesson of form.curriculumLessons) {
         if (!lesson.title || !lesson.title.trim()) {
           nextErrors.curriculumLessons = "Fiecare lecție trebuie să aibă un titlu.";
@@ -278,7 +343,60 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     }
 
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return {
+      isValid: Object.keys(nextErrors).length === 0,
+      hasGeneralErrors: GENERAL_ERROR_FIELDS.some((field) => !!nextErrors[field]),
+    };
+  };
+
+  const validateGeneralTab = () => validateForm({ generalOnly: true });
+  const validateAll = () => validateForm({ generalOnly: false });
+
+  const buildCurriculumLessonsPayload = () =>
+    reorderLessons(form.curriculumLessons).map((lesson, index) => ({
+      id: normalizeLessonIdForPayload(lesson, index),
+      title: lesson.title.trim(),
+      durationMinutes:
+        lesson.durationMinutes === "" || lesson.durationMinutes === null
+          ? null
+          : Number(lesson.durationMinutes),
+      summary: lesson.summary?.trim() || "",
+      isCompleted: lesson.isCompleted === true,
+      order: index,
+    }));
+
+  const buildSafeLocales = (localesToSubmit, baseFields, baseLessonLocales) => {
+    const hasLocales =
+      localesToSubmit &&
+      typeof localesToSubmit === "object" &&
+      !Array.isArray(localesToSubmit) &&
+      Object.keys(localesToSubmit).length > 0;
+
+    const inputLocales = hasLocales ? localesToSubmit : {};
+    const localeKeys = Array.from(new Set(["ro", ...Object.keys(inputLocales)]));
+
+    return localeKeys.reduce((acc, lang) => {
+      const localeEntry =
+        inputLocales?.[lang] &&
+        typeof inputLocales[lang] === "object" &&
+        !Array.isArray(inputLocales[lang])
+          ? inputLocales[lang]
+          : {};
+
+      const resolvedDescription = buildOptionalString(localeEntry.description) || baseFields.description;
+      const resolvedNotes = buildOptionalString(localeEntry.notesContent) || baseFields.notesContent;
+      const resolvedContact = buildOptionalString(localeEntry.contactContent) || baseFields.contactContent;
+      const resolvedLessons = mergeLocalizedLessonsForLanguage(localeEntry, baseLessonLocales);
+
+      acc[lang] = {
+        title: buildOptionalString(localeEntry.title) || baseFields.title,
+        ...(resolvedDescription ? { description: resolvedDescription } : {}),
+        ...(resolvedNotes ? { notesContent: resolvedNotes } : {}),
+        ...(resolvedContact ? { contactContent: resolvedContact } : {}),
+        curriculumLessons: resolvedLessons,
+      };
+      return acc;
+    }, {});
   };
 
   const generateLocales = async () => {
@@ -296,6 +414,12 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       const baseDescription = form.description?.trim() || "";
       const baseNotes = form.notesContent?.trim() || "";
       const baseContact = form.contactContent?.trim() || "";
+      const lessonPayload = buildCurriculumLessonsPayload();
+      const baseLessonLocales = lessonPayload.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        ...(lesson.summary ? { summary: lesson.summary } : {}),
+      }));
 
       for (const lang of languageKeys) {
         if (lang === "ro") {
@@ -304,6 +428,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             ...(baseDescription ? { description: baseDescription } : {}),
             ...(baseNotes ? { notesContent: baseNotes } : {}),
             ...(baseContact ? { contactContent: baseContact } : {}),
+            curriculumLessons: baseLessonLocales,
           };
           continue;
         }
@@ -316,11 +441,32 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             baseContact ? gTranslateFetch(baseContact, lang) : Promise.resolve(""),
           ]);
 
+        const translatedLessons = await Promise.all(
+          baseLessonLocales.map(async (lesson) => {
+            const [titleLessonTranslated, summaryLessonTranslated] = await Promise.all([
+              lesson.title ? gTranslateFetch(lesson.title, lang) : Promise.resolve(""),
+              lesson.summary ? gTranslateFetch(lesson.summary, lang) : Promise.resolve(""),
+            ]);
+            const resolvedTitle = titleLessonTranslated || lesson.title;
+            const resolvedSummary = summaryLessonTranslated || lesson.summary;
+            return {
+              id: lesson.id,
+              title: resolvedTitle,
+              ...(resolvedSummary ? { summary: resolvedSummary } : {}),
+            };
+          })
+        );
+
         result[lang] = {
           title: titleTranslated || baseTitle,
-          ...(descriptionTranslated ? { description: descriptionTranslated } : {}),
-          ...(notesTranslated ? { notesContent: notesTranslated } : {}),
-          ...(contactTranslated ? { contactContent: contactTranslated } : {}),
+          ...(descriptionTranslated || baseDescription
+            ? { description: descriptionTranslated || baseDescription }
+            : {}),
+          ...(notesTranslated || baseNotes ? { notesContent: notesTranslated || baseNotes } : {}),
+          ...(contactTranslated || baseContact
+            ? { contactContent: contactTranslated || baseContact }
+            : {}),
+          curriculumLessons: translatedLessons,
         };
       }
 
@@ -343,44 +489,22 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     const description = form.description.trim();
     const notesContent = form.notesContent.trim();
     const contactContent = form.contactContent.trim();
-
-    const hasLocales =
-      localesToSubmit &&
-      typeof localesToSubmit === "object" &&
-      !Array.isArray(localesToSubmit) &&
-      Object.keys(localesToSubmit).length > 0;
-
-    const safeLocales = hasLocales
-      ? {
-          ...localesToSubmit,
-          ro: {
-            ...(localesToSubmit.ro || {}),
-            title: localesToSubmit?.ro?.title?.trim() || title,
-            ...(buildOptionalString(localesToSubmit?.ro?.description) || description
-              ? { description: buildOptionalString(localesToSubmit?.ro?.description) || description }
-              : {}),
-            ...(buildOptionalString(localesToSubmit?.ro?.notesContent) || notesContent
-              ? {
-                  notesContent:
-                    buildOptionalString(localesToSubmit?.ro?.notesContent) || notesContent,
-                }
-              : {}),
-            ...(buildOptionalString(localesToSubmit?.ro?.contactContent) || contactContent
-              ? {
-                  contactContent:
-                    buildOptionalString(localesToSubmit?.ro?.contactContent) || contactContent,
-                }
-              : {}),
-          },
-        }
-      : {
-          ro: {
-            title,
-            ...(description ? { description } : {}),
-            ...(notesContent ? { notesContent } : {}),
-            ...(contactContent ? { contactContent } : {}),
-          },
-        };
+    const curriculumLessons = buildCurriculumLessonsPayload();
+    const baseLessonLocales = curriculumLessons.map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title,
+      ...(lesson.summary ? { summary: lesson.summary } : {}),
+    }));
+    const safeLocales = buildSafeLocales(
+      localesToSubmit,
+      {
+        title,
+        description,
+        notesContent,
+        contactContent,
+      },
+      baseLessonLocales
+    );
 
     const payload = {
       title,
@@ -397,17 +521,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
           ? new Date(form.scheduledAt).toISOString()
           : null,
       thumbnailUrl: form.thumbnailUrl.trim() || null,
-      curriculumLessons: reorderLessons(form.curriculumLessons).map((lesson, index) => ({
-        id: lesson.id || createLessonId(),
-        title: lesson.title.trim(),
-        durationMinutes:
-          lesson.durationMinutes === "" || lesson.durationMinutes === null
-            ? null
-            : Number(lesson.durationMinutes),
-        summary: lesson.summary?.trim() || "",
-        isCompleted: lesson.isCompleted === true,
-        order: index,
-      })),
+      curriculumLessons,
       notesContent,
       contactContent,
       locales: safeLocales,
@@ -416,9 +530,44 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     onSubmit(payload);
   };
 
-  const handleSubmit = async (event) => {
+  const confirmTranslateAndSubmit = async () => {
+    setShowTranslateConfirm(false);
+    const generatedLocales = await generateLocales();
+    if (!generatedLocales) return;
+    submitForm(generatedLocales);
+  };
+
+  const handleContinueToContent = () => {
+    const { isValid } = validateGeneralTab();
+    if (!isValid) return;
+    setActiveTab("content");
+  };
+
+  const handleOpenContentTab = () => {
+    if (activeTab === "content") {
+      setActiveTab("content");
+      return;
+    }
+    handleContinueToContent();
+  };
+
+  const handleSubmit = (event) => {
     event.preventDefault();
-    if (!validate()) return;
+    if (activeTab === "general") {
+      handleContinueToContent();
+      return;
+    }
+    const { isValid, hasGeneralErrors } = validateAll();
+    if (!isValid) {
+      if (hasGeneralErrors) setActiveTab("general");
+      return;
+    }
+    const hasLocales =
+      locales && typeof locales === "object" && !Array.isArray(locales) && Object.keys(locales).length > 0;
+    if (!hasLocales) {
+      setShowTranslateConfirm(true);
+      return;
+    }
     submitForm(locales);
   };
 
@@ -438,7 +587,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("content")}
+          onClick={handleOpenContentTab}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
             activeTab === "content"
               ? "bg-white text-gray-900 shadow-sm"
@@ -482,34 +631,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             {errors.description && (
               <p className="mt-1.5 text-xs text-red-600">{errors.description}</p>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-900">Localizare</label>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={generateLocales} disabled={uiLocked}>
-                {isTranslating ? "Se localizează..." : "Generează localizări"}
-              </Button>
-              {isTranslating && (
-                <span className="inline-flex items-center gap-2 text-xs text-gray-500">
-                  <span className="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                  Se traduc textele...va rugam asteptati...
-                </span>
-              )}
-              {translateMessage && (
-                <span
-                  className={`text-xs ${
-                    translateMessage.includes("eșuat") ? "text-red-600" : "text-emerald-600"
-                  }`}
-                >
-                  {translateMessage}
-                </span>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs text-gray-500">
-              Localizarea folosește titlul, descrierea, notele și contactul. Dacă nu localizezi, se
-              salvează cu fallback RO.
-            </p>
           </div>
 
           <div>
@@ -723,6 +844,34 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-900">Localizare</label>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <Button type="button" variant="outline" onClick={generateLocales} disabled={uiLocked}>
+                {isTranslating ? "Se localizează..." : "Generează localizări"}
+              </Button>
+              {isTranslating && (
+                <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+                  <span className="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                  Se traduc textele...va rugam asteptati...
+                </span>
+              )}
+              {translateMessage && (
+                <span
+                  className={`text-xs ${
+                    translateMessage.includes("eșuat") ? "text-red-600" : "text-emerald-600"
+                  }`}
+                >
+                  {translateMessage}
+                </span>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-gray-500">
+              Localizarea folosește titlul, descrierea, notele, contactul și lecțiile curriculum. Dacă
+              nu localizezi, se salvează cu fallback RO.
+            </p>
+          </div>
+
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -846,10 +995,51 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         <Button type="button" variant="outline" onClick={onCancel} disabled={uiLocked}>
           Anulează
         </Button>
-        <Button type="submit" disabled={uiLocked}>
-          {loading ? "Se salvează..." : initialValue ? "Actualizează cursul" : "Creează cursul"}
+        <Button
+          type={activeTab === "general" ? "button" : "submit"}
+          onClick={
+            activeTab === "general"
+              ? (event) => {
+                  event.preventDefault();
+                  handleContinueToContent();
+                }
+              : undefined
+          }
+          disabled={uiLocked}
+        >
+          {loading
+            ? "Se salvează..."
+            : activeTab === "general"
+            ? "Continuă"
+            : initialValue
+            ? "Actualizează cursul"
+            : "Creează cursul"}
         </Button>
       </div>
+
+      <Dialog open={showTranslateConfirm} onOpenChange={setShowTranslateConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Localizările nu au fost generate</DialogTitle>
+            <DialogDescription>
+              Vrei să generezi localizările acum și să finalizezi salvarea cursului?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowTranslateConfirm(false)}
+              disabled={uiLocked}
+            >
+              Editează
+            </Button>
+            <Button type="button" onClick={confirmTranslateAndSubmit} disabled={uiLocked}>
+              {isTranslating ? "Se localizează..." : "Localizează și finalizează"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

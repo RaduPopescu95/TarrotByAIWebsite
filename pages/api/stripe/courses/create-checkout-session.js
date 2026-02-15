@@ -57,6 +57,21 @@ function sanitizeString(value, maxLength = 255) {
   return normalized.slice(0, maxLength);
 }
 
+function normalizeAllowedPrefix(value) {
+  if (typeof value !== "string") return "";
+  let normalized = value.trim();
+  if (!normalized) return "";
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+  normalized = normalized.toLowerCase();
+  normalized = normalized.replace(/\/+$/, "");
+  return normalized;
+}
+
 function parseInvoiceDueDays(value) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
@@ -148,7 +163,7 @@ function parseAllowedReturnUrlPrefixes() {
 
   const prefixes = joined
     .split(",")
-    .map((entry) => entry.trim().toLowerCase())
+    .map((entry) => normalizeAllowedPrefix(entry))
     .filter(Boolean);
 
   if (process.env.NODE_ENV !== "production") {
@@ -180,7 +195,16 @@ function isValidReturnUrl(urlValue, baseUrl, allowedPrefixes) {
   }
 
   const loweredCandidate = candidate.toLowerCase();
-  return allowedPrefixes.some((prefix) => loweredCandidate.startsWith(prefix));
+  const normalizedCandidate = loweredCandidate.replace(/\/+$/, "");
+  return allowedPrefixes.some((prefix) => {
+    if (!prefix) return false;
+    return (
+      normalizedCandidate === prefix ||
+      normalizedCandidate.startsWith(`${prefix}/`) ||
+      normalizedCandidate.startsWith(`${prefix}?`) ||
+      normalizedCandidate.startsWith(`${prefix}#`)
+    );
+  });
 }
 
 function createValidationError(message) {
@@ -202,6 +226,9 @@ function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
   }
 
   const allowedPrefixes = parseAllowedReturnUrlPrefixes();
+  if ((requestedSuccessUrl || requestedCancelUrl) && allowedPrefixes.length === 0) {
+    console.warn("[courses.checkout] return_url_allowlist_empty");
+  }
   if (requestedSuccessUrl && !isValidReturnUrl(requestedSuccessUrl, baseUrl, allowedPrefixes)) {
     throw createValidationError("Invalid successUrl");
   }

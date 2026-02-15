@@ -43,6 +43,26 @@ function firstFile(value) {
   return value;
 }
 
+function firstField(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] || null;
+  }
+
+  return value;
+}
+
+function normalizeSubtitleLanguage(value) {
+  if (typeof value !== "string" || !value.trim()) return "ro";
+  const normalized = value.trim().toLowerCase();
+  if (normalized.startsWith("en")) return "en";
+  if (normalized.startsWith("ro")) return "ro";
+  return "ro";
+}
+
 function sanitizeFilenameBase(name) {
   const fallback = "subtitrare";
   if (!name || typeof name !== "string") {
@@ -74,9 +94,10 @@ export default async function handler(req, res) {
   let uploadedFile = null;
 
   try {
-    const { files } = await parseMultipartForm(req);
+    const { files, fields } = await parseMultipartForm(req);
     uploadedFile =
       firstFile(files?.video) || firstFile(files?.file) || firstFile(Object.values(files || {})[0]);
+    const subtitleLanguage = normalizeSubtitleLanguage(firstField(fields?.language));
 
     if (!uploadedFile) {
       return res.status(400).json({
@@ -99,12 +120,12 @@ export default async function handler(req, res) {
     const srtText = await openai.audio.transcriptions.create({
       file: fileForOpenAI,
       model: "whisper-1",
-      language: "ro",
+      language: subtitleLanguage,
       response_format: "srt",
       temperature: 0,
     });
 
-    const outputName = `${sanitizeFilenameBase(uploadedFile.originalFilename)}.ro.srt`;
+    const outputName = `${sanitizeFilenameBase(uploadedFile.originalFilename)}.${subtitleLanguage}.srt`;
 
     res.setHeader("Content-Type", "application/x-subrip; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${outputName}"`);
@@ -114,7 +135,7 @@ export default async function handler(req, res) {
     const message =
       error?.error?.message ||
       error?.message ||
-      "Failed to transcribe video to Romanian SRT.";
+      "Failed to transcribe media to SRT.";
 
     console.error("[transcribe-ro-srt] Error:", message);
     return res.status(status).json({ error: message });

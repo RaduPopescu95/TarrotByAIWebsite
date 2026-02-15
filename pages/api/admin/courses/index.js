@@ -15,6 +15,18 @@ function parseScheduledAt(value) {
   return date;
 }
 
+function hasValidLocalizedCurriculumLessons(value) {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  return value.every((lesson) => {
+    if (!lesson || typeof lesson !== "object" || Array.isArray(lesson)) return false;
+    if (typeof lesson.id !== "string" || !lesson.id.trim()) return false;
+    if (lesson.title !== undefined && typeof lesson.title !== "string") return false;
+    if (lesson.summary !== undefined && typeof lesson.summary !== "string") return false;
+    return true;
+  });
+}
+
 function isCourseLocales(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return Object.values(value).every((entry) => {
@@ -24,6 +36,7 @@ function isCourseLocales(value) {
     if (entry.notesContent !== undefined && typeof entry.notesContent !== "string") return false;
     if (entry.contactContent !== undefined && typeof entry.contactContent !== "string")
       return false;
+    if (!hasValidLocalizedCurriculumLessons(entry.curriculumLessons)) return false;
     return true;
   });
 }

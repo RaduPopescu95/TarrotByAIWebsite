@@ -1,11 +1,18 @@
 export type CourseCurrency = "RON" | "EUR";
 export type CourseStatus = "draft" | "published" | "scheduled";
 
+export interface CourseLocaleCurriculumLesson {
+  id: string;
+  title?: string;
+  summary?: string;
+}
+
 export interface CourseLocaleFields {
   title: string;
   description?: string;
   notesContent?: string;
   contactContent?: string;
+  curriculumLessons?: CourseLocaleCurriculumLesson[];
 }
 
 export type CourseLocales = Record<string, CourseLocaleFields>;

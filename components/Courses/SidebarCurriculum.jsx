@@ -30,6 +30,8 @@ export default function SidebarCurriculum({
   downloadCertificateLabel,
   certificateLockedLabel,
   isCertificateEnabled,
+  onDownloadCertificate,
+  isCertificateLoading = false,
   emptyLabel = "",
 }) {
   const defaultOpenLessonId = useMemo(() => activeLessonId || lessons[0]?.id || null, [
@@ -46,6 +48,8 @@ export default function SidebarCurriculum({
     setOpenLessonId((prevLessonId) => (prevLessonId === lessonId ? null : lessonId));
     if (typeof onSelectLesson === "function") onSelectLesson(lessonId);
   };
+  const canDownloadCertificate =
+    isCertificateEnabled && typeof onDownloadCertificate === "function";
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
@@ -127,8 +131,13 @@ export default function SidebarCurriculum({
 
       <button
         type="button"
-        disabled={!isCertificateEnabled}
-        className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-left text-sm font-semibold text-slate-500 disabled:cursor-not-allowed disabled:opacity-80"
+        onClick={canDownloadCertificate ? onDownloadCertificate : undefined}
+        disabled={!canDownloadCertificate || isCertificateLoading}
+        className={`w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+          canDownloadCertificate
+            ? "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50"
+            : "border-slate-200 bg-slate-100 text-slate-500"
+        } disabled:cursor-not-allowed disabled:opacity-80`}
       >
         {downloadCertificateLabel}
         {!isCertificateEnabled && (
