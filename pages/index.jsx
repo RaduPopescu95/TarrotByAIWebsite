@@ -19,7 +19,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
-import { useDatabase } from "../context/DatabaseContext";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
 import CourseCard from "../components/Courses/CourseCard";
@@ -126,7 +125,6 @@ function getCourseGridClass(courseCount = 0) {
 }
 
 function Landing(props) {
-  const { articles: arti } = useDatabase();
   const { currentUser, isGuestUser } = useAuth();
   const {
     oreNorocoase,

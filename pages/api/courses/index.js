@@ -7,19 +7,42 @@ import {
   toSafeCourse,
 } from "../../../lib/courses";
 
-async function fetchCourseCandidates(db) {
+const DEFAULT_LIMITED_CANDIDATE_FLOOR = 24;
+const DEFAULT_LIMITED_CANDIDATE_MULTIPLIER = 4;
+const DEFAULT_LIMITED_CANDIDATE_CAP = 200;
+
+function resolveCandidateLimit(requestedLimit) {
+  if (typeof requestedLimit !== "number") return null;
+  const floor = Number.parseInt(process.env.COURSES_LIST_CANDIDATE_FLOOR || "", 10);
+  const multiplier = Number.parseInt(process.env.COURSES_LIST_CANDIDATE_MULTIPLIER || "", 10);
+  const cap = Number.parseInt(process.env.COURSES_LIST_CANDIDATE_CAP || "", 10);
+  const effectiveFloor = Number.isFinite(floor) && floor > 0 ? floor : DEFAULT_LIMITED_CANDIDATE_FLOOR;
+  const effectiveMultiplier =
+    Number.isFinite(multiplier) && multiplier > 0 ? multiplier : DEFAULT_LIMITED_CANDIDATE_MULTIPLIER;
+  const effectiveCap = Number.isFinite(cap) && cap > 0 ? cap : DEFAULT_LIMITED_CANDIDATE_CAP;
+  return Math.min(Math.max(requestedLimit * effectiveMultiplier, effectiveFloor), effectiveCap);
+}
+
+async function fetchCourseCandidates(db, candidateLimit = null) {
   try {
-    const snapshot = await db
+    let collectionQuery = db
       .collection("courses")
       .where("status", "in", ["published", "scheduled"])
-      .orderBy("updatedAt", "desc")
-      .get();
+      .orderBy("updatedAt", "desc");
+    if (typeof candidateLimit === "number") {
+      collectionQuery = collectionQuery.limit(candidateLimit);
+    }
+    const snapshot = await collectionQuery.get();
     return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (error) {
     console.warn("[courses.list] list_query_fallback", {
       message: error?.message || "unknown_error",
     });
-    const fallbackSnapshot = await db.collection("courses").orderBy("updatedAt", "desc").get();
+    let fallbackQuery = db.collection("courses").orderBy("updatedAt", "desc");
+    if (typeof candidateLimit === "number") {
+      fallbackQuery = fallbackQuery.limit(candidateLimit);
+    }
+    const fallbackSnapshot = await fallbackQuery.get();
     return fallbackSnapshot.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
       .filter((course) => course.status === "published" || course.status === "scheduled");
@@ -37,9 +60,10 @@ export default async function handler(req, res) {
     const locale = readSingleQueryValue(req.query?.locale);
     const featuredOnly = parseQueryBoolean(req.query?.featuredOnly);
     const limit = parseQueryPositiveLimit(req.query?.limit);
+    const candidateLimit = resolveCandidateLimit(limit);
 
     const nowMs = Date.now();
-    const courses = (await fetchCourseCandidates(db))
+    const courses = (await fetchCourseCandidates(db, candidateLimit))
       .filter((course) => isCourseVisible(course, nowMs))
       .filter((course) => {
         if (featuredOnly === null) return true;

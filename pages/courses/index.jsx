@@ -45,7 +45,7 @@ export default function CoursesPage() {
       setError("");
       try {
         const locale = router.locale || "ro";
-        const response = await fetch(`/api/courses?locale=${encodeURIComponent(locale)}`, {
+        const response = await fetch(`/api/courses?locale=${encodeURIComponent(locale)}&limit=24`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });

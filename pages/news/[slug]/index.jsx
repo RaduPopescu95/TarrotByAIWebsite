@@ -6,7 +6,7 @@ import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -14,71 +14,86 @@ import languageDetector from "../../../lib/languageDetector";
 import { toUrlSlug } from "../../../utils/commonUtils";
 import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
 
+const SIDEBAR_ARTICLES_LIMIT = 12;
+const LEGACY_LOOKUP_LIMIT = 20;
+
+function convertFirestoreData(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (obj.toDate && typeof obj.toDate === "function") {
+    return obj.toDate().toISOString();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertFirestoreData);
+  }
+  if (typeof obj === "object" && obj.constructor === Object) {
+    const converted = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertFirestoreData(value);
+    }
+    return converted;
+  }
+  return obj;
+}
+
+function mapDocToArticle(docSnap) {
+  const data = docSnap.data() || {};
+  return {
+    id: docSnap.id,
+    ...convertFirestoreData(data),
+  };
+}
+
 export async function getServerSideProps(context) {
   try {
     const { locale, params, req, query: queryParams } = context;
-    
-    // Function to recursively convert Firestore objects to plain objects
-    const convertFirestoreData = (obj) => {
-      if (obj === null || obj === undefined) return obj;
-      
-      // Handle Firestore Timestamps
-      if (obj.toDate && typeof obj.toDate === 'function') {
-        return obj.toDate().toISOString();
-      }
-      
-      // Handle arrays
-      if (Array.isArray(obj)) {
-        return obj.map(convertFirestoreData);
-      }
-      
-      // Handle objects
-      if (typeof obj === 'object' && obj.constructor === Object) {
-        const converted = {};
-        for (const [key, value] of Object.entries(obj)) {
-          converted[key] = convertFirestoreData(value);
-        }
-        return converted;
-      }
-      
-      return obj;
-    };
+    const idFromQuery =
+      typeof queryParams?.id === "string"
+        ? queryParams.id.trim()
+        : Array.isArray(queryParams?.id)
+        ? queryParams.id[0]?.trim() || ""
+        : "";
 
-    // Get articles data from Firestore with converted timestamps
-    let articlesRef = collection(db, "BlogArticole");
-    let q = query(
-      articlesRef,
-      orderBy("firstUploadTimestamp", "desc"),
-      limit(50)
-    );
+    let filteredArticle = null;
+    let articlesData = [];
 
-    const documentSnapshots = await getDocs(q);
-    let articlesData = documentSnapshots.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...convertFirestoreData(data),
-      };
-    });
-    
-    articlesData = filterArticlesBeforeCurrentTime(articlesData);
+    if (idFromQuery) {
+      const articleDoc = await getDoc(doc(db, "BlogArticole", idFromQuery));
+      if (!articleDoc.exists()) {
+        return { notFound: true };
+      }
+      filteredArticle = mapDocToArticle(articleDoc);
 
-    // Extract ID from query parameter or slug
-    let id;
-    if (queryParams.id) {
-      // Use query parameter if available (new format)
-      id = queryParams.id;
+      const sidebarSnapshot = await getDocs(
+        query(
+          collection(db, "BlogArticole"),
+          orderBy("firstUploadTimestamp", "desc"),
+          limit(SIDEBAR_ARTICLES_LIMIT)
+        )
+      );
+      articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
+      articlesData = filterArticlesBeforeCurrentTime(articlesData);
     } else {
-      // Fall back to extracting from slug (old format)
       const slug = params.slug;
-      id = slug.split("-")[0];
+      const fallbackSnapshot = await getDocs(
+        query(
+          collection(db, "BlogArticole"),
+          orderBy("firstUploadTimestamp", "desc"),
+          limit(LEGACY_LOOKUP_LIMIT)
+        )
+      );
+      articlesData = fallbackSnapshot.docs.map(mapDocToArticle);
+      articlesData = filterArticlesBeforeCurrentTime(articlesData);
+      const fallbackId = slug.split("-")[0];
+      filteredArticle = articlesData.find((article) => article.id.toString() === fallbackId) || null;
+      if (!filteredArticle) {
+        return { notFound: true };
+      }
     }
-    const filteredArticle = articlesData.find(article => article.id.toString() === id);
 
-    if (!filteredArticle) {
-      return {
-        notFound: true,
-      };
+    // Ensure current article exists in sidebar payload even if not part of latest list.
+    const hasCurrentInList = articlesData.some((article) => article.id === filteredArticle.id);
+    if (!hasCurrentInList) {
+      articlesData = [filteredArticle, ...articlesData].slice(0, SIDEBAR_ARTICLES_LIMIT);
     }
 
     // Get URL for meta tags

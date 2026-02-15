@@ -1,5 +1,4 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { handleGetArticles } from "../utils/realtimeUtils";
 import languageDetector from "../lib/languageDetector";
 import { handleGetFirestorePaginatedCached } from "../utils/firestoreUtils";
 import { useRouter } from "next/router";
@@ -98,8 +97,13 @@ export const DatabaseProvider = ({ children }) => {
     const path = router.pathname || "";
     const isAdminRoute =
       path.startsWith("/dashboard") || path.startsWith("/admin") || path.startsWith("/login-admin");
-    if (isAdminRoute) {
-      console.log(`[DatabaseContext] Skip BlogArticole fetch on admin route: ${path}`);
+    const prefetchEnabled = process.env.NEXT_PUBLIC_DATABASE_CONTEXT_PREFETCH_ARTICLES === "true";
+    const isArticlesRoute = path === "/" || path === "/news" || path === "/news/[slug]";
+
+    if (isAdminRoute || !prefetchEnabled || !isArticlesRoute) {
+      console.log(
+        `[DatabaseContext] Skip BlogArticole prefetch on route: ${path} (enabled=${prefetchEnabled})`
+      );
       setIsLoading(false);
       return;
     }
