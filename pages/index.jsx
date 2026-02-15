@@ -722,7 +722,7 @@ function Landing(props) {
                 <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                   <div className="max-w-3xl">
                     <h2 className="text-3xl font-bold tracking-tight text-slate-900">{t("coursesHeading")}</h2>
-                    <p className="mt-2 text-base leading-relaxed text-slate-600">{t("coursesSubtitle")}</p>
+                 
                   </div>
                   <Link
                     href="/courses"
@@ -740,32 +740,6 @@ function Landing(props) {
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    <article className="w-full space-y-6">
-                      <div>
-                        <h3 className="text-2xl font-semibold text-slate-900">{t("coursesHomeLatestTitle")}</h3>
-                        <p className="mt-1 text-sm text-slate-600">{t("coursesHomeLatestSubtitle")}</p>
-                      </div>
-
-                      {homeCourses.latestCourses.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm text-slate-600">
-                          {t("coursesHomeLatestEmpty")}
-                        </div>
-                      ) : (
-                        <div className={latestCourseCardsGridClass}>
-                          {homeCourses.latestCourses.map((course) => (
-                            <CourseCard
-                              key={`latest-${course.id}`}
-                              course={course}
-                              onClick={() => router.push(`/courses/${course.id}`)}
-                              noImageLabel={t("coursesCardNoImage")}
-                              openLabel={t("coursesHomeOpenCourse")}
-                              priceLocale={router.locale || "ro-RO"}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </article>
-
                     <article className="w-full space-y-6">
                       <div>
                         <h3 className="text-2xl font-semibold text-slate-900">{t("coursesHomeFeaturedTitle")}</h3>
@@ -786,6 +760,32 @@ function Landing(props) {
                               noImageLabel={t("coursesCardNoImage")}
                               openLabel={t("coursesHomeOpenCourse")}
                               featuredLabel={t("coursesHomeFeaturedBadge")}
+                              priceLocale={router.locale || "ro-RO"}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </article>
+
+                    <article className="w-full space-y-6">
+                      <div>
+                        <h3 className="text-2xl font-semibold text-slate-900">{t("coursesHomeLatestTitle")}</h3>
+                        <p className="mt-1 text-sm text-slate-600">{t("coursesHomeLatestSubtitle")}</p>
+                      </div>
+
+                      {homeCourses.latestCourses.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm text-slate-600">
+                          {t("coursesHomeLatestEmpty")}
+                        </div>
+                      ) : (
+                        <div className={latestCourseCardsGridClass}>
+                          {homeCourses.latestCourses.map((course) => (
+                            <CourseCard
+                              key={`latest-${course.id}`}
+                              course={course}
+                              onClick={() => router.push(`/courses/${course.id}`)}
+                              noImageLabel={t("coursesCardNoImage")}
+                              openLabel={t("coursesHomeOpenCourse")}
                               priceLocale={router.locale || "ro-RO"}
                             />
                           ))}

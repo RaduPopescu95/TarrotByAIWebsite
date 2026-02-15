@@ -6,6 +6,7 @@ import { requireAuth } from "../../../../lib/requireAuth";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
 const DEFAULT_MOBILE_CHECKOUT_DEEP_LINK_BASE = "com.cristina.zurba.tarot://courses/checkout";
+const DEFAULT_TEST_PURCHASE_PASSWORD = "Cristina1994!";
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
@@ -56,6 +57,28 @@ function sanitizeString(value, maxLength = 255) {
   const normalized = value.trim();
   if (!normalized) return "";
   return normalized.slice(0, maxLength);
+}
+
+function isTruthyValue(value) {
+  if (typeof value !== "string") return false;
+  return ["1", "true", "yes", "y", "on"].includes(value.trim().toLowerCase());
+}
+
+function isFalsyValue(value) {
+  if (typeof value !== "string") return false;
+  return ["0", "false", "no", "n", "off"].includes(value.trim().toLowerCase());
+}
+
+function isPurchasePasswordRequired() {
+  const envValue = process.env.COURSES_PURCHASE_PASSWORD_REQUIRED;
+  if (isTruthyValue(envValue)) return true;
+  if (isFalsyValue(envValue)) return false;
+  return true;
+}
+
+function getExpectedPurchasePassword() {
+  const configured = sanitizeString(process.env.COURSES_PURCHASE_PASSWORD || "", 255);
+  return configured || DEFAULT_TEST_PURCHASE_PASSWORD;
 }
 
 function isMobilePlatform(value) {
@@ -317,12 +340,17 @@ export default async function handler(req, res) {
     cancelUrl: rawCancelUrl,
     platform: rawPlatform,
     billingDetails: rawBillingDetails,
+    purchasePassword: rawPurchasePassword,
   } = req.body || {};
   const courseId = typeof rawCourseId === "string" ? rawCourseId.trim() : "";
   if (!courseId) {
     return res.status(400).json({ error: "Missing courseId" });
   }
   const sourcePlatform = sanitizeString(rawPlatform, 32).toLowerCase() || "web";
+  const purchasePassword = sanitizeString(rawPurchasePassword, 255);
+  const purchasePasswordRequired = isPurchasePasswordRequired();
+  const shouldValidatePurchasePassword =
+    purchasePasswordRequired && sourcePlatform !== "expo" && sourcePlatform !== "mobile";
 
   console.info("[courses.checkout] start", {
     uid: maskUid(authUser.uid),
@@ -330,7 +358,22 @@ export default async function handler(req, res) {
     sourcePlatform,
     hasSuccessUrl: Boolean(sanitizeString(rawSuccessUrl, 2048)),
     hasCancelUrl: Boolean(sanitizeString(rawCancelUrl, 2048)),
+    purchasePasswordRequired,
+    shouldValidatePurchasePassword,
+    hasPurchasePassword: Boolean(purchasePassword),
   });
+
+  if (shouldValidatePurchasePassword) {
+    const expectedPurchasePassword = getExpectedPurchasePassword();
+    if (!purchasePassword || purchasePassword !== expectedPurchasePassword) {
+      console.warn("[courses.checkout] purchase_password_invalid", {
+        uid: maskUid(authUser.uid),
+        courseId,
+        sourcePlatform,
+      });
+      return res.status(403).json({ error: "Invalid purchase password" });
+    }
+  }
 
   try {
     const db = getAdminDb();

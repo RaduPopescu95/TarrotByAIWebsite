@@ -46,6 +46,7 @@ function mapPlaybackError(status, t) {
 
 function mapCheckoutError(status, t) {
   if (status === 401) return t("coursesErrorsAuthRequired");
+  if (status === 403) return t("coursesErrorsPurchasePasswordInvalid");
   if (status === 404) return t("coursesErrorsNotFound");
   if (status === 409) return t("coursesErrorsAlreadyPurchased");
   if (status === 400) return t("coursesErrorsCourseUnavailableForPurchase");
@@ -78,6 +79,7 @@ export default function CourseDetailPage() {
   const [pageError, setPageError] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [purchasePassword, setPurchasePassword] = useState("");
   const [playbackVimeoId, setPlaybackVimeoId] = useState(null);
   const [playbackLoading, setPlaybackLoading] = useState(false);
   const [playbackError, setPlaybackError] = useState("");
@@ -408,6 +410,13 @@ export default function CourseDetailPage() {
       handleLogin();
       return;
     }
+    const isPurchasePasswordRequired =
+      process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !== "false";
+    const normalizedPurchasePassword = purchasePassword.trim();
+    if (isPurchasePasswordRequired && !normalizedPurchasePassword) {
+      setCheckoutError(t("coursesErrorsPurchasePasswordMissing"));
+      return;
+    }
 
     setCheckoutLoading(true);
     setCheckoutError("");
@@ -419,7 +428,10 @@ export default function CourseDetailPage() {
           "Content-Type": "application/json",
           ...authHeaders,
         },
-        body: JSON.stringify({ courseId: normalizedCourseId }),
+        body: JSON.stringify({
+          courseId: normalizedCourseId,
+          purchasePassword: normalizedPurchasePassword,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -815,6 +827,12 @@ export default function CourseDetailPage() {
                 label={t("coursesFloatingPurchaseCta")}
                 loadingLabel={t("coursesFloatingPurchaseLoading")}
                 isLoading={checkoutLoading}
+                passwordEnabled={process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !== "false"}
+                passwordValue={purchasePassword}
+                onPasswordChange={setPurchasePassword}
+                passwordLabel={t("coursesPurchasePasswordLabel")}
+                passwordPlaceholder={t("coursesPurchasePasswordPlaceholder")}
+                passwordHint={t("coursesPurchasePasswordHint")}
                 onClick={handleCheckout}
               />
             </div>

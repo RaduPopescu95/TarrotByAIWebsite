@@ -121,13 +121,7 @@ export default function SidebarCurriculum({
         )}
       </section>
 
-      <button
-        type="button"
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50"
-      >
-        {finalTestLabel}
-        <span className="mt-1 block text-xs font-normal text-slate-500">{finalTestHint}</span>
-      </button>
+      
 
       <button
         type="button"
