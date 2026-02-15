@@ -6,7 +6,7 @@ import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
-import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -15,7 +15,7 @@ import { toUrlSlug } from "../../../utils/commonUtils";
 import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
-const LEGACY_LOOKUP_LIMIT = 20;
+const LEGACY_LOOKUP_LIMIT = 120;
 
 function convertFirestoreData(obj) {
   if (obj === null || obj === undefined) return obj;
@@ -36,11 +36,39 @@ function convertFirestoreData(obj) {
 }
 
 function mapDocToArticle(docSnap) {
-  const data = docSnap.data() || {};
+  const data = convertFirestoreData(docSnap.data() || {});
   return {
-    id: docSnap.id,
-    ...convertFirestoreData(data),
+    ...data,
+    // Keep both identifiers for backward compatibility.
+    id: data?.id ?? docSnap.id,
+    documentId: docSnap.id,
   };
+}
+
+async function findArticleByLegacyId(rawId) {
+  const normalizedId = typeof rawId === "string" ? rawId.trim() : "";
+  if (!normalizedId) return null;
+
+  const candidates = [normalizedId];
+  const numericId = Number(normalizedId);
+  if (Number.isFinite(numericId)) {
+    candidates.push(numericId);
+  }
+
+  for (const candidate of candidates) {
+    const legacySnapshot = await getDocs(
+      query(
+        collection(db, "BlogArticole"),
+        where("id", "==", candidate),
+        limit(1)
+      )
+    );
+    if (!legacySnapshot.empty) {
+      return mapDocToArticle(legacySnapshot.docs[0]);
+    }
+  }
+
+  return null;
 }
 
 export async function getServerSideProps(context) {
@@ -55,25 +83,46 @@ export async function getServerSideProps(context) {
 
     let filteredArticle = null;
     let articlesData = [];
+    const rawSlug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+    const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
+    const slugPrefixId = slug ? slug.split("-")[0].trim() : "";
 
     if (idFromQuery) {
       const articleDoc = await getDoc(doc(db, "BlogArticole", idFromQuery));
-      if (!articleDoc.exists()) {
-        return { notFound: true };
+      if (articleDoc.exists()) {
+        filteredArticle = mapDocToArticle(articleDoc);
       }
-      filteredArticle = mapDocToArticle(articleDoc);
+      if (!filteredArticle) {
+        filteredArticle = await findArticleByLegacyId(idFromQuery);
+      }
 
-      const sidebarSnapshot = await getDocs(
-        query(
-          collection(db, "BlogArticole"),
-          orderBy("firstUploadTimestamp", "desc"),
-          limit(SIDEBAR_ARTICLES_LIMIT)
-        )
-      );
-      articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
-      articlesData = filterArticlesBeforeCurrentTime(articlesData);
-    } else {
-      const slug = params.slug;
+      if (filteredArticle) {
+        const sidebarSnapshot = await getDocs(
+          query(
+            collection(db, "BlogArticole"),
+            orderBy("firstUploadTimestamp", "desc"),
+            limit(SIDEBAR_ARTICLES_LIMIT)
+          )
+        );
+        articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
+        articlesData = filterArticlesBeforeCurrentTime(articlesData);
+      }
+    }
+
+    if (!filteredArticle) {
+      if (slugPrefixId) {
+        const legacyArticleDoc = await getDoc(doc(db, "BlogArticole", slugPrefixId));
+        if (legacyArticleDoc.exists()) {
+          filteredArticle = mapDocToArticle(legacyArticleDoc);
+        }
+      }
+
+      if (!filteredArticle && slugPrefixId) {
+        filteredArticle = await findArticleByLegacyId(slugPrefixId);
+      }
+    }
+
+    if (!filteredArticle) {
       const fallbackSnapshot = await getDocs(
         query(
           collection(db, "BlogArticole"),
@@ -84,10 +133,27 @@ export async function getServerSideProps(context) {
       articlesData = fallbackSnapshot.docs.map(mapDocToArticle);
       articlesData = filterArticlesBeforeCurrentTime(articlesData);
       const fallbackId = slug.split("-")[0];
-      filteredArticle = articlesData.find((article) => article.id.toString() === fallbackId) || null;
+      filteredArticle =
+        articlesData.find(
+          (article) =>
+            String(article?.documentId || "") === fallbackId ||
+            String(article?.id || "") === fallbackId
+        ) || null;
       if (!filteredArticle) {
         return { notFound: true };
       }
+    }
+
+    if (articlesData.length === 0) {
+      const sidebarSnapshot = await getDocs(
+        query(
+          collection(db, "BlogArticole"),
+          orderBy("firstUploadTimestamp", "desc"),
+          limit(SIDEBAR_ARTICLES_LIMIT)
+        )
+      );
+      articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
+      articlesData = filterArticlesBeforeCurrentTime(articlesData);
     }
 
     // Ensure current article exists in sidebar payload even if not part of latest list.
