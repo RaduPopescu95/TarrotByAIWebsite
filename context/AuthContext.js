@@ -1,12 +1,9 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { authentication, db } from "../firebase";
-import {
-  handleGetUserInfo,
-  handleGetUserInfoJobs,
-} from "../utils/handleFirebaseQuery";
-import { handleGetFirestore } from "../utils/firestoreUtils";
-import { doc, setDoc } from "firebase/firestore";
+import { authentication } from "../firebase";
+import { handleGetUserInfoJobs } from "../utils/handleFirebaseQuery";
+import { signInWithGooglePopupOrRedirect } from "../utils/googleAuthWeb";
+import { deriveNameParts, upsertGoogleUserProfile } from "../utils/googleUserProfileSync";
 
 const AuthContext = createContext();
 
@@ -16,12 +13,30 @@ export const useAuth = () => {
 
 export { AuthContext };
 
+function isGoogleProviderUser(user) {
+  if (!user || !Array.isArray(user.providerData)) return false;
+  return user.providerData.some((provider) => provider?.providerId === "google.com");
+}
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null); // Inițializare cu null
   const [userData, setUserData] = useState(null); // Inițializare cu null
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState({ day: null, slot: null }); // ziua și slotul curent pentru ștergerea unui slot
+
+  const persistAuthSnapshot = (user, profile) => {
+    if (user) {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
+
+    if (profile) {
+      setUserData(profile);
+      localStorage.setItem("userData", JSON.stringify(profile));
+    }
+  };
 
   // Acces la localStorage doar pe client
   useEffect(() => {
@@ -104,6 +119,50 @@ export const AuthProvider = ({ children }) => {
     return false;
   };
 
+  const loginWithGoogle = async ({ returnUrl = "/" } = {}) => {
+    setLoading(true);
+    try {
+      const authResult = await signInWithGooglePopupOrRedirect(authentication);
+
+      if (authResult?.status === "redirecting") {
+        return { status: "redirecting" };
+      }
+
+      const signedUser = authResult?.user || authentication.currentUser;
+      if (signedUser) {
+        await upsertGoogleUserProfile(signedUser);
+        const profile = await handleGetUserInfoJobs();
+        if (profile) {
+          persistAuthSnapshot(signedUser, profile);
+        } else {
+          const { firstName, lastName } = deriveNameParts({
+            displayName: signedUser.displayName,
+            email: signedUser.email,
+          });
+          const fallbackProfile = {
+            owner_uid: signedUser.uid,
+            auth_provider: "Google",
+            first_name: firstName,
+            last_name: lastName,
+            email: signedUser.email || "",
+            photoURL: signedUser.photoURL || "",
+          };
+          persistAuthSnapshot(signedUser, fallbackProfile);
+        }
+      }
+
+      return { status: "signed_in", returnUrl, user: signedUser || null };
+    } catch (error) {
+      console.error("❌ [AUTH] Google sign-in failed", {
+        message: error?.message || "unknown_error",
+        code: error?.code || "unknown_code",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
       console.log("🔥 [AUTH CONTEXT] onAuthStateChanged triggered:", user ? {
@@ -139,7 +198,74 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      if (user && user.providerData[0]?.providerId !== "google.com") {
+      if (user && user.isAnonymous) {
+        console.log("🔑 [AUTH] Anonymous user detected, setting minimal data for public access");
+        let anonymousUserData = {
+          first_name: "Guest",
+          last_name: "User",
+          email: "",
+          owner_uid: user.uid,
+          isAnonymous: true
+        };
+        persistAuthSnapshot(user, anonymousUserData);
+        setCurrentUser(user);
+        setLoading(false);
+        return;
+      }
+
+      const googleProviderUser = isGoogleProviderUser(user);
+
+      if (googleProviderUser) {
+        try {
+          const syncResult = await upsertGoogleUserProfile(user);
+          console.log("✅ [AUTH] Google profile synced", {
+            uid: user.uid,
+            created: syncResult.created,
+            updatedFields: syncResult.updatedFields,
+          });
+        } catch (syncError) {
+          console.error("❌ [AUTH] Google profile sync failed", {
+            uid: user.uid,
+            message: syncError?.message || "unknown_error",
+          });
+        }
+
+        try {
+          const userDataFromFirestore = await handleGetUserInfoJobs();
+          if (userDataFromFirestore) {
+            persistAuthSnapshot(user, userDataFromFirestore);
+          } else {
+            const { firstName, lastName } = deriveNameParts({
+              displayName: user.displayName,
+              email: user.email,
+            });
+            const fallbackGoogleData = {
+              owner_uid: user.uid,
+              auth_provider: "Google",
+              first_name: firstName,
+              last_name: lastName,
+              email: user.email || "",
+              photoURL: user.photoURL || "",
+            };
+            persistAuthSnapshot(user, fallbackGoogleData);
+          }
+        } catch (error) {
+          console.error("Failed to fetch Google user data:", error);
+          const { firstName, lastName } = deriveNameParts({
+            displayName: user.displayName,
+            email: user.email,
+          });
+          const fallbackGoogleData = {
+            owner_uid: user.uid,
+            auth_provider: "Google",
+            first_name: firstName,
+            last_name: lastName,
+            email: user.email || "",
+            photoURL: user.photoURL || "",
+          };
+          persistAuthSnapshot(user, fallbackGoogleData);
+        }
+      } else {
         try {
           console.log("user....firebase...", user);
           let userDataFromFirestore = await handleGetUserInfoJobs();
@@ -148,86 +274,41 @@ export const AuthProvider = ({ children }) => {
             userDataFromFirestore
           );
 
-          // Handle null/undefined userData properly
           if (userDataFromFirestore) {
-            setUserData(userDataFromFirestore);
-            localStorage.setItem("currentUser", JSON.stringify(user));
-            localStorage.setItem("userData", JSON.stringify(userDataFromFirestore));
+            persistAuthSnapshot(user, userDataFromFirestore);
           } else {
-            console.log("No user data found in Firestore, user might not have a profile yet");
-            // Set basic user data from Firebase Auth
+            const { firstName, lastName } = deriveNameParts({
+              displayName: user.displayName,
+              email: user.email,
+            });
             let basicUserData = {
-              first_name: user.displayName || "",
-              last_name: "",
+              first_name: firstName,
+              last_name: lastName,
               email: user.email || "",
               owner_uid: user.uid
             };
-            setUserData(basicUserData);
-            localStorage.setItem("currentUser", JSON.stringify(user));
-            localStorage.setItem("userData", JSON.stringify(basicUserData));
+            persistAuthSnapshot(user, basicUserData);
           }
         } catch (error) {
           console.error("Failed to fetch user data:", error);
-          // 🚀 NEW: Handle permission denied errors
           if (error.message && error.message.includes("Permission denied")) {
             console.log("🚨 [AUTH] Permission denied detected, clearing cache and re-authenticating...");
             await clearAuthCache();
             setLoading(false);
             return;
           }
-          
-          // Set fallback user data in case of error
+
+          const { firstName, lastName } = deriveNameParts({
+            displayName: user.displayName,
+            email: user.email,
+          });
           let fallbackUserData = {
-            first_name: user.displayName || "",
-            last_name: "",
+            first_name: firstName,
+            last_name: lastName,
             email: user.email || "",
             owner_uid: user.uid
           };
-          setUserData(fallbackUserData);
-          localStorage.setItem("currentUser", JSON.stringify(user));
-          localStorage.setItem("userData", JSON.stringify(fallbackUserData));
-        }
-      } else {
-        console.log("user....other...", user);
-        
-        // Handle anonymous users (for public data access)
-        if (user && user.isAnonymous) {
-          console.log("🔑 [AUTH] Anonymous user detected, setting minimal data for public access");
-          let anonymousUserData = {
-            first_name: "Guest",
-            last_name: "User",
-            email: "",
-            owner_uid: user.uid,
-            isAnonymous: true
-          };
-          setUserData(anonymousUserData);
-          localStorage.setItem("currentUser", JSON.stringify(user));
-          localStorage.setItem("userData", JSON.stringify(anonymousUserData));
-          setCurrentUser(user);
-          setLoading(false);
-          return;
-        }
-        
-        if (user?.displayName) {
-          let first_name = user.displayName;
-          let last_name = "";
-          let email = user.email;
-          let owner_uid = user.uid;
-          let data = { first_name, last_name, email, owner_uid };
-          setUserData(data);
-          localStorage.setItem("currentUser", JSON.stringify(user));
-          localStorage.setItem("userData", JSON.stringify(data));
-        } else if (user) {
-          // Handle case where user exists but has no displayName
-          let basicData = {
-            first_name: "",
-            last_name: "",
-            email: user.email || "",
-            owner_uid: user.uid
-          };
-          setUserData(basicData);
-          localStorage.setItem("currentUser", JSON.stringify(user));
-          localStorage.setItem("userData", JSON.stringify(basicData));
+          persistAuthSnapshot(user, fallbackUserData);
         }
       }
       
@@ -272,6 +353,7 @@ export const AuthProvider = ({ children }) => {
     setUserData,
     setCurrentUser,
     setLoading,
+    loginWithGoogle,
     selectedSlot,
     setSelectedSlot,
     clearAuthCache, // 🚀 NEW: Export function to clear auth cache

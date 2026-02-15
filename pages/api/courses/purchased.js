@@ -58,6 +58,35 @@ export default async function handler(req, res) {
       .where("status", "==", "paid")
       .get();
 
+    if (purchasesSnap.empty) {
+      const allPurchasesSnap = await db
+        .collection("users")
+        .doc(authUser.uid)
+        .collection("purchases")
+        .get();
+      const purchaseStatuses = allPurchasesSnap.docs.map((docSnap) => {
+        const data = docSnap.data() || {};
+        return {
+          courseId:
+            typeof data.courseId === "string" && data.courseId.trim()
+              ? data.courseId.trim()
+              : docSnap.id,
+          status: typeof data.status === "string" ? data.status : "missing_status",
+          paymentStatus: typeof data.paymentStatus === "string" ? data.paymentStatus : null,
+          lastWebhookEventType:
+            typeof data.lastWebhookEventType === "string" ? data.lastWebhookEventType : null,
+          lastWebhookEventId:
+            typeof data.lastWebhookEventId === "string" ? data.lastWebhookEventId : null,
+        };
+      });
+
+      console.info("[courses.purchased] no_paid_purchases_debug", {
+        uid: maskUid(authUser?.uid),
+        allCount: allPurchasesSnap.size,
+        statuses: purchaseStatuses,
+      });
+    }
+
     const purchases = purchasesSnap.docs
       .map((docSnap) => {
         const data = docSnap.data() || {};

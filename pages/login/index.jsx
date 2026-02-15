@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
-import { retrieveTypeOfUser } from "../../utils/getFirebaseData";
 import { emailWithoutSpace } from "../../utils/strintText";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -13,6 +12,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
 import { sanitizeInternalReturnUrl } from "../../lib/navigation";
+import { resolveGoogleRedirectResult } from "../../utils/googleAuthWeb";
 
 function Copyright(props) {
   return (
@@ -42,11 +42,13 @@ export async function getServerSideProps({ locale }) {
 }
 
 export default function SignInSide() {
-  const { currentUser, isGuestUser, setAsGuestUser, setCurrentUser } =
+  const { setAsGuestUser, setCurrentUser, loginWithGoogle } =
     useAuth();
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+  const [isResolvingGoogleRedirect, setIsResolvingGoogleRedirect] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
   const { t } = useTranslation("common");
@@ -69,6 +71,35 @@ export default function SignInSide() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  React.useEffect(() => {
+    let mounted = true;
+    const resolveGoogleRedirect = async () => {
+      setIsResolvingGoogleRedirect(true);
+      try {
+        const redirectResult = await resolveGoogleRedirectResult(authentication);
+        if (!mounted) return;
+        if (redirectResult?.status === "signed_in" && redirectResult?.user) {
+          await router.push(safeReturnUrl);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        console.error("[login] google_redirect_fail", {
+          message: error?.message || "unknown_error",
+          code: error?.code || "unknown_code",
+        });
+        setShowSnackback(true);
+        setMessage(t("loginGoogleError"));
+      } finally {
+        if (mounted) setIsResolvingGoogleRedirect(false);
+      }
+    };
+
+    resolveGoogleRedirect();
+    return () => {
+      mounted = false;
+    };
+  }, [router, safeReturnUrl, t]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
     setIsLoading(true);
@@ -84,7 +115,7 @@ export default function SignInSide() {
 
     signInWithEmailAndPassword(authentication, emailNew, password)
       .then(async (userCredentials) => {
-        setCurrentUser(userCredentials);
+        setCurrentUser(userCredentials.user);
         console.log("userCredentials...", userCredentials.user.uid);
         router.push(safeReturnUrl);
         setIsLoading(false);
@@ -100,6 +131,26 @@ export default function SignInSide() {
       });
   };
 
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    setShowSnackback(false);
+    try {
+      const result = await loginWithGoogle({ returnUrl: safeReturnUrl });
+      if (result?.status === "signed_in") {
+        await router.push(safeReturnUrl);
+      }
+    } catch (error) {
+      console.error("[login] google_sign_in_fail", {
+        message: error?.message || "unknown_error",
+        code: error?.code || "unknown_code",
+      });
+      setShowSnackback(true);
+      setMessage(t("loginGoogleError"));
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const handleLoginAsGuest = async () => {
     try {
       setAsGuestUser(true);
@@ -112,6 +163,8 @@ export default function SignInSide() {
       );
     }
   };
+
+  const isActionLoading = isLoading || isGoogleLoading || isResolvingGoogleRedirect;
 
   return (
     <>
@@ -193,7 +246,7 @@ export default function SignInSide() {
                   type="button"
                   onClick={handleLoginAsGuest}
                   style={styles.guestButton}
-                  disabled={isLoading}
+                  disabled={isActionLoading}
                 >
                   {isLoading ? (
                     <div style={styles.spinner}></div>
@@ -206,12 +259,28 @@ export default function SignInSide() {
                 <button
                   type="submit"
                   style={styles.loginButton}
-                  disabled={isLoading}
+                  disabled={isActionLoading}
                 >
                   {isLoading ? (
                     <div style={styles.spinner}></div>
                   ) : (
                     "Autentificare"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  style={styles.googleButton}
+                  disabled={isActionLoading}
+                >
+                  {isGoogleLoading || isResolvingGoogleRedirect ? (
+                    <span style={styles.googleLoadingWrap}>
+                      <div style={styles.spinner}></div>
+                      {t("loginGoogleLoading")}
+                    </span>
+                  ) : (
+                    t("loginGoogleButton")
                   )}
                 </button>
 
@@ -454,6 +523,28 @@ const styles = {
     justifyContent: 'center',
     minHeight: '50px',
     boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+  },
+  googleButton: {
+    width: '100%',
+    padding: '15px 24px',
+    marginBottom: '2rem',
+    backgroundColor: '#ffffff',
+    border: '2px solid #e5e7eb',
+    color: '#111827',
+    borderRadius: '25px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '50px',
+  },
+  googleLoadingWrap: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
   },
   spinner: {
     width: '20px',

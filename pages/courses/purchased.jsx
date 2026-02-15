@@ -7,7 +7,7 @@ import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
-import { authentication } from "../../firebase";
+import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -64,11 +64,12 @@ export default function PurchasedCoursesPage() {
       setLoading(true);
       setError("");
       try {
-        const tokenSource = authentication.currentUser || currentUser;
-        if (!tokenSource || typeof tokenSource.getIdToken !== "function") {
+        let authHeaders = {};
+        try {
+          authHeaders = await getFirebaseBearerHeader({ required: true });
+        } catch (_) {
           throw new Error(t("coursesErrorsAuthRequired"));
         }
-        const token = await tokenSource.getIdToken();
         const locale = router.locale || "ro";
         const response = await fetch(
           `/api/courses/purchased?locale=${encodeURIComponent(locale)}`,
@@ -76,7 +77,7 @@ export default function PurchasedCoursesPage() {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
+              ...authHeaders,
             },
           }
         );

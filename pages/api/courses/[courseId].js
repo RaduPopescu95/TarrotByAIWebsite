@@ -49,6 +49,7 @@ export default async function handler(req, res) {
     const isVisible = isCourseVisible(courseData, Date.now());
 
     let hasAccess = false;
+    let purchaseStatus = "none";
     const decoded = await getOptionalAuth(req);
     const uidLabel = maskUid(decoded?.uid);
     if (decoded?.uid) {
@@ -58,7 +59,24 @@ export default async function handler(req, res) {
         .collection("purchases")
         .doc(courseId)
         .get();
-      hasAccess = purchaseSnap.exists && purchaseSnap.data()?.status === "paid";
+      const purchaseData = purchaseSnap.exists ? purchaseSnap.data() || {} : {};
+      purchaseStatus =
+        purchaseSnap.exists && typeof purchaseData.status === "string"
+          ? purchaseData.status
+          : purchaseSnap.exists
+          ? "missing_status"
+          : "missing_purchase_doc";
+      hasAccess = purchaseSnap.exists && purchaseData.status === "paid";
+
+      console.info("[courses.entitlement] purchase_lookup", {
+        courseId,
+        uid: uidLabel,
+        purchaseExists: purchaseSnap.exists,
+        purchaseStatus,
+        paymentStatus: purchaseData?.paymentStatus || null,
+        lastWebhookEventType: purchaseData?.lastWebhookEventType || null,
+        lastWebhookEventId: purchaseData?.lastWebhookEventId || null,
+      });
     }
 
     if (!isVisible && !hasAccess) {
@@ -92,6 +110,7 @@ export default async function handler(req, res) {
       uid: uidLabel,
       isVisible,
       hasAccess,
+      purchaseStatus,
       hasCustomThumbnail: safeCourse.hasCustomThumbnail === true,
       hasVimeoPreview: safeCourse.hasVimeoPreview === true,
       hasPreviewVimeoId: Boolean(safeCourse.previewVimeoId),

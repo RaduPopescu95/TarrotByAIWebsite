@@ -603,6 +603,24 @@ async function processCheckoutSessionEvent(db, event, session) {
   const entitlementGranted = isPaid && amountMatches && currencyMatches;
   const purchaseStatus = getPurchaseStatus({ isPaid, entitlementGranted, isFailureEvent });
 
+  console.info("[courses.webhook] entitlement_decision", {
+    eventId: event.id,
+    eventType: event.type,
+    uid: maskUid(uid),
+    courseId,
+    checkoutSessionId,
+    paymentStatus,
+    isPaid,
+    amountPaidCents,
+    expectedAmountCents,
+    amountMatches,
+    currency,
+    expectedCurrency: expectedCurrency || null,
+    currencyMatches,
+    entitlementGranted,
+    purchaseStatus,
+  });
+
   const result = await db.runTransaction(async (transaction) => {
     const [eventSnap, purchaseSnap] = await Promise.all([
       transaction.get(eventRef),
@@ -723,6 +741,10 @@ export default async function handler(req, res) {
   }
 
   if (!process.env.STRIPE_WEBHOOK_SECRET_COURSES) {
+    console.error("[courses.webhook] missing_env_secret", {
+      hasStripeSecretKey: Boolean(process.env.STRIPE_SECRET_KEY),
+      hasWebhookSecretCourses: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES),
+    });
     return res.status(500).json({ error: "Missing STRIPE_WEBHOOK_SECRET_COURSES" });
   }
 
@@ -749,6 +771,7 @@ export default async function handler(req, res) {
   console.info("[courses.webhook] event_received", {
     eventId: event.id,
     eventType: event.type,
+    livemode: Boolean(event.livemode),
   });
 
   if (!HANDLED_EVENTS.has(event.type)) {
@@ -759,6 +782,19 @@ export default async function handler(req, res) {
   if (!session || typeof session !== "object") {
     return res.status(200).json({ received: true });
   }
+
+  console.info("[courses.webhook] session_snapshot", {
+    eventId: event.id,
+    eventType: event.type,
+    sessionId: session?.id || "unknown",
+    paymentStatus: session?.payment_status || "unknown",
+    amountTotal: session?.amount_total ?? null,
+    currency: session?.currency || null,
+    metadataUid: maskUid(session?.metadata?.uid || ""),
+    metadataCourseId: session?.metadata?.courseId || null,
+    metadataExpectedAmount: session?.metadata?.expectedAmount || null,
+    metadataExpectedCurrency: session?.metadata?.expectedCurrency || null,
+  });
 
   try {
     const db = getAdminDb();

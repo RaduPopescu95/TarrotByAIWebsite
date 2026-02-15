@@ -10,8 +10,9 @@ import VideoCard from "../../components/Courses/VideoCard";
 import LessonTabs from "../../components/Courses/LessonTabs";
 import MaterialsPanel from "../../components/Courses/MaterialsPanel";
 import SidebarCurriculum from "../../components/Courses/SidebarCurriculum";
+import CoursePurchaseFab from "../../components/Courses/CoursePurchaseFab";
 import { useAuth } from "../../context/AuthContext";
-import { authentication } from "../../firebase";
+import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -86,12 +87,19 @@ export default function CourseDetailPage() {
   const [certificateLoading, setCertificateLoading] = useState(false);
   const [certificateError, setCertificateError] = useState("");
 
-  const getAuthHeaders = useCallback(async () => {
-    const user = authentication.currentUser;
-    if (!user) return {};
-    const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}` };
-  }, []);
+  const getAuthHeaders = useCallback(
+    async ({ required = false } = {}) => {
+      try {
+        return await getFirebaseBearerHeader({ required });
+      } catch (error) {
+        if (required) {
+          throw new Error(t("coursesErrorsAuthRequired"));
+        }
+        throw error;
+      }
+    },
+    [t]
+  );
 
   const toCourseReturnUrl = useCallback(() => {
     const fallbackPath = normalizedCourseId ? `/courses/${normalizedCourseId}` : "/courses";
@@ -115,7 +123,7 @@ export default function CourseDetailPage() {
       setCertificateError("");
 
       try {
-        const authHeaders = await getAuthHeaders();
+        const authHeaders = await getAuthHeaders({ required: false });
         const locale = router.locale || "ro";
         const response = await fetch(
           `/api/courses/${normalizedCourseId}?locale=${encodeURIComponent(locale)}`,
@@ -209,7 +217,7 @@ export default function CourseDetailPage() {
     setPlaybackLoading(true);
     setPlaybackError("");
     try {
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = await getAuthHeaders({ required: true });
       if (!authHeaders.Authorization) {
         throw new Error(t("coursesErrorsAuthRequired"));
       }
@@ -396,7 +404,7 @@ export default function CourseDetailPage() {
 
   const handleCheckout = async () => {
     if (!normalizedCourseId) return;
-    if (!authentication.currentUser) {
+    if (!currentUser) {
       handleLogin();
       return;
     }
@@ -404,12 +412,12 @@ export default function CourseDetailPage() {
     setCheckoutLoading(true);
     setCheckoutError("");
     try {
-      const token = await authentication.currentUser.getIdToken();
+      const authHeaders = await getAuthHeaders({ required: true });
       const response = await fetch("/api/stripe/courses/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...authHeaders,
         },
         body: JSON.stringify({ courseId: normalizedCourseId }),
       });
@@ -498,8 +506,7 @@ export default function CourseDetailPage() {
   const handleDownloadCertificate = useCallback(async () => {
     if (!normalizedCourseId) return;
 
-    const currentAuthUser = authentication.currentUser;
-    if (!currentAuthUser) {
+    if (!currentUser) {
       setCertificateError(t("coursesErrorsCertificateAuthRequired"));
       return;
     }
@@ -507,15 +514,13 @@ export default function CourseDetailPage() {
     setCertificateLoading(true);
     setCertificateError("");
     try {
-      const token = await currentAuthUser.getIdToken();
+      const authHeaders = await getAuthHeaders({ required: true });
       const locale = router.locale || "ro";
       const response = await fetch(
         `/api/courses/${normalizedCourseId}/certificate?locale=${encodeURIComponent(locale)}`,
         {
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: authHeaders,
         }
       );
 
@@ -550,7 +555,15 @@ export default function CourseDetailPage() {
     } finally {
       setCertificateLoading(false);
     }
-  }, [normalizedCourseId, router.locale, t]);
+  }, [normalizedCourseId, router.locale, t, currentUser, getAuthHeaders]);
+
+  const shouldShowPurchaseFab =
+    Boolean(currentUser) &&
+    !hasAccess &&
+    isVisible === true &&
+    !loading &&
+    !pageError &&
+    !waitingForCheckoutConfirmation;
 
   return (
     <>
@@ -739,18 +752,7 @@ export default function CourseDetailPage() {
                               : t("coursesLockedDescriptionLoggedOut")}
                           </p>
 
-                          {currentUser ? (
-                            <button
-                              type="button"
-                              onClick={handleCheckout}
-                              disabled={checkoutLoading}
-                              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {checkoutLoading
-                                ? t("coursesLockedPurchaseLoading")
-                                : t("coursesLockedPurchaseButton", { price: priceLabel })}
-                            </button>
-                          ) : (
+                          {currentUser ? null : (
                             <div className="space-y-3">
                               <p className="text-sm font-semibold text-slate-900">
                                 {t("coursesLockedAuthCtaTitle")}
@@ -807,6 +809,14 @@ export default function CourseDetailPage() {
                   emptyLabel={t("coursesDetailLessonsEmptyDescription")}
                 />
               </div>
+
+              <CoursePurchaseFab
+                visible={shouldShowPurchaseFab}
+                label={t("coursesFloatingPurchaseCta")}
+                loadingLabel={t("coursesFloatingPurchaseLoading")}
+                isLoading={checkoutLoading}
+                onClick={handleCheckout}
+              />
             </div>
           )}
         </div>

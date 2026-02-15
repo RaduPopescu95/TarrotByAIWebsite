@@ -222,6 +222,12 @@ function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
   const requestedSuccessUrl = sanitizeString(successUrl, 2048);
   const requestedCancelUrl = sanitizeString(cancelUrl, 2048);
   if (!requestedSuccessUrl && !requestedCancelUrl) {
+    console.info("[courses.checkout] return_urls_defaults", {
+      courseId,
+      baseUrl,
+      successUrl: defaults.successUrl,
+      cancelUrl: defaults.cancelUrl,
+    });
     return defaults;
   }
 
@@ -230,11 +236,29 @@ function resolveReturnUrls({ baseUrl, courseId, successUrl, cancelUrl }) {
     console.warn("[courses.checkout] return_url_allowlist_empty");
   }
   if (requestedSuccessUrl && !isValidReturnUrl(requestedSuccessUrl, baseUrl, allowedPrefixes)) {
+    console.warn("[courses.checkout] invalid_success_url", {
+      courseId,
+      requestedSuccessUrl,
+      baseUrl,
+      allowedPrefixes,
+    });
     throw createValidationError("Invalid successUrl");
   }
   if (requestedCancelUrl && !isValidReturnUrl(requestedCancelUrl, baseUrl, allowedPrefixes)) {
+    console.warn("[courses.checkout] invalid_cancel_url", {
+      courseId,
+      requestedCancelUrl,
+      baseUrl,
+      allowedPrefixes,
+    });
     throw createValidationError("Invalid cancelUrl");
   }
+
+  console.info("[courses.checkout] return_urls_custom", {
+    courseId,
+    requestedSuccessUrl: requestedSuccessUrl || defaults.successUrl,
+    requestedCancelUrl: requestedCancelUrl || defaults.cancelUrl,
+  });
 
   return {
     successUrl: requestedSuccessUrl || defaults.successUrl,
@@ -272,6 +296,8 @@ export default async function handler(req, res) {
     uid: maskUid(authUser.uid),
     courseId,
     sourcePlatform,
+    hasSuccessUrl: Boolean(sanitizeString(rawSuccessUrl, 2048)),
+    hasCancelUrl: Boolean(sanitizeString(rawCancelUrl, 2048)),
   });
 
   try {
@@ -329,6 +355,13 @@ export default async function handler(req, res) {
       courseId,
       successUrl: rawSuccessUrl,
       cancelUrl: rawCancelUrl,
+    });
+    console.info("[courses.checkout] return_urls_resolved", {
+      uid: maskUid(authUser.uid),
+      courseId,
+      baseUrl,
+      successUrl: returnUrls.successUrl,
+      cancelUrl: returnUrls.cancelUrl,
     });
 
     const metadata = {
