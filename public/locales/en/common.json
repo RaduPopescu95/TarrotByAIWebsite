@@ -135,6 +135,8 @@
   "filterContent": "Filter Content",
   "individualSessions": "Individual Sessions",
   "conferencesCourses": "Conferences/Courses",
+  "conferencesCoursesLive": "Live courses/conferences",
+  "conferencesCoursesRecorded": "Recorded courses/conferences",
   "instantReadings": "Instant Readings",
   "activeFilter": "Active filter",
   "home": "Home",

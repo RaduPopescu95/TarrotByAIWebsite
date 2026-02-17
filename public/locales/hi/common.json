@@ -99,6 +99,8 @@
   "filterContent": "सामग्री फ़िल्टर करें",
   "individualSessions": "व्यक्तिगत सत्र",
   "conferencesCourses": "सम्मेलन/पाठ्यक्रम",
+  "conferencesCoursesLive": "लाइव कोर्स/कॉन्फ्रेंस",
+  "conferencesCoursesRecorded": "रिकॉर्डेड कोर्स/कॉन्फ्रेंस",
   "articles": "लेख",
   "instantReadings": "तत्काल रीडिंग",
   "activeFilter": "सक्रिय फ़िल्टर",

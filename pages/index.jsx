@@ -381,66 +381,49 @@ function Landing(props) {
                   {t("discoverSpiritualWisdom")}
                 </p>
 
-                {/* Animated CTA Buttons - Grid 2x2 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-12">
+                {/* Animated CTA Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 max-w-5xl mx-auto mt-12">
                   
                   {/* Ședințe individuale */}
-                  <Link href="/calendar" className="group relative px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none">
+                  <Link href="/calendar" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                    <span className="relative flex items-center justify-center">
 {t("individualSessions")}
                     </span>
                   </Link>
                   
-                  {/* Conferințe/cursuri */}
-                  <Link href="/calendar-conferinte-grup" className="group relative px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 text-decoration-none">
+                  {/* Cursuri/Conferințe LIVE */}
+                  <Link href="/calendar-conferinte-grup" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-{t("conferencesCourses")}
+                    <span className="relative flex items-center justify-center">
+{t("conferencesCoursesLive")}
+                    </span>
+                  </Link>
+
+                  {/* Cursuri/Conferințe înregistrate */}
+                  <Link href="/courses" className="group relative px-8 py-4 sm:col-span-2 lg:col-span-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 text-decoration-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <span className="relative flex items-center justify-center">
+                      {t("conferencesCoursesRecorded")}
                     </span>
                   </Link>
                   
                   {/* Articole */}
-                  <Link href="/news" className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/25 text-decoration-none">
+                  <Link href="/news" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:col-start-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H15" />
-                      </svg>
+                    <span className="relative flex items-center justify-center">
                       {t("articles")}
                     </span>
                   </Link>
                   
                   {/* Citiri instant */}
-                  <Link href="/main-dashboard" className="group relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/25 text-decoration-none">
+                  <Link href="/main-dashboard" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:col-start-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
+                    <span className="relative flex items-center justify-center">
                       {t("instantReadings")}
                     </span>
                   </Link>
                   
-                </div>
-
-                <div className="mt-6">
-                  <Link
-                    href="/courses"
-                    className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-indigo-200 bg-white/90 px-6 py-3 font-semibold text-indigo-700 shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422A12.083 12.083 0 0112 21c-2.331 0-4.507-.66-6.16-1.8L12 14z" />
-                    </svg>
-                    {t("coursesHeading")}
-                  </Link>
                 </div>
               </div>
                              {/* Right column – Hero image */}

@@ -130,6 +130,8 @@
   "filterContent": "Inhalte Filtern",
   "individualSessions": "Einzelsitzungen",
   "conferencesCourses": "Konferenzen/Kurse",
+  "conferencesCoursesLive": "Kurse/Konferenzen live",
+  "conferencesCoursesRecorded": "Kurse/Konferenzen aufgezeichnet",
   "instantReadings": "Sofortige Lesungen",
   "activeFilter": "Aktiver Filter",
   "home": "Startseite",

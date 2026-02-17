@@ -130,6 +130,8 @@
   "filterContent": "Φιλτράρισμα Περιεχομένου",
   "individualSessions": "Ατομικές Συνεδρίες",
   "conferencesCourses": "Συνέδρια/Μαθήματα",
+  "conferencesCoursesLive": "Μαθήματα/Συνέδρια ζωντανά",
+  "conferencesCoursesRecorded": "Μαθήματα/Συνέδρια μαγνητοσκοπημένα",
   "instantReadings": "Άμεσες Αναγνώσεις",
   "activeFilter": "Ενεργό φίλτρο",
   "home": "Αρχική",

@@ -99,6 +99,8 @@
   "filterContent": "Filter Konten",
   "individualSessions": "Sesi Individual",
   "conferencesCourses": "Konferensi/Kursus",
+  "conferencesCoursesLive": "Kursus/Konferensi langsung",
+  "conferencesCoursesRecorded": "Kursus/Konferensi terekam",
   "articles": "Artikel",
   "instantReadings": "Bacaan Instan",
   "activeFilter": "Filter aktif",

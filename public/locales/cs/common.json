@@ -131,6 +131,8 @@
   "filterContent": "Filtrovat Obsah",
   "individualSessions": "Individuální Sezení",
   "conferencesCourses": "Konference/Kurzy",
+  "conferencesCoursesLive": "Kurzy/Konference živě",
+  "conferencesCoursesRecorded": "Kurzy/Konference nahrané",
   "instantReadings": "Okamžitá Čtení",
   "activeFilter": "Aktivní filtr",
   "home": "Domů",

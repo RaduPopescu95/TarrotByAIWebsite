@@ -130,6 +130,8 @@
   "filterContent": "Филтрирай съдържанието",
   "individualSessions": "Индивидуални сесии",
   "conferencesCourses": "Конференции/Курсове",
+  "conferencesCoursesLive": "Курсове/Конференции на живо",
+  "conferencesCoursesRecorded": "Курсове/Конференции записани",
   "instantReadings": "Мигновени четения",
   "activeFilter": "Активен филтър",
   "home": "Начало",
