@@ -1,6 +1,33 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
-import { resolveDate, toSafeCourse } from "../../../lib/courses";
+import { extractVimeoId, resolveDate, toSafeCourse } from "../../../lib/courses";
+
+const COURSE_MEDIA_COLLECTION = "courseMedia";
+const VIMEO_ID_PATTERN = /^\d+$/;
+
+function normalizeVimeoId(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || !VIMEO_ID_PATTERN.test(normalized)) return null;
+  return normalized;
+}
+
+function resolvePreviewVimeoId(course, media) {
+  const candidates = [
+    course?.vimeoPreviewVideoId,
+    course?.vimeoId,
+    media?.vimeoId,
+    extractVimeoId(media?.vimeoUrl),
+    extractVimeoId(course?.vimeoUrl),
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeVimeoId(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
@@ -111,11 +138,29 @@ export default async function handler(req, res) {
     const courseSnaps = await Promise.all(
       purchases.map((purchase) => db.collection("courses").doc(purchase.courseId).get())
     );
+    const mediaSnaps = await Promise.all(
+      purchases.map((purchase) => db.collection(COURSE_MEDIA_COLLECTION).doc(purchase.courseId).get())
+    );
 
     const payload = purchases.map((purchase, index) => {
       const courseSnap = courseSnaps[index];
+      const mediaSnap = mediaSnaps[index];
       const purchasedAt = purchase.purchasedAt || purchase.updatedAt;
       const courseMissing = !courseSnap.exists;
+      const courseData = courseMissing ? null : courseSnap.data() || {};
+      const media = mediaSnap?.exists ? mediaSnap.data() : null;
+      const fallbackPreviewVimeoId = resolvePreviewVimeoId(courseData, media);
+      const courseForResponse =
+        courseMissing || !courseData
+          ? null
+          : {
+              ...courseData,
+              ...(typeof courseData.vimeoPreviewVideoId === "string" && courseData.vimeoPreviewVideoId.trim()
+                ? {}
+                : fallbackPreviewVimeoId
+                ? { vimeoPreviewVideoId: fallbackPreviewVimeoId }
+                : {}),
+            };
 
       return {
         courseId: purchase.courseId,
@@ -124,9 +169,7 @@ export default async function handler(req, res) {
         amountPaid: purchase.amountPaid,
         currency: purchase.currency,
         courseMissing,
-        course: courseMissing
-          ? null
-          : toSafeCourse(purchase.courseId, courseSnap.data() || {}, locale),
+        course: courseForResponse ? toSafeCourse(purchase.courseId, courseForResponse, locale) : null,
       };
     });
 

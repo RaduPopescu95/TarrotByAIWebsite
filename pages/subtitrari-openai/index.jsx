@@ -6,7 +6,8 @@ export default function SubtitrariOpenAIPagina() {
   const [errorMessage, setErrorMessage] = useState("");
   const [previewSrt, setPreviewSrt] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
-  const [downloadName, setDownloadName] = useState("subtitrare.ro.srt");
+  const [subtitleLanguage, setSubtitleLanguage] = useState("en");
+  const [downloadName, setDownloadName] = useState("subtitrare.en.srt");
 
   useEffect(() => {
     return () => {
@@ -36,6 +37,19 @@ export default function SubtitrariOpenAIPagina() {
     }
   };
 
+  const handleLanguageChange = (event) => {
+    const nextLanguage = event.target.value === "ro" ? "ro" : "en";
+    setSubtitleLanguage(nextLanguage);
+    setDownloadName(`subtitrare.${nextLanguage}.srt`);
+    setErrorMessage("");
+    setPreviewSrt("");
+
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl);
+      setDownloadUrl("");
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -51,6 +65,8 @@ export default function SubtitrariOpenAIPagina() {
     try {
       const formData = new FormData();
       formData.append("video", selectedFile);
+      formData.append("language", subtitleLanguage);
+      formData.append("mode", subtitleLanguage === "en" ? "translate-to-en" : "transcribe");
 
       const response = await fetch("/api/transcribe-ro-srt", {
         method: "POST",
@@ -78,7 +94,7 @@ export default function SubtitrariOpenAIPagina() {
       const outputBlob = await response.blob();
       const contentDisposition = response.headers.get("content-disposition");
       const matchedFilename = contentDisposition?.match(/filename="([^"]+)"/i);
-      const suggestedFilename = matchedFilename?.[1] || "subtitrare.ro.srt";
+      const suggestedFilename = matchedFilename?.[1] || `subtitrare.${subtitleLanguage}.srt`;
 
       if (downloadUrl) {
         URL.revokeObjectURL(downloadUrl);
@@ -100,12 +116,26 @@ export default function SubtitrariOpenAIPagina() {
   return (
     <main style={styles.wrapper}>
       <section style={styles.card}>
-        <h1 style={styles.title}>Generator subtitrare SRT in romana</h1>
+        <h1 style={styles.title}>Generator subtitrare SRT (admin)</h1>
         <p style={styles.subtitle}>
-          Incarci un fisier video/audio, iar endpointul OpenAI iti intoarce direct subtitrarea `.srt` in limba romana.
+          Incarci un fisier video/audio si alegi limba subtitrarii. Pentru EN, audio-ul este tradus
+          automat in engleza si returnat ca `.srt`.
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          <label htmlFor="subtitle-language" style={styles.label}>
+            Limba subtitrarii
+          </label>
+          <select
+            id="subtitle-language"
+            value={subtitleLanguage}
+            onChange={handleLanguageChange}
+            style={styles.select}
+          >
+            <option value="en">English (EN) - traducere</option>
+            <option value="ro">Romana (RO) - transcriere</option>
+          </select>
+
           <input
             type="file"
             accept="video/*,audio/*"
@@ -166,6 +196,19 @@ const styles = {
   form: {
     display: "grid",
     gap: "12px",
+  },
+  label: {
+    margin: 0,
+    color: "#71573b",
+    fontSize: "14px",
+    fontWeight: 600,
+  },
+  select: {
+    background: "#fff",
+    padding: "10px",
+    border: "1px solid #d8c8b3",
+    borderRadius: "10px",
+    color: "#3f2f1f",
   },
   fileInput: {
     background: "#fff",

@@ -1,6 +1,57 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
-import { isCourseVisible, toSafeCourse } from "../../../lib/courses";
+import { extractVimeoId, isCourseVisible, toSafeCourse } from "../../../lib/courses";
+
+const COURSE_MEDIA_COLLECTION = "courseMedia";
+const VIMEO_ID_PATTERN = /^\d+$/;
+
+function normalizeVimeoId(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || !VIMEO_ID_PATTERN.test(normalized)) return null;
+  return normalized;
+}
+
+function resolvePreviewVimeoId(course, media) {
+  const candidates = [
+    course?.vimeoPreviewVideoId,
+    course?.vimeoId,
+    media?.vimeoId,
+    extractVimeoId(media?.vimeoUrl),
+    extractVimeoId(course?.vimeoUrl),
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeVimeoId(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+async function attachPreviewFallbackFromMedia(db, courseId, courseData = {}) {
+  try {
+    const mediaSnap = await db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get();
+    const media = mediaSnap.exists ? mediaSnap.data() : null;
+    const fallbackPreviewVimeoId = resolvePreviewVimeoId(courseData, media);
+    if (!fallbackPreviewVimeoId) return courseData;
+
+    if (typeof courseData.vimeoPreviewVideoId === "string" && courseData.vimeoPreviewVideoId.trim()) {
+      return courseData;
+    }
+
+    return {
+      ...courseData,
+      vimeoPreviewVideoId: fallbackPreviewVimeoId,
+    };
+  } catch (error) {
+    console.warn("[courses.entitlement] preview_media_fallback_failed", {
+      courseId,
+      message: error?.message || "unknown_error",
+    });
+    return courseData;
+  }
+}
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "anonymous";
@@ -45,7 +96,8 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    const courseData = courseSnap.data() || {};
+    const rawCourseData = courseSnap.data() || {};
+    const courseData = await attachPreviewFallbackFromMedia(db, courseId, rawCourseData);
     const isVisible = isCourseVisible(courseData, Date.now());
 
     let hasAccess = false;

@@ -123,7 +123,6 @@ const GENERAL_ERROR_FIELDS = [
   "currency",
   "status",
   "scheduledAt",
-  "thumbnailUrl",
 ];
 
 function normalizeLessonIdForPayload(lesson, index) {
@@ -172,7 +171,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     currency: initialValue?.currency || DEFAULT_CURRENCY,
     status: initialValue?.status || "draft",
     scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
-    thumbnailUrl: initialValue?.thumbnailUrl || "",
     categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
     featuredOnHome: initialValue?.featuredOnHome === true,
     notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
@@ -196,7 +194,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       currency: initialValue?.currency || DEFAULT_CURRENCY,
       status: initialValue?.status || "draft",
       scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
-      thumbnailUrl: initialValue?.thumbnailUrl || "",
       categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
       featuredOnHome: initialValue?.featuredOnHome === true,
       notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
@@ -318,10 +315,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       } else if (Number.isNaN(new Date(form.scheduledAt).getTime())) {
         nextErrors.scheduledAt = "Data publicării este invalidă.";
       }
-    }
-
-    if (form.thumbnailUrl && !isValidUrl(form.thumbnailUrl)) {
-      nextErrors.thumbnailUrl = "URL invalid.";
     }
 
     if (!generalOnly && Array.isArray(form.curriculumLessons)) {
@@ -520,7 +513,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         form.status === "scheduled" && form.scheduledAt
           ? new Date(form.scheduledAt).toISOString()
           : null,
-      thumbnailUrl: form.thumbnailUrl.trim() || null,
+      thumbnailUrl: null,
       curriculumLessons,
       notesContent,
       contactContent,
@@ -783,25 +776,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             </div>
           )}
 
-          <div>
-            <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-900">
-              URL imagine preview (opțional)
-            </label>
-            <Input
-              id="thumbnailUrl"
-              value={form.thumbnailUrl}
-              onChange={handleChange("thumbnailUrl")}
-              className="mt-2"
-              placeholder="https://example.com/image.jpg"
-              disabled={loading}
-            />
-            {errors.thumbnailUrl && (
-              <p className="mt-1.5 text-xs text-red-600">{errors.thumbnailUrl}</p>
-            )}
-            <p className="mt-1.5 text-xs text-gray-500">
-              Imaginea va fi afișată în lista publică de cursuri.
-            </p>
-          </div>
         </div>
       )}
 

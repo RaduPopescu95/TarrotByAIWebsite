@@ -63,6 +63,13 @@ function normalizeSubtitleLanguage(value) {
   return "ro";
 }
 
+function normalizeTranslationMode(value) {
+  if (typeof value !== "string") return "transcribe";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "translate-to-en") return "translate-to-en";
+  return "transcribe";
+}
+
 function sanitizeFilenameBase(name) {
   const fallback = "subtitrare";
   if (!name || typeof name !== "string") {
@@ -98,6 +105,7 @@ export default async function handler(req, res) {
     uploadedFile =
       firstFile(files?.video) || firstFile(files?.file) || firstFile(Object.values(files || {})[0]);
     const subtitleLanguage = normalizeSubtitleLanguage(firstField(fields?.language));
+    const translationMode = normalizeTranslationMode(firstField(fields?.mode));
 
     if (!uploadedFile) {
       return res.status(400).json({
@@ -117,13 +125,28 @@ export default async function handler(req, res) {
       }
     );
 
-    const srtText = await openai.audio.transcriptions.create({
-      file: fileForOpenAI,
-      model: "whisper-1",
-      language: subtitleLanguage,
-      response_format: "srt",
-      temperature: 0,
-    });
+    const shouldTranslateToEnglish =
+      subtitleLanguage === "en" && translationMode === "translate-to-en";
+
+    let srtText = "";
+    if (shouldTranslateToEnglish) {
+      console.info("[transcribe-ro-srt] mode=translation/en");
+      srtText = await openai.audio.translations.create({
+        file: fileForOpenAI,
+        model: "whisper-1",
+        response_format: "srt",
+        temperature: 0,
+      });
+    } else {
+      console.info("[transcribe-ro-srt] mode=transcription/" + subtitleLanguage);
+      srtText = await openai.audio.transcriptions.create({
+        file: fileForOpenAI,
+        model: "whisper-1",
+        language: subtitleLanguage,
+        response_format: "srt",
+        temperature: 0,
+      });
+    }
 
     const outputName = `${sanitizeFilenameBase(uploadedFile.originalFilename)}.${subtitleLanguage}.srt`;
 

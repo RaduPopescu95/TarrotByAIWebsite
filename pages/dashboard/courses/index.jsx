@@ -347,7 +347,7 @@ export default function CoursesDashboardPage() {
         status: "draft",
         featuredOnHome: false,
         scheduledAt: null,
-        thumbnailUrl: course.thumbnailUrl || null,
+        thumbnailUrl: null,
         curriculumLessons: Array.isArray(course.curriculumLessons)
           ? course.curriculumLessons.map((lesson, index) => ({
               id: lesson?.id || `lesson-${index + 1}`,
