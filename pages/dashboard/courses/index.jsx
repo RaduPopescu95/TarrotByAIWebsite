@@ -87,6 +87,18 @@ function resolveCourseVimeoId(course) {
   return extractVimeoId(course.vimeoUrl);
 }
 
+const SUBTITLE_TRANSLATION_TARGET_CODES = [
+  "ro",
+  "es",
+  "fr",
+  "de",
+  "it",
+  "pt",
+  "pl",
+  "cs",
+  "el",
+];
+
 export default function CoursesDashboardPage() {
   const { loading: authLoading } = useAuth();
 
@@ -129,6 +141,16 @@ export default function CoursesDashboardPage() {
   const [subtitleLanguage, setSubtitleLanguage] = useState("ro");
   const [subtitleDownloadName, setSubtitleDownloadName] = useState("subtitrare.ro.srt");
 
+  // Subtitle translations tab state (EN SRT -> 9 languages)
+  const [subtitleTranslationFile, setSubtitleTranslationFile] = useState(null);
+  const [subtitleTranslationLoading, setSubtitleTranslationLoading] = useState(false);
+  const [subtitleTranslationError, setSubtitleTranslationError] = useState("");
+  const [subtitleTranslationResult, setSubtitleTranslationResult] = useState("");
+  const [subtitleTranslationDownloadUrl, setSubtitleTranslationDownloadUrl] = useState("");
+  const [subtitleTranslationDownloadName, setSubtitleTranslationDownloadName] = useState(
+    "subtitrari.multilang.srt.zip"
+  );
+
   // Delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
@@ -140,8 +162,11 @@ export default function CoursesDashboardPage() {
       if (subtitleDownloadUrl) {
         URL.revokeObjectURL(subtitleDownloadUrl);
       }
+      if (subtitleTranslationDownloadUrl) {
+        URL.revokeObjectURL(subtitleTranslationDownloadUrl);
+      }
     };
-  }, [subtitleDownloadUrl]);
+  }, [subtitleDownloadUrl, subtitleTranslationDownloadUrl]);
 
   // Load courses
   useEffect(() => {
@@ -421,6 +446,10 @@ export default function CoursesDashboardPage() {
       const formData = new FormData();
       formData.append("video", subtitleFile);
       formData.append("language", subtitleLanguage);
+      formData.append(
+        "mode",
+        subtitleLanguage === "en" ? "translate-to-en" : "transcribe"
+      );
 
       const response = await fetch("/api/transcribe-ro-srt", {
         method: "POST",
@@ -457,6 +486,77 @@ export default function CoursesDashboardPage() {
       setSubtitleError(err.message || "Eroare neașteptată.");
     } finally {
       setSubtitleLoading(false);
+    }
+  };
+
+  const handleSubtitleTranslationFileChange = (event) => {
+    const nextFile = event.target.files?.[0] || null;
+    setSubtitleTranslationFile(nextFile);
+    setSubtitleTranslationError("");
+    setSubtitleTranslationResult("");
+
+    if (subtitleTranslationDownloadUrl) {
+      URL.revokeObjectURL(subtitleTranslationDownloadUrl);
+      setSubtitleTranslationDownloadUrl("");
+    }
+  };
+
+  const handleGenerateSubtitleTranslations = async (event) => {
+    event.preventDefault();
+    if (!subtitleTranslationFile) {
+      setSubtitleTranslationError("Selectează un fișier SRT în engleză.");
+      return;
+    }
+
+    setSubtitleTranslationLoading(true);
+    setSubtitleTranslationError("");
+    setSubtitleTranslationResult("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", subtitleTranslationFile);
+      formData.append("mode", "translate-srt-multi");
+      formData.append(
+        "targetLanguages",
+        JSON.stringify(SUBTITLE_TRANSLATION_TARGET_CODES)
+      );
+
+      const response = await fetch("/api/transcribe-ro-srt", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = "Traducerea subtitrării a eșuat.";
+        const rawError = await response.text();
+        try {
+          const parsed = JSON.parse(rawError);
+          message = parsed?.error || rawError || message;
+        } catch (_) {
+          message = rawError || message;
+        }
+        throw new Error(message);
+      }
+
+      const outputBlob = await response.blob();
+      const contentDisposition = response.headers.get("content-disposition");
+      const matchedFilename = contentDisposition?.match(/filename="([^"]+)"/i);
+      const suggestedFilename = matchedFilename?.[1] || "subtitrari.multilang.srt.zip";
+
+      if (subtitleTranslationDownloadUrl) {
+        URL.revokeObjectURL(subtitleTranslationDownloadUrl);
+      }
+
+      const nextUrl = URL.createObjectURL(outputBlob);
+      setSubtitleTranslationDownloadUrl(nextUrl);
+      setSubtitleTranslationDownloadName(suggestedFilename);
+      setSubtitleTranslationResult(
+        "Arhiva ZIP este pregătită. Conține subtitrarea tradusă în 9 limbi."
+      );
+    } catch (err) {
+      setSubtitleTranslationError(err.message || "Eroare neașteptată.");
+    } finally {
+      setSubtitleTranslationLoading(false);
     }
   };
 
@@ -620,7 +720,8 @@ export default function CoursesDashboardPage() {
                   <TabsList>
                     <TabsTrigger value="courses">Cursuri</TabsTrigger>
                     <TabsTrigger value="categories">Categorii</TabsTrigger>
-                    <TabsTrigger value="subtitles">Subtitrări SRT</TabsTrigger>
+                    {/* <TabsTrigger value="subtitles">Subtitrări SRT</TabsTrigger> */}
+                    <TabsTrigger value="subtitle-translations">Traduceri SRT</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -849,8 +950,8 @@ export default function CoursesDashboardPage() {
                   )}
                 </CardContent>
               </Card>
-            ) : (
-              // Subtitles Tab
+            ) : viewTab === "subtitles" ? (
+              // Subtitles Tab (media -> SRT)
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg">
@@ -911,7 +1012,7 @@ export default function CoursesDashboardPage() {
                       {subtitleDownloadUrl && (
                         <Button asChild variant="outline">
                           <a href={subtitleDownloadUrl} download={subtitleDownloadName}>
-                            Descarcă .srt
+                            Descarcă SRT
                           </a>
                         </Button>
                       )}
@@ -936,6 +1037,74 @@ export default function CoursesDashboardPage() {
                         </pre>
                       </div>
                     </>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              // Subtitle translations tab (EN SRT -> multi-language ZIP)
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Traduceri subtitrări SRT (EN -&gt; 9 limbi)</CardTitle>
+                  <CardDescription>
+                    Încarcă un fișier SRT în engleză și primești automat o arhivă ZIP cu
+                    subtitrarea tradusă în RO, ES, FR, DE, IT, PT, PL, CS și EL.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <form onSubmit={handleGenerateSubtitleTranslations} className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="subtitle-translation-upload"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Fișier SRT în engleză
+                      </label>
+                      <input
+                        id="subtitle-translation-upload"
+                        type="file"
+                        accept=".srt,text/plain,application/x-subrip"
+                        onChange={handleSubtitleTranslationFileChange}
+                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {subtitleTranslationFile
+                          ? `${subtitleTranslationFile.name} • ${(
+                              subtitleTranslationFile.size /
+                              (1024 * 1024)
+                            ).toFixed(2)} MB`
+                          : "Nu ai selectat încă un fișier SRT."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button type="submit" disabled={subtitleTranslationLoading}>
+                        {subtitleTranslationLoading
+                          ? "Se traduc subtitrările..."
+                          : "Tradu în 9 limbi"}
+                      </Button>
+                      {subtitleTranslationDownloadUrl && (
+                        <Button asChild variant="outline">
+                          <a
+                            href={subtitleTranslationDownloadUrl}
+                            download={subtitleTranslationDownloadName}
+                          >
+                            Descarcă ZIP
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </form>
+
+                  {subtitleTranslationError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {subtitleTranslationError}
+                    </div>
+                  )}
+
+                  {subtitleTranslationResult && (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                      {subtitleTranslationResult}
+                    </div>
                   )}
                 </CardContent>
               </Card>

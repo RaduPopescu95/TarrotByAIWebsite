@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
+const MULTI_TARGET_CODES = ["ro", "es", "fr", "de", "it", "pt", "pl", "cs", "el"];
+
 export default function SubtitrariOpenAIPagina() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [previewSrt, setPreviewSrt] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
   const [subtitleLanguage, setSubtitleLanguage] = useState("en");
+  const [processingMode, setProcessingMode] = useState("media");
   const [downloadName, setDownloadName] = useState("subtitrare.en.srt");
 
   useEffect(() => {
@@ -16,6 +20,14 @@ export default function SubtitrariOpenAIPagina() {
       }
     };
   }, [downloadUrl]);
+
+  const isSrtMultiMode = processingMode === "srt-multi";
+  const fileAccept = isSrtMultiMode
+    ? ".srt,text/plain,application/x-subrip"
+    : "video/*,audio/*";
+  const downloadButtonLabel = downloadName.toLowerCase().endsWith(".zip")
+    ? "Descarca arhiva ZIP"
+    : "Descarca SRT";
 
   const selectedFileLabel = useMemo(() => {
     if (!selectedFile) {
@@ -30,6 +42,22 @@ export default function SubtitrariOpenAIPagina() {
     setSelectedFile(file);
     setErrorMessage("");
     setPreviewSrt("");
+    setResultMessage("");
+
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl);
+      setDownloadUrl("");
+    }
+  };
+
+  const handleProcessingModeChange = (event) => {
+    const nextMode = event.target.value === "srt-multi" ? "srt-multi" : "media";
+    setProcessingMode(nextMode);
+    setSelectedFile(null);
+    setErrorMessage("");
+    setPreviewSrt("");
+    setResultMessage("");
+    setDownloadName(nextMode === "srt-multi" ? "subtitrari.multilang.srt.zip" : "subtitrare.en.srt");
 
     if (downloadUrl) {
       URL.revokeObjectURL(downloadUrl);
@@ -43,6 +71,7 @@ export default function SubtitrariOpenAIPagina() {
     setDownloadName(`subtitrare.${nextLanguage}.srt`);
     setErrorMessage("");
     setPreviewSrt("");
+    setResultMessage("");
 
     if (downloadUrl) {
       URL.revokeObjectURL(downloadUrl);
@@ -54,19 +83,30 @@ export default function SubtitrariOpenAIPagina() {
     event.preventDefault();
 
     if (!selectedFile) {
-      setErrorMessage("Selecteaza un fisier video/audio.");
+      setErrorMessage(
+        isSrtMultiMode
+          ? "Selecteaza un fisier SRT in engleza."
+          : "Selecteaza un fisier video/audio."
+      );
       return;
     }
 
     setIsLoading(true);
     setErrorMessage("");
     setPreviewSrt("");
+    setResultMessage("");
 
     try {
       const formData = new FormData();
-      formData.append("video", selectedFile);
-      formData.append("language", subtitleLanguage);
-      formData.append("mode", subtitleLanguage === "en" ? "translate-to-en" : "transcribe");
+      if (isSrtMultiMode) {
+        formData.append("file", selectedFile);
+        formData.append("mode", "translate-srt-multi");
+        formData.append("targetLanguages", JSON.stringify(MULTI_TARGET_CODES));
+      } else {
+        formData.append("video", selectedFile);
+        formData.append("language", subtitleLanguage);
+        formData.append("mode", subtitleLanguage === "en" ? "translate-to-en" : "transcribe");
+      }
 
       const response = await fetch("/api/transcribe-ro-srt", {
         method: "POST",
@@ -94,7 +134,10 @@ export default function SubtitrariOpenAIPagina() {
       const outputBlob = await response.blob();
       const contentDisposition = response.headers.get("content-disposition");
       const matchedFilename = contentDisposition?.match(/filename="([^"]+)"/i);
-      const suggestedFilename = matchedFilename?.[1] || `subtitrare.${subtitleLanguage}.srt`;
+      const fallbackFilename = isSrtMultiMode
+        ? "subtitrari.multilang.srt.zip"
+        : `subtitrare.${subtitleLanguage}.srt`;
+      const suggestedFilename = matchedFilename?.[1] || fallbackFilename;
 
       if (downloadUrl) {
         URL.revokeObjectURL(downloadUrl);
@@ -104,8 +147,14 @@ export default function SubtitrariOpenAIPagina() {
       setDownloadUrl(newUrl);
       setDownloadName(suggestedFilename);
 
-      const srtText = await outputBlob.text();
-      setPreviewSrt(srtText.slice(0, 3000));
+      if (isSrtMultiMode) {
+        setResultMessage(
+          "Arhiva ZIP este pregatita. Contine acelasi subtitru tradus in 9 limbi."
+        );
+      } else {
+        const srtText = await outputBlob.text();
+        setPreviewSrt(srtText.slice(0, 3000));
+      }
     } catch (error) {
       setErrorMessage(error.message || "Eroare neasteptata.");
     } finally {
@@ -118,34 +167,60 @@ export default function SubtitrariOpenAIPagina() {
       <section style={styles.card}>
         <h1 style={styles.title}>Generator subtitrare SRT (admin)</h1>
         <p style={styles.subtitle}>
-          Incarci un fisier video/audio si alegi limba subtitrarii. Pentru EN, audio-ul este tradus
-          automat in engleza si returnat ca `.srt`.
+          Poti genera subtitrare din video/audio sau poti incarca un SRT in engleza ca sa-l traduci
+          automat in 9 limbi, fiecare in fisierul lui `.srt`.
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          <label htmlFor="subtitle-language" style={styles.label}>
-            Limba subtitrarii
+          <label htmlFor="processing-mode" style={styles.label}>
+            Mod procesare
           </label>
           <select
-            id="subtitle-language"
-            value={subtitleLanguage}
-            onChange={handleLanguageChange}
+            id="processing-mode"
+            value={processingMode}
+            onChange={handleProcessingModeChange}
             style={styles.select}
           >
-            <option value="en">English (EN) - traducere</option>
-            <option value="ro">Romana (RO) - transcriere</option>
+            <option value="media">Video/Audio - subtitrare SRT</option>
+            <option value="srt-multi">SRT EN - traducere in 9 limbi (ZIP)</option>
           </select>
+          <p style={styles.helperText}>
+            {isSrtMultiMode
+              ? "Target-uri implicite: RO, ES, FR, DE, IT, PT, PL, CS, EL."
+              : "Pentru EN, audio-ul este tradus automat in engleza."}
+          </p>
+
+          {!isSrtMultiMode ? (
+            <>
+              <label htmlFor="subtitle-language" style={styles.label}>
+                Limba subtitrarii
+              </label>
+              <select
+                id="subtitle-language"
+                value={subtitleLanguage}
+                onChange={handleLanguageChange}
+                style={styles.select}
+              >
+                <option value="en">English (EN) - traducere</option>
+                <option value="ro">Romana (RO) - transcriere</option>
+              </select>
+            </>
+          ) : null}
 
           <input
             type="file"
-            accept="video/*,audio/*"
+            accept={fileAccept}
             onChange={handleFileChange}
             style={styles.fileInput}
           />
           <p style={styles.fileLabel}>{selectedFileLabel}</p>
 
           <button type="submit" disabled={isLoading} style={styles.button}>
-            {isLoading ? "Se proceseaza..." : "Genereaza subtitrare"}
+            {isLoading
+              ? "Se proceseaza..."
+              : isSrtMultiMode
+                ? "Tradu SRT in 9 limbi"
+                : "Genereaza subtitrare"}
           </button>
         </form>
 
@@ -154,10 +229,17 @@ export default function SubtitrariOpenAIPagina() {
         {downloadUrl ? (
           <div style={styles.result}>
             <a href={downloadUrl} download={downloadName} style={styles.downloadLink}>
-              Descarca SRT
+              {downloadButtonLabel}
             </a>
-            <p style={styles.previewTitle}>Preview (primele caractere):</p>
-            <pre style={styles.preview}>{previewSrt}</pre>
+
+            {resultMessage ? <p style={styles.resultMessage}>{resultMessage}</p> : null}
+
+            {previewSrt ? (
+              <>
+                <p style={styles.previewTitle}>Preview (primele caractere):</p>
+                <pre style={styles.preview}>{previewSrt}</pre>
+              </>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -221,6 +303,11 @@ const styles = {
     color: "#71573b",
     fontSize: "14px",
   },
+  helperText: {
+    margin: "0 0 4px 0",
+    color: "#86684a",
+    fontSize: "13px",
+  },
   button: {
     border: "none",
     borderRadius: "10px",
@@ -247,6 +334,12 @@ const styles = {
     color: "white",
     textDecoration: "none",
     fontWeight: 600,
+  },
+  resultMessage: {
+    marginTop: "12px",
+    marginBottom: 0,
+    color: "#3f2f1f",
+    lineHeight: 1.4,
   },
   previewTitle: {
     marginTop: "16px",
