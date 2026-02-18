@@ -385,41 +385,41 @@ function Landing(props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 max-w-5xl mx-auto mt-12">
                   
                   {/* Ședințe individuale */}
-                  <Link href="/calendar" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none">
+                  <Link href="/calendar" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:order-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center">
+                    <span className="relative flex items-center justify-center text-center leading-tight whitespace-normal">
 {t("individualSessions")}
                     </span>
                   </Link>
                   
                   {/* Cursuri/Conferințe LIVE */}
-                  <Link href="/calendar-conferinte-grup" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 text-decoration-none">
+                  <Link href="/calendar-conferinte-grup" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-3 lg:order-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center">
+                    <span className="relative flex items-center justify-center text-center leading-tight whitespace-normal">
 {t("conferencesCoursesLive")}
                     </span>
                   </Link>
 
                   {/* Cursuri/Conferințe înregistrate */}
-                  <Link href="/courses" className="group relative px-8 py-4 sm:col-span-2 lg:col-span-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 text-decoration-none">
+                  <Link href="/courses" className="group relative px-8 py-4 sm:col-span-2 lg:col-span-3 lg:order-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center">
+                    <span className="relative flex items-center justify-center text-center leading-tight whitespace-normal">
                       {t("conferencesCoursesRecorded")}
                     </span>
                   </Link>
                   
                   {/* Articole */}
-                  <Link href="/news" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:col-start-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/25 text-decoration-none">
+                  <Link href="/news" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:order-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center">
+                    <span className="relative flex items-center justify-center text-center leading-tight whitespace-normal">
                       {t("articles")}
                     </span>
                   </Link>
                   
                   {/* Citiri instant */}
-                  <Link href="/main-dashboard" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:col-start-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/25 text-decoration-none">
+                  <Link href="/main-dashboard" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:order-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/25 text-decoration-none">
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative flex items-center justify-center">
+                    <span className="relative flex items-center justify-center text-center leading-tight whitespace-normal">
                       {t("instantReadings")}
                     </span>
                   </Link>
