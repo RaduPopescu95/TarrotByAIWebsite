@@ -8,7 +8,7 @@ import {
 import { getElaiVideo } from "../../../../lib/elaiApi";
 import { ensureElaiMeta, mapElaiVideoToLanguageInfo, normalizeElaiStatus } from "../../../../utils/elaiStatusUtils";
 
-const DEFAULT_LIMIT = 120;
+const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 200;
 const DEFAULT_STALE_HOURS = 6;
 const DEFAULT_VERBOSE_LIMIT = 80;
@@ -156,10 +156,10 @@ export default async function handler(req, res) {
       ...payload,
     };
     trace.push(entry);
-    console.info("[admin.elai.status-sync] trace", entry);
+    console.log("[admin.elai.status-sync] trace", entry);
   }
 
-  console.info("[admin.elai.status-sync] start", {
+  console.log("[admin.elai.status-sync] start", {
     requestId,
     staleHours,
     limit,
@@ -233,7 +233,12 @@ export default async function handler(req, res) {
           continue;
         }
 
-        targets.push({ recordId, lang, videoId: info._id });
+        targets.push({
+          recordId,
+          lang,
+          videoId: info._id,
+          lastSyncMs: parseMs(info.lastElaiSyncAt),
+        });
         addTrace("target_added", {
           source: "manual_targets",
           recordId,
@@ -285,7 +290,12 @@ export default async function handler(req, res) {
             continue;
           }
 
-          targets.push({ recordId: record.id, lang, videoId: info._id });
+          targets.push({
+            recordId: record.id,
+            lang,
+            videoId: info._id,
+            lastSyncMs: parseMs(info.lastElaiSyncAt),
+          });
           addTrace("target_added", {
             source: "auto_discovery",
             recordId: record.id,
@@ -299,7 +309,12 @@ export default async function handler(req, res) {
       }
     }
 
-    const limitedTargets = targets.slice(0, limit);
+    const sortedTargets = [...targets].sort((a, b) => {
+      const aMs = Number.isFinite(a?.lastSyncMs) ? a.lastSyncMs : 0;
+      const bMs = Number.isFinite(b?.lastSyncMs) ? b.lastSyncMs : 0;
+      return aMs - bMs;
+    });
+    const limitedTargets = sortedTargets.slice(0, limit);
     if (targets.length > limitedTargets.length) {
       addTrace("target_limit_applied", {
         totalTargets: targets.length,
@@ -313,6 +328,7 @@ export default async function handler(req, res) {
       limitedTargets: limitedTargets.length,
       skippedTargets: skippedTargets.length,
       loadedRecords: recordsMap.size,
+      strategy: "oldest_last_sync_first",
     });
 
     const touchedRecordIds = new Set();
@@ -429,7 +445,7 @@ export default async function handler(req, res) {
     }, {});
     const totalDurationMs = Date.now() - startedAtMs;
 
-    console.info("[admin.elai.status-sync] done", {
+    console.log("[admin.elai.status-sync] done", {
       requestId,
       candidates: targets.length,
       limitedCandidates: limitedTargets.length,

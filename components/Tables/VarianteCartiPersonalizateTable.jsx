@@ -301,9 +301,9 @@ export default function VarianteCartiPersonalizateTable() {
     }
   };
 
-  const handleSyncElaiStatus = async (syncPayload = { staleHours: 6, limit: 120 }) => {
+  const handleSyncElaiStatus = async (syncPayload = { staleHours: 6, limit: 200 }) => {
     if (syncPayload?.nativeEvent) {
-      syncPayload = { staleHours: 6, limit: 120 };
+      syncPayload = { staleHours: 6, limit: 200 };
     }
     if (isSyncingElaiStatus) return;
     try {
@@ -314,6 +314,9 @@ export default function VarianteCartiPersonalizateTable() {
 
       if (!syncPayload?.silent) {
         const errorsCount = Array.isArray(response?.errors) ? response.errors.length : 0;
+        const candidates = Number(response?.candidates || 0);
+        const limitedCandidates = Number(response?.limitedCandidates || 0);
+        const wasLimited = candidates > limitedCandidates;
         const samplePreview = Array.isArray(response?.debugSamples)
           ? response.debugSamples
               .slice(0, 3)
@@ -323,7 +326,10 @@ export default function VarianteCartiPersonalizateTable() {
         alert(
           `Sync completat: ${response?.processed || 0} verificate, ${
             response?.updated || 0
-          } actualizate, ${errorsCount} erori.${samplePreview ? `\nSample: ${samplePreview}` : ""}`
+          } actualizate, ${errorsCount} erori.` +
+            `${wasLimited ? `\nLimitat: ${limitedCandidates}/${candidates} (ruleaza din nou pentru restul).` : ""}` +
+            `${response?.requestId ? `\nRequest ID: ${response.requestId}` : ""}` +
+            `${samplePreview ? `\nSample: ${samplePreview}` : ""}`
         );
       }
     } catch (error) {
