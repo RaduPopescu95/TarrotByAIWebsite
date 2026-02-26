@@ -2,10 +2,7 @@ import {
   AppBar,
   Box,
   Toolbar,
-  Typography,
-  Button,
   Divider,
-  IconButton,
   Stack,
 } from "@mui/material";
 
@@ -39,6 +36,11 @@ export default function TableToolbar(props) {
                 showDesc={props.showDesc}
                 isElaiDownload={props.isElaiDownload}
                 handleSearchFilter={props.handleSearchFilter}
+                onSyncElaiStatus={props.onSyncElaiStatus}
+                onRetrySelected={props.onRetrySelected}
+                retryDisabled={props.retryDisabled}
+                isSyncingElaiStatus={props.isSyncingElaiStatus}
+                isRetryingElai={props.isRetryingElai}
               />
             </Stack>
           </Toolbar>

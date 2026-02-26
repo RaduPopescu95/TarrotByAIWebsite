@@ -92,12 +92,21 @@ function normalizeTranslationMode(value) {
 
 function parseTargetLanguages(value) {
   let rawValue = firstField(value);
-  if (!rawValue) {
-    return DEFAULT_MULTI_TARGET_CODES;
+  if (rawValue === null || rawValue === undefined) {
+    return {
+      targetLanguageCodes: DEFAULT_MULTI_TARGET_CODES,
+      targetLanguagesProvided: false,
+    };
   }
 
   if (typeof rawValue !== "string") {
     rawValue = String(rawValue);
+  }
+  if (!rawValue.trim()) {
+    return {
+      targetLanguageCodes: DEFAULT_MULTI_TARGET_CODES,
+      targetLanguagesProvided: false,
+    };
   }
 
   let parsedCodes = [];
@@ -116,11 +125,10 @@ function parseTargetLanguages(value) {
     .filter((code) => code !== "en" && Boolean(MULTI_TRANSLATE_TARGETS[code]));
 
   const uniqueCodes = [...new Set(normalizedCodes)];
-  if (!uniqueCodes.length) {
-    return DEFAULT_MULTI_TARGET_CODES;
-  }
-
-  return uniqueCodes;
+  return {
+    targetLanguageCodes: uniqueCodes,
+    targetLanguagesProvided: true,
+  };
 }
 
 function sanitizeFilenameBase(name) {
@@ -359,6 +367,7 @@ export default async function handler(req, res) {
     }
 
     if (translationMode === "translate-srt-multi") {
+      const translateStartedAtMs = Date.now();
       const sourceSrtText = await fs.promises.readFile(uploadedFile.filepath, "utf8");
 
       if (!sourceSrtText || !sourceSrtText.trim()) {
@@ -379,12 +388,26 @@ export default async function handler(req, res) {
         });
       }
 
-      const targetLanguageCodes = parseTargetLanguages(fields?.targetLanguages);
+      const { targetLanguageCodes, targetLanguagesProvided } = parseTargetLanguages(
+        fields?.targetLanguages
+      );
+      if (targetLanguagesProvided && !targetLanguageCodes.length) {
+        return res.status(400).json({ error: "Selecteaza cel putin o limba." });
+      }
+
       const baseName = sanitizeFilenameBase(uploadedFile.originalFilename);
       const translatedFiles = [];
+      console.info("[transcribe-ro-srt] translate-srt-multi:start", {
+        sourceFile: uploadedFile.originalFilename || null,
+        entryCount: entries.length,
+        targetLanguageCodes,
+      });
 
       for (const targetLanguageCode of targetLanguageCodes) {
-        console.info(`[transcribe-ro-srt] translating SRT to ${targetLanguageCode}`);
+        const languageStartedAtMs = Date.now();
+        console.info(
+          `[transcribe-ro-srt] translate-srt-multi:language:start ${targetLanguageCode}`
+        );
         const translatedById = await translateEntriesToLanguage(
           entries,
           targetLanguageCode
@@ -394,10 +417,20 @@ export default async function handler(req, res) {
           name: `${baseName}.${targetLanguageCode}.srt`,
           content: translatedSrt,
         });
+        console.info(
+          `[transcribe-ro-srt] translate-srt-multi:language:done ${targetLanguageCode}`,
+          { durationMs: Date.now() - languageStartedAtMs }
+        );
       }
 
       const zipName = `${baseName}.multilang.srt.zip`;
       await sendZip(res, zipName, translatedFiles);
+      console.info("[transcribe-ro-srt] translate-srt-multi:done", {
+        sourceFile: uploadedFile.originalFilename || null,
+        languageCount: targetLanguageCodes.length,
+        entryCount: entries.length,
+        durationMs: Date.now() - translateStartedAtMs,
+      });
       return;
     }
 

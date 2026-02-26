@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Paper,
   Table,
@@ -10,10 +10,16 @@ import {
   Pagination,
   Box,
   Typography,
-  Button,
+  Checkbox,
+  Tooltip,
 } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import {
+  ensureElaiMeta,
+  getElaiStatusLabel,
+  isElaiReadyWithUrl,
+} from "../../utils/elaiStatusUtils";
 
 export default function VariatieCartiContainer(props) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,47 +46,72 @@ export default function VariatieCartiContainer(props) {
     "sk",
   ];
 
-  const renderLanguageCell = (url) =>
-    url.length > 0 ? (
-      <CheckCircleOutlineIcon sx={{ color: "green", fontSize: "25px" }} />
-    ) : (
-      <HighlightOffIcon sx={{ color: "red", fontSize: "25px" }} />
+  const renderLanguageCell = (langInfo) => {
+    const normalized = ensureElaiMeta(langInfo);
+    const isReady = isElaiReadyWithUrl(normalized);
+    const tooltipTitle = getElaiStatusLabel(normalized);
+    const shortStatus = normalized.elaiStatus === "unknown" ? "n/a" : normalized.elaiStatus;
+
+    return (
+      <Tooltip title={tooltipTitle} arrow>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          {isReady ? (
+            <CheckCircleOutlineIcon sx={{ color: "green", fontSize: "25px" }} />
+          ) : (
+            <HighlightOffIcon sx={{ color: "red", fontSize: "25px" }} />
+          )}
+          <Typography sx={{ color: "#CFCFCF", fontSize: "10px", lineHeight: 1.1 }}>
+            {shortStatus}
+          </Typography>
+        </Box>
+      </Tooltip>
     );
+  };
+
   const cellStyle = { border: "1px solid rgb(26 104 119)", color: "#D3D3D3" };
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  // Alege între props.db și props.searchedDb
+
   const dataSource =
     props.searchedDb && props.searchedDb.length > 0 && props.searchedValue
       ? props.searchedDb
       : props.searchedDb && props.searchValue.length > 0
         ? props.searchedDb
         : props.db;
+
   const currentItems = dataSource.slice(indexOfFirstItem, indexOfLastItem);
-  // Adăugarea unui element pentru afișarea intervalului de ID-uri
   const idInterval = `${indexOfFirstItem + 1}-${
     indexOfLastItem > dataSource.length ? dataSource.length : indexOfLastItem
   }`;
 
-  useEffect(() => {
-    console.log("rendering...");
-    console.log(currentItems);
-  });
+  const selectedRecordIdSet = useMemo(() => {
+    return new Set(props.selectedRecordIds || []);
+  }, [props.selectedRecordIds]);
+
+  const currentPageIds = useMemo(() => currentItems.map((item) => item.id), [currentItems]);
+  const allCurrentSelected =
+    currentPageIds.length > 0 && currentPageIds.every((id) => selectedRecordIdSet.has(id));
+  const someCurrentSelected =
+    !allCurrentSelected && currentPageIds.some((id) => selectedRecordIdSet.has(id));
+
   return (
     <TableContainer component={Paper} sx={{ backgroundColor: "#252525" }}>
-      {/* <Button
-        onClick={() => {
-          props.handleVideosToTranslate(currentItems);
-        }}
-      >
-        Translate page
-      </Button> */}
       <Table sx={{ minWidth: 650 }} aria-label="simple table">
         <TableHead>
           <TableRow>
+            <TableCell style={cellStyle} align="center">
+              <Checkbox
+                checked={allCurrentSelected}
+                indeterminate={someCurrentSelected}
+                onChange={(event) =>
+                  props.onToggleSelectCurrentPage?.(currentPageIds, event.target.checked)
+                }
+                sx={{ color: "#D3D3D3" }}
+              />
+            </TableCell>
             <TableCell style={cellStyle}>ID</TableCell>
             {languages.map((lang) => (
-              <TableCell style={cellStyle} key={lang}>
+              <TableCell style={cellStyle} key={lang} align="center">
                 {lang.toUpperCase()}
               </TableCell>
             ))}
@@ -91,58 +122,43 @@ export default function VariatieCartiContainer(props) {
             <TableRow
               hover
               key={index}
-              onClick={() =>
-                row.isRendering
-                  ? console.log("is rendering...")
-                  : props.handleShowDialog(row)
-              }
+              onClick={() => props.handleShowDialog(row)}
               sx={{
                 cursor: "pointer",
               }}
             >
+              <TableCell style={cellStyle} align="center">
+                <Checkbox
+                  checked={selectedRecordIdSet.has(row.id)}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={() => props.onToggleRecordSelection?.(row.id)}
+                  sx={{ color: "#D3D3D3" }}
+                />
+              </TableCell>
               <TableCell style={cellStyle}>{row.id}</TableCell>
-              {row.isRendering ? (
-                <Box
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    margin: "4%",
-                    paddingTop: "1%",
-                  }}
-                >
-                  <Typography style={{ color: "white" }}>
-                    Rendering on Elai, please wait...
-                  </Typography>
-                </Box>
-              ) : (
-                languages.map((lang) => (
-                  <TableCell key={lang} align="center" style={cellStyle}>
-                    {renderLanguageCell(row.info[lang].url)}
-                  </TableCell>
-                ))
-              )}
-              {}
+              {languages.map((lang) => (
+                <TableCell key={lang} align="center" style={cellStyle}>
+                  {renderLanguageCell(row.info?.[lang])}
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      {props.searchedDb &&
-        props.searchedDb.length === 0 &&
-        props.searchValue.length > 0 && (
-          <Box
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: 10,
-            }}
-          >
-            <Typography style={{ color: "white" }}>
-              Nu s-au găsit rezultate pentru căutarea dvs.
-            </Typography>
-          </Box>
-        )}
+      {props.searchedDb && props.searchedDb.length === 0 && props.searchValue.length > 0 && (
+        <Box
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: 10,
+          }}
+        >
+          <Typography style={{ color: "white" }}>
+            Nu s-au găsit rezultate pentru căutarea dvs.
+          </Typography>
+        </Box>
+      )}
       <Box
         sx={{
           display: "flex",
@@ -159,7 +175,7 @@ export default function VariatieCartiContainer(props) {
           sx={{
             marginY: 2,
             ".MuiPaginationItem-root": {
-              color: "#D3D3D3", // Schimbă culoarea textului
+              color: "#D3D3D3",
             },
           }}
         />

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Button,
   CircularProgress,
   Stack,
   Typography,
@@ -9,24 +8,23 @@ import {
 import TableToolbar from "../ProcessTable/TableToolbar";
 
 import IconInSelect from "../ProcessTable/IconInSelect";
-
-import CustomTableContainer from "../ProcessTable/CustomTableContainer";
 import { useStyles } from "../../styles/ProcessTableStyles";
 import { editData, getData, writeData } from "../../utils/realtimeUtils";
 import { getCurrentDateTime } from "../../utils/timeUtils";
-import { uploadImage } from "../../utils/storageUtils";
-import { authentication, storage } from "../../firebase";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
-import { deleteObject, ref as storageRef } from "firebase/storage";
 
-import CartiViitorFields from "../Dashboard/CartiViitorFields";
 import DeleteDialog from "../DialogBox/DeleteDialog";
-import CartiPersonalizateFields from "../Dashboard/CartiPersonalizateFields";
 import VarianteCartiPersonalizateFields from "../Dashboard/VarianteCartiPersonalizateFields";
-import { testString } from "../../utils/strintText";
 import VariatieCartiContainer from "../ProcessTable/VariatieCartiContainer";
 import { generateElaiVideoAPI, renderElaiVideoAPI } from "../../utils/apiUtils";
 import { checkDescription } from "../../utils/commonUtils";
+import {
+  canRerenderElaiStatus,
+  computeRecordIsRendering,
+  ensureElaiMeta,
+  normalizeVarianteRecord,
+} from "../../utils/elaiStatusUtils";
+import { postElaiRerender, postElaiStatusSync } from "../../utils/elaiAdminApi";
 
 export default function VarianteCartiPersonalizateTable() {
   // const { db } = useMockup();
@@ -45,6 +43,9 @@ export default function VarianteCartiPersonalizateTable() {
 
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedRecordIds, setSelectedRecordIds] = useState([]);
+  const [isSyncingElaiStatus, setIsSyncingElaiStatus] = useState(false);
+  const [isRetryingElai, setIsRetryingElai] = useState(false);
 
   const handleSearchFilter = (value) => {
     const lowerCaseValue = value.toLowerCase();
@@ -68,7 +69,9 @@ export default function VarianteCartiPersonalizateTable() {
     const dataCategorii = await getData("Citire-Personalizata", "Categorii");
 
     let rawData = [...data.arr];
-    const sortedArr = rawData.sort((a, b) => a.id - b.id);
+    const sortedArr = rawData
+      .map((item) => normalizeVarianteRecord(item))
+      .sort((a, b) => a.id - b.id);
     let rawDataCarti = [...dataCarti.arr];
     const sortedArrCarti = rawDataCarti.sort((a, b) => a.nume - b.nume);
     let rawDataCategorii = [...dataCategorii.arr];
@@ -84,6 +87,26 @@ export default function VarianteCartiPersonalizateTable() {
       // Handle the case where servicesDB is undefined
       // For example, display an error message or take appropriate action
     }
+  };
+
+  const handleToggleRecordSelection = (recordId) => {
+    setSelectedRecordIds((prev) => {
+      if (prev.includes(recordId)) {
+        return prev.filter((id) => id !== recordId);
+      }
+      return [...prev, recordId];
+    });
+  };
+
+  const handleToggleSelectCurrentPage = (pageIds = [], shouldSelect) => {
+    setSelectedRecordIds((prev) => {
+      const current = new Set(prev);
+      for (const id of pageIds) {
+        if (shouldSelect) current.add(id);
+        else current.delete(id);
+      }
+      return Array.from(current);
+    });
   };
 
   const handleShowDialog = (item) => {
@@ -123,8 +146,6 @@ export default function VarianteCartiPersonalizateTable() {
   };
 
   const confirmDelete = () => {
-    const authInstance = authentication;
-    const currentUser = authInstance.currentUser;
     const database = getDatabase();
 
     // 1. Ștergeți elementul din Firebase
@@ -197,7 +218,7 @@ export default function VarianteCartiPersonalizateTable() {
             carte,
             date: dateTime.date,
             time: dateTime.time,
-            isRendering: finalData.isRendering,
+            isRendering: computeRecordIsRendering(info) || Boolean(finalData.isRendering),
           };
 
           editData(
@@ -230,11 +251,26 @@ export default function VarianteCartiPersonalizateTable() {
       console.log("categorie", categorie);
       console.log("carte", carte);
 
-      for (let item of Object.values(info)) {
+      const nowIso = new Date().toISOString();
+      for (let [lang, item] of Object.entries(info)) {
         if (item.descriere.length > 0) {
           let response = await generateElaiVideoAPI(item.video, item.descriere);
-          console.log("response:", response._id);
-          await renderElaiVideoAPI(response._id);
+          if (response?._id) {
+            console.log("response:", response._id);
+            await renderElaiVideoAPI(response._id);
+            const previous = ensureElaiMeta(info[lang]);
+            info[lang] = {
+              ...previous,
+              video: item.video,
+              descriere: item.descriere,
+              _id: response._id,
+              url: "",
+              isRendering: true,
+              elaiStatus: "rendering",
+              elaiError: "",
+              lastRenderAttemptAt: nowIso,
+            };
+          }
           // console.log("video:", item.video);
         }
       }
@@ -247,7 +283,7 @@ export default function VarianteCartiPersonalizateTable() {
         date: dateTime.date,
         time: dateTime.time,
         firstUpload: true,
-        isRendering: true,
+        isRendering: computeRecordIsRendering(info),
       };
 
       // Folosește await pentru a aștepta finalizarea promisiunii
@@ -265,6 +301,79 @@ export default function VarianteCartiPersonalizateTable() {
     }
   };
 
+  const handleSyncElaiStatus = async (syncPayload = { staleHours: 6, limit: 120 }) => {
+    if (syncPayload?.nativeEvent) {
+      syncPayload = { staleHours: 6, limit: 120 };
+    }
+    if (isSyncingElaiStatus) return;
+    try {
+      setIsSyncingElaiStatus(true);
+      const response = await postElaiStatusSync(syncPayload);
+      await handleGetData();
+
+      if (!syncPayload?.silent) {
+        alert(
+          `Sync completat: ${response?.processed || 0} verificate, ${
+            response?.updated || 0
+          } actualizate.`
+        );
+      }
+    } catch (error) {
+      if (!syncPayload?.silent) {
+        alert(`Eroare la sync ELAI: ${error.message}`);
+      }
+    } finally {
+      setIsSyncingElaiStatus(false);
+    }
+  };
+
+  const handleRetrySelected = async () => {
+    if (isRetryingElai) return;
+    const selectedRows = db.filter((item) => selectedRecordIds.includes(item.id));
+
+    const targets = [];
+    for (const row of selectedRows) {
+      for (const [lang, rawInfo] of Object.entries(row.info || {})) {
+        const info = ensureElaiMeta(rawInfo);
+        if (!info._id) continue;
+        if (!canRerenderElaiStatus(info.elaiStatus)) continue;
+        targets.push({
+          recordId: row.id,
+          lang,
+          videoId: info._id,
+        });
+      }
+    }
+
+    if (targets.length === 0) {
+      alert("Nu exista videoclipuri draft/error selectate pentru retry.");
+      return;
+    }
+
+    if (targets.length > 5) {
+      alert(
+        `Ai selectat ${targets.length} target-uri. Limita este 5 per rulare pentru protectia minutelor.`
+      );
+      return;
+    }
+
+    try {
+      setIsRetryingElai(true);
+      const rerenderResponse = await postElaiRerender({ targets });
+      await handleGetData();
+      setSelectedRecordIds([]);
+
+      const attempted = rerenderResponse?.attempted || 0;
+      const succeeded = rerenderResponse?.succeeded || 0;
+      const failed = rerenderResponse?.failed || 0;
+      alert(`Retry finalizat: ${attempted} incercate, ${succeeded} succes, ${failed} esec.`);
+    } catch (error) {
+      alert(`Eroare la retry render: ${error.message}`);
+    } finally {
+      setIsRetryingElai(false);
+    }
+  };
+
   const handleShowSoloPopup = () => {
     setOpenSoloPopup(!openSoloPopup);
   };
@@ -274,6 +383,12 @@ export default function VarianteCartiPersonalizateTable() {
     // fetchData();
     // console.log(db);
   }, []);
+
+  useEffect(() => {
+    setSelectedRecordIds((prev) =>
+      prev.filter((id) => db.some((item) => item.id === id))
+    );
+  }, [db]);
 
   // HANDLE TRANSLATE PAGE ON SCREEN AND GENERATE ELAI.IO FOR OTHER LANGUAGES THAT ARE NOT GENERATED
   const handleTranslate = async (text, target, videoNumberComplet) => {
@@ -362,6 +477,11 @@ export default function VarianteCartiPersonalizateTable() {
                 db={db}
                 isElaiDownload={true}
                 handleSearchFilter={handleSearchFilter}
+                onSyncElaiStatus={handleSyncElaiStatus}
+                onRetrySelected={handleRetrySelected}
+                retryDisabled={selectedRecordIds.length === 0}
+                isSyncingElaiStatus={isSyncingElaiStatus}
+                isRetryingElai={isRetryingElai}
               />
               <TableToolbar />
 
@@ -386,6 +506,9 @@ export default function VarianteCartiPersonalizateTable() {
                     handleShowDialog={handleShowDialog}
                     searchedDb={searchedDb}
                     searchValue={searchValue}
+                    selectedRecordIds={selectedRecordIds}
+                    onToggleRecordSelection={handleToggleRecordSelection}
+                    onToggleSelectCurrentPage={handleToggleSelectCurrentPage}
                   />
                 )}
               </Stack>

@@ -1,33 +1,39 @@
-import IconButton from "@mui/material/IconButton";
-import { Box, Button, InputAdornment, Stack, TextField } from "@mui/material";
+import { Box, Button, InputAdornment, Stack } from "@mui/material";
 
 import { useStyles } from "../../styles/ProcessTableStyles";
 import {
   createImgApiUrl,
-  deleteFirebaseVariatiiCarti,
   fetchDataReplaceFirebase,
   fetchDataReplaceFirebaseOneVideo,
 } from "../../utils/apiUtils";
-import FieldRow from "../Dashboard/FieldRow";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { StyledTextField } from "../../styles/FormStyles";
 import SearchIcon from "@mui/icons-material/Search";
 import { useState } from "react";
-import { getUrlImg } from "../../utils/realtimeUtils";
 
 export default function RightToolbarMenu(props) {
   const [value, setValue] = useState("");
   const classes = useStyles();
-  const handleSearch = (val) => {
-    setValue(val);
-    props.handleSearchFilter(val);
+  const headerButtonSx = {
+    fontSize: "15px",
+    fontWeight: "700",
+    backgroundColor: "transparent",
+    color: "white",
+    width: "auto",
+    textTransform: "none",
+    border: "1px solid #d3a03e",
+    transition: "background-color 0.3s",
+    "&:hover": {
+      backgroundColor: "#ffc045",
+      border: "1px solid ##ffc045",
+    },
   };
 
-  const handleUrl = async () => {
-    console.log("start....");
-    const urlImage = await getUrlImg();
-    console.log(urlImage);
+  const handleSearch = (val) => {
+    setValue(val);
+    props.handleSearchFilter?.(val);
   };
+
   return (
     <>
       <Stack
@@ -71,20 +77,7 @@ export default function RightToolbarMenu(props) {
                 sx={{ color: "white" }}
               />
             }
-            sx={{
-              fontSize: "15px",
-              fontWeight: "700",
-              backgroundColor: "transparent",
-              color: "white",
-              width: "auto",
-              textTransform: "none",
-              border: "1px solid #d3a03e",
-              transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
-              "&:hover": {
-                backgroundColor: "#ffc045", // Culorea de fundal pentru hover
-                border: "1px solid ##ffc045", // Adaugă o bordură la hover
-              },
-            }}
+            sx={headerButtonSx}
             className={classes.buttonHeader}
             onClick={() => props.handleShowSettings()}
           >
@@ -94,20 +87,7 @@ export default function RightToolbarMenu(props) {
         {props.isElaiDownload && (
           <Button
             variant="contained"
-            sx={{
-              fontSize: "15px",
-              fontWeight: "700",
-              backgroundColor: "transparent",
-              color: "white",
-              width: "auto",
-              textTransform: "none",
-              border: "1px solid #d3a03e",
-              transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
-              "&:hover": {
-                backgroundColor: "#ffc045", // Culorea de fundal pentru hover
-                border: "1px solid ##ffc045", // Adaugă o bordură la hover
-              },
-            }}
+            sx={headerButtonSx}
             className={classes.buttonHeader}
             onClick={() => fetchDataReplaceFirebaseOneVideo()}
             // onClick={() => deleteFirebaseVariatiiCarti()}
@@ -118,20 +98,7 @@ export default function RightToolbarMenu(props) {
         {props.isElaiDownload && (
           <Button
             variant="contained"
-            sx={{
-              fontSize: "15px",
-              fontWeight: "700",
-              backgroundColor: "transparent",
-              color: "white",
-              width: "auto",
-              textTransform: "none",
-              border: "1px solid #d3a03e",
-              transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
-              "&:hover": {
-                backgroundColor: "#ffc045", // Culorea de fundal pentru hover
-                border: "1px solid ##ffc045", // Adaugă o bordură la hover
-              },
-            }}
+            sx={headerButtonSx}
             className={classes.buttonHeader}
             onClick={() => fetchDataReplaceFirebase()}
             // onClick={() => deleteFirebaseVariatiiCarti()}
@@ -142,26 +109,34 @@ export default function RightToolbarMenu(props) {
         {props.isElaiDownload && (
           <Button
             variant="contained"
-            sx={{
-              fontSize: "15px",
-              fontWeight: "700",
-              backgroundColor: "transparent",
-              color: "white",
-              width: "auto",
-              textTransform: "none",
-              border: "1px solid #d3a03e",
-              transition: "background-color 0.3s", // Adaugă o tranziție pentru culoarea de fundal
-              "&:hover": {
-                backgroundColor: "#ffc045", // Culorea de fundal pentru hover
-                border: "1px solid ##ffc045", // Adaugă o bordură la hover
-              },
-            }}
+            sx={headerButtonSx}
             className={classes.buttonHeader}
-            // onClick={handleUrl}
             onClick={() => createImgApiUrl()}
             // onClick={() => deleteFirebaseVariatiiCarti()}
           >
             Create Elai Photo
+          </Button>
+        )}
+        {props.isElaiDownload && (
+          <Button
+            variant="contained"
+            sx={headerButtonSx}
+            className={classes.buttonHeader}
+            onClick={() => props.onSyncElaiStatus?.()}
+            disabled={props.isSyncingElaiStatus}
+          >
+            {props.isSyncingElaiStatus ? "Syncing..." : "Sync ELAI status"}
+          </Button>
+        )}
+        {props.isElaiDownload && (
+          <Button
+            variant="contained"
+            sx={headerButtonSx}
+            className={classes.buttonHeader}
+            onClick={() => props.onRetrySelected?.()}
+            disabled={props.retryDisabled || props.isRetryingElai}
+          >
+            {props.isRetryingElai ? "Retrying..." : "Retry selected draft/error"}
           </Button>
         )}
       </Stack>

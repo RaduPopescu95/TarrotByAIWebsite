@@ -2,9 +2,9 @@ import {
   deleteElaiVideoAPI,
   generateElaiVideoAPI,
   renderElaiVideoAPI,
-  updateElaiVideoAPI,
 } from "./apiUtils";
 import moment from "moment";
+import { ensureElaiMeta } from "./elaiStatusUtils";
 
 export const toUrlSlug = (string) => {
   // Check if string is null, undefined, or not a string
@@ -39,6 +39,7 @@ const languages = [
 
 export const checkDescription = async (data, dialogData) => {
   let isRendering = false;
+  const nowIso = new Date().toISOString();
   try {
     for (const lang of languages) {
       console.log(
@@ -58,8 +59,22 @@ export const checkDescription = async (data, dialogData) => {
           data.info[lang].video,
           data.info[lang].descriere
         );
-        console.log("response:", response._id);
-        await renderElaiVideoAPI(response._id);
+        if (response?._id) {
+          console.log("response:", response._id);
+          await renderElaiVideoAPI(response._id);
+          const previous = ensureElaiMeta(dialogData.info?.[lang]);
+          data.info[lang] = {
+            ...previous,
+            video: data.info[lang].video,
+            descriere: data.info[lang].descriere,
+            _id: response._id,
+            url: "",
+            isRendering: true,
+            elaiStatus: "rendering",
+            elaiError: "",
+            lastRenderAttemptAt: nowIso,
+          };
+        }
 
         // data.info[lang].isRendering = true;
         isRendering = true;
@@ -72,8 +87,22 @@ export const checkDescription = async (data, dialogData) => {
           data.info[lang].video,
           data.info[lang].descriere
         );
-        console.log("response:", response._id);
-        await renderElaiVideoAPI(response._id);
+        if (response?._id) {
+          console.log("response:", response._id);
+          await renderElaiVideoAPI(response._id);
+          const previous = ensureElaiMeta(dialogData.info?.[lang]);
+          data.info[lang] = {
+            ...previous,
+            video: data.info[lang].video,
+            descriere: data.info[lang].descriere,
+            _id: response._id,
+            url: "",
+            isRendering: true,
+            elaiStatus: "rendering",
+            elaiError: "",
+            lastRenderAttemptAt: nowIso,
+          };
+        }
         // data.info[lang].isRendering = true;
         isRendering = true;
       } else if (

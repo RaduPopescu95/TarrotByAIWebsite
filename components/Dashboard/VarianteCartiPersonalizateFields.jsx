@@ -29,6 +29,7 @@ import LoadingDialog from "../DialogBox/DialogLoader";
 import DropdownFieldRow from "./DropdownFieldRow";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { gTranslateFetch } from "../../utils/apiUtils";
+import { ensureElaiMeta } from "../../utils/elaiStatusUtils";
 
 export default function VarianteCartiViitorFields({
   handleUpload,
@@ -318,105 +319,33 @@ export default function VarianteCartiViitorFields({
 
   const handleUploadData = () => {
     setLoading(true);
+    const buildLanguageInfo = (lang, video, descriere) => {
+      const previous = ensureElaiMeta(dialogData.info?.[lang]);
+      return {
+        ...previous,
+        video,
+        descriere,
+        url: previous.url || "",
+        _id: previous._id || "",
+        isRendering: false,
+      };
+    };
+
     const data = {
-      ro: {
-        video: videoRo,
-        descriere: descriereRo,
-        url: dialogData.info ? dialogData.info.ro.url : "",
-        _id: dialogData.info ? dialogData.info.ro._id : "",
-        isRendering: false,
-      },
-      en: {
-        video: videoEn,
-        descriere: descriereEn,
-        url: dialogData.info ? dialogData.info.en.url : "",
-        _id: dialogData.info ? dialogData.info.en._id : "",
-        isRendering: false,
-      },
-      es: {
-        video: videoEs,
-        descriere: descriereEs,
-        url: dialogData.info ? dialogData.info.es.url : "",
-        _id: dialogData.info ? dialogData.info.es._id : "",
-        isRendering: false,
-      },
-      it: {
-        video: videoIt,
-        descriere: descriereIt,
-        url: dialogData.info ? dialogData.info.it.url : "",
-        _id: dialogData.info ? dialogData.info.it._id : "",
-        isRendering: false,
-      },
-      pl: {
-        video: videoPl,
-        descriere: descrierePl,
-        url: dialogData.info ? dialogData.info.pl.url : "",
-        _id: dialogData.info ? dialogData.info.pl._id : "",
-        isRendering: false,
-      },
-      de: {
-        video: videoDe,
-        descriere: descriereDe,
-        url: dialogData.info ? dialogData.info.de.url : "",
-        _id: dialogData.info ? dialogData.info.de._id : "",
-        isRendering: false,
-      },
-      hu: {
-        video: videoHu,
-        descriere: descriereHu,
-        url: dialogData.info ? dialogData.info.hu.url : "",
-        _id: dialogData.info ? dialogData.info.hu._id : "",
-        isRendering: false,
-      },
-      cs: {
-        video: videoCs,
-        descriere: descriereCs,
-        url: dialogData.info ? dialogData.info.cs.url : "",
-        _id: dialogData.info ? dialogData.info.cs._id : "",
-        isRendering: false,
-      },
-      sk: {
-        video: videoSk,
-        descriere: descriereSk,
-        url: dialogData.info ? dialogData.info.sk.url : "",
-        _id: dialogData.info ? dialogData.info.sk._id : "",
-        isRendering: false,
-      },
-      hr: {
-        video: videoHr,
-        descriere: descriereHr,
-        url: dialogData.info ? dialogData.info.hr.url : "",
-        _id: dialogData.info ? dialogData.info.hr._id : "",
-        isRendering: false,
-      },
-      ru: {
-        video: videoRu,
-        descriere: descriereRu,
-        url: dialogData.info ? dialogData.info.ru.url : "",
-        _id: dialogData.info ? dialogData.info.ru._id : "",
-        isRendering: false,
-      },
-      bg: {
-        video: videoBg,
-        descriere: descriereBg,
-        url: dialogData.info ? dialogData.info.bg.url : "",
-        _id: dialogData.info ? dialogData.info.bg._id : "",
-        isRendering: false,
-      },
-      el: {
-        video: videoEl,
-        descriere: descriereEl,
-        url: dialogData.info ? dialogData.info.el.url : "",
-        _id: dialogData.info ? dialogData.info.el._id : "",
-        isRendering: false,
-      },
-      fr: {
-        video: videoFr,
-        descriere: descriereFr,
-        url: dialogData.info ? dialogData.info.fr.url : "",
-        _id: dialogData.info ? dialogData.info.fr._id : "",
-        isRendering: false,
-      },
+      ro: buildLanguageInfo("ro", videoRo, descriereRo),
+      en: buildLanguageInfo("en", videoEn, descriereEn),
+      es: buildLanguageInfo("es", videoEs, descriereEs),
+      it: buildLanguageInfo("it", videoIt, descriereIt),
+      pl: buildLanguageInfo("pl", videoPl, descrierePl),
+      de: buildLanguageInfo("de", videoDe, descriereDe),
+      hu: buildLanguageInfo("hu", videoHu, descriereHu),
+      cs: buildLanguageInfo("cs", videoCs, descriereCs),
+      sk: buildLanguageInfo("sk", videoSk, descriereSk),
+      hr: buildLanguageInfo("hr", videoHr, descriereHr),
+      ru: buildLanguageInfo("ru", videoRu, descriereRu),
+      bg: buildLanguageInfo("bg", videoBg, descriereBg),
+      el: buildLanguageInfo("el", videoEl, descriereEl),
+      fr: buildLanguageInfo("fr", videoFr, descriereFr),
     };
     console.log("start...");
     console.log(dialogData.info);

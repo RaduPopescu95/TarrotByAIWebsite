@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
@@ -87,17 +87,20 @@ function resolveCourseVimeoId(course) {
   return extractVimeoId(course.vimeoUrl);
 }
 
-const SUBTITLE_TRANSLATION_TARGET_CODES = [
-  "ro",
-  "es",
-  "fr",
-  "de",
-  "it",
-  "pt",
-  "pl",
-  "cs",
-  "el",
+const SUBTITLE_TRANSLATION_LANGUAGES = [
+  { code: "ro", label: "Romanian", nativeLabel: "Română" },
+  { code: "es", label: "Spanish", nativeLabel: "Español" },
+  { code: "fr", label: "French", nativeLabel: "Français" },
+  { code: "de", label: "German", nativeLabel: "Deutsch" },
+  { code: "it", label: "Italian", nativeLabel: "Italiano" },
+  { code: "pt", label: "Portuguese", nativeLabel: "Português" },
+  { code: "pl", label: "Polish", nativeLabel: "Polski" },
+  { code: "cs", label: "Czech", nativeLabel: "Čeština" },
+  { code: "el", label: "Greek", nativeLabel: "Ελληνικά" },
 ];
+const DEFAULT_SUBTITLE_TRANSLATION_LANGUAGE_CODES = SUBTITLE_TRANSLATION_LANGUAGES.map(
+  (language) => language.code
+);
 
 export default function CoursesDashboardPage() {
   const { loading: authLoading } = useAuth();
@@ -150,6 +153,16 @@ export default function CoursesDashboardPage() {
   const [subtitleTranslationDownloadName, setSubtitleTranslationDownloadName] = useState(
     "subtitrari.multilang.srt.zip"
   );
+  const [selectedSubtitleTranslationLanguages, setSelectedSubtitleTranslationLanguages] = useState(
+    DEFAULT_SUBTITLE_TRANSLATION_LANGUAGE_CODES
+  );
+  const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState(0);
+  const [subtitleTranslationStageText, setSubtitleTranslationStageText] = useState("");
+  const [subtitleTranslationProgressVisible, setSubtitleTranslationProgressVisible] = useState(false);
+  const [subtitleTranslationStartedAt, setSubtitleTranslationStartedAt] = useState(null);
+
+  const subtitleTranslationProgressIntervalRef = useRef(null);
+  const subtitleTranslationProgressHideTimeoutRef = useRef(null);
 
   // Delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -157,8 +170,21 @@ export default function CoursesDashboardPage() {
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [courseToPreview, setCourseToPreview] = useState(null);
 
+  const clearSubtitleTranslationTimers = () => {
+    if (subtitleTranslationProgressIntervalRef.current) {
+      clearInterval(subtitleTranslationProgressIntervalRef.current);
+      subtitleTranslationProgressIntervalRef.current = null;
+    }
+
+    if (subtitleTranslationProgressHideTimeoutRef.current) {
+      clearTimeout(subtitleTranslationProgressHideTimeoutRef.current);
+      subtitleTranslationProgressHideTimeoutRef.current = null;
+    }
+  };
+
   useEffect(() => {
     return () => {
+      clearSubtitleTranslationTimers();
       if (subtitleDownloadUrl) {
         URL.revokeObjectURL(subtitleDownloadUrl);
       }
@@ -494,11 +520,39 @@ export default function CoursesDashboardPage() {
     setSubtitleTranslationFile(nextFile);
     setSubtitleTranslationError("");
     setSubtitleTranslationResult("");
+    setSubtitleTranslationProgress(0);
+    setSubtitleTranslationStageText("");
+    setSubtitleTranslationProgressVisible(false);
+    setSubtitleTranslationStartedAt(null);
+    clearSubtitleTranslationTimers();
 
     if (subtitleTranslationDownloadUrl) {
       URL.revokeObjectURL(subtitleTranslationDownloadUrl);
       setSubtitleTranslationDownloadUrl("");
     }
+  };
+
+  const handleSelectAllSubtitleTranslationLanguages = () => {
+    setSelectedSubtitleTranslationLanguages(DEFAULT_SUBTITLE_TRANSLATION_LANGUAGE_CODES);
+    setSubtitleTranslationError("");
+    setSubtitleTranslationResult("");
+  };
+
+  const handleResetSubtitleTranslationLanguages = () => {
+    setSelectedSubtitleTranslationLanguages([]);
+    setSubtitleTranslationError("");
+    setSubtitleTranslationResult("");
+  };
+
+  const handleToggleSubtitleTranslationLanguage = (languageCode) => {
+    setSelectedSubtitleTranslationLanguages((currentSelection) => {
+      if (currentSelection.includes(languageCode)) {
+        return currentSelection.filter((code) => code !== languageCode);
+      }
+      return [...currentSelection, languageCode];
+    });
+    setSubtitleTranslationError("");
+    setSubtitleTranslationResult("");
   };
 
   const handleGenerateSubtitleTranslations = async (event) => {
@@ -507,10 +561,52 @@ export default function CoursesDashboardPage() {
       setSubtitleTranslationError("Selectează un fișier SRT în engleză.");
       return;
     }
+    if (!selectedSubtitleTranslationLanguages.length) {
+      setSubtitleTranslationError("Selectează cel puțin o limbă.");
+      return;
+    }
 
     setSubtitleTranslationLoading(true);
     setSubtitleTranslationError("");
     setSubtitleTranslationResult("");
+    setSubtitleTranslationProgressVisible(true);
+    setSubtitleTranslationProgress(5);
+
+    clearSubtitleTranslationTimers();
+
+    const selectedLanguageCodes = [...selectedSubtitleTranslationLanguages];
+    const startedAtMs = Date.now();
+    setSubtitleTranslationStartedAt(startedAtMs);
+
+    const selectedLanguagePreview = selectedLanguageCodes
+      .slice(0, 3)
+      .map((code) => code.toUpperCase())
+      .join(", ");
+    const selectedLanguageSummary =
+      selectedLanguageCodes.length > 3
+        ? `${selectedLanguagePreview}, +${selectedLanguageCodes.length - 3}`
+        : selectedLanguagePreview;
+
+    setSubtitleTranslationStageText(`Se traduc: ${selectedLanguageSummary}`);
+
+    const estimatedDurationMs = Math.max(24000, selectedLanguageCodes.length * 11000);
+    subtitleTranslationProgressIntervalRef.current = setInterval(() => {
+      const elapsedMs = Date.now() - startedAtMs;
+      const progressRatio = Math.min(elapsedMs / estimatedDurationMs, 1);
+      const nextProgress = Math.min(92, Math.round(5 + progressRatio * 87));
+
+      setSubtitleTranslationProgress((currentProgress) =>
+        nextProgress > currentProgress ? nextProgress : currentProgress
+      );
+
+      if (progressRatio < 0.15) {
+        setSubtitleTranslationStageText("Se pregătește traducerea...");
+      } else if (progressRatio < 0.8) {
+        setSubtitleTranslationStageText(`Se traduc: ${selectedLanguageSummary}`);
+      } else {
+        setSubtitleTranslationStageText("Se pregătește arhiva ZIP...");
+      }
+    }, 400);
 
     try {
       const formData = new FormData();
@@ -518,7 +614,7 @@ export default function CoursesDashboardPage() {
       formData.append("mode", "translate-srt-multi");
       formData.append(
         "targetLanguages",
-        JSON.stringify(SUBTITLE_TRANSLATION_TARGET_CODES)
+        JSON.stringify(selectedLanguageCodes)
       );
 
       const response = await fetch("/api/transcribe-ro-srt", {
@@ -550,10 +646,29 @@ export default function CoursesDashboardPage() {
       const nextUrl = URL.createObjectURL(outputBlob);
       setSubtitleTranslationDownloadUrl(nextUrl);
       setSubtitleTranslationDownloadName(suggestedFilename);
-      setSubtitleTranslationResult(
-        "Arhiva ZIP este pregătită. Conține subtitrarea tradusă în 9 limbi."
+      clearSubtitleTranslationTimers();
+      setSubtitleTranslationProgress(100);
+      setSubtitleTranslationStageText(
+        `Finalizat în ${((Date.now() - startedAtMs) / 1000).toFixed(1)}s`
       );
+      setSubtitleTranslationResult(
+        `Arhiva ZIP este pregătită. Conține subtitrarea tradusă în ${selectedLanguageCodes.length} ${
+          selectedLanguageCodes.length === 1 ? "limbă" : "limbi"
+        }.`
+      );
+      subtitleTranslationProgressHideTimeoutRef.current = setTimeout(() => {
+        setSubtitleTranslationProgressVisible(false);
+        setSubtitleTranslationProgress(0);
+        setSubtitleTranslationStageText("");
+        setSubtitleTranslationStartedAt(null);
+        subtitleTranslationProgressHideTimeoutRef.current = null;
+      }, 2800);
     } catch (err) {
+      clearSubtitleTranslationTimers();
+      setSubtitleTranslationProgressVisible(false);
+      setSubtitleTranslationProgress(0);
+      setSubtitleTranslationStageText("");
+      setSubtitleTranslationStartedAt(null);
       setSubtitleTranslationError(err.message || "Eroare neașteptată.");
     } finally {
       setSubtitleTranslationLoading(false);
@@ -1076,11 +1191,74 @@ export default function CoursesDashboardPage() {
                       </p>
                     </div>
 
+                    <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50/80 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-gray-800">Limbi țintă</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSelectAllSubtitleTranslationLanguages}
+                            disabled={subtitleTranslationLoading}
+                          >
+                            Selectează toate
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleResetSubtitleTranslationLanguages}
+                            disabled={subtitleTranslationLoading}
+                          >
+                            Resetează
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {SUBTITLE_TRANSLATION_LANGUAGES.map((language) => {
+                          const isChecked = selectedSubtitleTranslationLanguages.includes(language.code);
+                          return (
+                            <label
+                              key={language.code}
+                              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition ${
+                                isChecked
+                                  ? "border-indigo-300 bg-indigo-50 text-indigo-900"
+                                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={isChecked}
+                                disabled={subtitleTranslationLoading}
+                                onChange={() => handleToggleSubtitleTranslationLanguage(language.code)}
+                              />
+                              <span className="leading-tight">
+                                <span className="font-medium">
+                                  {language.code.toUpperCase()} — {language.nativeLabel}
+                                </span>
+                                <span className="block text-xs text-gray-500">{language.label}</span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-xs text-gray-500">
+                        Selectate: {selectedSubtitleTranslationLanguages.length}/
+                        {SUBTITLE_TRANSLATION_LANGUAGES.length}
+                      </p>
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-3">
                       <Button type="submit" disabled={subtitleTranslationLoading}>
                         {subtitleTranslationLoading
                           ? "Se traduc subtitrările..."
-                          : "Tradu în 9 limbi"}
+                          : `Tradu în ${selectedSubtitleTranslationLanguages.length} ${
+                              selectedSubtitleTranslationLanguages.length === 1 ? "limbă" : "limbi"
+                            }`}
                       </Button>
                       {subtitleTranslationDownloadUrl && (
                         <Button asChild variant="outline">
@@ -1093,6 +1271,29 @@ export default function CoursesDashboardPage() {
                         </Button>
                       )}
                     </div>
+
+                    {subtitleTranslationProgressVisible && (
+                      <div className="space-y-2 pt-1">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out"
+                            style={{ width: `${subtitleTranslationProgress}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                          <span>{subtitleTranslationStageText || "Se procesează..."}</span>
+                          <span className="font-medium">
+                            {subtitleTranslationProgress}%{" "}
+                            {subtitleTranslationLoading && subtitleTranslationStartedAt
+                              ? `• ${Math.max(
+                                  0,
+                                  Math.floor((Date.now() - subtitleTranslationStartedAt) / 1000)
+                                )}s`
+                              : ""}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </form>
 
                   {subtitleTranslationError && (

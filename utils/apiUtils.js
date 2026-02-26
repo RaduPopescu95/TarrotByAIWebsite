@@ -1,10 +1,14 @@
 import { getDatabase, ref, remove } from "firebase/database";
 import { getData, getUrlImg, writeData, writeImg } from "./realtimeUtils";
 import { getCurrentDateTime } from "./timeUtils";
-import { normalizeString, testString } from "./strintText";
-import { getDownloadURL, ref as storageRef } from "firebase/storage";
-import { storage } from "../firebase";
+import { testString } from "./strintText";
 import { getUrlImageApi } from "./storageUtils";
+import {
+  createEmptyInfoMap,
+  mapElaiVideoToLanguageInfo,
+  normalizeVarianteRecord,
+  computeRecordIsRendering,
+} from "./elaiStatusUtils";
 // import { writeFirestoreData } from "./firestoreUtils";
 
 let finalArr = [];
@@ -46,7 +50,7 @@ export const deleteFirebaseVariatiiCarti = async () => {
 export const fetchDataReplaceFirebaseOneVideo = async () => {
   console.log("START FETCH DATA.....");
   let dt = await getData("Citire-Personalizata", "VarianteCarti");
-  finalArr = [...dt.arr];
+  finalArr = [...dt.arr].map((item) => normalizeVarianteRecord(item));
 
   try {
     const options = {
@@ -216,13 +220,11 @@ export const fetchDataReplaceFirebaseOneVideo = async () => {
               // Verifică dacă id-ul videoului corespunde cu cel din subObject
               if (subObject._id === video._id) {
                 // Actualizează obiectul subObject cu noile detalii
-                element.info[key] = {
-                  video: video.name,
-                  descriere: video.slides[0].speech,
-                  _id: video._id !== undefined ? video._id : "",
-                  url: video.url !== undefined ? video.url : "",
-                  isRendering: false,
-                };
+                element.info[key] = mapElaiVideoToLanguageInfo(
+                  video,
+                  element.info[key]
+                );
+                element.isRendering = computeRecordIsRendering(element.info);
 
                 // Salvează actualizările în baza de date sau unde este necesar
                 await writeData(
@@ -244,7 +246,7 @@ export const fetchDataReplaceFirebaseOneVideo = async () => {
 export const fetchDataReplaceFirebase = async () => {
   console.log("START FETCH DATA.....");
   let dt = await getData("Citire-Personalizata", "VarianteCarti");
-  finalArr = [...dt.arr];
+  finalArr = [...dt.arr].map((item) => normalizeVarianteRecord(item));
 
   //FETCH FROM REAL TIME AND WRITE TO FIRESTORE -------------->
   // for (let i = 0; i < finalArr.length; i++) {
@@ -265,7 +267,6 @@ export const fetchDataReplaceFirebase = async () => {
   // <---------- FETCH FROM REAL TIME AND WRITE TO FIRESTORE
 
   try {
-    const page = Math.floor(Math.random() * 10) + 1;
     const options = {
       method: "GET",
       headers: {
@@ -312,16 +313,13 @@ export const fetchDataReplaceFirebase = async () => {
                   console.log("finalArr[i]...");
                   // console.log(languageCode);
                   console.log(number);
-                  finalArr[i].info[languageCode] = {
-                    video: video.name,
-                    descriere: video.slides[0].speech,
-                    _id: video._id !== undefined ? video._id : "",
-                    url: video.url !== undefined ? video.url : "",
-                    isRendering: false,
-                  };
-                  // console.log(finalArr[i].isRendering);
-                  finalArr[i].isRendering = false;
-                  // console.log(finalArr[i].isRendering);
+                  finalArr[i].info[languageCode] = mapElaiVideoToLanguageInfo(
+                    video,
+                    finalArr[i].info[languageCode]
+                  );
+                  finalArr[i].isRendering = computeRecordIsRendering(
+                    finalArr[i].info
+                  );
 
                   await writeData(
                     finalArr[i],
@@ -334,106 +332,13 @@ export const fetchDataReplaceFirebase = async () => {
                   "No is....id of elai video NOT= to firebase video id"
                 );
 
-                const info = {
-                  ro: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  en: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  es: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  it: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  pl: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  de: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  hu: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  cs: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  sk: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  hr: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  ru: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  bg: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  el: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                  fr: {
-                    video: "",
-                    descriere: "",
-                    _id: "",
-                    url: "",
-                    isRendering: false,
-                  },
-                };
+                const info = createEmptyInfoMap();
+                if (languageCode in info) {
+                  info[languageCode] = mapElaiVideoToLanguageInfo(
+                    video,
+                    info[languageCode]
+                  );
+                }
 
                 const data = {
                   id: number, // Folosiți numărul ca id
@@ -442,7 +347,7 @@ export const fetchDataReplaceFirebase = async () => {
                   carte: {},
                   date: dateTime.date,
                   time: dateTime.time,
-                  isRendering: false,
+                  isRendering: computeRecordIsRendering(info),
                 };
 
                 // Verificați dacă un element cu același id există deja în finalArr
@@ -465,92 +370,13 @@ export const fetchDataReplaceFirebase = async () => {
             const number = parseInt(parts[1], 10);
             const languageCode = parts[parts.length - 1];
 
-            const info = {
-              ro: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              en: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              es: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              it: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              pl: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              de: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              hu: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              cs: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              sk: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              hr: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              ru: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              bg: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              el: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-              fr: {
-                video: "",
-                descriere: "",
-                _id: "",
-                url: "",
-              },
-            };
+            const info = createEmptyInfoMap();
+            if (languageCode in info) {
+              info[languageCode] = mapElaiVideoToLanguageInfo(
+                video,
+                info[languageCode]
+              );
+            }
 
             const data = {
               id: number,
@@ -559,7 +385,7 @@ export const fetchDataReplaceFirebase = async () => {
               carte: {},
               date: dateTime.date,
               time: dateTime.time,
-              isRendering: false,
+              isRendering: computeRecordIsRendering(info),
             };
 
             // Verificați dacă un element cu același id există deja în finalArr
@@ -715,10 +541,15 @@ export const deleteElaiVideoAPI = async (videoId) => {
     },
   };
 
-  fetch(`https://apis.elai.io/api/v1/videos/${videoId}`, options)
-    .then((response) => response.json())
-    .then((response) => console.log(response))
-    .catch((err) => console.error(err));
+  try {
+    const response = await fetch(`https://apis.elai.io/api/v1/videos/${videoId}`, options);
+    const data = await response.json();
+    console.log(data);
+    return data;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
 };
 
 export const renderElaiVideoAPI = async (videoId) => {
@@ -730,8 +561,13 @@ export const renderElaiVideoAPI = async (videoId) => {
     },
   };
 
-  fetch(`https://apis.elai.io/api/v1/videos/render/${videoId}`, options)
-    .then((response) => response.json())
-    .then((response) => console.log("response...to render.........", response))
-    .catch((err) => console.error("error at fetch renderelaivideoapi...", err));
+  try {
+    const response = await fetch(`https://apis.elai.io/api/v1/videos/render/${videoId}`, options);
+    const data = await response.json();
+    console.log("response...to render.........", data);
+    return data;
+  } catch (err) {
+    console.error("error at fetch renderelaivideoapi...", err);
+    return null;
+  }
 };
