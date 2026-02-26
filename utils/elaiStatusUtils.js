@@ -65,6 +65,86 @@ export function extractElaiErrorMessage(value) {
   }
 }
 
+function readNestedValue(object, path) {
+  if (!object || typeof object !== "object") return undefined;
+  const parts = path.split(".");
+  let current = object;
+  for (const part of parts) {
+    if (!current || typeof current !== "object") return undefined;
+    current = current[part];
+  }
+  return current;
+}
+
+function extractRawStatus(video = {}) {
+  const candidates = [
+    video?.status,
+    video?.state,
+    video?.renderStatus,
+    video?.render_status,
+    video?.videoStatus,
+    video?.video_status,
+    readNestedValue(video, "data.status"),
+    readNestedValue(video, "render.status"),
+    readNestedValue(video, "meta.status"),
+  ];
+
+  for (const candidate of candidates) {
+    const value = toStringSafe(candidate).trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function hasLikelyVideoFields(candidate) {
+  if (!candidate || typeof candidate !== "object") return false;
+  return Boolean(
+    candidate?._id ||
+      candidate?.id ||
+      candidate?.status ||
+      candidate?.state ||
+      candidate?.url ||
+      candidate?.videoUrl ||
+      candidate?.video_url
+  );
+}
+
+function unwrapElaiVideoPayload(video = {}) {
+  const candidates = [
+    video,
+    video?.video,
+    readNestedValue(video, "data.video"),
+    readNestedValue(video, "result.video"),
+    video?.data,
+    video?.result,
+  ];
+
+  for (const candidate of candidates) {
+    if (hasLikelyVideoFields(candidate)) return candidate;
+  }
+
+  return video;
+}
+
+function extractBestUrl(video = {}) {
+  const candidates = [
+    video?.url,
+    video?.videoUrl,
+    video?.video_url,
+    video?.downloadUrl,
+    video?.download_url,
+    video?.link,
+    readNestedValue(video, "data.url"),
+    readNestedValue(video, "result.url"),
+  ];
+
+  for (const candidate of candidates) {
+    const value = toStringSafe(candidate).trim();
+    if (value) return value;
+  }
+  return "";
+}
+
 export function ensureElaiMeta(info = {}) {
   const normalizedStatus = normalizeElaiStatus(info.elaiStatus);
   return {
@@ -108,16 +188,33 @@ export function createEmptyInfoMap() {
 
 export function mapElaiVideoToLanguageInfo(video, previousInfo = {}, nowIso = new Date().toISOString()) {
   const previous = ensureElaiMeta(previousInfo);
-  const status = normalizeElaiStatus(video?.status);
-  const errorMessage = extractElaiErrorMessage(video?.error);
-  const speech = video?.slides?.[0]?.speech;
+  const source = unwrapElaiVideoPayload(video);
+  const rawStatus = extractRawStatus(source);
+  let status = normalizeElaiStatus(rawStatus);
+  const resolvedUrl = extractBestUrl(source) || previous.url;
+
+  // Some Elai responses can omit status while still returning a valid final URL.
+  if (status === "unknown" && resolvedUrl) {
+    status = "ready";
+  }
+  if (status === "unknown" && previous.elaiStatus && previous.elaiStatus !== "unknown") {
+    status = previous.elaiStatus;
+  }
+
+  const errorMessage = extractElaiErrorMessage(source?.error || video?.error);
+  const speech = source?.slides?.[0]?.speech;
 
   return {
     ...previous,
-    video: typeof video?.name === "string" ? video.name : previous.video,
+    video: typeof source?.name === "string" ? source.name : previous.video,
     descriere: typeof speech === "string" ? speech : previous.descriere,
-    _id: typeof video?._id === "string" ? video._id : previous._id,
-    url: typeof video?.url === "string" ? video.url : previous.url,
+    _id:
+      typeof source?._id === "string"
+        ? source._id
+        : typeof source?.id === "string"
+          ? source.id
+          : previous._id,
+    url: resolvedUrl,
     isRendering: status === "rendering",
     elaiStatus: status,
     elaiError: status === "error" ? errorMessage : "",

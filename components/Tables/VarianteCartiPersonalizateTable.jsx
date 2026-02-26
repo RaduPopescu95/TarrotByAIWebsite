@@ -309,13 +309,21 @@ export default function VarianteCartiPersonalizateTable() {
     try {
       setIsSyncingElaiStatus(true);
       const response = await postElaiStatusSync(syncPayload);
+      console.info("[ELAI status-sync]", response);
       await handleGetData();
 
       if (!syncPayload?.silent) {
+        const errorsCount = Array.isArray(response?.errors) ? response.errors.length : 0;
+        const samplePreview = Array.isArray(response?.debugSamples)
+          ? response.debugSamples
+              .slice(0, 3)
+              .map((sample) => `${sample.lang}:${sample.rawStatus || "n/a"}->${sample.mappedStatus}`)
+              .join(" | ")
+          : "";
         alert(
           `Sync completat: ${response?.processed || 0} verificate, ${
             response?.updated || 0
-          } actualizate.`
+          } actualizate, ${errorsCount} erori.${samplePreview ? `\nSample: ${samplePreview}` : ""}`
         );
       }
     } catch (error) {
