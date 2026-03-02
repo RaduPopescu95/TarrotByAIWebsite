@@ -79,6 +79,24 @@ export default function VariatieCartiContainer(props) {
         ? props.searchedDb
         : props.db;
 
+  const readyStats = useMemo(() => {
+    let ready = 0;
+    let total = 0;
+
+    for (const row of dataSource) {
+      for (const lang of languages) {
+        const info = ensureElaiMeta(row.info?.[lang]);
+        if (!info._id) continue;
+        total += 1;
+        if (isElaiReadyWithUrl(info)) {
+          ready += 1;
+        }
+      }
+    }
+
+    return { ready, total };
+  }, [dataSource]);
+
   const currentItems = dataSource.slice(indexOfFirstItem, indexOfLastItem);
   const idInterval = `${indexOfFirstItem + 1}-${
     indexOfLastItem > dataSource.length ? dataSource.length : indexOfLastItem
@@ -179,6 +197,9 @@ export default function VariatieCartiContainer(props) {
             },
           }}
         />
+        <Box sx={{ color: "#D3D3D3" }}>
+          Ready Elai: {readyStats.ready}/{readyStats.total}
+        </Box>
         <Box sx={{ color: "#D3D3D3" }}>
           {idInterval} din {props.db.length}
         </Box>
