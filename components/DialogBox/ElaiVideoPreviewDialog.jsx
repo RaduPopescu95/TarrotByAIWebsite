@@ -11,7 +11,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { ensureElaiMeta } from "../../utils/elaiStatusUtils";
+import { canRerenderElaiStatus, ensureElaiMeta } from "../../utils/elaiStatusUtils";
 
 export default function ElaiVideoPreviewDialog({
   open,
@@ -19,11 +19,14 @@ export default function ElaiVideoPreviewDialog({
   recordId,
   lang,
   info,
+  onRetrySingle,
+  isRetryingSingle = false,
 }) {
   const normalized = useMemo(() => ensureElaiMeta(info || {}), [info]);
   const [copyMessage, setCopyMessage] = useState("");
 
   const hasUrl = normalized.url.length > 0;
+  const canRetry = Boolean(normalized._id) && canRerenderElaiStatus(normalized.elaiStatus);
   const languageLabel = typeof lang === "string" && lang ? lang.toUpperCase() : "-";
 
   const handleCopyLink = async () => {
@@ -51,6 +54,15 @@ export default function ElaiVideoPreviewDialog({
   const handleClose = () => {
     setCopyMessage("");
     onClose?.();
+  };
+
+  const handleRetrySingle = () => {
+    if (!canRetry || !onRetrySingle) return;
+    onRetrySingle({
+      recordId,
+      lang,
+      info: normalized,
+    });
   };
 
   return (
@@ -85,12 +97,25 @@ export default function ElaiVideoPreviewDialog({
             <Button variant="outlined" onClick={handleOpenInNewTab} disabled={!hasUrl}>
               Open in new tab
             </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={handleRetrySingle}
+              disabled={!canRetry || isRetryingSingle}
+            >
+              {isRetryingSingle ? "Retrying..." : "Retry this language"}
+            </Button>
             {copyMessage ? (
               <Typography variant="body2" sx={{ color: "#BDBDBD" }}>
                 {copyMessage}
               </Typography>
             ) : null}
           </Stack>
+          {!canRetry ? (
+            <Typography variant="caption" sx={{ color: "#BDBDBD" }}>
+              Retry este disponibil doar pentru status draft/error cu video ID valid.
+            </Typography>
+          ) : null}
 
           <Box>
             <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>

@@ -47,6 +47,7 @@ export default function VarianteCartiPersonalizateTable() {
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [isSyncingElaiStatus, setIsSyncingElaiStatus] = useState(false);
   const [isRetryingElai, setIsRetryingElai] = useState(false);
+  const [isRetryingSingleElai, setIsRetryingSingleElai] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPayload, setPreviewPayload] = useState({
     recordId: "",
@@ -128,6 +129,53 @@ export default function VarianteCartiPersonalizateTable() {
 
   const handleClosePreview = () => {
     setPreviewOpen(false);
+  };
+
+  const handleRetrySingleLanguage = async ({ recordId, lang, info }) => {
+    if (isRetryingSingleElai) return;
+    const normalizedInfo = ensureElaiMeta(info);
+    const numericRecordId = Number(recordId);
+    const safeLang = typeof lang === "string" ? lang : "";
+
+    if (!Number.isFinite(numericRecordId) || numericRecordId <= 0 || !safeLang) {
+      alert("Date invalide pentru retry pe limba selectata.");
+      return;
+    }
+
+    if (!normalizedInfo._id) {
+      alert("Lipseste video ID pentru limba selectata.");
+      return;
+    }
+
+    if (!canRerenderElaiStatus(normalizedInfo.elaiStatus)) {
+      alert("Retry este permis doar pentru status draft/error.");
+      return;
+    }
+
+    try {
+      setIsRetryingSingleElai(true);
+      const rerenderResponse = await postElaiRerender({
+        targets: [
+          {
+            recordId: numericRecordId,
+            lang: safeLang,
+            videoId: normalizedInfo._id,
+          },
+        ],
+      });
+
+      await handleGetData();
+
+      alert(
+        `Retry ${safeLang.toUpperCase()} finalizat: ${
+          rerenderResponse?.succeeded || 0
+        } succes, ${rerenderResponse?.failed || 0} esec.`
+      );
+    } catch (error) {
+      alert(`Eroare la retry pe limba selectata: ${error.message}`);
+    } finally {
+      setIsRetryingSingleElai(false);
+    }
   };
 
   const handleShowDialog = (item) => {
@@ -568,6 +616,8 @@ export default function VarianteCartiPersonalizateTable() {
         recordId={previewPayload.recordId}
         lang={previewPayload.lang}
         info={previewPayload.info}
+        onRetrySingle={handleRetrySingleLanguage}
+        isRetryingSingle={isRetryingSingleElai}
       />
     </>
   );
