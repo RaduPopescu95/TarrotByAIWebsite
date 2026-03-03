@@ -9,7 +9,7 @@ import {
 } from "../../../../lib/elaiRtdb";
 import { canRerenderElaiStatus, ensureElaiMeta } from "../../../../utils/elaiStatusUtils";
 
-const MAX_BATCH = 5;
+const MAX_BATCH = 14;
 const MAX_RETRIES = 2;
 const COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 3;

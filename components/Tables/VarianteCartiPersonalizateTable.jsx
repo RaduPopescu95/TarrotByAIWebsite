@@ -28,6 +28,8 @@ import {
 } from "../../utils/elaiStatusUtils";
 import { postElaiRerender, postElaiStatusSync } from "../../utils/elaiAdminApi";
 
+const MAX_RERENDER_BATCH = 14;
+
 export default function VarianteCartiPersonalizateTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
@@ -494,9 +496,9 @@ export default function VarianteCartiPersonalizateTable() {
       return;
     }
 
-    if (targets.length > 5) {
+    if (targets.length > MAX_RERENDER_BATCH) {
       alert(
-        `Ai selectat ${targets.length} target-uri. Limita este 5 per rulare pentru protectia minutelor.`
+        `Ai selectat ${targets.length} target-uri. Limita este ${MAX_RERENDER_BATCH} per rulare pentru protectia minutelor.`
       );
       return;
     }
@@ -569,9 +571,9 @@ export default function VarianteCartiPersonalizateTable() {
       return;
     }
 
-    if (targets.length > 5) {
+    if (targets.length > MAX_RERENDER_BATCH) {
       alert(
-        `Randul selectat are ${targets.length} target-uri eligibile. Limita este 5 per rulare.`
+        `Randul selectat are ${targets.length} target-uri eligibile. Limita este ${MAX_RERENDER_BATCH} per rulare.`
       );
       return;
     }
