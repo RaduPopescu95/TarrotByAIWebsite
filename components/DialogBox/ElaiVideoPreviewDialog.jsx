@@ -19,6 +19,8 @@ export default function ElaiVideoPreviewDialog({
   recordId,
   lang,
   info,
+  onSyncSingle,
+  isSyncingSingle = false,
   onRetrySingle,
   isRetryingSingle = false,
 }) {
@@ -65,6 +67,15 @@ export default function ElaiVideoPreviewDialog({
     });
   };
 
+  const handleSyncSingle = () => {
+    if (!normalized._id || !onSyncSingle) return;
+    onSyncSingle({
+      recordId,
+      lang,
+      info: normalized,
+    });
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>{`Record #${recordId || "-"} - ${languageLabel}`}</DialogTitle>
@@ -99,6 +110,14 @@ export default function ElaiVideoPreviewDialog({
             </Button>
             <Button
               variant="contained"
+              color="info"
+              onClick={handleSyncSingle}
+              disabled={!normalized._id || isSyncingSingle}
+            >
+              {isSyncingSingle ? "Syncing..." : "Sync this language"}
+            </Button>
+            <Button
+              variant="contained"
               color="warning"
               onClick={handleRetrySingle}
               disabled={!canRetry || isRetryingSingle}
@@ -111,6 +130,11 @@ export default function ElaiVideoPreviewDialog({
               </Typography>
             ) : null}
           </Stack>
+          {!normalized._id ? (
+            <Typography variant="caption" sx={{ color: "#BDBDBD" }}>
+              Sync necesita video ID valid.
+            </Typography>
+          ) : null}
           {!canRetry ? (
             <Typography variant="caption" sx={{ color: "#BDBDBD" }}>
               Retry este disponibil doar pentru status draft/error cu video ID valid.

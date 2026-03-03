@@ -47,6 +47,7 @@ export default function VarianteCartiPersonalizateTable() {
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [isSyncingElaiStatus, setIsSyncingElaiStatus] = useState(false);
   const [isRetryingElai, setIsRetryingElai] = useState(false);
+  const [isSyncingSingleElai, setIsSyncingSingleElai] = useState(false);
   const [isRetryingSingleElai, setIsRetryingSingleElai] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPayload, setPreviewPayload] = useState({
@@ -90,10 +91,12 @@ export default function VarianteCartiPersonalizateTable() {
       setCarti([...sortedArrCarti]);
       setCategorii([...sortedArrCategorii]);
       setIsLoading(false);
+      return sortedArr;
     } else {
       setIsLoading(false);
       // Handle the case where servicesDB is undefined
       // For example, display an error message or take appropriate action
+      return [];
     }
   };
 
@@ -131,6 +134,60 @@ export default function VarianteCartiPersonalizateTable() {
     setPreviewOpen(false);
   };
 
+  const updatePreviewPayloadFromRows = (rows, recordId, lang) => {
+    const refreshedRow = rows.find((row) => row.id === recordId);
+    if (!refreshedRow) return;
+    setPreviewPayload({
+      recordId,
+      lang,
+      info: refreshedRow?.info?.[lang] || {},
+    });
+  };
+
+  const handleSyncSingleLanguage = async ({ recordId, lang, info }) => {
+    if (isSyncingSingleElai) return;
+    const normalizedInfo = ensureElaiMeta(info);
+    const numericRecordId = Number(recordId);
+    const safeLang = typeof lang === "string" ? lang : "";
+
+    if (!Number.isFinite(numericRecordId) || numericRecordId <= 0 || !safeLang) {
+      alert("Date invalide pentru sync pe limba selectata.");
+      return;
+    }
+
+    if (!normalizedInfo._id) {
+      alert("Lipseste video ID pentru limba selectata.");
+      return;
+    }
+
+    try {
+      setIsSyncingSingleElai(true);
+      const syncResponse = await postElaiStatusSync({
+        targets: [
+          {
+            recordId: numericRecordId,
+            lang: safeLang,
+            videoId: normalizedInfo._id,
+          },
+        ],
+        limit: 1,
+      });
+
+      const refreshedRows = await handleGetData();
+      updatePreviewPayloadFromRows(refreshedRows, numericRecordId, safeLang);
+
+      alert(
+        `Sync ${safeLang.toUpperCase()} finalizat: ${syncResponse?.updated || 0} actualizate, ${
+          Array.isArray(syncResponse?.errors) ? syncResponse.errors.length : 0
+        } erori.`
+      );
+    } catch (error) {
+      alert(`Eroare la sync pe limba selectata: ${error.message}`);
+    } finally {
+      setIsSyncingSingleElai(false);
+    }
+  };
+
   const handleRetrySingleLanguage = async ({ recordId, lang, info }) => {
     if (isRetryingSingleElai) return;
     const normalizedInfo = ensureElaiMeta(info);
@@ -164,7 +221,8 @@ export default function VarianteCartiPersonalizateTable() {
         ],
       });
 
-      await handleGetData();
+      const refreshedRows = await handleGetData();
+      updatePreviewPayloadFromRows(refreshedRows, numericRecordId, safeLang);
 
       alert(
         `Retry ${safeLang.toUpperCase()} finalizat: ${
@@ -616,6 +674,8 @@ export default function VarianteCartiPersonalizateTable() {
         recordId={previewPayload.recordId}
         lang={previewPayload.lang}
         info={previewPayload.info}
+        onSyncSingle={handleSyncSingleLanguage}
+        isSyncingSingle={isSyncingSingleElai}
         onRetrySingle={handleRetrySingleLanguage}
         isRetryingSingle={isRetryingSingleElai}
       />
