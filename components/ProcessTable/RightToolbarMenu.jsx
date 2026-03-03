@@ -130,7 +130,7 @@ export default function RightToolbarMenu(props) {
             onClick={() => props.onRetrySelectedRow?.()}
             disabled={props.rowModeDisabled || props.isRetryingSelectedRow}
           >
-            {props.isRetryingSelectedRow ? "Rendering row..." : "Render selected row"}
+            {props.isRetryingSelectedRow ? "Rendering rows..." : "Render selected rows"}
           </Button>
         )}
         {props.isElaiDownload && (
@@ -141,7 +141,7 @@ export default function RightToolbarMenu(props) {
             onClick={() => props.onSyncSelectedRow?.()}
             disabled={props.rowModeDisabled || props.isSyncingSelectedRow}
           >
-            {props.isSyncingSelectedRow ? "Syncing row..." : "Sync selected row"}
+            {props.isSyncingSelectedRow ? "Syncing rows..." : "Sync selected rows"}
           </Button>
         )}
         {props.isElaiDownload && (

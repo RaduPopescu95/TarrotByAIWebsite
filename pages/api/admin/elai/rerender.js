@@ -9,7 +9,6 @@ import {
 } from "../../../../lib/elaiRtdb";
 import { canRerenderElaiStatus, ensureElaiMeta } from "../../../../utils/elaiStatusUtils";
 
-const MAX_BATCH = 14;
 const MAX_RETRIES = 2;
 const COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
@@ -79,9 +78,6 @@ export default async function handler(req, res) {
   const targets = Array.isArray(req.body?.targets) ? req.body.targets : [];
   if (targets.length === 0) {
     return res.status(400).json({ error: "No rerender targets supplied" });
-  }
-  if (targets.length > MAX_BATCH) {
-    return res.status(400).json({ error: `Max ${MAX_BATCH} targets per run` });
   }
 
   const db = getAdminDb();

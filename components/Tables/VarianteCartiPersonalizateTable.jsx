@@ -28,8 +28,6 @@ import {
 } from "../../utils/elaiStatusUtils";
 import { postElaiRerender, postElaiStatusSync } from "../../utils/elaiAdminApi";
 
-const MAX_RERENDER_BATCH = 14;
-
 export default function VarianteCartiPersonalizateTable() {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
@@ -496,13 +494,6 @@ export default function VarianteCartiPersonalizateTable() {
       return;
     }
 
-    if (targets.length > MAX_RERENDER_BATCH) {
-      alert(
-        `Ai selectat ${targets.length} target-uri. Limita este ${MAX_RERENDER_BATCH} per rulare pentru protectia minutelor.`
-      );
-      return;
-    }
-
     try {
       setIsRetryingElai(true);
       const rerenderResponse = await postElaiRerender({ targets });
@@ -520,41 +511,43 @@ export default function VarianteCartiPersonalizateTable() {
     }
   };
 
-  const getSingleSelectedRow = () => {
-    if (selectedRecordIds.length !== 1) {
-      alert("Selecteaza exact un rand pentru aceasta actiune.");
-      return null;
+  const getSelectedRows = () => {
+    if (selectedRecordIds.length === 0) {
+      alert("Selecteaza cel putin un rand pentru aceasta actiune.");
+      return [];
     }
 
-    const selectedId = selectedRecordIds[0];
-    const row = db.find((item) => item.id === selectedId);
-    if (!row) {
-      alert("Randul selectat nu mai exista. Reincarca datele.");
-      return null;
+    const selectedIdSet = new Set(selectedRecordIds);
+    const selectedRows = db.filter((item) => selectedIdSet.has(item.id));
+    if (selectedRows.length === 0) {
+      alert("Randurile selectate nu mai exista. Reincarca datele.");
+      return [];
     }
 
-    return row;
+    return selectedRows;
   };
 
-  const buildRowTargets = (row, mode = "render") => {
+  const buildTargetsFromRows = (rows = [], mode = "render") => {
     const targets = [];
-    for (const [lang, rawInfo] of Object.entries(row?.info || {})) {
-      const info = ensureElaiMeta(rawInfo);
-      if (!info._id) continue;
+    for (const row of rows) {
+      for (const [lang, rawInfo] of Object.entries(row?.info || {})) {
+        const info = ensureElaiMeta(rawInfo);
+        if (!info._id) continue;
 
-      if (mode === "render" && !canRerenderElaiStatus(info.elaiStatus)) {
-        continue;
+        if (mode === "render" && !canRerenderElaiStatus(info.elaiStatus)) {
+          continue;
+        }
+
+        if (mode === "sync" && normalizeElaiStatus(info.elaiStatus) === "ready") {
+          continue;
+        }
+
+        targets.push({
+          recordId: row.id,
+          lang,
+          videoId: info._id,
+        });
       }
-
-      if (mode === "sync" && normalizeElaiStatus(info.elaiStatus) === "ready") {
-        continue;
-      }
-
-      targets.push({
-        recordId: row.id,
-        lang,
-        videoId: info._id,
-      });
     }
 
     return targets;
@@ -562,19 +555,12 @@ export default function VarianteCartiPersonalizateTable() {
 
   const handleRetrySelectedRow = async () => {
     if (isRetryingSelectedRow) return;
-    const row = getSingleSelectedRow();
-    if (!row) return;
+    const selectedRows = getSelectedRows();
+    if (selectedRows.length === 0) return;
 
-    const targets = buildRowTargets(row, "render");
+    const targets = buildTargetsFromRows(selectedRows, "render");
     if (targets.length === 0) {
-      alert("Nu exista limbi draft/error eligibile pentru render pe randul selectat.");
-      return;
-    }
-
-    if (targets.length > MAX_RERENDER_BATCH) {
-      alert(
-        `Randul selectat are ${targets.length} target-uri eligibile. Limita este ${MAX_RERENDER_BATCH} per rulare.`
-      );
+      alert("Nu exista limbi draft/error eligibile pentru render pe randurile selectate.");
       return;
     }
 
@@ -584,7 +570,7 @@ export default function VarianteCartiPersonalizateTable() {
       await handleGetData();
 
       alert(
-        `Render pe rand finalizat: ${rerenderResponse?.succeeded || 0} succes, ${
+        `Render pe randuri finalizat: ${rerenderResponse?.succeeded || 0} succes, ${
           rerenderResponse?.failed || 0
         } esec.`
       );
@@ -597,12 +583,12 @@ export default function VarianteCartiPersonalizateTable() {
 
   const handleSyncSelectedRow = async () => {
     if (isSyncingSelectedRow) return;
-    const row = getSingleSelectedRow();
-    if (!row) return;
+    const selectedRows = getSelectedRows();
+    if (selectedRows.length === 0) return;
 
-    const targets = buildRowTargets(row, "sync");
+    const targets = buildTargetsFromRows(selectedRows, "sync");
     if (targets.length === 0) {
-      alert("Nu exista limbi non-ready eligibile pentru sync pe randul selectat.");
+      alert("Nu exista limbi non-ready eligibile pentru sync pe randurile selectate.");
       return;
     }
 
@@ -734,7 +720,7 @@ export default function VarianteCartiPersonalizateTable() {
                 onRetrySelectedRow={handleRetrySelectedRow}
                 onSyncSelectedRow={handleSyncSelectedRow}
                 retryDisabled={selectedRecordIds.length === 0}
-                rowModeDisabled={selectedRecordIds.length !== 1}
+                rowModeDisabled={selectedRecordIds.length === 0}
                 isSyncingElaiStatus={isSyncingElaiStatus}
                 isRetryingElai={isRetryingElai}
                 isRetryingSelectedRow={isRetryingSelectedRow}
