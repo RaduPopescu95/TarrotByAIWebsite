@@ -46,8 +46,8 @@ export default function VariatieCartiContainer(props) {
     "sk",
   ];
 
-  const renderLanguageCell = (langInfo) => {
-    const normalized = ensureElaiMeta(langInfo);
+  const renderLanguageCell = (row, lang) => {
+    const normalized = ensureElaiMeta(row?.info?.[lang]);
     const isReady = isElaiReadyWithUrl(normalized);
     const tooltipTitle = getElaiStatusLabel(normalized);
     const shortStatus = normalized.elaiStatus === "unknown" ? "n/a" : normalized.elaiStatus;
@@ -155,8 +155,18 @@ export default function VariatieCartiContainer(props) {
               </TableCell>
               <TableCell style={cellStyle}>{row.id}</TableCell>
               {languages.map((lang) => (
-                <TableCell key={lang} align="center" style={cellStyle}>
-                  {renderLanguageCell(row.info?.[lang])}
+                <TableCell
+                  key={lang}
+                  align="center"
+                  style={cellStyle}
+                  sx={{ cursor: "pointer" }}
+                  onClick={(event) => {
+                    if (!props.onPreviewLanguage) return;
+                    event.stopPropagation();
+                    props.onPreviewLanguage({ row, lang });
+                  }}
+                >
+                  {renderLanguageCell(row, lang)}
                 </TableCell>
               ))}
             </TableRow>

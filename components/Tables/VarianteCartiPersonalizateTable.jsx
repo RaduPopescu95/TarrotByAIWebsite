@@ -14,6 +14,7 @@ import { getCurrentDateTime } from "../../utils/timeUtils";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 
 import DeleteDialog from "../DialogBox/DeleteDialog";
+import ElaiVideoPreviewDialog from "../DialogBox/ElaiVideoPreviewDialog";
 import VarianteCartiPersonalizateFields from "../Dashboard/VarianteCartiPersonalizateFields";
 import VariatieCartiContainer from "../ProcessTable/VariatieCartiContainer";
 import { generateElaiVideoAPI, renderElaiVideoAPI } from "../../utils/apiUtils";
@@ -46,6 +47,12 @@ export default function VarianteCartiPersonalizateTable() {
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [isSyncingElaiStatus, setIsSyncingElaiStatus] = useState(false);
   const [isRetryingElai, setIsRetryingElai] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPayload, setPreviewPayload] = useState({
+    recordId: "",
+    lang: "",
+    info: {},
+  });
 
   const handleSearchFilter = (value) => {
     const lowerCaseValue = value.toLowerCase();
@@ -107,6 +114,20 @@ export default function VarianteCartiPersonalizateTable() {
       }
       return Array.from(current);
     });
+  };
+
+  const handleOpenPreview = ({ row, lang }) => {
+    const info = row?.info?.[lang] || {};
+    setPreviewPayload({
+      recordId: row?.id || "",
+      lang: lang || "",
+      info,
+    });
+    setPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
   };
 
   const handleShowDialog = (item) => {
@@ -523,6 +544,7 @@ export default function VarianteCartiPersonalizateTable() {
                     selectedRecordIds={selectedRecordIds}
                     onToggleRecordSelection={handleToggleRecordSelection}
                     onToggleSelectCurrentPage={handleToggleSelectCurrentPage}
+                    onPreviewLanguage={handleOpenPreview}
                   />
                 )}
               </Stack>
@@ -539,6 +561,13 @@ export default function VarianteCartiPersonalizateTable() {
         openConfirmDialog={openDeleteDialog}
         handleDelete={handleDelete}
         confirmDelete={confirmDelete}
+      />
+      <ElaiVideoPreviewDialog
+        open={previewOpen}
+        onClose={handleClosePreview}
+        recordId={previewPayload.recordId}
+        lang={previewPayload.lang}
+        info={previewPayload.info}
       />
     </>
   );
