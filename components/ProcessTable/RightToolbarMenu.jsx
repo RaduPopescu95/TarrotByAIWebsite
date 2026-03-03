@@ -42,7 +42,10 @@ export default function RightToolbarMenu(props) {
         sx={{
           width: "100%",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
+          flexWrap: "wrap",
+          rowGap: 1,
+          columnGap: 1,
         }}
       >
         <Box
@@ -50,6 +53,8 @@ export default function RightToolbarMenu(props) {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
+            gap: 1,
+            marginRight: 1,
           }}
         >
           <StyledTextField
