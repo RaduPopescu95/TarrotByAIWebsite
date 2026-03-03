@@ -122,6 +122,28 @@ export default function RightToolbarMenu(props) {
             variant="contained"
             sx={headerButtonSx}
             className={classes.buttonHeader}
+            onClick={() => props.onRetrySelectedRow?.()}
+            disabled={props.rowModeDisabled || props.isRetryingSelectedRow}
+          >
+            {props.isRetryingSelectedRow ? "Rendering row..." : "Render selected row"}
+          </Button>
+        )}
+        {props.isElaiDownload && (
+          <Button
+            variant="contained"
+            sx={headerButtonSx}
+            className={classes.buttonHeader}
+            onClick={() => props.onSyncSelectedRow?.()}
+            disabled={props.rowModeDisabled || props.isSyncingSelectedRow}
+          >
+            {props.isSyncingSelectedRow ? "Syncing row..." : "Sync selected row"}
+          </Button>
+        )}
+        {props.isElaiDownload && (
+          <Button
+            variant="contained"
+            sx={headerButtonSx}
+            className={classes.buttonHeader}
             onClick={() => props.onSyncElaiStatus?.()}
             disabled={props.isSyncingElaiStatus}
           >

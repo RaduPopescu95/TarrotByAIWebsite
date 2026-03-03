@@ -23,6 +23,7 @@ import {
   canRerenderElaiStatus,
   computeRecordIsRendering,
   ensureElaiMeta,
+  normalizeElaiStatus,
   normalizeVarianteRecord,
 } from "../../utils/elaiStatusUtils";
 import { postElaiRerender, postElaiStatusSync } from "../../utils/elaiAdminApi";
@@ -47,6 +48,8 @@ export default function VarianteCartiPersonalizateTable() {
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [isSyncingElaiStatus, setIsSyncingElaiStatus] = useState(false);
   const [isRetryingElai, setIsRetryingElai] = useState(false);
+  const [isRetryingSelectedRow, setIsRetryingSelectedRow] = useState(false);
+  const [isSyncingSelectedRow, setIsSyncingSelectedRow] = useState(false);
   const [isSyncingSingleElai, setIsSyncingSingleElai] = useState(false);
   const [isRetryingSingleElai, setIsRetryingSingleElai] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -515,6 +518,112 @@ export default function VarianteCartiPersonalizateTable() {
     }
   };
 
+  const getSingleSelectedRow = () => {
+    if (selectedRecordIds.length !== 1) {
+      alert("Selecteaza exact un rand pentru aceasta actiune.");
+      return null;
+    }
+
+    const selectedId = selectedRecordIds[0];
+    const row = db.find((item) => item.id === selectedId);
+    if (!row) {
+      alert("Randul selectat nu mai exista. Reincarca datele.");
+      return null;
+    }
+
+    return row;
+  };
+
+  const buildRowTargets = (row, mode = "render") => {
+    const targets = [];
+    for (const [lang, rawInfo] of Object.entries(row?.info || {})) {
+      const info = ensureElaiMeta(rawInfo);
+      if (!info._id) continue;
+
+      if (mode === "render" && !canRerenderElaiStatus(info.elaiStatus)) {
+        continue;
+      }
+
+      if (mode === "sync" && normalizeElaiStatus(info.elaiStatus) === "ready") {
+        continue;
+      }
+
+      targets.push({
+        recordId: row.id,
+        lang,
+        videoId: info._id,
+      });
+    }
+
+    return targets;
+  };
+
+  const handleRetrySelectedRow = async () => {
+    if (isRetryingSelectedRow) return;
+    const row = getSingleSelectedRow();
+    if (!row) return;
+
+    const targets = buildRowTargets(row, "render");
+    if (targets.length === 0) {
+      alert("Nu exista limbi draft/error eligibile pentru render pe randul selectat.");
+      return;
+    }
+
+    if (targets.length > 5) {
+      alert(
+        `Randul selectat are ${targets.length} target-uri eligibile. Limita este 5 per rulare.`
+      );
+      return;
+    }
+
+    try {
+      setIsRetryingSelectedRow(true);
+      const rerenderResponse = await postElaiRerender({ targets });
+      await handleGetData();
+
+      alert(
+        `Render pe rand finalizat: ${rerenderResponse?.succeeded || 0} succes, ${
+          rerenderResponse?.failed || 0
+        } esec.`
+      );
+    } catch (error) {
+      alert(`Eroare la render pe rand: ${error.message}`);
+    } finally {
+      setIsRetryingSelectedRow(false);
+    }
+  };
+
+  const handleSyncSelectedRow = async () => {
+    if (isSyncingSelectedRow) return;
+    const row = getSingleSelectedRow();
+    if (!row) return;
+
+    const targets = buildRowTargets(row, "sync");
+    if (targets.length === 0) {
+      alert("Nu exista limbi non-ready eligibile pentru sync pe randul selectat.");
+      return;
+    }
+
+    try {
+      setIsSyncingSelectedRow(true);
+      const response = await postElaiStatusSync({
+        targets,
+        limit: targets.length,
+      });
+      await handleGetData();
+
+      alert(
+        `Sync pe rand finalizat: ${response?.processed || 0} verificate, ${
+          response?.updated || 0
+        } actualizate, ${Array.isArray(response?.errors) ? response.errors.length : 0} erori.`
+      );
+    } catch (error) {
+      alert(`Eroare la sync pe rand: ${error.message}`);
+    } finally {
+      setIsSyncingSelectedRow(false);
+    }
+  };
+
   const handleShowSoloPopup = () => {
     setOpenSoloPopup(!openSoloPopup);
   };
@@ -620,9 +729,14 @@ export default function VarianteCartiPersonalizateTable() {
                 handleSearchFilter={handleSearchFilter}
                 onSyncElaiStatus={handleSyncElaiStatus}
                 onRetrySelected={handleRetrySelected}
+                onRetrySelectedRow={handleRetrySelectedRow}
+                onSyncSelectedRow={handleSyncSelectedRow}
                 retryDisabled={selectedRecordIds.length === 0}
+                rowModeDisabled={selectedRecordIds.length !== 1}
                 isSyncingElaiStatus={isSyncingElaiStatus}
                 isRetryingElai={isRetryingElai}
+                isRetryingSelectedRow={isRetryingSelectedRow}
+                isSyncingSelectedRow={isSyncingSelectedRow}
               />
               <TableToolbar />
 

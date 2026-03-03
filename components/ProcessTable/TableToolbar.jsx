@@ -38,9 +38,14 @@ export default function TableToolbar(props) {
                 handleSearchFilter={props.handleSearchFilter}
                 onSyncElaiStatus={props.onSyncElaiStatus}
                 onRetrySelected={props.onRetrySelected}
+                onRetrySelectedRow={props.onRetrySelectedRow}
+                onSyncSelectedRow={props.onSyncSelectedRow}
                 retryDisabled={props.retryDisabled}
+                rowModeDisabled={props.rowModeDisabled}
                 isSyncingElaiStatus={props.isSyncingElaiStatus}
                 isRetryingElai={props.isRetryingElai}
+                isRetryingSelectedRow={props.isRetryingSelectedRow}
+                isSyncingSelectedRow={props.isSyncingSelectedRow}
               />
             </Stack>
           </Toolbar>
