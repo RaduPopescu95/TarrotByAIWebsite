@@ -1,4 +1,3 @@
-const CNP_CONTROL_KEY = "279146358279";
 const CIF_CONTROL_KEY = "753217532";
 const SECTOR_CITY_VALUES = new Set([
   "Sector 1",
@@ -88,52 +87,12 @@ function normalizeCityName(value) {
 }
 
 export function validateRomanianCnp(value) {
-  const digits = sanitizeString(value, 32).replace(/\D/g, "");
-  if (digits.length !== 13) {
-    return { valid: false, normalized: digits, reason: "CNP must have 13 digits" };
+  const normalized = sanitizeString(value, 32);
+  if (!normalized) {
+    return { valid: false, normalized: "", reason: "CNP is required" };
   }
 
-  const firstDigit = Number(digits[0]);
-  if (!Number.isInteger(firstDigit) || firstDigit < 1 || firstDigit > 9) {
-    return { valid: false, normalized: digits, reason: "Invalid CNP prefix" };
-  }
-
-  const year = Number(digits.slice(1, 3));
-  const month = Number(digits.slice(3, 5));
-  const day = Number(digits.slice(5, 7));
-  const centuryByPrefix = {
-    1: 1900,
-    2: 1900,
-    3: 1800,
-    4: 1800,
-    5: 2000,
-    6: 2000,
-    7: 2000,
-    8: 2000,
-    9: 1900,
-  };
-  const century = centuryByPrefix[firstDigit];
-  const fullYear = century + year;
-  const birthDate = new Date(fullYear, month - 1, day);
-  const validDate =
-    birthDate.getFullYear() === fullYear &&
-    birthDate.getMonth() === month - 1 &&
-    birthDate.getDate() === day;
-  if (!validDate) {
-    return { valid: false, normalized: digits, reason: "Invalid CNP date" };
-  }
-
-  let checksum = 0;
-  for (let index = 0; index < 12; index += 1) {
-    checksum += Number(digits[index]) * Number(CNP_CONTROL_KEY[index]);
-  }
-  checksum %= 11;
-  if (checksum === 10) checksum = 1;
-  if (checksum !== Number(digits[12])) {
-    return { valid: false, normalized: digits, reason: "Invalid CNP checksum" };
-  }
-
-  return { valid: true, normalized: digits };
+  return { valid: true, normalized };
 }
 
 export function validateRomanianCif(value) {
