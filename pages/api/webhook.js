@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { handleUploadFirestoreGeneral, handleGetFirestore } from "../../utils/firestoreUtils";
 import { createOlbioInvoice } from "../../utils/olbioClient";
 import { v4 as uuidv4 } from "uuid"; // Pentru generarea meetingCode identic cu frontend-ul
+import { getAdminDb } from "../../lib/firebaseAdmin";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -95,6 +96,9 @@ export default async (req, res) => {
           }
 
           console.log(`✅ [${requestId}] Session nou, continuă procesarea...`);
+          const db = getAdminDb();
+          const checkoutSnap = await db.collection("consultationCheckoutSessions").doc(session_id).get();
+          const checkoutAudit = checkoutSnap.exists ? checkoutSnap.data() || {} : {};
 
           // 2. Generează meetingCode (identic cu frontend-ul)
           const meetingCode = uuidv4();
@@ -115,6 +119,15 @@ export default async (req, res) => {
             meetingActive: false, // ✅ Identic cu frontend
             owner_uid: session.metadata.owner_uid || "", // ✅ Identic cu frontend
             adresaClient: session.metadata.adresaClient || "", // ✅ Identic cu frontend
+            rawFormValues: checkoutAudit.rawFormValues || null,
+            normalizedBeforeCheckout: checkoutAudit.normalizedBeforeCheckout || null,
+            checkoutRequestPayload: checkoutAudit.checkoutRequestPayload || null,
+            stripeMetadataSnapshot: checkoutAudit.stripeMetadataSnapshot || session.metadata || null,
+            storedBillingSnapshot: {
+              metadata: session.metadata || {},
+              customerDetails: session.customer_details || null,
+            },
+            invoiceDecision: checkoutAudit.invoiceDecision || null,
           };
 
           console.log(`💳 [${requestId}] Date rezervare construite:`, JSON.stringify(rezervareData, null, 2));
@@ -137,6 +150,17 @@ export default async (req, res) => {
               rezervareData,
               session
             });
+            if (invoice?.audit && data?.documentId) {
+              await db.collection("RezervariConsultatii").doc(data.documentId).set(
+                {
+                  finalOblioPayload: invoice.audit.finalOblioPayload || null,
+                  oblioResponse: invoice.audit.oblioResponse || invoice || null,
+                  invoiceDecision: invoice.audit.invoiceDecision || rezervareData.invoiceDecision || null,
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              );
+            }
             if (invoice?.id || invoice?.documentId) {
               console.log(`🧾 [${requestId}] Factură creată cu succes în Olbio`, invoice?.id || invoice?.documentId);
             } else {

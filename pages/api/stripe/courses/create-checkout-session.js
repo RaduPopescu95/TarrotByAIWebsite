@@ -2,6 +2,11 @@ import Stripe from "stripe";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../../lib/requireAuth";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../../utils/billingAudit.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
@@ -196,6 +201,7 @@ function normalizeBillingDetails(rawBilling, fallbackEmail = "") {
     billingType,
     firstName,
     lastName,
+    cnp: sanitizeString(rawBilling.cnp, 32),
     email,
     phone,
     address,
@@ -378,6 +384,43 @@ export default async function handler(req, res) {
   try {
     const db = getAdminDb();
     const billingDetails = normalizeBillingDetails(rawBillingDetails, authUser.email || "");
+    const billingAudit = normalizeBillingContext(
+      {
+        ...(rawBillingDetails || {}),
+        ...(billingDetails || {}),
+        companyName: billingDetails?.company?.name,
+        cif: billingDetails?.company?.vat,
+        cnp: rawBillingDetails?.cnp,
+        reg: billingDetails?.company?.reg,
+        address: billingDetails?.billingType === "corporate" ? billingDetails?.company?.address : billingDetails?.address?.line1,
+        state: billingDetails?.address?.state,
+        city: billingDetails?.address?.city,
+        country: billingDetails?.address?.country,
+        postalCode: billingDetails?.address?.postalCode,
+        contact: `${billingDetails?.firstName || ""} ${billingDetails?.lastName || ""}`.trim(),
+        name:
+          billingDetails?.billingType === "corporate"
+            ? billingDetails?.company?.name
+            : `${billingDetails?.firstName || ""} ${billingDetails?.lastName || ""}`.trim(),
+        email: billingDetails?.email || authUser.email || "",
+        phone: billingDetails?.phone || "",
+      },
+      { defaultCountry: "Romania" }
+    );
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "courses",
+      stage: "api_checkout_received",
+      raw: rawBillingDetails || {},
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
+      return res.status(400).json({
+        error: billingAudit.validation.blockingErrors[0]?.message || "Invalid billing details",
+        details: billingAudit.validation.blockingErrors,
+      });
+    }
     const snap = await db.collection("courses").doc(courseId).get();
     if (!snap.exists) {
       console.warn("[courses.checkout] course_not_found", {
@@ -447,7 +490,7 @@ export default async function handler(req, res) {
       expectedCurrency: currency.toUpperCase(),
       sourcePlatform,
       invoiceSendEmail: String(billingDetails?.invoicePreferences?.sendEmail !== false),
-      invoiceEInvoice: String(billingDetails?.invoicePreferences?.eInvoice === true),
+      invoiceEInvoice: String(invoiceDecision.sendEInvoice),
     };
     if (billingDetails?.billingType) {
       metadata.billingType = billingDetails.billingType;
@@ -458,6 +501,8 @@ export default async function handler(req, res) {
     ) {
       metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
     }
+    metadata.invoiceDeliveryInRomania = String(billingAudit.normalizedClient.deliveryInRomania);
+    metadata.invoiceEligibleForEInvoice = String(billingAudit.normalizedClient.eligibleForEInvoice);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -498,6 +543,11 @@ export default async function handler(req, res) {
       if (billingDetails) {
         checkoutSessionPayload.billing = billingDetails;
       }
+      checkoutSessionPayload.rawFormValues = rawBillingDetails || null;
+      checkoutSessionPayload.normalizedBeforeCheckout = billingAudit.normalizedClient;
+      checkoutSessionPayload.checkoutRequestPayload = req.body || {};
+      checkoutSessionPayload.stripeMetadataSnapshot = metadata;
+      checkoutSessionPayload.invoiceDecision = invoiceDecision;
       await db
         .collection(CHECKOUT_SESSION_COLLECTION)
         .doc(session.id)

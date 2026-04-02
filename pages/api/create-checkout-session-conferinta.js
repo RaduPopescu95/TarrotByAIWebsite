@@ -1,5 +1,10 @@
 import Stripe from 'stripe';
 import { handleUploadFirestoreGeneral, handleUpdateFirestore } from '../../utils/firestoreUtils';
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from '../../utils/billingAudit.mjs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -81,7 +86,9 @@ export default async function handler(req, res) {
       paymentMethod,
       sendInvoiceEmail,
       eInvoice,
-      dueDays
+      dueDays,
+      rawFormValues,
+      normalizedBeforeCheckout
     } = req.body;
 
     console.log(`💳 [${checkoutId}] Date primite:`, {
@@ -134,6 +141,41 @@ export default async function handler(req, res) {
 
     console.log(`✅ [${checkoutId}] Validarea datelor a trecut cu succes`);
 
+    const billingAudit = normalizeBillingContext(
+      {
+        ...(rawFormValues || {}),
+        billingType: buyerType,
+        companyName: buyerCompanyName,
+        cif: buyerCif,
+        cnp: buyerCnp,
+        reg: buyerRegCom,
+        address: buyerStreet,
+        state: buyerCounty,
+        city: buyerCity,
+        country: buyerCountry,
+        contact: buyerContactName,
+        email: buyerEmailMeta || participantData?.email,
+        phone: buyerPhoneMeta || participantData?.telefon,
+        name: buyerContactName || `${participantData?.prenume || ""} ${participantData?.nume || ""}`.trim(),
+      },
+      { defaultCountry: "Romania" }
+    );
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "conference",
+      stage: "api_checkout_received",
+      requestId: checkoutId,
+      raw: rawFormValues || req.body,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
+      return res.status(400).json({
+        error: "Invalid billing details",
+        details: billingAudit.validation.blockingErrors,
+      });
+    }
+
     // Pregătește metadata pentru Stripe
     const metadata = {
       conferintaId: conferintaId,
@@ -168,8 +210,10 @@ export default async function handler(req, res) {
       ...(measureCode ? { measureCode } : {}),
       ...(paymentMethod ? { paymentMethod } : {}),
       ...(typeof sendInvoiceEmail !== "undefined" ? { sendInvoiceEmail: String(!!sendInvoiceEmail) } : {}),
-      ...(typeof eInvoice !== "undefined" ? { eInvoice: String(!!eInvoice) } : {}),
-      ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {})
+      eInvoice: String(invoiceDecision.sendEInvoice),
+      ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {}),
+      invoiceDeliveryInRomania: String(billingAudit.normalizedClient.deliveryInRomania),
+      invoiceEligibleForEInvoice: String(billingAudit.normalizedClient.eligibleForEInvoice),
     };
 
     console.log(`💳 [${checkoutId}] Metadata pregătită pentru Stripe:`, metadata);
@@ -233,7 +277,15 @@ export default async function handler(req, res) {
         oraFinal: oraFinal
       },
       checkoutId: checkoutId,
-      metadata: metadata
+      metadata: metadata,
+      rawFormValues: rawFormValues || null,
+      normalizedBeforeCheckout:
+        normalizedBeforeCheckout && typeof normalizedBeforeCheckout === "object"
+          ? normalizedBeforeCheckout
+          : billingAudit.normalizedClient,
+      checkoutRequestPayload: req.body,
+      stripeMetadataSnapshot: metadata,
+      invoiceDecision,
     };
 
     console.log(`💳 [${checkoutId}] Date sesiune pentru Firestore:`, JSON.stringify(paymentSession, null, 2));

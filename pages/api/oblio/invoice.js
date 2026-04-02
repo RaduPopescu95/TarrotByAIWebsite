@@ -1,6 +1,12 @@
 import Stripe from "stripe";
 import { createOlbioInvoiceFromPayload } from "../../../utils/olbioClient";
 import { handleQueryFirestore, handleUpdateFirestore } from "../../../utils/firestoreUtils";
+import {
+  buildInvoiceDecision,
+  buildOblioClientFromNormalized,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../utils/billingAudit.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -25,14 +31,14 @@ function getSellerVatConfig() {
     sellerVatPayer: true,
     vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
     vatIncluded: 1,
-    vatName: "Normala"
+    vatName: "Normala",
   };
 }
 
 function getBearerToken(req) {
-  const h = req.headers?.authorization || "";
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m ? m[1] : "";
+  const header = req.headers?.authorization || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1] : "";
 }
 
 function todayISO() {
@@ -40,14 +46,14 @@ function todayISO() {
 }
 
 function toNumber(val, fallback = 0) {
-  const n = typeof val === "string" ? Number(val) : val;
-  return Number.isFinite(n) ? n : fallback;
+  const parsed = typeof val === "string" ? Number(val) : val;
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function roundTo(val, decimals = 2) {
-  const n = toNumber(val, 0);
-  const m = Math.pow(10, decimals);
-  return Math.round(n * m) / m;
+  const number = toNumber(val, 0);
+  const factor = Math.pow(10, decimals);
+  return Math.round(number * factor) / factor;
 }
 
 export default async function handler(req, res) {
@@ -61,7 +67,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1) Auth
     const secret =
       process.env.INVOICE_SHARED_SECRET ||
       process.env.NEXT_OBLIO_INVOICE_SHARED_SECRET ||
@@ -78,14 +83,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Unauthorized", requestId });
     }
 
-    // 2) Validate payload
-    const {
-      transactionId,
-      customer,
-      productCode,
-      invoice,
-      meta
-    } = req.body || {};
+    const { transactionId, customer, productCode, invoice, meta } = req.body || {};
 
     if (!transactionId || typeof transactionId !== "string") {
       return res.status(400).json({ error: "Missing transactionId", requestId });
@@ -97,83 +95,71 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing productCode", requestId });
     }
 
-    const firstName = customer?.firstName || "";
-    const lastName = customer?.lastName || "";
-    const email = customer?.email || "";
-    const phone = customer?.phone || "";
-    const billingType =
-      customer?.billingType ||
-      (customer?.company ? "corporate" : "individual"); // optional
-    const company = customer?.company || {};
-    const addr = customer?.address || {};
-    const line1 = addr?.line1 || "";
-    const city = addr?.city || "";
-    const state = addr?.state || addr?.stateCounty || "";
-    const postalCode = addr?.postal_code || addr?.postalCode || "";
-    const country = addr?.country || "";
-
-    if (!firstName || !lastName || !email || !phone) {
+    const billingAudit = normalizeBillingContext(
+      {
+        billingType: customer?.billingType,
+        firstName: customer?.firstName,
+        lastName: customer?.lastName,
+        name: customer?.name,
+        companyName: customer?.company?.name || customer?.company?.company,
+        cif: customer?.company?.vat || customer?.company?.cif || customer?.company?.companyVAT,
+        cnp: customer?.cnp,
+        reg: customer?.company?.reg || customer?.company?.rc || customer?.company?.companyReg,
+        address:
+          customer?.billingType === "corporate"
+            ? customer?.company?.address || customer?.company?.companyAddress
+            : customer?.address?.line1,
+        state: customer?.address?.state || customer?.address?.stateCounty,
+        city: customer?.address?.city,
+        country: customer?.address?.country,
+        postalCode: customer?.address?.postal_code || customer?.address?.postalCode,
+        contact: customer?.contact || `${customer?.firstName || ""} ${customer?.lastName || ""}`.trim(),
+        email: customer?.email,
+        phone: customer?.phone,
+      },
+      { defaultCountry: "Romania" }
+    );
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "mobile",
+      stage: "api_checkout_received",
+      requestId,
+      raw: customer,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
       return res.status(400).json({
-        error: "Missing customer identity fields",
+        error: "Invalid billing details",
         requestId,
-        details: { firstName: !!firstName, lastName: !!lastName, email: !!email, phone: !!phone }
+        details: billingAudit.validation.blockingErrors,
       });
     }
-    if (!line1 || !city || !state || !postalCode || !country) {
-      return res.status(400).json({
-        error: "Missing customer address fields",
-        requestId,
-        details: { line1: !!line1, city: !!city, state: !!state, postalCode: !!postalCode, country: !!country }
-      });
-    }
 
-    // Optional corporate validation
-    if (billingType === "corporate") {
-      const companyName = company?.name || company?.company || "";
-      const companyVAT = company?.vat || company?.cif || company?.companyVAT || "";
-      const companyAddress = company?.address || company?.companyAddress || "";
-      if (!companyName || !companyVAT || !companyAddress) {
-        return res.status(400).json({
-          error: "Missing corporate billing fields",
-          requestId,
-          details: { companyName: !!companyName, companyVAT: !!companyVAT, companyAddress: !!companyAddress }
-        });
-      }
-    }
-
-    // 3) Idempotency: return existing invoice if present
-    // Using query by field for compatibility with existing Firestore helper API.
     const existingArr = await handleQueryFirestore("OblioInvoices", "transactionId", transactionId);
     const existing = Array.isArray(existingArr) ? existingArr[0] : null;
     if (existing) {
       if (existing.status === "created" && existing.oblio?.seriesName && existing.oblio?.number) {
-        console.log(`[OBLIO_API] [${requestId}] Idempotency hit for ${transactionId}`);
         return res.status(200).json({
           requestId,
           transactionId,
-          oblio: existing.oblio
+          oblio: existing.oblio,
         });
       }
-      // If another request is already processing this transactionId, ask client to retry later
       if (existing.status === "processing" && existing.requestId && existing.requestId !== requestId) {
-        console.log(`[OBLIO_API] [${requestId}] Already processing ${transactionId} (requestId=${existing.requestId})`);
         return res.status(202).json({
           requestId,
           transactionId,
-          status: "processing"
+          status: "processing",
         });
       }
     }
 
-    // 4) Stripe verification
-    console.log(`[OBLIO_API] [${requestId}] Retrieving Stripe PaymentIntent ${transactionId}`);
     const pi = await stripe.paymentIntents.retrieve(transactionId);
     const piStatus = pi?.status;
     const piCurrency = (pi?.currency || "").toLowerCase();
     const piAmount = typeof pi?.amount_received === "number" ? pi.amount_received : pi?.amount;
     const amountRON = roundTo(Math.round(toNumber(piAmount, 0)) / 100, 2);
-
-    console.log(`[OBLIO_API] [${requestId}] Stripe status=${piStatus} currency=${piCurrency} amount=${amountRON}`);
 
     if (piStatus !== "succeeded") {
       return res.status(400).json({ error: "Payment not succeeded", requestId, stripe: { status: piStatus } });
@@ -182,26 +168,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid currency", requestId, stripe: { currency: piCurrency } });
     }
 
-    // Mark processing (best-effort lock) to reduce duplicate invoices
     try {
       await handleUpdateFirestore(`OblioInvoices/${transactionId}`, {
         transactionId,
         requestId,
         status: "processing",
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
-    } catch (e) {
-      console.warn(`[OBLIO_API] [${requestId}] Failed to mark processing:`, e?.message || e);
+    } catch (error) {
+      console.warn(`[OBLIO_API] [${requestId}] Failed to mark processing:`, error?.message || error);
     }
 
-    // 5) Build Oblio invoice payload
     const oblioCif = process.env.OBLIO_CIF || process.env.OBLIO_COMPANY_CIF || "";
     const oblioSeries = process.env.OBLIO_SERIES || "";
     if (!oblioCif || !oblioSeries) {
       return res.status(500).json({
         error: "Oblio not configured",
         requestId,
-        details: { hasCif: !!oblioCif, hasSeries: !!oblioSeries }
+        details: { hasCif: !!oblioCif, hasSeries: !!oblioSeries },
       });
     }
 
@@ -210,100 +194,81 @@ export default async function handler(req, res) {
     const currency = invoice?.currency || "RON";
     const precision = typeof invoice?.precision === "number" ? invoice.precision : 2;
     const sendEmail = invoice?.sendEmail === false ? 0 : 1;
-
     const vatCfg = getSellerVatConfig();
 
-    // Map productCode/meta.feature -> invoice line
     const productMap = {
       astrogama_natala: {
         name: "Analiză Astrogramă Natală",
-        description: "Serviciu digital - analiză astrogramă natală"
+        description: "Serviciu digital - analiză astrogramă natală",
       },
       astrogama_natala_other_person: {
         name: "Analiză Astrogramă Natală (altă persoană)",
-        description: "Serviciu digital - analiză astrogramă natală pentru altă persoană"
+        description: "Serviciu digital - analiză astrogramă natală pentru altă persoană",
       },
       sinastrie_relatie: {
         name: "Analiză Sinastrie Relație",
-        description: "Serviciu digital - analiză sinastrie relație"
+        description: "Serviciu digital - analiză sinastrie relație",
       },
       sinastrie_relatie_others: {
         name: "Analiză Sinastrie Relație (others)",
-        description: "Serviciu digital - analiză sinastrie relație (others)"
-      }
+        description: "Serviciu digital - analiză sinastrie relație (others)",
+      },
     };
     const mapped = productMap[productCode] || {
       name: meta?.feature || "Serviciu digital",
-      description: `Serviciu digital (${productCode})`
+      description: `Serviciu digital (${productCode})`,
     };
-
-    // To avoid rounding mismatches, use vatIncluded=1 and price=gross (Oblio expects 0/1 reliably)
-    const products = [
-      {
-        name: mapped.name,
-        description: mapped.description,
-        price: amountRON,
-        measuringUnit: "bucată",
-        vatName: vatCfg.vatName,
-        vatPercentage: vatCfg.vatPercentage,
-        vatIncluded: vatCfg.vatIncluded,
-        quantity: 1,
-        productType: "Serviciu"
-      }
-    ];
 
     const oblioPayload = {
       cif: oblioCif,
-      client:
-        billingType === "corporate"
-          ? {
-              cif: company?.vat || company?.cif || company?.companyVAT || "",
-              name: company?.name || company?.company || "",
-              rc: company?.reg || company?.rc || company?.companyReg || "",
-              address: company?.address || company?.companyAddress || "",
-              email,
-              phone,
-              contact: `${firstName} ${lastName}`.trim(),
-              vatPayer: true,
-              save: 1
-            }
-          : {
-              name: `${firstName} ${lastName}`.trim(),
-              address: line1,
-              city,
-              state,
-              country,
-              email,
-              phone,
-              vatPayer: false,
-              save: 1
-            },
+      client: buildOblioClientFromNormalized(billingAudit.normalizedClient),
       issueDate,
       seriesName: oblioSeries,
       language,
       precision,
       currency,
       sendEmail,
-      products,
+      sendEInvoice: invoiceDecision.sendEInvoice ? 1 : 0,
+      products: [
+        {
+          name: mapped.name,
+          description: mapped.description,
+          price: amountRON,
+          measuringUnit: "bucată",
+          vatName: vatCfg.vatName,
+          vatPercentage: vatCfg.vatPercentage,
+          vatIncluded: vatCfg.vatIncluded,
+          quantity: 1,
+          productType: "Serviciu",
+        },
+      ],
       mentions: `Factura generată automat (mobile). Stripe PI: ${transactionId}.`,
-      internalNote: `transactionId:${transactionId} requestId:${requestId} productCode:${productCode} feature:${meta?.feature || ""}`,
+      internalNote: `transactionId:${transactionId} requestId:${requestId} productCode:${productCode} eInvoice=${invoiceDecision.sendEInvoice ? "1" : "0"}`,
       collect: {
         type: "Card",
         documentNumber: `STRIPE-${transactionId}`,
         value: amountRON,
         issueDate,
-        mentions: "Plată procesată prin Stripe"
-      }
+        mentions: "Plată procesată prin Stripe",
+      },
     };
 
-    // 6) Create invoice in Oblio
+    logBillingAudit({
+      flow: "mobile",
+      stage: "oblio_payload",
+      requestId,
+      transactionId,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+      oblioPayload,
+    });
+
     const oblioResp = await createOlbioInvoiceFromPayload({
       invoicePayload: oblioPayload,
-      requestId
+      requestId,
     });
 
     if (!oblioResp || oblioResp.status !== 200 || !oblioResp.data) {
-      // Persist failure for troubleshooting
       await handleUpdateFirestore(`OblioInvoices/${transactionId}`, {
         transactionId,
         requestId,
@@ -312,18 +277,21 @@ export default async function handler(req, res) {
         stripe: {
           amount: amountRON,
           currency: piCurrency,
-          customerEmail: email,
-          status: piStatus
+          customerEmail: billingAudit.normalizedClient.email,
+          status: piStatus,
         },
         oblio: {
-          raw: oblioResp || null
-        }
+          raw: oblioResp || null,
+          finalOblioPayload: oblioPayload,
+          normalizedClient: billingAudit.normalizedClient,
+          invoiceDecision,
+        },
       });
 
       return res.status(502).json({
         error: "Oblio invoice failed",
         requestId,
-        transactionId
+        transactionId,
       });
     }
 
@@ -332,10 +300,9 @@ export default async function handler(req, res) {
       number: oblioResp.data.number,
       link: oblioResp.data.link,
       total: amountRON,
-      currency: "RON"
+      currency: "RON",
     };
 
-    // 7) Persist idempotency record
     await handleUpdateFirestore(`OblioInvoices/${transactionId}`, {
       transactionId,
       requestId,
@@ -344,21 +311,25 @@ export default async function handler(req, res) {
       stripe: {
         amount: amountRON,
         currency: piCurrency,
-        customerEmail: email,
-        status: piStatus
+        customerEmail: billingAudit.normalizedClient.email,
+        status: piStatus,
       },
-      oblio: result
+      oblio: {
+        ...result,
+        finalOblioPayload: oblioPayload,
+        rawCustomer: customer,
+        normalizedClient: billingAudit.normalizedClient,
+        invoiceDecision,
+      },
     });
 
     return res.status(200).json({
       requestId,
       transactionId,
-      oblio: result
+      oblio: result,
     });
   } catch (err) {
     console.error(`[OBLIO_API] [${requestId}] Unexpected error:`, err?.message || err);
     return res.status(500).json({ error: "Internal server error", requestId });
   }
 }
-
-

@@ -3,6 +3,12 @@ import { buffer } from "micro";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { createOlbioInvoiceFromPayload } from "../../../../utils/olbioClient";
+import {
+  buildInvoiceDecision,
+  buildOblioClientFromNormalized,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../../utils/billingAudit.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const HANDLED_EVENTS = new Set([
@@ -202,6 +208,7 @@ function normalizeCourseBilling(checkoutSessionData, session) {
     reg: sanitizeString(rawCompany.reg || rawCompany.rc, 64),
     address: sanitizeString(rawCompany.address, 255),
   };
+  const cnp = sanitizeString(storedBilling.cnp, 32);
 
   const storedPreferences =
     storedBilling.invoicePreferences &&
@@ -243,6 +250,7 @@ function normalizeCourseBilling(checkoutSessionData, session) {
     lastName,
     email,
     phone,
+    cnp,
     address,
     company,
     invoicePreferences,
@@ -425,10 +433,43 @@ async function createCourseOblioInvoice(db, event, session) {
 
   const checkoutSessionData = checkoutSessionSnap.exists ? checkoutSessionSnap.data() || {} : {};
   const billing = normalizeCourseBilling(checkoutSessionData, session);
-  if (!hasMinimumInvoiceFields(billing)) {
+  const billingAudit = normalizeBillingContext(
+    {
+      ...(checkoutSessionData?.rawFormValues || {}),
+      ...(billing || {}),
+      companyName: billing?.company?.name,
+      cif: billing?.company?.vat,
+      cnp: billing?.cnp || checkoutSessionData?.rawFormValues?.cnp,
+      reg: billing?.company?.reg,
+      address: billing?.billingType === "corporate" ? billing?.company?.address : billing?.address?.line1,
+      state: billing?.address?.state,
+      city: billing?.address?.city,
+      country: billing?.address?.country,
+      postalCode: billing?.address?.postalCode,
+      contact: `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim(),
+      name:
+        billing?.billingType === "corporate"
+          ? billing?.company?.name
+          : `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim(),
+      email: billing?.email,
+      phone: billing?.phone,
+    },
+    { defaultCountry: "Romania" }
+  );
+  const invoiceDecision = buildInvoiceDecision(billingAudit);
+  logBillingAudit({
+    flow: "courses",
+    stage: "webhook_pre_oblio",
+    requestId: `course_inv_${checkoutSessionId}`,
+    sessionId: checkoutSessionId,
+    raw: checkoutSessionData?.rawFormValues || billing,
+    normalized: billingAudit.normalizedClient,
+    decision: invoiceDecision,
+  });
+  if (!invoiceDecision.emitInvoice) {
     const skippedPayload = {
       status: "skipped_missing_billing",
-      reason: "Missing required billing fields",
+      reason: invoiceDecision.blockedReason || "Missing required billing fields",
       checkoutSessionId,
       courseId,
       uid,
@@ -471,6 +512,7 @@ async function createCourseOblioInvoice(db, event, session) {
     precision: 2,
     currency,
     sendEmail: invoicePreferences.sendEmail === false ? 0 : 1,
+    sendEInvoice: invoiceDecision.sendEInvoice ? 1 : 0,
     products: [
       {
         name: courseTitle,
@@ -485,7 +527,7 @@ async function createCourseOblioInvoice(db, event, session) {
       },
     ],
     mentions: `Factura generata automat pentru curs. Stripe session: ${checkoutSessionId}`,
-    internalNote: `courseId=${courseId}; uid=${uid}; eInvoice=${invoicePreferences.eInvoice ? "1" : "0"}; dueDays=${invoicePreferences.dueDays ?? ""}`,
+    internalNote: `courseId=${courseId}; uid=${uid}; eInvoice=${invoiceDecision.sendEInvoice ? "1" : "0"}; dueDays=${invoicePreferences.dueDays ?? ""}`,
     collect: {
       type: "Card",
       documentNumber: `STRIPE-${checkoutSessionId}`,
@@ -494,6 +536,7 @@ async function createCourseOblioInvoice(db, event, session) {
       mentions: "Plata procesata prin Stripe",
     },
   };
+  invoicePayload.client = buildOblioClientFromNormalized(billingAudit.normalizedClient);
 
   const requestId = `course_inv_${checkoutSessionId}_${Date.now()}`;
   const oblioResp = await createOlbioInvoiceFromPayload({
@@ -510,6 +553,9 @@ async function createCourseOblioInvoice(db, event, session) {
       uid,
       eventType: event.type,
       errorText: sanitizeString(oblioResp?.errorText || "Oblio invoice failed", 500),
+      finalOblioPayload: invoicePayload,
+      normalizedClient: billingAudit.normalizedClient,
+      invoiceDecision,
       updatedAt: FieldValue.serverTimestamp(),
     };
     await paymentRef.set({ oblio: errorPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -553,6 +599,9 @@ async function createCourseOblioInvoice(db, event, session) {
           : "",
         128
       ) || null,
+    finalOblioPayload: invoicePayload,
+    normalizedClient: billingAudit.normalizedClient,
+    invoiceDecision,
     updatedAt: FieldValue.serverTimestamp(),
   };
 

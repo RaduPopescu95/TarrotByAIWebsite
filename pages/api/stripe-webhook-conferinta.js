@@ -155,11 +155,12 @@ async function handleSuccessfulPayment(session, requestId) {
 
     // 1. Actualizez sesiunea de plată în Firestore (dacă există)
     console.log(`💳 [${requestId}] [${paymentId}] Verifică sesiunea de plată existentă...`);
+    let paymentSession = null;
     try {
       const platiConferinte = await handleGetFirestore('PlatiConferinteGrup');
       console.log(`💳 [${requestId}] [${paymentId}] Plăți încărcate: ${platiConferinte.length} în total`);
       
-      const paymentSession = platiConferinte.find(p => p.stripeSessionId === session.id);
+      paymentSession = platiConferinte.find(p => p.stripeSessionId === session.id) || null;
       
       if (paymentSession) {
         console.log(`💳 [${requestId}] [${paymentId}] Sesiune de plată găsită, actualizez...`);
@@ -223,6 +224,13 @@ async function handleSuccessfulPayment(session, requestId) {
       isGuestUser: !userId.includes('@'), // Simplu check dacă nu este email, probabil este guest
       accessLink: uniqueAccessLink // Pentru compatibilitate cu structura existentă
     };
+    if (paymentSession?.rawFormValues) {
+      newParticipant.rawFormValues = paymentSession.rawFormValues;
+      newParticipant.normalizedBeforeCheckout = paymentSession.normalizedBeforeCheckout || null;
+      newParticipant.checkoutRequestPayload = paymentSession.checkoutRequestPayload || null;
+      newParticipant.stripeMetadataSnapshot = paymentSession.stripeMetadataSnapshot || session.metadata || null;
+      newParticipant.invoiceDecision = paymentSession.invoiceDecision || null;
+    }
 
     console.log(`💳 [${requestId}] [${paymentId}] Date participant nou:`, JSON.stringify(newParticipant, null, 2));
 
@@ -278,7 +286,16 @@ async function handleSuccessfulPayment(session, requestId) {
         isGuestUser: !userId.includes('@'),
         webhookProcessedAt: new Date().toISOString(),
         requestId: requestId,
-        paymentId: paymentId
+        paymentId: paymentId,
+        rawFormValues: paymentSession?.rawFormValues || null,
+        normalizedBeforeCheckout: paymentSession?.normalizedBeforeCheckout || null,
+        checkoutRequestPayload: paymentSession?.checkoutRequestPayload || null,
+        stripeMetadataSnapshot: paymentSession?.stripeMetadataSnapshot || session.metadata || null,
+        storedBillingSnapshot: {
+          metadata: session.metadata || {},
+          customerDetails: session.customer_details || null,
+        },
+        invoiceDecision: paymentSession?.invoiceDecision || null,
       };
 
       await handleUploadFirestoreGeneral(plataData, "PlatiConferinteGrup");
@@ -299,6 +316,16 @@ async function handleSuccessfulPayment(session, requestId) {
         conferinta,
         participant: newParticipant
       });
+      if (invoice?.audit && paymentSession?.documentId) {
+        await handleUpdateFirestore(
+          `PlatiConferinteGrup/${paymentSession?.documentId || ""}`,
+          {
+            finalOblioPayload: invoice.audit.finalOblioPayload || null,
+            oblioResponse: invoice.audit.oblioResponse || invoice || null,
+            invoiceDecision: invoice.audit.invoiceDecision || paymentSession?.invoiceDecision || null,
+          }
+        );
+      }
       if (invoice?.id || invoice?.documentId) {
         console.log(`🧾 [${requestId}] [${paymentId}] Factură creată cu succes în Olbio`, invoice?.id || invoice?.documentId);
       } else {

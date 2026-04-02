@@ -19,6 +19,11 @@ import {
   formatSelectedSlot,
   validatePhoneNumber,
 } from "../../../../utils/commonUtils";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../../utils/billingAudit.mjs";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import {
@@ -41,6 +46,7 @@ const Checkout = (props) => {
   const [billingCity, setBillingCity] = useState("");
   const [billingCounty, setBillingCounty] = useState("");
   const [billingCountry, setBillingCountry] = useState("Romania");
+  const [personalCnp, setPersonalCnp] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyVAT, setCompanyVAT] = useState("");
   const [companyReg, setCompanyReg] = useState("");
@@ -145,10 +151,13 @@ const Checkout = (props) => {
     if (!adresa) newErrors.adresa = true;
     if (!billingCity) newErrors.billingCity = true;
     if (!billingCounty) newErrors.billingCounty = true;
+    if (!billingCountry) newErrors.billingCountry = true;
     if (billingType === "corporate") {
       if (!companyName) newErrors.companyName = true;
       if (!companyVAT) newErrors.companyVAT = true;
       if (!companyAddress) newErrors.companyAddress = true;
+    } else if (!personalCnp) {
+      newErrors.personalCnp = true;
     }
 
     // Validare număr de telefon cu sugestii de format
@@ -179,6 +188,44 @@ const Checkout = (props) => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      return;
+    }
+
+    const rawFormValues = {
+      billingType,
+      firstName: userData?.first_name || "",
+      lastName: userData?.last_name || "",
+      name: nume,
+      cnp: billingType === "corporate" ? "" : personalCnp,
+      companyName,
+      cif: companyVAT,
+      reg: companyReg,
+      address: billingType === "corporate" ? companyAddress : adresa,
+      state: billingCounty,
+      city: billingCity,
+      country: billingCountry,
+      contact: nume,
+      email,
+      phone: telefon,
+    };
+    const billingAudit = normalizeBillingContext(rawFormValues, { defaultCountry: "Romania" });
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "consultation",
+      stage: "ui_submit",
+      raw: rawFormValues,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
+      setErrors((prev) => ({
+        ...prev,
+        ...billingAudit.validation.errorsByField,
+      }));
+      setAlert({
+        type: "danger",
+        message: billingAudit.validation.blockingErrors[0]?.message || "Datele de facturare sunt invalide.",
+      });
       return;
     }
 
@@ -236,10 +283,13 @@ const Checkout = (props) => {
           selectedSlot,
           owner_uid,
           adresaClient: adresa,
+          rawFormValues,
+          normalizedBeforeCheckout: billingAudit.normalizedClient,
           // Oblio buyer data
           buyerType: billingType === "corporate" ? "company" : "person",
           buyerCompanyName: billingType === "corporate" ? companyName : undefined,
           buyerCif: billingType === "corporate" ? companyVAT : undefined,
+          buyerCnp: billingType === "corporate" ? undefined : personalCnp,
           buyerRegCom: billingType === "corporate" ? companyReg : undefined,
           buyerStreet: billingType === "corporate" ? companyAddress : adresa,
           buyerCity: billingCity,
@@ -252,7 +302,7 @@ const Checkout = (props) => {
           vatRate: 19,
           measureUnit: "bucată",
           sendInvoiceEmail: true,
-          eInvoice: true,
+          eInvoice: invoiceDecision.sendEInvoice,
         }),
       });
 
@@ -263,6 +313,17 @@ const Checkout = (props) => {
             errJson?.message ||
               "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
           );
+          setIsLoading(false);
+          return;
+        }
+        if (response.status === 400) {
+          setAlert({
+            type: "danger",
+            message:
+              errJson?.details?.[0]?.message ||
+              errJson?.error ||
+              "Datele de facturare sunt invalide. Verifică formularul.",
+          });
           setIsLoading(false);
           return;
         }
@@ -522,6 +583,22 @@ const Checkout = (props) => {
                             </div>
                           </>
                         )}
+                        {billingType !== "corporate" && (
+                          <div className="col-md-6 col-sm-12">
+                            <div className={`form-group card-label ${errors.personalCnp ? "border-danger" : ""}`}>
+                              <label>CNP</label>
+                              <input
+                                className={`form-control ${errors.personalCnp ? "border-danger" : ""}`}
+                                type="text"
+                                value={personalCnp}
+                                onChange={(e) => {
+                                  setPersonalCnp(e.target.value);
+                                  setErrors((prev) => ({ ...prev, personalCnp: false }));
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         <div className="col-md-4 col-sm-12">
                           <div className={`form-group card-label ${errors.billingCity ? "border-danger" : ""}`}>
@@ -552,13 +629,16 @@ const Checkout = (props) => {
                           </div>
                         </div>
                         <div className="col-md-4 col-sm-12">
-                          <div className="form-group card-label">
+                          <div className={`form-group card-label ${errors.billingCountry ? "border-danger" : ""}`}>
                             <label>Țară</label>
                             <input
-                              className="form-control"
+                              className={`form-control ${errors.billingCountry ? "border-danger" : ""}`}
                               type="text"
                               value={billingCountry}
-                              onChange={(e) => setBillingCountry(e.target.value)}
+                              onChange={(e) => {
+                                setBillingCountry(e.target.value);
+                                setErrors((prev) => ({ ...prev, billingCountry: false }));
+                              }}
                             />
                           </div>
                         </div>

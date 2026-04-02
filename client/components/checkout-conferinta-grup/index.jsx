@@ -12,6 +12,11 @@ import AlertMessage from "../AlertMessage";
 import moment from "moment";
 import "moment/locale/ro";
 import { loadStripe } from "@stripe/stripe-js";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../utils/billingAudit.mjs";
 
 moment.locale("ro");
 
@@ -55,9 +60,11 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     password: "",
     // Date facturare (Oblio)
     billingType: "individual", // "individual" | "corporate"
+    billingAddress: "",
     billingCity: "",
     billingCounty: "",
     billingCountry: "Romania",
+    personalCnp: "",
     companyName: "",
     companyVAT: "",
     companyReg: "",
@@ -193,6 +200,14 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       showAlert("danger", "Județul (pentru factură) este obligatoriu");
       return false;
     }
+    if (!formData.billingCountry?.trim()) {
+      showAlert("danger", "Țara (pentru factură) este obligatorie");
+      return false;
+    }
+    if (formData.billingType !== "corporate" && !formData.billingAddress?.trim()) {
+      showAlert("danger", "Adresa (pentru factură) este obligatorie");
+      return false;
+    }
     if (formData.billingType === "corporate") {
       if (!formData.companyName?.trim()) {
         showAlert("danger", "Denumirea firmei este obligatorie pentru facturare pe firmă");
@@ -206,6 +221,40 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         showAlert("danger", "Adresa firmei este obligatorie pentru facturare pe firmă");
         return false;
       }
+    } else if (!formData.personalCnp?.trim()) {
+      showAlert("danger", "CNP-ul este obligatoriu pentru facturare pe persoană fizică");
+      return false;
+    }
+
+    const rawFormValues = {
+      billingType: formData.billingType,
+      firstName: formData.prenume,
+      lastName: formData.nume,
+      name: `${formData.prenume} ${formData.nume}`.trim(),
+      cnp: formData.billingType === "corporate" ? "" : formData.personalCnp,
+      companyName: formData.companyName,
+      cif: formData.companyVAT,
+      reg: formData.companyReg,
+      address: formData.billingType === "corporate" ? formData.companyAddress : formData.billingAddress,
+      state: formData.billingCounty,
+      city: formData.billingCity,
+      country: formData.billingCountry,
+      contact: `${formData.prenume} ${formData.nume}`.trim(),
+      email: formData.email,
+      phone: formData.telefon,
+    };
+    const billingAudit = normalizeBillingContext(rawFormValues, { defaultCountry: "Romania" });
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "conference",
+      stage: "ui_validate",
+      raw: rawFormValues,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
+      showAlert("danger", billingAudit.validation.blockingErrors[0]?.message || "Datele de facturare sunt invalide");
+      return false;
     }
 
     return true;
@@ -368,6 +417,32 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
       // Generez link-ul unic de acces
       const uniqueAccessLink = generateUniqueAccessLink();
+      const rawFormValues = {
+        billingType: formData.billingType,
+        firstName: formData.prenume,
+        lastName: formData.nume,
+        name: `${formData.prenume} ${formData.nume}`.trim(),
+        cnp: formData.billingType === "corporate" ? "" : formData.personalCnp,
+        companyName: formData.companyName,
+        cif: formData.companyVAT,
+        reg: formData.companyReg,
+        address: formData.billingType === "corporate" ? formData.companyAddress : formData.billingAddress,
+        state: formData.billingCounty,
+        city: formData.billingCity,
+        country: formData.billingCountry,
+        contact: `${formData.prenume} ${formData.nume}`.trim(),
+        email: formData.email,
+        phone: formData.telefon,
+      };
+      const billingAudit = normalizeBillingContext(rawFormValues, { defaultCountry: "Romania" });
+      const invoiceDecision = buildInvoiceDecision(billingAudit);
+      logBillingAudit({
+        flow: "conference",
+        stage: "ui_submit",
+        raw: rawFormValues,
+        normalized: billingAudit.normalizedClient,
+        decision: invoiceDecision,
+      });
 
       // Datele pentru Stripe checkout
       const checkoutData = {
@@ -383,12 +458,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         oraInceput: conferinta.oraInceput,
         oraFinal: conferinta.oraFinal,
         isGuestUser: !currentUser,
+        rawFormValues,
+        normalizedBeforeCheckout: billingAudit.normalizedClient,
         // Oblio buyer data (top-level so API can put into Stripe metadata)
         buyerType: formData.billingType === "corporate" ? "company" : "person",
         buyerCompanyName: formData.billingType === "corporate" ? formData.companyName : undefined,
         buyerCif: formData.billingType === "corporate" ? formData.companyVAT : undefined,
         buyerRegCom: formData.billingType === "corporate" ? formData.companyReg : undefined,
-        buyerStreet: formData.billingType === "corporate" ? formData.companyAddress : undefined,
+        buyerCnp: formData.billingType === "corporate" ? undefined : formData.personalCnp,
+        buyerStreet: formData.billingType === "corporate" ? formData.companyAddress : formData.billingAddress,
         buyerCity: formData.billingCity,
         buyerCounty: formData.billingCounty,
         buyerCountry: formData.billingCountry,
@@ -399,7 +477,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         vatRate: 19,
         measureUnit: "bucată",
         sendInvoiceEmail: true,
-        eInvoice: true
+        eInvoice: invoiceDecision.sendEInvoice
       };
 
       // Call API pentru a crea Stripe session
@@ -424,6 +502,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
         setMaintenanceMessage(
           json?.message ||
             "Această secțiune este în proces de mentenanță. Vă rugăm să încercați mai târziu."
+        );
+        setProcessing(false);
+        return;
+      }
+
+      if (response.status === 400) {
+        showAlert(
+          "danger",
+          json?.details?.[0]?.message || json?.error || "Datele de facturare sunt invalide."
         );
         setProcessing(false);
         return;
@@ -849,6 +936,34 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                                       className="form-control"
                                       name="companyAddress"
                                       value={formData.companyAddress}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                            {formData.billingType !== "corporate" && (
+                              <>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">CNP *</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="personalCnp"
+                                      value={formData.personalCnp}
+                                      onChange={handleInputChange}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-md-6">
+                                  <div className="form-group mb-3">
+                                    <label className="form-label">Adresă *</label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      name="billingAddress"
+                                      value={formData.billingAddress}
                                       onChange={handleInputChange}
                                     />
                                   </div>

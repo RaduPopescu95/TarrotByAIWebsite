@@ -1,5 +1,12 @@
 // pages/api/create-checkout-session.js
 import Stripe from "stripe";
+import { FieldValue } from "firebase-admin/firestore";
+import { getAdminDb } from "../../lib/firebaseAdmin";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../utils/billingAudit.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -65,6 +72,8 @@ export default async (req, res) => {
       sendInvoiceEmail,
       eInvoice,
       dueDays,
+      rawFormValues,
+      normalizedBeforeCheckout,
     } = req.body;
 
     try {
@@ -74,6 +83,77 @@ export default async (req, res) => {
         process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
       );
       console.log("Stripe Secret Key:", process.env.STRIPE_SECRET_KEY);
+
+      const billingAudit = normalizeBillingContext(
+        {
+          ...(rawFormValues || {}),
+          billingType: buyerType,
+          companyName: buyerCompanyName,
+          cif: buyerCif,
+          cnp: buyerCnp,
+          reg: buyerRegCom,
+          address: buyerStreet || adresaClient,
+          state: buyerCounty,
+          city: buyerCity,
+          country: buyerCountry,
+          contact: buyerContactName || nume,
+          email: buyerEmailMeta || email,
+          phone: buyerPhoneMeta || telefon,
+          name: buyerContactName || nume,
+        },
+        { defaultCountry: "Romania" }
+      );
+      const invoiceDecision = buildInvoiceDecision(billingAudit);
+      logBillingAudit({
+        flow: "consultation",
+        stage: "api_checkout_received",
+        raw: rawFormValues || req.body,
+        normalized: billingAudit.normalizedClient,
+        decision: invoiceDecision,
+      });
+      if (!billingAudit.validation.ok) {
+        return res.status(400).json({
+          error: "Invalid billing details",
+          details: billingAudit.validation.blockingErrors,
+        });
+      }
+
+      const metadata = {
+        nume,
+        alteInformatii,
+        telefon,
+        categorie: JSON.stringify(categorie),
+        tipConsultatie,
+        selectedSlot: JSON.stringify(selectedSlot),
+        owner_uid,
+        adresaClient,
+        ...(buyerType ? { buyerType } : {}),
+        ...(buyerCif ? { buyerCif } : {}),
+        ...(buyerCnp ? { buyerCnp } : {}),
+        ...(buyerCompanyName ? { buyerCompanyName } : {}),
+        ...(buyerRegCom ? { buyerRegCom } : {}),
+        ...(typeof buyerVatPayer !== "undefined" ? { buyerVatPayer: String(!!buyerVatPayer) } : {}),
+        ...(buyerStreet ? { buyerStreet } : {}),
+        ...(buyerCity ? { buyerCity } : {}),
+        ...(buyerCounty ? { buyerCounty } : {}),
+        ...(buyerPostalCode ? { buyerPostalCode } : {}),
+        ...(buyerCountry ? { buyerCountry } : {}),
+        ...(buyerContactName ? { buyerContactName } : {}),
+        ...(buyerEmailMeta ? { buyerEmail: buyerEmailMeta } : {}),
+        ...(buyerPhoneMeta ? { buyerPhone: buyerPhoneMeta } : {}),
+        ...(buyerIBAN ? { buyerIBAN } : {}),
+        ...(buyerBankName ? { buyerBankName } : {}),
+        ...(serviceCode ? { serviceCode } : {}),
+        ...(typeof vatRate !== "undefined" ? { vatRate: String(vatRate) } : {}),
+        ...(measureUnit ? { measureUnit } : {}),
+        ...(measureCode ? { measureCode } : {}),
+        ...(paymentMethod ? { paymentMethod } : {}),
+        ...(typeof sendInvoiceEmail !== "undefined" ? { sendInvoiceEmail: String(!!sendInvoiceEmail) } : {}),
+        eInvoice: String(invoiceDecision.sendEInvoice),
+        ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {}),
+        invoiceDeliveryInRomania: String(billingAudit.normalizedClient.deliveryInRomania),
+        invoiceEligibleForEInvoice: String(billingAudit.normalizedClient.eligibleForEInvoice),
+      };
 
       // Creează sesiunea de checkout cu opțiunea de creare factură
       const session = await stripe.checkout.sessions.create({
@@ -95,42 +175,7 @@ export default async (req, res) => {
         customer_email: email,
         billing_address_collection: "required", // Solicită adresa de facturare
         phone_number_collection: { enabled: true }, // Solicită numărul de telefon
-        metadata: {
-          nume,
-          alteInformatii,
-          telefon,
-          categorie: JSON.stringify(categorie), // Transmite categoria ca string
-          tipConsultatie,
-          selectedSlot: JSON.stringify(selectedSlot),
-          owner_uid,
-          adresaClient,
-          // Buyer/company metadata (only simple strings/booleans allowed in Stripe metadata)
-          ...(buyerType ? { buyerType } : {}),
-          ...(buyerCif ? { buyerCif } : {}),
-          ...(buyerCnp ? { buyerCnp } : {}),
-          ...(buyerCompanyName ? { buyerCompanyName } : {}),
-          ...(buyerRegCom ? { buyerRegCom } : {}),
-          ...(typeof buyerVatPayer !== "undefined" ? { buyerVatPayer: String(!!buyerVatPayer) } : {}),
-          ...(buyerStreet ? { buyerStreet } : {}),
-          ...(buyerCity ? { buyerCity } : {}),
-          ...(buyerCounty ? { buyerCounty } : {}),
-          ...(buyerPostalCode ? { buyerPostalCode } : {}),
-          ...(buyerCountry ? { buyerCountry } : {}),
-          ...(buyerContactName ? { buyerContactName } : {}),
-          ...(buyerEmailMeta ? { buyerEmail: buyerEmailMeta } : {}),
-          ...(buyerPhoneMeta ? { buyerPhone: buyerPhoneMeta } : {}),
-          ...(buyerIBAN ? { buyerIBAN } : {}),
-          ...(buyerBankName ? { buyerBankName } : {}),
-          // Line and invoice options
-          ...(serviceCode ? { serviceCode } : {}),
-          ...(typeof vatRate !== "undefined" ? { vatRate: String(vatRate) } : {}),
-          ...(measureUnit ? { measureUnit } : {}),
-          ...(measureCode ? { measureCode } : {}),
-          ...(paymentMethod ? { paymentMethod } : {}),
-          ...(typeof sendInvoiceEmail !== "undefined" ? { sendInvoiceEmail: String(!!sendInvoiceEmail) } : {}),
-          ...(typeof eInvoice !== "undefined" ? { eInvoice: String(!!eInvoice) } : {}),
-          ...(typeof dueDays !== "undefined" ? { dueDays: String(dueDays) } : {}),
-        },
+        metadata,
         // Adaugă opțiunea pentru crearea unei facturi
         invoice_creation: {
           enabled: true,
@@ -138,6 +183,30 @@ export default async (req, res) => {
         success_url: `${req.headers.origin}/rezervare-finalizata?session_id={CHECKOUT_SESSION_ID}`, // Transmite session_id ca parametru de query
         cancel_url: `${req.headers.origin}/calendar`,
       });
+
+      try {
+        const db = getAdminDb();
+        await db.collection("consultationCheckoutSessions").doc(session.id).set(
+          {
+            stripeCheckoutSessionId: session.id,
+            checkoutType: "consultation",
+            paymentStatus: "pending",
+            rawFormValues: rawFormValues || null,
+            normalizedBeforeCheckout:
+              normalizedBeforeCheckout && typeof normalizedBeforeCheckout === "object"
+                ? normalizedBeforeCheckout
+                : billingAudit.normalizedClient,
+            checkoutRequestPayload: req.body,
+            stripeMetadataSnapshot: metadata,
+            invoiceDecision,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (persistError) {
+        console.warn("[consultation.checkout] persist_failed", persistError?.message || persistError);
+      }
 
       res.status(200).json({ id: session.id });
     } catch (err) {
