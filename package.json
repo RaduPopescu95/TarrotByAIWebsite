@@ -65,6 +65,7 @@
     "clsx": "^2.1.1",
     "config": "^3.3.11",
     "core-js": "^3.29.1",
+    "countrycitystatejson": "^26.4.501",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.1",
     "dayjs": "^1.11.10",

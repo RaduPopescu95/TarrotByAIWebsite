@@ -11,8 +11,20 @@ import LessonTabs from "../../components/Courses/LessonTabs";
 import MaterialsPanel from "../../components/Courses/MaterialsPanel";
 import SidebarCurriculum from "../../components/Courses/SidebarCurriculum";
 import CoursePurchaseFab from "../../components/Courses/CoursePurchaseFab";
+import BillingDetailsForm from "../../components/BillingDetailsForm";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+import {
+  buildBillingAuditInput,
+  buildCourseBillingDetails,
+  createInitialBillingFormValues,
+  mapBillingAuditErrorsToForm,
+} from "../../utils/billingAddressData.mjs";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../utils/billingAudit.mjs";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -60,6 +72,32 @@ function mapCertificateError(status, t) {
   return t("coursesErrorsCertificateDownload");
 }
 
+function splitDisplayName(displayName = "") {
+  const normalized = typeof displayName === "string" ? displayName.trim() : "";
+  if (!normalized) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const parts = normalized.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: "" };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts.slice(-1).join(" "),
+  };
+}
+
+function getCheckoutInputClass(error) {
+  return [
+    "w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition",
+    error
+      ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
+      : "border-slate-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100",
+  ].join(" ");
+}
+
 function toGoogleCalendarDate(value) {
   return value.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
@@ -69,7 +107,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation("common");
   const { courseId, success, canceled } = router.query;
   const normalizedCourseId = Array.isArray(courseId) ? courseId[0] : courseId;
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +118,14 @@ export default function CourseDetailPage() {
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [purchasePassword, setPurchasePassword] = useState("");
+  const [checkoutFormErrors, setCheckoutFormErrors] = useState({});
+  const [billingContact, setBillingContact] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
+  const [billingForm, setBillingForm] = useState(createInitialBillingFormValues());
   const [playbackVimeoId, setPlaybackVimeoId] = useState(null);
   const [playbackLoading, setPlaybackLoading] = useState(false);
   const [playbackError, setPlaybackError] = useState("");
@@ -182,6 +228,31 @@ export default function CourseDetailPage() {
       mounted = false;
     };
   }, [loadCourseState, currentUser]);
+
+  useEffect(() => {
+    const derivedName = splitDisplayName(currentUser?.displayName || "");
+
+    setBillingContact((prev) => ({
+      firstName: prev.firstName || userData?.first_name || derivedName.firstName,
+      lastName: prev.lastName || userData?.last_name || derivedName.lastName,
+      email: prev.email || userData?.email || currentUser?.email || "",
+      phone:
+        prev.phone ||
+        userData?.telefon ||
+        userData?.phoneNumber ||
+        currentUser?.phoneNumber ||
+        "",
+    }));
+  }, [
+    currentUser?.displayName,
+    currentUser?.email,
+    currentUser?.phoneNumber,
+    userData?.email,
+    userData?.first_name,
+    userData?.last_name,
+    userData?.phoneNumber,
+    userData?.telefon,
+  ]);
 
   useEffect(() => {
     if (!success || !normalizedCourseId || !currentUser) return;
@@ -404,6 +475,30 @@ export default function CourseDetailPage() {
       ? course.contactContent.trim()
       : "";
 
+  const handleBillingContactChange = (field, value) => {
+    setBillingContact((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setCheckoutFormErrors((prev) => ({
+      ...prev,
+      [field]: false,
+    }));
+    setCheckoutError("");
+  };
+
+  const handleBillingFieldChange = (field, value) => {
+    setBillingForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setCheckoutFormErrors((prev) => ({
+      ...prev,
+      [field]: false,
+    }));
+    setCheckoutError("");
+  };
+
   const handleCheckout = async () => {
     if (!normalizedCourseId) return;
     if (!currentUser) {
@@ -418,10 +513,85 @@ export default function CourseDetailPage() {
       return;
     }
 
+    const nextErrors = {};
+    if (!billingContact.firstName.trim()) {
+      nextErrors.firstName = t("coursesBillingFirstNameRequired", {
+        defaultValue: "Prenumele este obligatoriu pentru facturare.",
+      });
+    }
+    if (!billingContact.lastName.trim()) {
+      nextErrors.lastName = t("coursesBillingLastNameRequired", {
+        defaultValue: "Numele este obligatoriu pentru facturare.",
+      });
+    }
+    if (!billingContact.email.trim()) {
+      nextErrors.email = t("coursesBillingEmailRequired", {
+        defaultValue: "Email-ul este obligatoriu pentru facturare.",
+      });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingContact.email.trim())) {
+      nextErrors.email = t("coursesBillingEmailInvalid", {
+        defaultValue: "Email-ul introdus nu este valid.",
+      });
+    }
+    if (!billingContact.phone.trim()) {
+      nextErrors.phone = t("coursesBillingPhoneRequired", {
+        defaultValue: "Telefonul este obligatoriu pentru facturare.",
+      });
+    }
+
+    const rawBillingInput = buildBillingAuditInput({
+      billingValues: billingForm,
+      firstName: billingContact.firstName,
+      lastName: billingContact.lastName,
+      fullName: `${billingContact.firstName} ${billingContact.lastName}`.trim(),
+      email: billingContact.email,
+      phone: billingContact.phone,
+      individualAddress: billingForm.billingAddress,
+    });
+    const billingAudit = normalizeBillingContext(rawBillingInput, { defaultCountry: "Romania" });
+    const invoiceDecision = buildInvoiceDecision(billingAudit);
+
+    logBillingAudit({
+      flow: "courses",
+      stage: "ui_submit",
+      raw: rawBillingInput,
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+
+    if (!billingAudit.validation.ok) {
+      Object.assign(
+        nextErrors,
+        mapBillingAuditErrorsToForm(billingAudit.validation.errorsByField, {
+          billingType: billingForm.billingType,
+        })
+      );
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setCheckoutFormErrors(nextErrors);
+      setCheckoutError(
+        Object.values(nextErrors)[0] ||
+          t("coursesBillingFormInvalid", {
+            defaultValue: "Completeaza datele de facturare inainte de a continua.",
+          })
+      );
+      return;
+    }
+
     setCheckoutLoading(true);
     setCheckoutError("");
+    setCheckoutFormErrors({});
     try {
       const authHeaders = await getAuthHeaders({ required: true });
+      const billingDetails = buildCourseBillingDetails({
+        billingValues: billingForm,
+        firstName: billingContact.firstName,
+        lastName: billingContact.lastName,
+        email: billingContact.email,
+        phone: billingContact.phone,
+        individualAddress: billingForm.billingAddress,
+      });
       const response = await fetch("/api/stripe/courses/create-checkout-session", {
         method: "POST",
         headers: {
@@ -431,12 +601,13 @@ export default function CourseDetailPage() {
         body: JSON.stringify({
           courseId: normalizedCourseId,
           purchasePassword: normalizedPurchasePassword,
+          billingDetails,
         }),
       });
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(mapCheckoutError(response.status, t));
+        throw new Error(data?.error || mapCheckoutError(response.status, t));
       }
       if (data?.url) {
         window.location.href = data.url;
@@ -764,7 +935,146 @@ export default function CourseDetailPage() {
                               : t("coursesLockedDescriptionLoggedOut")}
                           </p>
 
-                          {currentUser ? null : (
+                          {currentUser ? (
+                            <div className="space-y-4">
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                  <label className="block text-sm font-semibold text-slate-700">
+                                    {t("coursesBillingFirstNameLabel", {
+                                      defaultValue: "Prenume",
+                                    })}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={billingContact.firstName}
+                                    onChange={(event) =>
+                                      handleBillingContactChange("firstName", event.target.value)
+                                    }
+                                    className={getCheckoutInputClass(checkoutFormErrors.firstName)}
+                                  />
+                                  {typeof checkoutFormErrors.firstName === "string" ? (
+                                    <p className="text-xs font-medium text-red-600">
+                                      {checkoutFormErrors.firstName}
+                                    </p>
+                                  ) : null}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="block text-sm font-semibold text-slate-700">
+                                    {t("coursesBillingLastNameLabel", {
+                                      defaultValue: "Nume",
+                                    })}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={billingContact.lastName}
+                                    onChange={(event) =>
+                                      handleBillingContactChange("lastName", event.target.value)
+                                    }
+                                    className={getCheckoutInputClass(checkoutFormErrors.lastName)}
+                                  />
+                                  {typeof checkoutFormErrors.lastName === "string" ? (
+                                    <p className="text-xs font-medium text-red-600">
+                                      {checkoutFormErrors.lastName}
+                                    </p>
+                                  ) : null}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="block text-sm font-semibold text-slate-700">
+                                    {t("coursesBillingEmailLabel", {
+                                      defaultValue: "Email facturare",
+                                    })}
+                                  </label>
+                                  <input
+                                    type="email"
+                                    value={billingContact.email}
+                                    onChange={(event) =>
+                                      handleBillingContactChange("email", event.target.value)
+                                    }
+                                    className={getCheckoutInputClass(checkoutFormErrors.email)}
+                                  />
+                                  {typeof checkoutFormErrors.email === "string" ? (
+                                    <p className="text-xs font-medium text-red-600">
+                                      {checkoutFormErrors.email}
+                                    </p>
+                                  ) : null}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="block text-sm font-semibold text-slate-700">
+                                    {t("coursesBillingPhoneLabel", {
+                                      defaultValue: "Telefon",
+                                    })}
+                                  </label>
+                                  <input
+                                    type="tel"
+                                    value={billingContact.phone}
+                                    onChange={(event) =>
+                                      handleBillingContactChange("phone", event.target.value)
+                                    }
+                                    className={getCheckoutInputClass(checkoutFormErrors.phone)}
+                                  />
+                                  {typeof checkoutFormErrors.phone === "string" ? (
+                                    <p className="text-xs font-medium text-red-600">
+                                      {checkoutFormErrors.phone}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              {process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !==
+                              "false" ? (
+                                <div className="space-y-1.5">
+                                  <label className="block text-sm font-semibold text-slate-700">
+                                    {t("coursesPurchasePasswordLabel")}
+                                  </label>
+                                  <input
+                                    type="password"
+                                    value={purchasePassword}
+                                    onChange={(event) => {
+                                      setPurchasePassword(event.target.value);
+                                      setCheckoutError("");
+                                    }}
+                                    placeholder={t("coursesPurchasePasswordPlaceholder")}
+                                    autoComplete="off"
+                                    className={getCheckoutInputClass(false)}
+                                  />
+                                  <p className="text-xs text-slate-500">
+                                    {t("coursesPurchasePasswordHint")}
+                                  </p>
+                                </div>
+                              ) : null}
+
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <BillingDetailsForm
+                                  variant="tailwind"
+                                  title={t("coursesBillingCardTitle", {
+                                    defaultValue: "Date pentru factura",
+                                  })}
+                                  description={t("coursesBillingCardDescription", {
+                                    defaultValue:
+                                      "Pentru clientii din Romania, judetul si localitatea se aleg din listele valide pentru Oblio.",
+                                  })}
+                                  billingValues={billingForm}
+                                  onBillingChange={handleBillingFieldChange}
+                                  errors={checkoutFormErrors}
+                                  individualAddressValue={billingForm.billingAddress}
+                                  onIndividualAddressChange={(value) =>
+                                    handleBillingFieldChange("billingAddress", value)
+                                  }
+                                  disabled={checkoutLoading}
+                                />
+                              </div>
+
+                              <p className="text-xs text-slate-500">
+                                {t("coursesBillingInlineHint", {
+                                  defaultValue:
+                                    "Completeaza datele de facturare, apoi finalizeaza comanda din butonul flotant.",
+                                })}
+                              </p>
+                            </div>
+                          ) : (
                             <div className="space-y-3">
                               <p className="text-sm font-semibold text-slate-900">
                                 {t("coursesLockedAuthCtaTitle")}
@@ -827,7 +1137,7 @@ export default function CourseDetailPage() {
                 label={t("coursesFloatingPurchaseCta")}
                 loadingLabel={t("coursesFloatingPurchaseLoading")}
                 isLoading={checkoutLoading}
-                passwordEnabled={process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !== "false"}
+                passwordEnabled={false}
                 passwordValue={purchasePassword}
                 onPasswordChange={setPurchasePassword}
                 passwordLabel={t("coursesPurchasePasswordLabel")}

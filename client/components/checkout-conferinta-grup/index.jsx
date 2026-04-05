@@ -17,6 +17,12 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../../utils/billingAudit.mjs";
+import BillingDetailsForm from "../../../components/BillingDetailsForm";
+import {
+  buildBillingAuditInput,
+  createInitialBillingFormValues,
+  mapBillingAuditErrorsToForm,
+} from "../../../utils/billingAddressData.mjs";
 
 moment.locale("ro");
 
@@ -31,6 +37,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
   const [processing, setProcessing] = useState(false);
   const [alert, setAlert] = useState({ type: "", message: "", visible: false });
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const maintenanceEnabled =
     String(process.env.NEXT_PUBLIC_PAYMENTS_MAINTENANCE_ENABLED || "").toLowerCase() ===
@@ -58,17 +65,7 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     telefon: "",
     observatii: "",
     password: "",
-    // Date facturare (Oblio)
-    billingType: "individual", // "individual" | "corporate"
-    billingAddress: "",
-    billingCity: "",
-    billingCounty: "",
-    billingCountry: "Romania",
-    personalCnp: "",
-    companyName: "",
-    companyVAT: "",
-    companyReg: "",
-    companyAddress: ""
+    ...createInitialBillingFormValues(),
   });
 
   // Test mode pentru simulare fără Stripe
@@ -146,30 +143,48 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       ...prev,
       [name]: value
     }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: false,
+    }));
+  };
+
+  const handleBillingFieldChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      [field]: false,
+    }));
   };
 
   const validateForm = () => {
+    const nextErrors = {};
+
     if (!formData.nume.trim()) {
-      showAlert("danger", "Numele este obligatoriu");
-      return false;
+      nextErrors.nume = "Numele este obligatoriu";
     }
     if (!formData.prenume.trim()) {
-      showAlert("danger", "Prenumele este obligatoriu");
-      return false;
+      nextErrors.prenume = "Prenumele este obligatoriu";
     }
     if (!formData.email.trim()) {
-      showAlert("danger", "Email-ul este obligatoriu");
-      return false;
+      nextErrors.email = "Email-ul este obligatoriu";
     }
     if (!formData.telefon.trim()) {
-      showAlert("danger", "Telefonul este obligatoriu");
-      return false;
+      nextErrors.telefon = "Telefonul este obligatoriu";
     }
     
     // Verifică email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      showAlert("danger", "Format email invalid");
+      nextErrors.email = "Format email invalid";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      showAlert("danger", Object.values(nextErrors)[0]);
       return false;
     }
 
@@ -191,58 +206,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       return false;
     }
 
-    // Date minime pentru factură (Oblio)
-    if (!formData.billingCity?.trim()) {
-      showAlert("danger", "Orașul (pentru factură) este obligatoriu");
-      return false;
-    }
-    if (!formData.billingCounty?.trim()) {
-      showAlert("danger", "Județul (pentru factură) este obligatoriu");
-      return false;
-    }
-    if (!formData.billingCountry?.trim()) {
-      showAlert("danger", "Țara (pentru factură) este obligatorie");
-      return false;
-    }
-    if (formData.billingType !== "corporate" && !formData.billingAddress?.trim()) {
-      showAlert("danger", "Adresa (pentru factură) este obligatorie");
-      return false;
-    }
-    if (formData.billingType === "corporate") {
-      if (!formData.companyName?.trim()) {
-        showAlert("danger", "Denumirea firmei este obligatorie pentru facturare pe firmă");
-        return false;
-      }
-      if (!formData.companyVAT?.trim()) {
-        showAlert("danger", "CUI/CIF este obligatoriu pentru facturare pe firmă");
-        return false;
-      }
-      if (!formData.companyAddress?.trim()) {
-        showAlert("danger", "Adresa firmei este obligatorie pentru facturare pe firmă");
-        return false;
-      }
-    } else if (!formData.personalCnp?.trim()) {
-      showAlert("danger", "CNP-ul este obligatoriu pentru facturare pe persoană fizică");
-      return false;
-    }
-
-    const rawFormValues = {
-      billingType: formData.billingType,
+    const rawFormValues = buildBillingAuditInput({
+      billingValues: formData,
       firstName: formData.prenume,
       lastName: formData.nume,
-      name: `${formData.prenume} ${formData.nume}`.trim(),
-      cnp: formData.billingType === "corporate" ? "" : formData.personalCnp,
-      companyName: formData.companyName,
-      cif: formData.companyVAT,
-      reg: formData.companyReg,
-      address: formData.billingType === "corporate" ? formData.companyAddress : formData.billingAddress,
-      state: formData.billingCounty,
-      city: formData.billingCity,
-      country: formData.billingCountry,
-      contact: `${formData.prenume} ${formData.nume}`.trim(),
+      fullName: `${formData.prenume} ${formData.nume}`.trim(),
       email: formData.email,
       phone: formData.telefon,
-    };
+      individualAddress: formData.billingAddress,
+    });
     const billingAudit = normalizeBillingContext(rawFormValues, { defaultCountry: "Romania" });
     const invoiceDecision = buildInvoiceDecision(billingAudit);
     logBillingAudit({
@@ -253,10 +225,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       decision: invoiceDecision,
     });
     if (!billingAudit.validation.ok) {
+      const mappedErrors = mapBillingAuditErrorsToForm(billingAudit.validation.errorsByField, {
+        billingType: formData.billingType,
+      });
+      setFieldErrors(mappedErrors);
       showAlert("danger", billingAudit.validation.blockingErrors[0]?.message || "Datele de facturare sunt invalide");
       return false;
     }
 
+    setFieldErrors({});
     return true;
   };
 
@@ -417,23 +394,15 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
       // Generez link-ul unic de acces
       const uniqueAccessLink = generateUniqueAccessLink();
-      const rawFormValues = {
-        billingType: formData.billingType,
+      const rawFormValues = buildBillingAuditInput({
+        billingValues: formData,
         firstName: formData.prenume,
         lastName: formData.nume,
-        name: `${formData.prenume} ${formData.nume}`.trim(),
-        cnp: formData.billingType === "corporate" ? "" : formData.personalCnp,
-        companyName: formData.companyName,
-        cif: formData.companyVAT,
-        reg: formData.companyReg,
-        address: formData.billingType === "corporate" ? formData.companyAddress : formData.billingAddress,
-        state: formData.billingCounty,
-        city: formData.billingCity,
-        country: formData.billingCountry,
-        contact: `${formData.prenume} ${formData.nume}`.trim(),
+        fullName: `${formData.prenume} ${formData.nume}`.trim(),
         email: formData.email,
         phone: formData.telefon,
-      };
+        individualAddress: formData.billingAddress,
+      });
       const billingAudit = normalizeBillingContext(rawFormValues, { defaultCountry: "Romania" });
       const invoiceDecision = buildInvoiceDecision(billingAudit);
       logBillingAudit({
@@ -876,136 +845,16 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                         <div className="card-body">
                           <div className="row">
                             <div className="col-md-12">
-                              <div className="form-group mb-3">
-                                <label className="form-label">Tip facturare</label>
-                                <select
-                                  className="form-control"
-                                  name="billingType"
-                                  value={formData.billingType}
-                                  onChange={handleInputChange}
-                                >
-                                  <option value="individual">Persoană fizică</option>
-                                  <option value="corporate">Firmă</option>
-                                </select>
-                              </div>
-                            </div>
-
-                            {formData.billingType === "corporate" && (
-                              <>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">Denumire firmă *</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="companyName"
-                                      value={formData.companyName}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">CUI / CIF *</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="companyVAT"
-                                      value={formData.companyVAT}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">Nr. Reg. Com. (opțional)</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="companyReg"
-                                      value={formData.companyReg}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">Adresă firmă *</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="companyAddress"
-                                      value={formData.companyAddress}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                            {formData.billingType !== "corporate" && (
-                              <>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">CNP *</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="personalCnp"
-                                      value={formData.personalCnp}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="col-md-6">
-                                  <div className="form-group mb-3">
-                                    <label className="form-label">Adresă *</label>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      name="billingAddress"
-                                      value={formData.billingAddress}
-                                      onChange={handleInputChange}
-                                    />
-                                  </div>
-                                </div>
-                              </>
-                            )}
-
-                            <div className="col-md-4">
-                              <div className="form-group mb-3">
-                                <label className="form-label">Oraș *</label>
-                                <input
-                                  type="text"
-                                  className="form-control"
-                                  name="billingCity"
-                                  value={formData.billingCity}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                            </div>
-                            <div className="col-md-4">
-                              <div className="form-group mb-3">
-                                <label className="form-label">Județ *</label>
-                                <input
-                                  type="text"
-                                  className="form-control"
-                                  name="billingCounty"
-                                  value={formData.billingCounty}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                            </div>
-                            <div className="col-md-4">
-                              <div className="form-group mb-3">
-                                <label className="form-label">Țară</label>
-                                <input
-                                  type="text"
-                                  className="form-control"
-                                  name="billingCountry"
-                                  value={formData.billingCountry}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
+                              <BillingDetailsForm
+                                variant="bootstrap"
+                                description="Pentru România, județul și localitatea se aleg din listele compatibile cu Oblio."
+                                billingValues={formData}
+                                onBillingChange={handleBillingFieldChange}
+                                errors={fieldErrors}
+                                individualAddressValue={formData.billingAddress}
+                                onIndividualAddressChange={(value) => handleBillingFieldChange("billingAddress", value)}
+                                disabled={processing}
+                              />
                             </div>
                           </div>
                         </div>

@@ -5,6 +5,13 @@ import {
   buildSyntheticScenarioReport,
   normalizeBillingContext,
 } from "../utils/billingAudit.mjs";
+import {
+  buildBillingAuditInput,
+  buildCourseBillingDetails,
+  createInitialBillingFormValues,
+  getAddressSelectionAfterCountyChange,
+  loadBillingAddressDataset,
+} from "../utils/billingAddressData.mjs";
 
 function buildValidCnp(firstTwelveDigits) {
   const controlKey = "279146358279";
@@ -52,6 +59,7 @@ function runScenario(label, inputUi) {
   });
 }
 
+const addressDataset = await loadBillingAddressDataset();
 const scenarios = [
   runScenario("client România, oraș normal", {
     billingType: "individual",
@@ -131,4 +139,101 @@ const blockedScenario = runScenario("București invalid", {
 });
 assert.equal(blockedScenario.verdict, "checkout blocat corect");
 
-console.log(JSON.stringify({ generatedAt: new Date().toISOString(), scenarios, blockedScenario }, null, 2));
+const countyChangeReset = getAddressSelectionAfterCountyChange({
+  nextCounty: "Ilfov",
+  currentCity: "Sector 3",
+  localitiesByCounty: addressDataset.romania.localitiesByCounty,
+});
+assert.equal(countyChangeReset.billingCounty, "Ilfov");
+assert.equal(countyChangeReset.billingCity, "");
+
+const consultationPayload = buildBillingAuditInput({
+  billingValues: createInitialBillingFormValues({
+    personalCnp: buildValidCnp("198010122114"),
+    billingCounty: "Bucuresti",
+    billingCity: "Sector 1",
+  }),
+  firstName: "Ioana",
+  lastName: "Popescu",
+  fullName: "Ioana Popescu",
+  email: "ioana@example.com",
+  phone: "+40740000001",
+  individualAddress: "Str. Sperantei 12",
+});
+const consultationAudit = normalizeBillingContext(consultationPayload, {
+  defaultCountry: "Romania",
+});
+assert.equal(consultationAudit.validation.ok, true);
+
+const conferencePayload = buildBillingAuditInput({
+  billingValues: createInitialBillingFormValues({
+    billingType: "corporate",
+    companyName: "Example Events SRL",
+    companyVAT: `RO${buildValidCif("1854729")}`,
+    companyReg: "J40/1234/2024",
+    companyAddress: "Bd. Libertatii 10",
+    billingCounty: "Cluj",
+    billingCity: "Cluj-Napoca",
+  }),
+  firstName: "Elena",
+  lastName: "Marin",
+  fullName: "Elena Marin",
+  email: "office@example-events.ro",
+  phone: "+40740000002",
+  individualAddress: "",
+});
+const conferenceAudit = normalizeBillingContext(conferencePayload, {
+  defaultCountry: "Romania",
+});
+assert.equal(conferenceAudit.validation.ok, true);
+
+const courseBillingDetails = buildCourseBillingDetails({
+  billingValues: createInitialBillingFormValues({
+    billingType: "corporate",
+    companyName: "Course Buyer SRL",
+    companyVAT: `RO${buildValidCif("1854730")}`,
+    companyReg: "J40/2222/2024",
+    companyAddress: "Str. Academiei 8",
+    billingCountry: "United States",
+    billingCounty: "California",
+    billingCity: "Los Angeles",
+  }),
+  firstName: "Alex",
+  lastName: "Pop",
+  email: "alex@example.com",
+  phone: "+14085550123",
+  individualAddress: "",
+});
+const courseAudit = normalizeBillingContext(
+  {
+    ...courseBillingDetails,
+    companyName: courseBillingDetails.company.name,
+    cif: courseBillingDetails.company.vat,
+    reg: courseBillingDetails.company.reg,
+    address: courseBillingDetails.company.address,
+    state: courseBillingDetails.address.state,
+    city: courseBillingDetails.address.city,
+    country: courseBillingDetails.address.country,
+    email: courseBillingDetails.email,
+    phone: courseBillingDetails.phone,
+  },
+  { defaultCountry: "Romania" }
+);
+assert.equal(courseAudit.validation.ok, true);
+assert.equal(courseAudit.normalizedClient.deliveryInRomania, false);
+
+console.log(
+  JSON.stringify(
+    {
+      generatedAt: new Date().toISOString(),
+      scenarios,
+      blockedScenario,
+      countyChangeReset,
+      consultationAudit: consultationAudit.normalizedClient,
+      conferenceAudit: conferenceAudit.normalizedClient,
+      courseAudit: courseAudit.normalizedClient,
+    },
+    null,
+    2
+  )
+);
