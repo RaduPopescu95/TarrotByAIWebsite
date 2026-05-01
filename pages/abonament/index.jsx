@@ -232,9 +232,6 @@ export default function AbonamentPage() {
 
   const points = React.useMemo(
     () => [
-      t("premiumSubscribePoint1", {
-        defaultValue: "Billing is for individuals only (full postal address required).",
-      }),
       t("premiumSubscribePoint2", {
         defaultValue:
           "Secure payment via Stripe; Romanian county and locality use Oblio-compliant lists.",

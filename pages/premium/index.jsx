@@ -27,9 +27,6 @@ function cn(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-/** Hide fake/short design session ids from UI; real Stripe checkout session ids are typically longer. */
-const STRIPE_CHECKOUT_SESSION_REF_MIN_CHARS = 44;
-
 function normalizeTruthyQuery(param) {
   const v = normalizeQuery(param).toLowerCase();
   return v === "1" || v === "true" || v === "yes";
@@ -62,7 +59,7 @@ function SuccessBadgeIcon() {
   );
 }
 
-function CelebrationPanel({ eyebrow, title, referenceLabel, referenceValue, children }) {
+function CelebrationPanel({ eyebrow, title, children }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-b from-emerald-50/90 via-white to-white px-6 py-9 shadow-sm sm:px-10 sm:py-11">
       <CelebrationConfetti />
@@ -70,11 +67,6 @@ function CelebrationPanel({ eyebrow, title, referenceLabel, referenceValue, chil
         <SuccessBadgeIcon />
         {eyebrow ? <p className="text-sm font-medium text-emerald-700/90">{eyebrow}</p> : null}
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
-        {referenceValue ? (
-          <p className="mt-4 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-            {referenceLabel}: <span className="text-slate-600">{referenceValue}</span>
-          </p>
-        ) : null}
         {children ? <div className="mt-5 space-y-4 text-center">{children}</div> : null}
       </div>
     </div>
@@ -147,20 +139,29 @@ function Divider() {
   return <div className="my-8 border-t border-dashed border-slate-200" />;
 }
 
-function NextStepLink({ href, title, description, cta }) {
+function VideoLibraryPrimaryCta({ label, hint }) {
   return (
     <Link
-      href={href}
-      className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50/80 sm:gap-5 sm:px-5"
+      href="/videouri"
+      className="group flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 px-6 py-5 text-center shadow-lg shadow-emerald-900/15 ring-2 ring-white/30 transition hover:from-emerald-500 hover:via-emerald-500 hover:to-teal-500 hover:shadow-emerald-800/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:py-6"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-        <span className="text-sm font-semibold text-slate-900 group-hover:text-slate-800">{title}</span>
-        <span className="text-xs leading-snug text-slate-600 sm:text-sm">{description}</span>
-        {cta ? <span className="mt-2 inline-block text-xs font-semibold text-slate-700">{cta}</span> : null}
-      </div>
-      <span className="shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" aria-hidden>
-        ›
+      <span className="inline-flex items-center gap-2 text-base font-semibold tracking-tight text-white sm:text-lg">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-6 w-6 shrink-0 text-emerald-100"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-9.197-5.19A1 1 0 004 6.845v10.31a1 1 0 001.555.832l9.197-5.19a1 1 0 000-1.738z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {label}
       </span>
+      {hint ? (
+        <span className="max-w-md px-1 text-sm font-medium leading-snug text-emerald-50/95">{hint}</span>
+      ) : null}
     </Link>
   );
 }
@@ -240,10 +241,6 @@ export default function PremiumZonePage() {
   const errorQuery = normalizeQuery(router.query.error);
   const hasUrlError = Boolean(errorQuery && errorQuery.length > 0);
 
-  const rawSessionId = router.query.session_id;
-  const sessionId = normalizeQuery(rawSessionId);
-  const sessionIdDisplay = typeof sessionId === "string" && sessionId.startsWith("cs_") ? sessionId : null;
-
   const previewQueryEnabled =
     normalizeTruthyQuery(router.query.premiumSuccessPreview) ||
     normalizeTruthyQuery(router.query.preview);
@@ -254,13 +251,6 @@ export default function PremiumZonePage() {
       designPreviewHostsOk ||
       process.env.NEXT_PUBLIC_PREMIUM_SUCCESS_PREVIEW === "true");
   const devForcedGuestSuccess = isPremiumSuccessDesignPreview && checkoutSuccess;
-
-  const celebrationSessionReference =
-    sessionIdDisplay &&
-    !devForcedGuestSuccess &&
-    sessionIdDisplay.length >= STRIPE_CHECKOUT_SESSION_REF_MIN_CHARS
-      ? sessionIdDisplay
-      : null;
 
   React.useEffect(() => {
     if (!checkoutSuccess) return;
@@ -485,8 +475,6 @@ export default function PremiumZonePage() {
                   <CelebrationPanel
                     eyebrow={t("premiumCheckoutSuccessGuestEyebrow")}
                     title={t("premiumCheckoutSuccessGuestTitle")}
-                    referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                    referenceValue={celebrationSessionReference}
                   />
                   {devForcedGuestSuccess ? (
                     <p className="text-center text-xs text-slate-500">{t("premiumDesignPreviewHint")}</p>
@@ -504,8 +492,6 @@ export default function PremiumZonePage() {
                   <CelebrationPanel
                     eyebrow={t("premiumCheckoutSuccessEyebrow")}
                     title={t("premiumCheckoutSuccessTitle")}
-                    referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                    referenceValue={celebrationSessionReference}
                   >
                     <p className="text-center text-sm leading-relaxed text-slate-600">{t("premiumCheckoutProcessing")}</p>
                     <button
@@ -524,28 +510,23 @@ export default function PremiumZonePage() {
                       <CelebrationPanel
                         eyebrow={t("premiumCheckoutSuccessEyebrow")}
                         title={t("premiumCheckoutSuccessTitle")}
-                        referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                        referenceValue={celebrationSessionReference}
                       >
                         <p className="text-center text-sm leading-relaxed text-slate-600">
                           {t("premiumCheckoutSuccessActivatedHint")}
                         </p>
                       </CelebrationPanel>
                       <Divider />
-                      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">{t("premiumContinueEyebrow")}</p>
+                      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {t("premiumContinueEyebrow")}
+                      </p>
+                      <VideoLibraryPrimaryCta
+                        label={t("premiumVideoLibraryBigCta")}
+                        hint={t("premiumVideoLibraryBigCtaHint")}
+                      />
                     </>
                   ) : (
                     <p className="mb-6 border-b border-slate-100 pb-6 text-sm text-slate-600">{t("premiumZoneDescription")}</p>
                   )}
-
-                  <div className="flex flex-col gap-3">
-                    <NextStepLink
-                      href="/videouri"
-                      title={t("videoLibraryNav")}
-                      description={t("premiumVideoLibraryIntro")}
-                      cta={t("videoLibraryNav")}
-                    />
-                  </div>
                 </div>
               ) : null}
             </div>
