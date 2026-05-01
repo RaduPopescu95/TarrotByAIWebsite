@@ -16,12 +16,16 @@ export default function CourseCard({
   priceLocale = "ro-RO",
   openLabel = "",
   featuredLabel = "",
+  freePriceLabel = "",
 }) {
   const shouldShowVideoPreview =
     !course?.hasCustomThumbnail &&
     typeof course?.previewVimeoId === "string" &&
     course.previewVimeoId.length > 0;
-  const priceLabel = formatPrice(course?.price, course?.currency, priceLocale);
+  const priceLabel =
+    typeof course?.price === "number" && course.price === 0 && freePriceLabel
+      ? freePriceLabel
+      : formatPrice(course?.price, course?.currency, priceLocale);
 
   return (
     <button

@@ -397,6 +397,7 @@ export default function CoursesDashboardPage() {
         currency: course.currency || "RON",
         status: "draft",
         featuredOnHome: false,
+        sitePremiumAccess: course.sitePremiumAccess !== false,
         scheduledAt: null,
         thumbnailUrl: null,
         curriculumLessons: Array.isArray(course.curriculumLessons)

@@ -1,6 +1,7 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { extractVimeoId, isCourseVisible, toSafeCourse } from "../../../lib/courses";
+import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
 
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 const VIMEO_ID_PATTERN = /^\d+$/;
@@ -100,10 +101,20 @@ export default async function handler(req, res) {
     const courseData = await attachPreviewFallbackFromMedia(db, courseId, rawCourseData);
     const isVisible = isCourseVisible(courseData, Date.now());
 
-    let hasAccess = false;
     let purchaseStatus = "none";
     const decoded = await getOptionalAuth(req);
     const uidLabel = maskUid(decoded?.uid);
+
+    const entitlement = await resolveCourseEntitlement(
+      db,
+      decoded?.uid || null,
+      courseId,
+      rawCourseData,
+      { courseVisible: isVisible }
+    );
+    const hasAccess = entitlement.hasAccess;
+    const accessSource = entitlement.accessSource;
+
     if (decoded?.uid) {
       const purchaseSnap = await db
         .collection("users")
@@ -118,7 +129,6 @@ export default async function handler(req, res) {
           : purchaseSnap.exists
           ? "missing_status"
           : "missing_purchase_doc";
-      hasAccess = purchaseSnap.exists && purchaseData.status === "paid";
 
       console.info("[courses.entitlement] purchase_lookup", {
         courseId,
@@ -128,7 +138,14 @@ export default async function handler(req, res) {
         paymentStatus: purchaseData?.paymentStatus || null,
         lastWebhookEventType: purchaseData?.lastWebhookEventType || null,
         lastWebhookEventId: purchaseData?.lastWebhookEventId || null,
+        subscriptionUnlock: entitlement.subscriptionUnlock,
+        sitePremiumActive: entitlement.sitePremiumActive,
+        courseIncludedInPremium: entitlement.courseIncludedInPremium,
+        accessSource,
+        freeCourse: entitlement.accessSource === "free",
       });
+    } else if (entitlement.accessSource === "free") {
+      console.info("[courses.entitlement] free_course_anonymous", { courseId });
     }
 
     if (!isVisible && !hasAccess) {
@@ -163,6 +180,8 @@ export default async function handler(req, res) {
       isVisible,
       hasAccess,
       purchaseStatus,
+      accessSource,
+      freeCourse: accessSource === "free",
       hasCustomThumbnail: safeCourse.hasCustomThumbnail === true,
       hasVimeoPreview: safeCourse.hasVimeoPreview === true,
       hasPreviewVimeoId: Boolean(safeCourse.previewVimeoId),
@@ -173,6 +192,7 @@ export default async function handler(req, res) {
       course: safeCourse,
       isVisible,
       hasAccess,
+      ...(accessSource ? { accessSource } : {}),
     });
   } catch (error) {
     console.error("[courses.entitlement] state_failed", {

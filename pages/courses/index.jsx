@@ -125,6 +125,7 @@ export default function CoursesPage() {
                   noImageLabel={t("coursesCardNoImage")}
                   openLabel={t("coursesHomeOpenCourse")}
                   priceLocale={router.locale || "ro-RO"}
+                  freePriceLabel={t("coursesPriceFree")}
                   onClick={() => router.push(`/courses/${course.id}`)}
                 />
               ))}

@@ -1,6 +1,7 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
-import { resolveDate } from "../../../lib/courses";
+import { isCourseVisible, resolveDate } from "../../../lib/courses";
+import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
@@ -150,6 +151,13 @@ export default async function handler(req, res) {
 
     const [purchaseSnap, courseSnap] = await Promise.all([purchaseRef.get(), courseRef.get()]);
     const purchase = pickPurchaseSnapshot(purchaseSnap);
+    const courseData = courseSnap.exists ? courseSnap.data() || {} : {};
+    const courseVisible = courseSnap.exists ? isCourseVisible(courseData, Date.now()) : false;
+    const entitlement = courseSnap.exists
+      ? await resolveCourseEntitlement(db, authUser.uid, normalizedCourseId, courseData, {
+          courseVisible,
+        })
+      : null;
     const purchaseSessionId =
       purchase?.data?.stripeCheckoutSessionId && typeof purchase.data.stripeCheckoutSessionId === "string"
         ? purchase.data.stripeCheckoutSessionId
@@ -189,10 +197,18 @@ export default async function handler(req, res) {
         status: courseSnap.exists ? (courseSnap.data()?.status || null) : null,
         price: courseSnap.exists ? courseSnap.data()?.price ?? null : null,
         currency: courseSnap.exists ? courseSnap.data()?.currency || null : null,
+        sitePremiumAccess: courseSnap.exists ? courseData.sitePremiumAccess !== false : null,
+        courseVisible,
+        price: courseSnap.exists ? courseData.price ?? null : null,
       },
       purchase,
       derived: {
-        hasAccess: purchase?.data?.status === "paid",
+        hasAccess: Boolean(entitlement?.hasAccess),
+        accessSource: entitlement?.accessSource || null,
+        purchasePaid: Boolean(entitlement?.purchasePaid),
+        subscriptionUnlock: Boolean(entitlement?.subscriptionUnlock),
+        sitePremiumActive: Boolean(entitlement?.sitePremiumActive),
+        courseIncludedInPremium: Boolean(entitlement?.courseIncludedInPremium),
         purchaseStatus: purchase?.data?.status || "missing_purchase_doc",
         linkedSessionId,
       },

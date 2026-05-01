@@ -122,6 +122,16 @@ export default function BillingDetailsForm({
   individualAddressLabel = "Adresa",
   individualAddressPlaceholder = "Strada, numar, bloc, apartament",
   hideIndividualAddressField = false,
+  /** When true, hides corporate billing and keeps type fixed to individual. */
+  individualBillingOnly = false,
+  /**
+   * "all" — full form (default).
+   * "identity" — only CNP + street address (individual path; CNP omitted if hidePersonalCnp).
+   * "location" — only country / county / locality.
+   */
+  fieldGroup = "all",
+  /** When true, CNP field is not shown (street + location still apply for individual). */
+  hidePersonalCnp = false,
   disabled = false,
 }) {
   const [addressOptions, setAddressOptions] = useState(null);
@@ -157,6 +167,13 @@ export default function BillingDetailsForm({
     () => getLocalitiesForCounty(localitiesByCounty, billingValues?.billingCounty),
     [billingValues?.billingCounty, localitiesByCounty]
   );
+
+  useEffect(() => {
+    if (!individualBillingOnly || !onBillingChange) return;
+    if (billingValues?.billingType === "corporate") {
+      onBillingChange("billingType", "individual");
+    }
+  }, [individualBillingOnly, billingValues?.billingType, onBillingChange]);
 
   useEffect(() => {
     if (!billingValues?.billingCountry || !onBillingChange) return;
@@ -232,6 +249,16 @@ export default function BillingDetailsForm({
   const thirdWidth = variant === "tailwind" ? "" : "col-md-4 col-sm-12";
   const fullWidth = variant === "tailwind" ? "md:col-span-2" : "col-md-12 col-sm-12";
   const formControlClass = variant === "tailwind" ? getTailwindControlClass : getBootstrapControlClass;
+  const showBillingTypeRow = fieldGroup === "all" && !individualBillingOnly;
+  const showCorporateBlock =
+    fieldGroup === "all" &&
+    !individualBillingOnly &&
+    billingValues?.billingType === "corporate";
+  const showIndividualIdentityFields =
+    (fieldGroup === "all" || fieldGroup === "identity") &&
+    !showCorporateBlock &&
+    (individualBillingOnly || billingValues?.billingType !== "corporate");
+  const showLocationFields = fieldGroup === "all" || fieldGroup === "location";
   const sectorsHint =
     usesRomanianSelectors && billingValues?.billingCounty === BUCHAREST_COUNTY_NAME
       ? "Pentru Bucuresti poti alege doar Sector 1-6."
@@ -269,19 +296,21 @@ export default function BillingDetailsForm({
       ) : null}
 
       <div className={rowClass}>
-        <Field widthClass={fullWidth} label="Tip facturare" error={errors.billingType}>
-          <select
-            className={formControlClass(errors.billingType)}
-            value={billingValues?.billingType || "individual"}
-            onChange={(event) => commitBillingField("billingType", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="individual">Persoana fizica</option>
-            <option value="corporate">Firma</option>
-          </select>
-        </Field>
+        {showBillingTypeRow ? (
+          <Field widthClass={fullWidth} label="Tip facturare" error={errors.billingType}>
+            <select
+              className={formControlClass(errors.billingType)}
+              value={billingValues?.billingType || "individual"}
+              onChange={(event) => commitBillingField("billingType", event.target.value)}
+              disabled={disabled}
+            >
+              <option value="individual">Persoana fizica</option>
+              <option value="corporate">Firma</option>
+            </select>
+          </Field>
+        ) : null}
 
-        {billingValues?.billingType === "corporate" ? (
+        {showCorporateBlock ? (
           <>
             <Field widthClass={halfWidth} label="Denumire firma" error={errors.companyName}>
               <input
@@ -320,17 +349,21 @@ export default function BillingDetailsForm({
               />
             </Field>
           </>
-        ) : (
+        ) : null}
+
+        {showIndividualIdentityFields ? (
           <>
-            <Field widthClass={halfWidth} label="CNP" error={errors.personalCnp}>
-              <input
-                type="text"
-                className={formControlClass(errors.personalCnp)}
-                value={billingValues?.personalCnp || ""}
-                onChange={(event) => commitBillingField("personalCnp", event.target.value)}
-                disabled={disabled}
-              />
-            </Field>
+            {!hidePersonalCnp && (
+              <Field widthClass={halfWidth} label="CNP" error={errors.personalCnp}>
+                <input
+                  type="text"
+                  className={formControlClass(errors.personalCnp)}
+                  value={billingValues?.personalCnp || ""}
+                  onChange={(event) => commitBillingField("personalCnp", event.target.value)}
+                  disabled={disabled}
+                />
+              </Field>
+            )}
 
             {!hideIndividualAddressField && (
               <Field
@@ -349,88 +382,92 @@ export default function BillingDetailsForm({
               </Field>
             )}
           </>
-        )}
+        ) : null}
 
-        <Field widthClass={thirdWidth} label="Tara" error={errors.billingCountry}>
-          <select
-            className={formControlClass(errors.billingCountry)}
-            value={normalizedCountry || billingValues?.billingCountry || ""}
-            onChange={(event) => handleCountryChange(event.target.value)}
-            disabled={disabled || countryOptions.length === 0}
-          >
-            <option value="">Selecteaza tara</option>
-            {countryOptions.map((option) => (
-              <option key={option.code} value={option.name}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        {usesRomanianSelectors ? (
+        {showLocationFields ? (
           <>
-            <Field widthClass={thirdWidth} label="Judet" error={errors.billingCounty}>
+            <Field widthClass={thirdWidth} label="Tara" error={errors.billingCountry}>
               <select
-                className={formControlClass(errors.billingCounty)}
-                value={normalizeRomanianCounty(billingValues?.billingCounty, countyOptions)}
-                onChange={(event) => handleCountyChange(event.target.value)}
-                disabled={disabled || countyOptions.length === 0}
+                className={formControlClass(errors.billingCountry)}
+                value={normalizedCountry || billingValues?.billingCountry || ""}
+                onChange={(event) => handleCountryChange(event.target.value)}
+                disabled={disabled || countryOptions.length === 0}
               >
-                <option value="">Selecteaza judetul</option>
-                {countyOptions.map((county) => (
-                  <option key={county} value={county}>
-                    {county}
+                <option value="">Selecteaza tara</option>
+                {countryOptions.map((option) => (
+                  <option key={option.code} value={option.name}>
+                    {option.name}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field
-              widthClass={thirdWidth}
-              label="Localitate"
-              error={errors.billingCity}
-              hint={sectorsHint}
-            >
-              <select
-                className={formControlClass(errors.billingCity)}
-                value={normalizeRomanianLocality(billingValues?.billingCity, localityOptions)}
-                onChange={(event) => handleLocalityChange(event.target.value)}
-                disabled={disabled || !billingValues?.billingCounty || localityOptions.length === 0}
-              >
-                <option value="">
-                  {billingValues?.billingCounty
-                    ? "Selecteaza localitatea"
-                    : "Selecteaza mai intai judetul"}
-                </option>
-                {localityOptions.map((locality) => (
-                  <option key={locality} value={locality}>
-                    {locality}
-                  </option>
-                ))}
-              </select>
-            </Field>
+
+            {usesRomanianSelectors ? (
+              <>
+                <Field widthClass={thirdWidth} label="Judet" error={errors.billingCounty}>
+                  <select
+                    className={formControlClass(errors.billingCounty)}
+                    value={normalizeRomanianCounty(billingValues?.billingCounty, countyOptions)}
+                    onChange={(event) => handleCountyChange(event.target.value)}
+                    disabled={disabled || countyOptions.length === 0}
+                  >
+                    <option value="">Selecteaza judetul</option>
+                    {countyOptions.map((county) => (
+                      <option key={county} value={county}>
+                        {county}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field
+                  widthClass={thirdWidth}
+                  label="Localitate"
+                  error={errors.billingCity}
+                  hint={sectorsHint}
+                >
+                  <select
+                    className={formControlClass(errors.billingCity)}
+                    value={normalizeRomanianLocality(billingValues?.billingCity, localityOptions)}
+                    onChange={(event) => handleLocalityChange(event.target.value)}
+                    disabled={disabled || !billingValues?.billingCounty || localityOptions.length === 0}
+                  >
+                    <option value="">
+                      {billingValues?.billingCounty
+                        ? "Selecteaza localitatea"
+                        : "Selecteaza mai intai judetul"}
+                    </option>
+                    {localityOptions.map((locality) => (
+                      <option key={locality} value={locality}>
+                        {locality}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field widthClass={thirdWidth} label="Judet / Regiune" error={errors.billingCounty}>
+                  <input
+                    type="text"
+                    className={formControlClass(errors.billingCounty)}
+                    value={billingValues?.billingCounty || ""}
+                    onChange={(event) => commitBillingField("billingCounty", event.target.value)}
+                    disabled={disabled}
+                  />
+                </Field>
+                <Field widthClass={thirdWidth} label="Oras / Localitate" error={errors.billingCity}>
+                  <input
+                    type="text"
+                    className={formControlClass(errors.billingCity)}
+                    value={billingValues?.billingCity || ""}
+                    onChange={(event) => commitBillingField("billingCity", event.target.value)}
+                    disabled={disabled}
+                  />
+                </Field>
+              </>
+            )}
           </>
-        ) : (
-          <>
-            <Field widthClass={thirdWidth} label="Judet / Regiune" error={errors.billingCounty}>
-              <input
-                type="text"
-                className={formControlClass(errors.billingCounty)}
-                value={billingValues?.billingCounty || ""}
-                onChange={(event) => commitBillingField("billingCounty", event.target.value)}
-                disabled={disabled}
-              />
-            </Field>
-            <Field widthClass={thirdWidth} label="Oras / Localitate" error={errors.billingCity}>
-              <input
-                type="text"
-                className={formControlClass(errors.billingCity)}
-                value={billingValues?.billingCity || ""}
-                onChange={(event) => commitBillingField("billingCity", event.target.value)}
-                disabled={disabled}
-              />
-            </Field>
-          </>
-        )}
+        ) : null}
       </div>
     </div>
   );

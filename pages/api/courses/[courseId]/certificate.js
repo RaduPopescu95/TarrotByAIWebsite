@@ -1,6 +1,7 @@
 import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
-import { normalizeLocale, resolveDate, toSafeCourse } from "../../../../lib/courses";
+import { isCourseVisible, normalizeLocale, resolveDate, toSafeCourse } from "../../../../lib/courses";
 import { requireAuth } from "../../../../lib/requireAuth";
+import { resolveCourseEntitlement } from "../../../../lib/courseSubscriptionAccess";
 import { getCertificateLocaleCopy, resolveCertificateLocale } from "../../../../lib/certificateLocale";
 import { buildCourseCertificatePdf } from "../../../../lib/certificatePdf";
 
@@ -97,18 +98,7 @@ export default async function handler(req, res) {
   try {
     const db = getAdminDb();
 
-    const [purchaseSnap, courseSnap] = await Promise.all([
-      db.collection("users").doc(authUser.uid).collection("purchases").doc(courseId).get(),
-      db.collection("courses").doc(courseId).get(),
-    ]);
-
-    if (!purchaseSnap.exists || purchaseSnap.data()?.status !== "paid") {
-      console.info("[courses.certificate] access_denied", {
-        courseId,
-        uid: maskUid(authUser.uid),
-      });
-      return res.status(403).json({ error: "No active entitlement for this course" });
-    }
+    const courseSnap = await db.collection("courses").doc(courseId).get();
 
     if (!courseSnap.exists) {
       console.warn("[courses.certificate] course_not_found", {
@@ -119,6 +109,37 @@ export default async function handler(req, res) {
     }
 
     const courseData = courseSnap.data() || {};
+    const courseVisible = isCourseVisible(courseData, Date.now());
+    const entitlement = await resolveCourseEntitlement(db, authUser.uid, courseId, courseData, {
+      courseVisible,
+    });
+
+    if (entitlement.accessSource === "free") {
+      console.info("[courses.certificate] free_course_no_certificate", {
+        courseId,
+        uid: maskUid(authUser.uid),
+      });
+      return res.status(403).json({
+        error: "Certificate is only available for purchased courses",
+      });
+    }
+
+    if (!entitlement.hasAccess) {
+      console.info("[courses.certificate] access_denied", {
+        courseId,
+        uid: maskUid(authUser.uid),
+      });
+      return res.status(403).json({ error: "No active entitlement for this course" });
+    }
+
+    const purchaseSnap = await db
+      .collection("users")
+      .doc(authUser.uid)
+      .collection("purchases")
+      .doc(courseId)
+      .get();
+    const purchaseData = purchaseSnap.exists ? purchaseSnap.data() || {} : {};
+
     const safeCourse = toSafeCourse(courseId, courseData, localeCode);
     const courseTitle = safeCourse?.title || "Course";
 
@@ -133,7 +154,10 @@ export default async function handler(req, res) {
     }
 
     const recipientName = resolveRecipientName(authRecord, authUser?.email || "");
-    const purchasedAt = resolveDate(purchaseSnap.data()?.purchasedAt) || new Date();
+    const purchasedAt =
+      purchaseData.status === "paid"
+        ? resolveDate(purchaseData.purchasedAt) || new Date()
+        : new Date();
     const certificateId = buildCertificateId({
       issuedAt: purchasedAt,
       uid: authUser.uid,

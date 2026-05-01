@@ -1,6 +1,10 @@
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
-import { requireAuth } from "../../../../lib/requireAuth";
-import { extractVimeoId } from "../../../../lib/courses";
+import { getOptionalAuth } from "../../../../lib/requireAuth";
+import { extractVimeoId, isCourseVisible } from "../../../../lib/courses";
+import {
+  isCourseFreeFullAccess,
+  resolveCourseEntitlement,
+} from "../../../../lib/courseSubscriptionAccess";
 
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 
@@ -18,16 +22,6 @@ export default async function handler(req, res) {
 
   res.setHeader("Cache-Control", "private, no-store, max-age=0");
 
-  let authUser;
-  try {
-    authUser = await requireAuth(req);
-  } catch (err) {
-    console.warn("[courses.entitlement] playback_unauthorized", {
-      message: err?.message || "unauthorized",
-    });
-    return res.status(err.statusCode || 401).json({ error: err.message });
-  }
-
   const {
     query: { courseId },
   } = req;
@@ -36,44 +30,46 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing courseId" });
   }
 
+  const decoded = await getOptionalAuth(req);
+  const uid = decoded?.uid || null;
+
   console.info("[courses.entitlement] playback_start", {
     courseId,
-    uid: maskUid(authUser.uid),
+    uid: maskUid(uid),
   });
 
   try {
     const db = getAdminDb();
 
-    const purchaseSnap = await db
-      .collection("users")
-      .doc(authUser.uid)
-      .collection("purchases")
-      .doc(courseId)
-      .get();
-
-    if (!purchaseSnap.exists || purchaseSnap.data()?.status !== "paid") {
-      console.info("[courses.entitlement] playback_denied", {
-        courseId,
-        uid: maskUid(authUser.uid),
-      });
-      return res.status(403).json({ error: "No active entitlement for this course" });
-    }
-
-    const [mediaSnap, courseSnap] = await Promise.all([
-      db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get(),
-      db.collection("courses").doc(courseId).get(),
-    ]);
-
+    const courseSnap = await db.collection("courses").doc(courseId).get();
     if (!courseSnap.exists) {
       console.warn("[courses.entitlement] playback_course_not_found", {
         courseId,
-        uid: maskUid(authUser.uid),
+        uid: maskUid(uid),
       });
       return res.status(404).json({ error: "Course not found" });
     }
 
-    const mediaData = mediaSnap.exists ? mediaSnap.data() : null;
     const courseData = courseSnap.data() || {};
+    const courseVisible = isCourseVisible(courseData, Date.now());
+    const entitlement = await resolveCourseEntitlement(db, uid, courseId, courseData, {
+      courseVisible,
+    });
+
+    if (!entitlement.hasAccess) {
+      console.info("[courses.entitlement] playback_denied", {
+        courseId,
+        uid: maskUid(uid),
+      });
+      if (!uid && !isCourseFreeFullAccess(courseData)) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      return res.status(403).json({ error: "No active entitlement for this course" });
+    }
+
+    const mediaSnap = await db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get();
+
+    const mediaData = mediaSnap.exists ? mediaSnap.data() : null;
     const vimeoUrl =
       (typeof mediaData?.vimeoUrl === "string" && mediaData.vimeoUrl) ||
       (typeof courseData?.vimeoUrl === "string" ? courseData.vimeoUrl : "");
@@ -82,14 +78,14 @@ export default async function handler(req, res) {
     if (!vimeoId) {
       console.warn("[courses.entitlement] playback_source_missing", {
         courseId,
-        uid: maskUid(authUser.uid),
+        uid: maskUid(uid),
       });
       return res.status(404).json({ error: "Playback source not found" });
     }
 
     console.info("[courses.entitlement] playback_ok", {
       courseId,
-      uid: maskUid(authUser.uid),
+      uid: maskUid(uid),
       provider: "vimeo",
     });
 
@@ -97,7 +93,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("[courses.entitlement] playback_failed", {
       courseId,
-      uid: maskUid(authUser.uid),
+      uid: maskUid(uid),
       message: error?.message || "unknown_error",
     });
     return res.status(500).json({ error: "Failed to load playback source" });

@@ -173,6 +173,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
     categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
     featuredOnHome: initialValue?.featuredOnHome === true,
+    sitePremiumAccess: initialValue?.sitePremiumAccess !== false,
     notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
     contactContent:
       typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -196,6 +197,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
       categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
       featuredOnHome: initialValue?.featuredOnHome === true,
+      sitePremiumAccess: initialValue?.sitePremiumAccess !== false,
       notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
       contactContent:
         typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -241,6 +243,19 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
 
   const handleToggleFeatured = (event) => {
     setForm((prev) => ({ ...prev, featuredOnHome: event.target.checked }));
+  };
+
+  const handleToggleSitePremium = (event) => {
+    setForm((prev) => ({ ...prev, sitePremiumAccess: event.target.checked }));
+  };
+
+  const handleToggleFreeCourse = (event) => {
+    const checked = event.target.checked;
+    setForm((prev) => ({
+      ...prev,
+      price: checked ? 0 : prev.price === 0 ? "" : prev.price,
+      sitePremiumAccess: checked ? false : prev.sitePremiumAccess,
+    }));
   };
 
   const updateLessonField = (index, field, value) => {
@@ -302,8 +317,8 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     if (form.vimeoUrl && !isValidUrl(form.vimeoUrl)) nextErrors.vimeoUrl = "URL invalid.";
 
     const priceValue = Number(form.price);
-    if (!Number.isFinite(priceValue) || priceValue <= 0) {
-      nextErrors.price = "Prețul trebuie să fie > 0.";
+    if (!Number.isFinite(priceValue) || priceValue < 0) {
+      nextErrors.price = "Preț invalid. Folosește 0 pentru curs gratuit.";
     }
 
     if (!form.currency) nextErrors.currency = "Moneda este obligatorie.";
@@ -509,6 +524,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       currency: form.currency,
       status: form.status,
       featuredOnHome: !!form.featuredOnHome,
+      sitePremiumAccess: Number(form.price) === 0 ? false : !!form.sitePremiumAccess,
       scheduledAt:
         form.status === "scheduled" && form.scheduledAt
           ? new Date(form.scheduledAt).toISOString()
@@ -693,6 +709,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
                 disabled={loading}
               />
               {errors.price && <p className="mt-1.5 text-xs text-red-600">{errors.price}</p>}
+              <p className="mt-1.5 text-xs text-gray-500">0 = curs gratuit, video complet fără plată.</p>
             </div>
             <div>
               <label htmlFor="currency" className="block text-sm font-medium text-gray-900">
@@ -710,6 +727,25 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               </select>
               {errors.currency && <p className="mt-1.5 text-xs text-red-600">{errors.currency}</p>}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={Number(form.price) === 0}
+                onChange={handleToggleFreeCourse}
+                disabled={uiLocked}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+              />
+              <span className="block">
+                <span className="text-sm font-medium text-gray-900">Curs gratuit</span>
+                <span className="mt-1 block text-xs text-gray-500">
+                  Bifează pentru preț 0: oricine poate urmări video complet fără cont (dacă cursul e
+                  public).
+                </span>
+              </span>
+            </label>
           </div>
 
           <div>
@@ -753,6 +789,27 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               </span>
             </label>
           </div>
+
+          {Number(form.price) !== 0 ? (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!form.sitePremiumAccess}
+                  onChange={handleToggleSitePremium}
+                  disabled={uiLocked}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                />
+                <span className="block">
+                  <span className="text-sm font-medium text-gray-900">Inclus în abonamentul site</span>
+                  <span className="mt-1 block text-xs text-gray-500">
+                    Dacă este activ, abonații premium au acces la video fără achiziție separată. Poate
+                    fi dezactivat pentru cursuri doar cu plată unică.
+                  </span>
+                </span>
+              </label>
+            </div>
+          ) : null}
 
           {form.status === "scheduled" && (
             <div>

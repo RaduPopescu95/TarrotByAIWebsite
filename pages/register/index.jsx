@@ -1,4 +1,5 @@
 import * as React from "react";
+import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { validateEmail } from "../../utils/commonUtils";
@@ -10,28 +11,8 @@ import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { useRouter } from "next/router";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import Header from "../../components/Header";
-import Head from "next/head";
+import AuthFunnelShell from "../../components/auth/AuthFunnelShell";
 import { sanitizeInternalReturnUrl } from "../../lib/navigation";
-
-function Copyright(props) {
-  return (
-    <div style={styles.copyrightContainer}>
-      <p style={styles.copyrightText}>
-        {"Copyright © "}
-        <span>Cristina Zurba</span> {new Date().getFullYear()}
-        {"."}
-      </p>
-      <p style={styles.copyrightText}>
-        {"dezvoltat de "}
-        <Link href="https://webappdynamicx.ro/" style={styles.copyrightLink}>
-          Web App Dynamicx
-        </Link>{" "}
-        {"."}
-      </p>
-    </div>
-  );
-}
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -41,15 +22,16 @@ export async function getServerSideProps({ locale }) {
   };
 }
 
-export default function SignInSide() {
-  // Stări pentru gestionarea erorilor
+const bulletInputClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:opacity-60";
+
+export default function RegisterPage() {
   const [emailError, setEmailError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
-  const [message, setMessage] = React.useState("email");
-  const [showSnackback, setShowSnackback] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const [showErrorBanner, setShowErrorBanner] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isMobile, setIsMobile] = React.useState(false);
-  
+
   const { t } = useTranslation("common");
   const { setUserData } = useAuth();
   const router = useRouter();
@@ -58,8 +40,9 @@ export default function SignInSide() {
     : router.query?.returnUrl;
   const safeReturnUrl = React.useMemo(
     () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
-    [rawReturnUrl]
+    [rawReturnUrl],
   );
+
   const [formData, setFormData] = React.useState({
     email: "",
     password: "",
@@ -68,22 +51,14 @@ export default function SignInSide() {
     firstName: "",
   });
 
-  // Check if mobile
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   const isButtonDisabled =
     !formData.email ||
     !formData.password ||
     formData.password !== formData.confirmPassword ||
     !formData.firstName ||
     !formData.lastName;
+
+  const loginHref = `/login?returnUrl=${encodeURIComponent(safeReturnUrl)}`;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -93,10 +68,11 @@ export default function SignInSide() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsLoading(true);
-    
+    setShowErrorBanner(false);
+    let hasError = false;
+
     const data = new FormData(event.currentTarget);
     const email = data.get("email");
     const password = data.get("password");
@@ -104,70 +80,51 @@ export default function SignInSide() {
     const last_name = data.get("lastName");
     const first_name = data.get("firstName");
 
-    // Resetare mesaje de eroare
-    let hasError = false;
-
-    let isValidEmail = validateEmail(email);
-
+    const isValidEmail = validateEmail(email);
     if (!isValidEmail) {
-      console.log("email not valid", email);
-      setEmailError("Emailul nu este valid");
+      setEmailError(t("firebaseErrorInvalidEmail"));
       hasError = true;
     } else {
       setEmailError("");
     }
 
     if (password !== confirmPassword) {
-      console.log("parolele nu sunt identice");
-      setPasswordError("Parolele nu sunt identice");
+      setPasswordError(t("passDontMatch"));
       hasError = true;
-    } else if (password.length < 6) {
-      console.log("Parola trebuie să aibă cel puțin 6 caractere");
-      setPasswordError("Parola trebuie să aibă cel puțin 6 caractere");
+    } else if (typeof password === "string" && password.length < 6) {
+      setPasswordError(t("firebaseErrorWeakPassword"));
       hasError = true;
     } else {
       setPasswordError("");
     }
 
-    // Dacă există erori, opriți procesarea formularului
-    if (hasError) {
+    if (hasError) return;
+
+    setIsLoading(true);
+    try {
+      const userCredentials = await createUserWithEmailAndPassword(authentication, email, password);
+      const user = userCredentials.user;
+      const value = {
+        owner_uid: user.uid,
+        first_name: first_name,
+        last_name: last_name,
+        email,
+      };
+      setUserData({ ...value });
+      await setDoc(doc(db, "Users", user.uid), value);
+      await router.push(safeReturnUrl);
+    } catch (error) {
+      setShowErrorBanner(true);
+      setMessage(handleFirebaseAuthError(error));
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    console.log({ email, first_name, last_name });
-    createUserWithEmailAndPassword(authentication, email, password)
-      .then((userCredentials) => {
-        setTimeout(async () => {
-          const user = userCredentials.user;
-
-          const collectionId = "Users";
-          const documentId = user.uid;
-          const value = {
-            owner_uid: user.uid,
-            first_name: first_name,
-            last_name: last_name,
-            email: email,
-            // Adaugă orice alte câmpuri necesare
-          };
-          setUserData({ ...value });
-          setDoc(doc(db, collectionId, documentId), value);
-          console.log("success PASS");
-        }, 1500);
-      })
-      .then(() => {})
-      .then(() => {
-        router.push(safeReturnUrl);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        const errorMessage = handleFirebaseAuthError(error);
-        setShowSnackback(true);
-        setMessage(errorMessage);
-        setIsLoading(false);
-        console.log("error at submit user", error);
-      });
   };
+
+  const points = React.useMemo(
+    () => [t("createAccountCTAMessage"), t("createAccountCTA"), t("discoverSpiritualWisdom")],
+    [t],
+  );
 
   return (
     <>
@@ -175,532 +132,175 @@ export default function SignInSide() {
         <title>{t("registerTitle")}</title>
         <meta name="description" content={t("registerDescription")} />
         <meta name="robots" content="noindex,nofollow" />
-        <meta property="og:title" content={t("registerTitle")} />
-        <meta property="og:description" content={t("registerDescription")} />
       </Head>
 
-      {/* Main wrapper with unified design */}
-      <div style={styles.mainWrapper}>
-        {/* Header */}
-        <section>
-          <Header isOnlySettngs={true} />
-        </section>
+      <AuthFunnelShell
+        topSlot={
+          <Link
+            href={loginHref}
+            className="mx-auto mb-4 inline-flex w-full max-w-6xl shrink-0 items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 lg:mb-4 xl:max-w-7xl"
+          >
+            <span aria-hidden>←</span>
+            {t("backToLogin")}
+          </Link>
+        }
+      >
+        <section className="rounded-2xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8 sm:py-8 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 lg:px-10 lg:py-8 xl:gap-x-14 xl:px-12">
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <Image
+              src="/LogoPngTransparent.png"
+              width={120}
+              height={120}
+              alt=""
+              className="mb-4 h-[88px] w-[88px] object-contain sm:h-24 sm:w-24 lg:mb-3 lg:h-28 lg:w-28 xl:h-32 xl:w-32"
+              priority
+            />
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl lg:text-2xl">{t("signUp")}</h1>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600 lg:mt-2 lg:max-w-none lg:text-sm lg:leading-snug">
+              {t("registerDescription")}
+            </p>
+          </div>
 
-        {/* Main content container */}
-        <div style={styles.contentContainer}>
-          
-          {/* Left side - Register form */}
-          <div style={{...styles.leftSide, marginLeft: isMobile ? '15%' : '0', marginTop: isMobile ? '20%' : '0'}}>
-            <div style={styles.formContainer}>
-              
-              {/* Logo */}
-              <div style={styles.logoContainer}>
-                <Image
-                  src="/LogoPngTransparent.png"
-                  width={100}
-                  height={100}
-                  alt="Cristina Zurba Logo"
-                />
+          <ul className="mt-6 space-y-2.5 text-left text-sm text-slate-600 lg:col-start-1 lg:row-start-2 lg:mt-0 lg:space-y-2 lg:self-start lg:text-sm">
+            {points.map((line, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500 lg:mt-2" aria-hidden />
+                <span className="leading-snug">{line}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
+            {showErrorBanner && message ? (
+              <div role="alert" className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {message}
               </div>
+            ) : null}
 
-              {/* Title */}
-              <h1 style={styles.title}>
-                Înregistrare
-              </h1>
-
-              {/* Register Form */}
-              <form onSubmit={handleSubmit} style={styles.form}>
-                
-                {/* First Name Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="firstName" style={styles.label}>
-                    Prenume *
+            <form className="space-y-3 sm:space-y-4" onSubmit={handleSubmit}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="reg-first-name" className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t("firstName")}
                   </label>
                   <input
+                    id="reg-first-name"
                     type="text"
-                    id="firstName"
                     name="firstName"
                     required
                     autoComplete="given-name"
-                    style={styles.input}
-                    placeholder="Prenume"
+                    placeholder={t("firstName")}
+                    value={formData.firstName}
                     onChange={handleChange}
+                    disabled={isLoading}
+                    className={bulletInputClass}
                   />
                 </div>
-
-                {/* Last Name Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="lastName" style={styles.label}>
-                    Nume *
+                <div>
+                  <label htmlFor="reg-last-name" className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t("lastName")}
                   </label>
                   <input
+                    id="reg-last-name"
                     type="text"
-                    id="lastName"
                     name="lastName"
                     required
                     autoComplete="family-name"
-                    style={styles.input}
-                    placeholder="Nume"
+                    placeholder={t("lastName")}
+                    value={formData.lastName}
                     onChange={handleChange}
+                    disabled={isLoading}
+                    className={bulletInputClass}
                   />
                 </div>
-
-                {/* Email Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="email" style={styles.label}>
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    autoComplete="email"
-                    style={{...styles.input, borderColor: emailError ? '#ff4757' : '#e9ecef'}}
-                    placeholder="exemplu@email.com"
-                    onChange={handleChange}
-                  />
-                  {emailError && (
-                    <p style={styles.errorText}>{emailError}</p>
-                  )}
-                </div>
-
-                {/* Password Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="password" style={styles.label}>
-                    Parolă *
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    autoComplete="new-password"
-                    style={{...styles.input, borderColor: passwordError ? '#ff4757' : '#e9ecef'}}
-                    placeholder="••••••••"
-                    onChange={handleChange}
-                  />
-                  {passwordError && (
-                    <p style={styles.errorText}>{passwordError}</p>
-                  )}
-                </div>
-
-                {/* Confirm Password Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="confirmPassword" style={styles.label}>
-                    Confirmă parola *
-                  </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    required
-                    autoComplete="new-password"
-                    style={{...styles.input, borderColor: passwordError ? '#ff4757' : '#e9ecef'}}
-                    placeholder="••••••••"
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* Register Button */}
-                <button
-                  type="submit"
-                  style={{
-                    ...styles.registerButton,
-                    ...(isButtonDisabled ? styles.buttonDisabled : {})
-                  }}
-                  disabled={isButtonDisabled || isLoading}
-                >
-                  {isLoading ? (
-                    <div style={styles.spinner}></div>
-                  ) : (
-                    "Înregistrare"
-                  )}
-                </button>
-
-                {/* Links */}
-                <div style={styles.linksContainer}>
-                  <div style={styles.linkGroup}>
-                    <span style={styles.linkText}>
-                      Ai deja un cont?
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        router.push(
-                          `/login?returnUrl=${encodeURIComponent(safeReturnUrl)}`
-                        )
-                      }
-                      style={styles.link}
-                    >
-                      Autentificare
-                    </button>
-                  </div>
-                </div>
-
-                {/* Copyright */}
-                <div style={styles.copyrightSection}>
-                  <Copyright />
-                </div>
-
-              </form>
-            </div>
-          </div>
-
-          {/* Right side - Marketing content */}
-          <div style={styles.rightSide}>
-            <div style={styles.marketingContent}>
-              <div style={styles.marketingContainer}>
-                
-                {/* App marketing section */}
-                <div style={styles.appSection}>
-                  <Image
-                    src="/appmarketing.png"
-                    width={450}
-                    height={450}
-                    alt="App Marketing"
-                    style={styles.appImage}
-                  />
-                  
-                  <div style={styles.downloadSection}>
-                    <h2 style={styles.downloadTitle}>
-                      Descarcă 
-                      <span style={styles.downloadTitleBold}>
-                        aplicația acum
-                      </span>
-                    </h2>
-                  </div>
-                  
-                  <div style={styles.storeButtons}>
-                    <div style={styles.storeButton}>
-                      <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
-                        <img
-                          src="/gplay.png"
-                          alt="Google Play"
-                          style={styles.storeIcon}
-                        />
-                      </Link>
-                      <p style={styles.storeLabel}>Android</p>
-                    </div>
-                    <div style={styles.storeButton}>
-                      <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
-                        <img
-                          src="/appstore.png"
-                          alt="App Store"
-                          style={styles.storeIcon}
-                        />
-                      </Link>
-                      <p style={styles.storeLabel}>iOS</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tarot section */}
-                <div style={styles.tarotSection}>
-                  <Image
-                    src="/lucky-deco.png"
-                    width={278}
-                    height={65}
-                    alt="Lucky decoration"
-                  />
-                  <Image
-                    src="/onboardImg.png"
-                    width={400}
-                    height={450}
-                    alt="Tarot reading"
-                    style={styles.tarotImage}
-                  />
-                  <h1 style={{...styles.tarotTitle, fontSize: isMobile ? '40px' : '80px'}}>
-                    Tarot by AI
-                  </h1>
-                </div>
-
               </div>
-            </div>
-          </div>
 
-        </div>
+              <div>
+                <label htmlFor="reg-email" className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("email")}
+                </label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  name="email"
+                  required
+                  autoComplete="email"
+                  placeholder={t("email")}
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className={`${bulletInputClass} ${emailError ? "border-red-300 focus:border-red-400 focus:ring-red-50" : ""}`}
+                />
+                {emailError ? <p className="mt-1 text-xs text-red-600">{emailError}</p> : null}
+              </div>
 
-        {/* Error notification */}
-        {showSnackback && (
-          <div style={styles.errorNotification}>
-            <div style={styles.errorContent}>
-              <i className="fa fa-exclamation-triangle" style={styles.errorIcon}></i>
-              <span>{message}</span>
+              <div>
+                <label htmlFor="reg-password" className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("password")}
+                </label>
+                <input
+                  id="reg-password"
+                  type="password"
+                  name="password"
+                  required
+                  autoComplete="new-password"
+                  placeholder={t("password")}
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className={`${bulletInputClass} ${passwordError ? "border-red-300 focus:border-red-400 focus:ring-red-50" : ""}`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="reg-confirm" className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("confirmPassword")}
+                </label>
+                <input
+                  id="reg-confirm"
+                  type="password"
+                  name="confirmPassword"
+                  required
+                  autoComplete="new-password"
+                  placeholder={t("confirmPassword")}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className={`${bulletInputClass} ${passwordError ? "border-red-300 focus:border-red-400 focus:ring-red-50" : ""}`}
+                />
+                {passwordError ? <p className="mt-1 text-xs text-red-600">{passwordError}</p> : null}
+              </div>
+
               <button
-                style={styles.errorClose}
-                onClick={() => setShowSnackback(false)}
+                type="submit"
+                disabled={isButtonDisabled || isLoading}
+                className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <i className="fa fa-times"></i>
+                {isLoading ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    {t("signUp")}
+                  </span>
+                ) : (
+                  t("signUp")
+                )}
               </button>
+            </form>
+
+            <div className="mt-5 flex flex-col gap-3 text-center text-sm sm:mt-6 lg:mt-5 lg:flex-row lg:justify-between lg:gap-4 lg:text-left">
+              <Link href="/forgotpassword" className="shrink-0 font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline lg:text-sm">
+                {t("forgotPassword")}
+              </Link>
+              <p className="text-slate-600 lg:flex-1 lg:min-w-0 lg:text-right lg:text-sm">
+                {t("alreadyAccount")}{" "}
+                <Link href={loginHref} className="font-semibold text-indigo-700 underline-offset-2 hover:underline">
+                  {t("loginNow")}
+                </Link>
+              </p>
             </div>
           </div>
-        )}
-
-      </div>
+        </section>
+      </AuthFunnelShell>
     </>
   );
 }
-
-// Styles matching /consultatii design
-const styles = {
-  mainWrapper: {
-    minHeight: '100vh',
-    backgroundColor: '#ffffff',
-    width: '100%',
-  },
-  contentContainer: {
-    display: 'flex',
-    minHeight: '100vh',
-  },
-  leftSide: {
-    width: '41.67%', // 5/12
-    padding: '2rem',
-    backgroundColor: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflowY: 'auto',
-    '@media (max-width: 768px)': {
-      width: '100%',
-      padding: '1rem',
-    },
-  },
-  rightSide: {
-    width: '58.33%', // 7/12
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    '@media (max-width: 768px)': {
-      display: 'none',
-    },
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: '400px',
-    padding: '2rem',
-  },
-  logoContainer: {
-    textAlign: 'center',
-    marginBottom: '2rem',
-  },
-  title: {
-    fontSize: '1.8rem',
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: '2rem',
-  },
-  form: {
-    width: '100%',
-  },
-  inputGroup: {
-    marginBottom: '1.5rem',
-  },
-  label: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    width: '100%',
-    padding: '12px 16px',
-    border: '2px solid #e9ecef',
-    borderRadius: '12px',
-    fontSize: '16px',
-    transition: 'all 0.3s ease',
-    backgroundColor: 'white',
-    boxSizing: 'border-box',
-  },
-  errorText: {
-    fontSize: '12px',
-    color: '#ff4757',
-    marginTop: '0.5rem',
-    margin: '0.5rem 0 0 0',
-  },
-  registerButton: {
-    width: '100%',
-    padding: '15px 24px',
-    marginBottom: '2rem',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    border: 'none',
-    color: 'white',
-    borderRadius: '25px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '50px',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-  },
-  buttonDisabled: {
-    background: '#e9ecef',
-    color: '#6c757d',
-    cursor: 'not-allowed',
-    boxShadow: 'none',
-  },
-  spinner: {
-    width: '20px',
-    height: '20px',
-    border: '2px solid transparent',
-    borderTop: '2px solid currentColor',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  linksContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  linkGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
-  link: {
-    background: 'none',
-    border: 'none',
-    color: '#667eea',
-    fontSize: '14px',
-    cursor: 'pointer',
-    textDecoration: 'underline',
-    padding: '0',
-  },
-  linkText: {
-    fontSize: '14px',
-    color: '#666',
-  },
-  copyrightSection: {
-    marginTop: '2rem',
-  },
-  copyrightContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: '1rem',
-  },
-  copyrightText: {
-    fontSize: '12px',
-    color: '#666',
-    margin: '0',
-  },
-  copyrightLink: {
-    color: '#667eea',
-    textDecoration: 'none',
-  },
-  marketingContent: {
-    padding: '2rem',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  marketingContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '3rem',
-    maxWidth: '1000px',
-  },
-  appSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  appImage: {
-    marginBottom: '1rem',
-  },
-  downloadSection: {
-    textAlign: 'center',
-    marginBottom: '1rem',
-  },
-  downloadTitle: {
-    color: 'white',
-    fontWeight: '300',
-    margin: '0',
-    fontSize: '1.5rem',
-  },
-  downloadTitleBold: {
-    fontWeight: 'bold',
-    marginLeft: '5px',
-  },
-  storeButtons: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    gap: '2rem',
-    width: '70%',
-  },
-  storeButton: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  storeIcon: {
-    width: '60px',
-    height: '60px',
-    marginBottom: '0.5rem',
-  },
-  storeLabel: {
-    margin: '0',
-    color: 'white',
-    backgroundColor: 'rgba(40, 49, 64, 0.5)',
-    padding: '4px 8px',
-    borderRadius: '8px',
-    fontSize: '14px',
-  },
-  tarotSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  tarotImage: {
-    marginTop: '1rem',
-    marginBottom: '1rem',
-  },
-  tarotTitle: {
-    color: 'white',
-    fontWeight: 'bold',
-    margin: '0',
-    textAlign: 'center',
-  },
-  errorNotification: {
-    position: 'fixed',
-    bottom: '20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    zIndex: 1000,
-    animation: 'slideInUp 0.3s ease-out',
-  },
-  errorContent: {
-    background: '#ff4757',
-    color: 'white',
-    padding: '15px 20px',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-  },
-  errorIcon: {
-    fontSize: '18px',
-  },
-  errorClose: {
-    background: 'none',
-    border: 'none',
-    color: 'white',
-    cursor: 'pointer',
-    padding: '0',
-    marginLeft: '10px',
-    fontSize: '16px',
-  },
-};

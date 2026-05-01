@@ -23,6 +23,7 @@ import VideoForm from "./VideoForm";
 import VideoTable from "./VideoTable";
 import Modal from "./Modal";
 import { LANGUAGE_LABELS } from "../../../../data/constants";
+import { resolveLibraryEmbedSrc } from "../../../../lib/videoLibraryPublic";
 import { gTranslateFetch } from "../../../../utils/apiUtils";
 
 type PublishFilter = "all" | "published" | "unpublished";
@@ -713,34 +714,8 @@ export default function VideoLibraryAdminScreen() {
     setPage(1);
   };
 
-  const getEmbedUrl = (video: VideoDoc) => {
-    const raw = video.videoUrl?.trim();
-    if (!raw) return null;
-    try {
-      const parsed = new URL(raw);
-      if (video.platform === "youtube") {
-        if (parsed.hostname.includes("youtu.be")) {
-          const id = parsed.pathname.replace("/", "");
-          return id ? `https://www.youtube.com/embed/${id}` : null;
-        }
-        if (parsed.hostname.includes("youtube.com")) {
-          const id = parsed.searchParams.get("v") || "";
-          if (id) return `https://www.youtube.com/embed/${id}`;
-          const match = parsed.pathname.match(/\/embed\/([^/]+)/);
-          return match?.[1] ? `https://www.youtube.com/embed/${match[1]}` : null;
-        }
-      }
-      if (video.platform === "vimeo") {
-        if (parsed.hostname.includes("vimeo.com")) {
-          const id = parsed.pathname.split("/").filter(Boolean).pop();
-          return id ? `https://player.vimeo.com/video/${id}` : null;
-        }
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  };
+  const getEmbedUrl = (video: VideoDoc) =>
+    resolveLibraryEmbedSrc(video.platform, video.videoUrl ?? "") || null;
 
   const stats = useMemo(() => {
     const total = videos.length;
@@ -882,6 +857,7 @@ export default function VideoLibraryAdminScreen() {
                   <option value="all">Toate platformele</option>
                   <option value="youtube">YouTube</option>
                   <option value="vimeo">Vimeo</option>
+                  <option value="bunny">Bunny Stream</option>
                 </select>
                 <select
                   value={publishFilter}

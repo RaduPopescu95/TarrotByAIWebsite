@@ -244,6 +244,16 @@ function Mixed(props) {
       ),
       active: router.pathname === "/news"
     },
+    {
+      href: "/videouri",
+      label: t("videoLibraryNav"),
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+      ),
+      active: router.pathname === "/videouri"
+    },
     // {
     //   href: "/inregistrari-descarcare",
     //   label: "Înregistrări",

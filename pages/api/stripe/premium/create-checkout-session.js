@@ -1,0 +1,187 @@
+import Stripe from "stripe";
+import { FieldValue } from "firebase-admin/firestore";
+import { getAdminDb } from "../../../../lib/firebaseAdmin";
+import { requireAuth } from "../../../../lib/requireAuth";
+import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
+import { resolvePremiumPublicBaseUrl } from "../../../../lib/premiumServerUtils";
+import {
+  normalizeBillingDetails,
+  buildBillingContextInput,
+} from "../../../../lib/stripeBillingDetails";
+import {
+  buildInvoiceDecision,
+  logBillingAudit,
+  normalizeBillingContext,
+} from "../../../../utils/billingAudit.mjs";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const PREMIUM_CHECKOUT_SESSION_COLLECTION = "premiumCheckoutSessions";
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const priceId = process.env.STRIPE_PREMIUM_PRICE_ID;
+  if (!priceId || typeof priceId !== "string") {
+    console.error("[premium.checkout] missing STRIPE_PREMIUM_PRICE_ID");
+    return res.status(500).json({ error: "Premium billing is not configured" });
+  }
+
+  let authUser;
+  try {
+    authUser = await requireAuth(req);
+  } catch (err) {
+    const code = err.statusCode || 401;
+    return res.status(code).json({ error: err.message || "Unauthorized" });
+  }
+
+  const { billingDetails: rawBillingDetails } = req.body || {};
+
+  let billingDetails = null;
+  let billingAudit = null;
+  let invoiceDecision = null;
+  try {
+    billingDetails = normalizeBillingDetails(rawBillingDetails, authUser.email || "");
+    billingAudit = normalizeBillingContext(
+      buildBillingContextInput(billingDetails, rawBillingDetails, authUser.email || ""),
+      { defaultCountry: "Romania", individualCnpOptional: true }
+    );
+    invoiceDecision = buildInvoiceDecision(billingAudit);
+    logBillingAudit({
+      flow: "premium_subscription",
+      stage: "api_checkout_received",
+      raw: rawBillingDetails || {},
+      normalized: billingAudit.normalizedClient,
+      decision: invoiceDecision,
+    });
+    if (!billingAudit.validation.ok) {
+      return res.status(400).json({
+        error: billingAudit.validation.blockingErrors[0]?.message || "Invalid billing details",
+        details: billingAudit.validation.blockingErrors,
+      });
+    }
+  } catch (auditErr) {
+    console.error("[premium.checkout] billing_audit_error", auditErr?.message || auditErr);
+    return res.status(400).json({ error: "Invalid billing payload" });
+  }
+
+  const baseUrl = resolvePremiumPublicBaseUrl(req);
+  if (!baseUrl) {
+    console.error("[premium.checkout] missing_base_url");
+    return res.status(500).json({ error: "Missing site URL configuration" });
+  }
+
+  const uid = authUser.uid;
+  const db = getAdminDb();
+  let stripeCustomerId = null;
+  try {
+    const snap = await db.collection("Users").doc(uid).get();
+    if (snap.exists) {
+      const c = snap.data()?.stripeCustomerId;
+      if (typeof c === "string" && c.trim()) {
+        stripeCustomerId = c.trim();
+      }
+    }
+  } catch (e) {
+    console.warn("[premium.checkout] user_read_failed", { message: e?.message });
+  }
+
+  const metadata = {
+    uid,
+    flow: PREMIUM_FLOW_METADATA,
+    invoiceSendEmail: String(billingDetails?.invoicePreferences?.sendEmail !== false),
+    invoiceEInvoice: String(invoiceDecision.sendEInvoice),
+    invoiceDeliveryInRomania: String(billingAudit.normalizedClient.deliveryInRomania),
+    invoiceEligibleForEInvoice: String(billingAudit.normalizedClient.eligibleForEInvoice),
+  };
+  if (billingDetails?.billingType) {
+    metadata.billingType = billingDetails.billingType;
+  }
+  if (
+    billingDetails?.invoicePreferences?.dueDays !== null &&
+    billingDetails?.invoicePreferences?.dueDays !== undefined
+  ) {
+    metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
+  }
+
+  const sessionParams = {
+    mode: "subscription",
+    payment_method_types: ["card"],
+    billing_address_collection: "required",
+    phone_number_collection: { enabled: true },
+    line_items: [{ price: priceId, quantity: 1 }],
+    client_reference_id: uid,
+    metadata,
+    subscription_data: {
+      metadata,
+    },
+    success_url: `${baseUrl}/premium?checkout=success`,
+    cancel_url: `${baseUrl}/abonament?checkout=cancel`,
+  };
+
+  if (stripeCustomerId) {
+    sessionParams.customer = stripeCustomerId;
+  } else if (authUser.email) {
+    sessionParams.customer_email = authUser.email;
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    if (!session?.url) {
+      return res.status(500).json({ error: "Checkout session missing URL" });
+    }
+
+    try {
+      const checkoutSessionPayload = {
+        uid,
+        stripeCheckoutSessionId: session.id,
+        paymentStatus: "pending",
+        status: "created",
+        flow: PREMIUM_FLOW_METADATA,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (billingDetails) {
+        checkoutSessionPayload.billing = billingDetails;
+      }
+      checkoutSessionPayload.rawFormValues = rawBillingDetails || null;
+      checkoutSessionPayload.normalizedBeforeCheckout = billingAudit.normalizedClient;
+      checkoutSessionPayload.stripeMetadataSnapshot = metadata;
+      checkoutSessionPayload.invoiceDecision = invoiceDecision;
+      checkoutSessionPayload.checkoutRequestPayload = req.body || {};
+
+      await db
+        .collection(PREMIUM_CHECKOUT_SESSION_COLLECTION)
+        .doc(session.id)
+        .set(checkoutSessionPayload, { merge: true });
+
+      await db.collection("Users").doc(uid).set(
+        {
+          premiumBillingProfile: {
+            billing: billingDetails,
+            rawFormValues: rawBillingDetails ?? null,
+            normalizedBeforeCheckout: billingAudit.normalizedClient,
+            stripeMetadataSnapshot: metadata,
+            invoiceDecision,
+            checkoutSessionPendingId: session.id,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (persistError) {
+      console.warn("[premium.checkout] session_persist_failed", {
+        sessionId: session.id,
+        message: persistError?.message || "unknown_error",
+      });
+    }
+
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error("[premium.checkout] stripe_error", { message: err?.message });
+    return res.status(500).json({ error: "Could not start checkout" });
+  }
+}

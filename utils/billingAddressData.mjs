@@ -284,6 +284,35 @@ export function buildCourseBillingDetails({
   };
 }
 
+/** Restore BillingDetailsForm UI + contact fields from `Users.premiumBillingProfile`. */
+export function hydrateBillingUiFromPremiumProfile(profile) {
+  const b = profile?.billing;
+  if (!b || typeof b !== "object") return null;
+  const addr = b.address && typeof b.address === "object" ? b.address : {};
+  const billingType = b.billingType === "corporate" ? "corporate" : "individual";
+
+  return {
+    billingContact: {
+      firstName: sanitizeString(b.firstName, 120),
+      lastName: sanitizeString(b.lastName, 120),
+      email: sanitizeString(b.email, 320),
+      phone: sanitizeString(b.phone, 64),
+    },
+    billingForm: createInitialBillingFormValues({
+      billingType,
+      billingCountry: normalizeCountrySelection(addr.country || ROMANIA_COUNTRY_NAME),
+      billingCounty: sanitizeString(addr.state, 120),
+      billingCity: sanitizeString(addr.city, 120),
+      billingAddress: billingType === "individual" ? sanitizeString(addr.line1, 255) : "",
+      personalCnp: billingType === "individual" ? sanitizeString(b.cnp, 32) : "",
+      companyName: sanitizeString(b.company?.name, 255),
+      companyVAT: sanitizeString(b.company?.vat, 64),
+      companyReg: sanitizeString(b.company?.reg, 64),
+      companyAddress: sanitizeString(b.company?.address, 255),
+    }),
+  };
+}
+
 export function mapBillingAuditErrorsToForm(
   errorsByField = {},
   { billingType = "individual", individualAddressField = "billingAddress" } = {}

@@ -131,6 +131,9 @@ export default function VideoTable({
                   <span className="text-[10px] text-gray-500">{getSortIndicator("isPublished")}</span>
                 </button>
               </th>
+              <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-gray-700">
+                Acces site
+              </th>
               <th className="px-6 py-4" aria-sort={getAriaSort("createdAt")}>
                 <button
                   type="button"
@@ -158,7 +161,11 @@ export default function VideoTable({
                 </td>
                 <td className="px-6 py-4">
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                    {video.platform === "youtube" ? "YouTube" : "Vimeo"}
+                    {video.platform === "bunny"
+                      ? "Bunny"
+                      : video.platform === "vimeo"
+                        ? "Vimeo"
+                        : "YouTube"}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-gray-600">
@@ -203,6 +210,17 @@ export default function VideoTable({
                   >
                     {video.isPublished ? "Public" : "Ascuns"}
                   </button>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {video.isPremium === true ? (
+                    <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-800 ring-1 ring-violet-600/15">
+                      Abonament site
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-600/15">
+                      Teaser public
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-gray-600">{formatTimestamp(video.createdAt)}</td>
                 <td className="px-6 py-4">

@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type VideoPlatform = "vimeo" | "youtube";
+export type VideoPlatform = "bunny" | "vimeo" | "youtube";
 
 export type VideoLocaleFields = {
   title: string;

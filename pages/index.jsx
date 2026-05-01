@@ -742,6 +742,7 @@ function Landing(props) {
                               openLabel={t("coursesHomeOpenCourse")}
                               featuredLabel={t("coursesHomeFeaturedBadge")}
                               priceLocale={router.locale || "ro-RO"}
+                              freePriceLabel={t("coursesPriceFree")}
                             />
                           ))}
                         </div>
@@ -768,6 +769,7 @@ function Landing(props) {
                               noImageLabel={t("coursesCardNoImage")}
                               openLabel={t("coursesHomeOpenCourse")}
                               priceLocale={router.locale || "ro-RO"}
+                              freePriceLabel={t("coursesPriceFree")}
                             />
                           ))}
                         </div>

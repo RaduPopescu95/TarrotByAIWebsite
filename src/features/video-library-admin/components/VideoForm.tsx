@@ -15,6 +15,7 @@ type Props = {
 const platformOptions: Array<{ value: VideoPlatform; label: string }> = [
   { value: "youtube", label: "YouTube" },
   { value: "vimeo", label: "Vimeo" },
+  { value: "bunny", label: "Bunny Stream" },
 ];
 
 export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
@@ -27,7 +28,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     category: "",
     order: undefined,
     isPublished: false,
-    isPremium: false,
+    isPremium: true,
     publishAt: null,
   });
   const [errors, setErrors] = useState<VideoValidationErrors>({});
@@ -86,7 +87,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         category: initialValue.category || "",
         order: initialValue.order,
         isPublished: initialValue.isPublished,
-        isPremium: initialValue.isPremium ?? false,
+        isPremium: initialValue.isPremium === true,
         publishAt: initialValue.publishAt ?? null,
       });
       setErrors({});
@@ -299,7 +300,12 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                 />
                 {errors.videoUrl && <p className="mt-1.5 text-xs text-red-600">{errors.videoUrl}</p>}
                 <p className="mt-1.5 text-xs text-gray-500">
-                  Pentru YouTube poți folosi link-ul standard sau short link; pentru Vimeo folosește link-ul complet.
+                  YouTube: link standard sau youtu.be. Vimeo: link complet către videoclip. Bunny Stream:
+                  Folosește linkul de embed din panoul Bunny, de forma{" "}
+                  <span className="break-all font-mono text-[11px]">
+                    https://player.mediadelivery.net/embed/[id-bibliotecă]/[id-video]
+                  </span>
+                  .
                 </p>
               </div>
 
@@ -415,8 +421,13 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               disabled={uiLocked}
               className="h-5 w-5 rounded border-gray-300 text-amber-600 shadow-sm transition-all focus:ring-2 focus:ring-amber-500/30 focus:ring-offset-0"
             />
-            <span className="text-sm font-semibold text-gray-700 transition-colors group-hover:text-amber-700 group-has-[:checked]:text-amber-700">
-              Doar utilizatori premium
+            <span className="flex flex-col text-left">
+              <span className="text-sm font-semibold text-gray-700 transition-colors group-hover:text-amber-700 group-has-[:checked]:text-amber-700">
+                Necesită abonament site
+              </span>
+              <span className="text-xs font-normal text-gray-500">
+                Debifat = clip teaser, vizibil gratuit pe site; bifat = doar pentru abonați cu acces premium activ.
+              </span>
             </span>
           </label>
         </div>

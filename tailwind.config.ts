@@ -53,6 +53,18 @@ const config: Config = {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        /** Shimmer skeleton (dimensions stay fixed; only gradient moves). */
+        'skeleton-shine':
+          'linear-gradient(90deg, #e2e8f0 0%, #e2e8f0 28%, #f8fafc 50%, #e2e8f0 72%, #e2e8f0 100%)',
+      },
+      keyframes: {
+        'skeleton-shine': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+      },
+      animation: {
+        'skeleton-shine': 'skeleton-shine 1.65s ease-in-out infinite',
       },
     },
   },

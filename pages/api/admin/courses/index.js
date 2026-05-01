@@ -91,7 +91,13 @@ function validateCourseInput(input) {
       errors.push("categoryIds");
     }
   }
-  if (typeof input.price !== "number" || input.price <= 0) errors.push("price");
+  if (
+    typeof input.price !== "number" ||
+    !Number.isFinite(input.price) ||
+    input.price < 0
+  ) {
+    errors.push("price");
+  }
   if (!ALLOWED_CURRENCIES.includes(input.currency)) errors.push("currency");
   if (!ALLOWED_STATUS.includes(input.status)) errors.push("status");
   if (input.status === "scheduled") {
@@ -101,6 +107,9 @@ function validateCourseInput(input) {
   }
   if (input.featuredOnHome !== undefined && typeof input.featuredOnHome !== "boolean") {
     errors.push("featuredOnHome");
+  }
+  if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
+    errors.push("sitePremiumAccess");
   }
   if (input.curriculumLessons !== undefined && !hasValidCurriculumLessons(input.curriculumLessons)) {
     errors.push("curriculumLessons");
@@ -164,6 +173,7 @@ export default async function handler(req, res) {
       currency: input.currency,
       status: input.status,
       featuredOnHome: input.featuredOnHome === true,
+      sitePremiumAccess: input.sitePremiumAccess !== false,
       scheduledAt: input.status === "scheduled" ? parseScheduledAt(input.scheduledAt) : null,
       ...(input.locales ? { locales: input.locales } : {}),
       thumbnailUrl: input.thumbnailUrl?.trim() || null,

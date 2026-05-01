@@ -112,6 +112,7 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [accessSource, setAccessSource] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [accessLoading, setAccessLoading] = useState(false);
   const [pageError, setPageError] = useState("");
@@ -192,11 +193,19 @@ export default function CourseDetailPage() {
         const nextCourse = data?.course || null;
         const nextHasAccess = !!data?.hasAccess;
         const nextIsVisible = !!data?.isVisible;
+        const nextAccessSource =
+          typeof data?.accessSource === "string" ? data.accessSource : null;
 
         setCourse(nextCourse);
         setHasAccess(nextHasAccess);
+        setAccessSource(nextAccessSource);
         setIsVisible(nextIsVisible);
-        return { course: nextCourse, hasAccess: nextHasAccess, isVisible: nextIsVisible };
+        return {
+          course: nextCourse,
+          hasAccess: nextHasAccess,
+          isVisible: nextIsVisible,
+          accessSource: nextAccessSource,
+        };
       } catch (err) {
         console.error("[courses.detail] state_load_fail", {
           courseId: normalizedCourseId,
@@ -205,6 +214,7 @@ export default function CourseDetailPage() {
         });
         setCourse(null);
         setHasAccess(false);
+        setAccessSource(null);
         setIsVisible(false);
         setPlaybackVimeoId(null);
         setPageError(err.message || t("coursesErrorsLoadCourse"));
@@ -290,8 +300,9 @@ export default function CourseDetailPage() {
     setPlaybackLoading(true);
     setPlaybackError("");
     try {
-      const authHeaders = await getAuthHeaders({ required: true });
-      if (!authHeaders.Authorization) {
+      const needAuth = accessSource !== "free";
+      const authHeaders = await getAuthHeaders({ required: needAuth });
+      if (needAuth && !authHeaders.Authorization) {
         throw new Error(t("coursesErrorsAuthRequired"));
       }
       const response = await fetch(`/api/courses/${normalizedCourseId}/playback`, {
@@ -319,7 +330,7 @@ export default function CourseDetailPage() {
     } finally {
       setPlaybackLoading(false);
     }
-  }, [normalizedCourseId, getAuthHeaders, hasAccess, t]);
+  }, [normalizedCourseId, getAuthHeaders, hasAccess, accessSource, t]);
 
   useEffect(() => {
     loadPlayback();
@@ -343,16 +354,17 @@ export default function CourseDetailPage() {
     typeof course?.previewVimeoId === "string" &&
     course.previewVimeoId.length > 0;
 
-  const priceLabel = useMemo(
-    () =>
-      formatPrice(
-        course?.price,
-        course?.currency,
-        router.locale || "ro-RO",
-        t("coursesPriceUnavailable")
-      ),
-    [course?.price, course?.currency, router.locale, t]
-  );
+  const priceLabel = useMemo(() => {
+    if (typeof course?.price === "number" && course.price === 0) {
+      return t("coursesPriceFree");
+    }
+    return formatPrice(
+      course?.price,
+      course?.currency,
+      router.locale || "ro-RO",
+      t("coursesPriceUnavailable")
+    );
+  }, [course?.price, course?.currency, router.locale, t]);
 
   const curriculumData = useMemo(() => {
     const hasLessonsField = course && Object.prototype.hasOwnProperty.call(course, "curriculumLessons");
@@ -607,7 +619,11 @@ export default function CourseDetailPage() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || mapCheckoutError(response.status, t));
+        const msg =
+          data?.error === "free_course"
+            ? t("coursesErrorsFreeCourse")
+            : data?.error || mapCheckoutError(response.status, t);
+        throw new Error(msg);
       }
       if (data?.url) {
         window.location.href = data.url;
@@ -921,7 +937,11 @@ export default function CourseDetailPage() {
                         )
                       ) : hasAccess ? (
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                          {t("coursesAccessAlreadyGranted")}
+                          {accessSource === "free"
+                            ? t("coursesAccessFreeBadge")
+                            : accessSource === "site_premium"
+                              ? t("coursesAccessViaSubscription")
+                              : t("coursesAccessAlreadyGranted")}
                         </div>
                       ) : waitingForCheckoutConfirmation ? (
                         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -1125,7 +1145,7 @@ export default function CourseDetailPage() {
                       : t("coursesDetailDownloadCertificate")
                   }
                   certificateLockedLabel={t("coursesDetailCertificateLocked")}
-                  isCertificateEnabled={hasAccess}
+                  isCertificateEnabled={hasAccess && accessSource !== "free"}
                   onDownloadCertificate={handleDownloadCertificate}
                   isCertificateLoading={certificateLoading}
                   emptyLabel={t("coursesDetailLessonsEmptyDescription")}

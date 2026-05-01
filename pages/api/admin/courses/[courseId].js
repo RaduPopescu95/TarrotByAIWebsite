@@ -89,8 +89,12 @@ function validateUpdate(input) {
       errors.push("categoryIds");
     }
   }
-  if (input.price !== undefined && (typeof input.price !== "number" || input.price <= 0))
+  if (
+    input.price !== undefined &&
+    (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price < 0)
+  ) {
     errors.push("price");
+  }
   if (input.currency !== undefined && !ALLOWED_CURRENCIES.includes(input.currency))
     errors.push("currency");
   if (input.status !== undefined && !ALLOWED_STATUS.includes(input.status)) errors.push("status");
@@ -102,6 +106,9 @@ function validateUpdate(input) {
   }
   if (input.featuredOnHome !== undefined && typeof input.featuredOnHome !== "boolean") {
     errors.push("featuredOnHome");
+  }
+  if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
+    errors.push("sitePremiumAccess");
   }
   if (input.curriculumLessons !== undefined && !hasValidCurriculumLessons(input.curriculumLessons)) {
     errors.push("curriculumLessons");
@@ -192,6 +199,9 @@ export default async function handler(req, res) {
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.featuredOnHome !== undefined
         ? { featuredOnHome: input.featuredOnHome === true }
+        : {}),
+      ...(input.sitePremiumAccess !== undefined
+        ? { sitePremiumAccess: input.sitePremiumAccess === true }
         : {}),
       ...(input.scheduledAt !== undefined
         ? { scheduledAt: parseScheduledAt(input.scheduledAt) }

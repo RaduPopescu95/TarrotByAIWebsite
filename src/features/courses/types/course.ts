@@ -38,6 +38,8 @@ export interface CourseBase {
   currency: CourseCurrency;
   status: CourseStatus;
   featuredOnHome?: boolean;
+  /** If not false, course full video is included for site premium subscribers. */
+  sitePremiumAccess?: boolean;
   vimeoPreviewThumbnailUrl?: string | null;
   vimeoPreviewVideoId?: string | null;
   hasVimeoPreview?: boolean;

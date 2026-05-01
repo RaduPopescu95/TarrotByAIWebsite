@@ -142,6 +142,7 @@ function buildError(field, message, code) {
 }
 
 export function normalizeBillingContext(rawInput, options = {}) {
+  const individualCnpOptional = Boolean(options.individualCnpOptional);
   const raw = rawInput && typeof rawInput === "object" ? rawInput : {};
   const firstName = pickFirstValue(raw, [
     "firstName",
@@ -343,7 +344,15 @@ export function normalizeBillingContext(rawInput, options = {}) {
     }
   } else {
     const cnpResult = validateRomanianCnp(cnp);
-    if (!sanitizeString(cnp, 32)) {
+    if (individualCnpOptional) {
+      if (sanitizeString(cnp, 32)) {
+        if (!cnpResult.valid) {
+          blockingErrors.push(buildError("cnp", `CNP invalid: ${cnpResult.reason}.`, "invalid_cnp"));
+        } else {
+          normalizedCnp = cnpResult.normalized;
+        }
+      }
+    } else if (!sanitizeString(cnp, 32)) {
       blockingErrors.push(buildError("cnp", "CNP este obligatoriu pentru persoană fizică.", "missing_cnp"));
     } else if (!cnpResult.valid) {
       blockingErrors.push(buildError("cnp", `CNP invalid: ${cnpResult.reason}.`, "invalid_cnp"));
@@ -389,7 +398,10 @@ export function normalizeBillingContext(rawInput, options = {}) {
     email: sanitizeString(email, 320),
     phone: sanitizeString(phone, 64),
     deliveryInRomania,
-    eligibleForEInvoice: validation.ok && deliveryInRomania,
+    eligibleForEInvoice:
+      validation.ok &&
+      deliveryInRomania &&
+      (billingType === "corporate" || Boolean(normalizedCnp)),
   };
 
   return {
@@ -404,7 +416,7 @@ export function buildInvoiceDecision(audit) {
   const validation = audit?.validation || { ok: false, blockingErrors: [] };
   return {
     emitInvoice: validation.ok,
-    sendEInvoice: Boolean(validation.ok && normalizedClient.deliveryInRomania),
+    sendEInvoice: Boolean(normalizedClient.eligibleForEInvoice),
     blockedReason: validation.ok
       ? null
       : validation.blockingErrors.map((item) => item.message).join(" "),
