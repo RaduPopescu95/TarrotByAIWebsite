@@ -395,6 +395,12 @@ export default function PremiumZonePage() {
               >
                 {leftTitleAndBody.body}
               </p>
+              {access && checkoutSuccess ? (
+                <div className="mt-4 flex w-full max-w-md flex-col items-center gap-2 text-center text-sm leading-relaxed text-slate-600 lg:mx-auto">
+                  <p>{t("premiumCheckoutSuccessActivatedHint")}</p>
+                  <p>{t("premiumVideoLibraryIntro")}</p>
+                </div>
+              ) : null}
               {(uiVariant === "error" || uiVariant === "cancelled") && errorQuery ? (
                 <p className="mt-3 break-all font-mono text-[11px] text-slate-400">
                   code: <span className="text-slate-600">{errorQuery}</span>
@@ -500,12 +506,7 @@ export default function PremiumZonePage() {
                       <CelebrationPanel
                         eyebrow={t("premiumCheckoutSuccessEyebrow")}
                         title={t("premiumCheckoutSuccessTitle")}
-                      >
-                        <p className="text-center text-sm leading-relaxed text-slate-600">
-                          {t("premiumCheckoutSuccessActivatedHint")}
-                        </p>
-                      </CelebrationPanel>
-                    
+                      />
                       <VideoLibraryPrimaryCta
                         label={t("premiumVideoLibraryBigCta")}
                         hint={t("premiumVideoLibraryBigCtaHint")}
@@ -518,18 +519,7 @@ export default function PremiumZonePage() {
               ) : null}
             </div>
 
-            {access && checkoutSuccess ? (
-              <ul className="-mt-1 hidden flex-col gap-2 text-sm text-slate-600 lg:col-start-1 lg:row-start-2 lg:flex">
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                  <span>{t("premiumCheckoutSuccessActivatedHint")}</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                  <span>{t("premiumVideoLibraryIntro")}</span>
-                </li>
-              </ul>
-            ) : access && !checkoutSuccess ? (
+            {access && !checkoutSuccess ? (
               <ul className="-mt-2 hidden flex-col gap-2 text-sm text-slate-600 lg:col-start-1 lg:row-start-2 lg:flex">
                 <li className="flex gap-2">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" aria-hidden />
