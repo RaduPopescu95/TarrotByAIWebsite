@@ -27,6 +27,14 @@ function cn(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+/** Hide fake/short design session ids from UI; real Stripe checkout session ids are typically longer. */
+const STRIPE_CHECKOUT_SESSION_REF_MIN_CHARS = 44;
+
+function normalizeTruthyQuery(param) {
+  const v = normalizeQuery(param).toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
 /** emerald / celebration */
 function CelebrationConfetti() {
   return (
@@ -194,11 +202,11 @@ function eyebrowClassForVariant(v) {
   }
 }
 
-function eyebrowLabelForVariant(v, t, { activationPending, checkoutSuccessGuest }) {
+function eyebrowLabelForVariant(v, t, { activationPending, guestSuccessPresentation }) {
   switch (v) {
     case "success":
       if (activationPending) return t("premiumUiTagWaiting");
-      if (checkoutSuccessGuest) return t("premiumCheckoutSuccessGuestEyebrow");
+      if (guestSuccessPresentation) return t("premiumCheckoutSuccessGuestEyebrow");
       return t("premiumUiTagSuccess");
     case "auth":
       return t("premiumUiTagSignIn");
@@ -218,6 +226,14 @@ export default function PremiumZonePage() {
   const router = useRouter();
   const { currentUser, userData, loading, setUserData, isGuestUser } = useAuth();
 
+  const [designPreviewHostsOk, setDesignPreviewHostsOk] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const h = window.location.hostname;
+    setDesignPreviewHostsOk(h === "localhost" || h === "127.0.0.1");
+  }, []);
+
   const checkout = normalizeQuery(router.query.checkout);
   const checkoutSuccess = checkout === "success";
   const checkoutCancel = checkout === "cancel";
@@ -227,6 +243,24 @@ export default function PremiumZonePage() {
   const rawSessionId = router.query.session_id;
   const sessionId = normalizeQuery(rawSessionId);
   const sessionIdDisplay = typeof sessionId === "string" && sessionId.startsWith("cs_") ? sessionId : null;
+
+  const previewQueryEnabled =
+    normalizeTruthyQuery(router.query.premiumSuccessPreview) ||
+    normalizeTruthyQuery(router.query.preview);
+  /** Local design preview: npm run dev, sau next start pe localhost, sau .env NEXT_PUBLIC_PREMIUM_SUCCESS_PREVIEW=true */
+  const isPremiumSuccessDesignPreview =
+    previewQueryEnabled &&
+    (process.env.NODE_ENV === "development" ||
+      designPreviewHostsOk ||
+      process.env.NEXT_PUBLIC_PREMIUM_SUCCESS_PREVIEW === "true");
+  const devForcedGuestSuccess = isPremiumSuccessDesignPreview && checkoutSuccess;
+
+  const celebrationSessionReference =
+    sessionIdDisplay &&
+    !devForcedGuestSuccess &&
+    sessionIdDisplay.length >= STRIPE_CHECKOUT_SESSION_REF_MIN_CHARS
+      ? sessionIdDisplay
+      : null;
 
   React.useEffect(() => {
     if (!checkoutSuccess) return;
@@ -243,16 +277,17 @@ export default function PremiumZonePage() {
   }, [checkoutSuccess, setUserData]);
 
   const access = hasPremiumAccess(userData);
-  const activationPending = checkoutSuccess && currentUser && !isGuestUser && !access;
+  const activationPending =
+    checkoutSuccess && !devForcedGuestSuccess && currentUser && !isGuestUser && !access;
   const showLocked = currentUser && !isGuestUser && !access && !activationPending;
   const showGuest = !currentUser || isGuestUser;
-  const checkoutSuccessGuest = checkoutSuccess && showGuest;
-  const compactSuccessHero = access && checkoutSuccess;
+  const guestSuccessPresentation = checkoutSuccess && (showGuest || devForcedGuestSuccess);
+  const compactSuccessHero = access && checkoutSuccess && !devForcedGuestSuccess;
 
   let uiVariant = "member";
   if (!router.isReady) {
     uiVariant = "loading";
-  } else if (loading) {
+  } else if (loading && !devForcedGuestSuccess) {
     uiVariant = "loading";
   } else if (hasUrlError) {
     uiVariant = "error";
@@ -272,7 +307,7 @@ export default function PremiumZonePage() {
 
   const leftEyebrow = eyebrowLabelForVariant(uiVariant === "loading" ? "member" : uiVariant, t, {
     activationPending,
-    checkoutSuccessGuest,
+    guestSuccessPresentation,
   });
 
   const leftTitleAndBody = (() => {
@@ -294,10 +329,12 @@ export default function PremiumZonePage() {
         body: t("premiumCheckoutSuccessActivated"),
       };
     }
-    if (uiVariant === "success" && showGuest) {
+    if (uiVariant === "success" && guestSuccessPresentation) {
       return {
         title: t("premiumCheckoutSuccessGuestTitle"),
-        body: t("premiumCheckoutSuccessGuestBody"),
+        body: devForcedGuestSuccess
+          ? t("premiumDesignPreviewPaidBody")
+          : t("premiumCheckoutSuccessGuestBody"),
       };
     }
     if (uiVariant === "success" && activationPending) {
@@ -338,7 +375,7 @@ export default function PremiumZonePage() {
       </Head>
 
       <AuthFunnelShell mainVerticalAlign="start" mainClassName="pb-10 sm:pb-12">
-        {!router.isReady || loading ? (
+        {!router.isReady || (loading && !devForcedGuestSuccess) ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-sm">
             <span className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-sky-600" aria-hidden />
             <p className="mt-4 text-sm font-medium text-slate-600">{t("premiumPageLoading")}</p>
@@ -350,7 +387,14 @@ export default function PremiumZonePage() {
               sectionClass,
             )}
           >
-            <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <div
+              className={cn(
+                "flex flex-col",
+                checkoutSuccess
+                  ? "items-center text-center"
+                  : "items-center text-center lg:items-start lg:text-left",
+              )}
+            >
               <Image
                 src="/LogoPngTransparent.png"
                 width={120}
@@ -363,7 +407,14 @@ export default function PremiumZonePage() {
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl lg:text-[1.65rem] xl:text-3xl">
                 {leftTitleAndBody.title}
               </h1>
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600 lg:max-w-none">{leftTitleAndBody.body}</p>
+              <p
+                className={cn(
+                  "mt-3 max-w-md text-sm leading-relaxed text-slate-600",
+                  checkoutSuccess ? "lg:mx-auto" : "lg:max-w-none",
+                )}
+              >
+                {leftTitleAndBody.body}
+              </p>
               {(uiVariant === "error" || uiVariant === "cancelled") && errorQuery ? (
                 <p className="mt-3 break-all font-mono text-[11px] text-slate-400">
                   code: <span className="text-slate-600">{errorQuery}</span>
@@ -429,20 +480,24 @@ export default function PremiumZonePage() {
                     {t("premiumLockedCta")}
                   </Link>
                 </div>
-              ) : uiVariant === "success" && showGuest ? (
+              ) : uiVariant === "success" && guestSuccessPresentation ? (
                 <div className="space-y-5">
                   <CelebrationPanel
                     eyebrow={t("premiumCheckoutSuccessGuestEyebrow")}
                     title={t("premiumCheckoutSuccessGuestTitle")}
                     referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                    referenceValue={sessionIdDisplay}
+                    referenceValue={celebrationSessionReference}
                   />
-                  <Link
-                    href={loginHref}
-                    className="flex w-full items-center justify-center rounded-xl bg-emerald-800 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                  >
-                    {t("premiumLoginCta")}
-                  </Link>
+                  {devForcedGuestSuccess ? (
+                    <p className="text-center text-xs text-slate-500">{t("premiumDesignPreviewHint")}</p>
+                  ) : (
+                    <Link
+                      href={loginHref}
+                      className="flex w-full items-center justify-center rounded-xl bg-emerald-800 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                    >
+                      {t("premiumLoginCta")}
+                    </Link>
+                  )}
                 </div>
               ) : uiVariant === "success" && activationPending ? (
                 <div className="space-y-5">
@@ -450,7 +505,7 @@ export default function PremiumZonePage() {
                     eyebrow={t("premiumCheckoutSuccessEyebrow")}
                     title={t("premiumCheckoutSuccessTitle")}
                     referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                    referenceValue={sessionIdDisplay}
+                    referenceValue={celebrationSessionReference}
                   >
                     <p className="text-center text-sm leading-relaxed text-slate-600">{t("premiumCheckoutProcessing")}</p>
                     <button
@@ -470,7 +525,7 @@ export default function PremiumZonePage() {
                         eyebrow={t("premiumCheckoutSuccessEyebrow")}
                         title={t("premiumCheckoutSuccessTitle")}
                         referenceLabel={t("premiumCheckoutSuccessReferenceLabel")}
-                        referenceValue={sessionIdDisplay}
+                        referenceValue={celebrationSessionReference}
                       >
                         <p className="text-center text-sm leading-relaxed text-slate-600">
                           {t("premiumCheckoutSuccessActivatedHint")}
@@ -489,12 +544,6 @@ export default function PremiumZonePage() {
                       title={t("videoLibraryNav")}
                       description={t("premiumVideoLibraryIntro")}
                       cta={t("videoLibraryNav")}
-                    />
-                    <NextStepLink
-                      href="/courses"
-                      title={t("premiumBrowseCoursesCta")}
-                      description={t("premiumCoursesNextDescription")}
-                      cta={t("premiumBrowseCoursesCta")}
                     />
                   </div>
                 </div>

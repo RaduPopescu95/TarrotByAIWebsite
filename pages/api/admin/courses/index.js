@@ -173,7 +173,7 @@ export default async function handler(req, res) {
       currency: input.currency,
       status: input.status,
       featuredOnHome: input.featuredOnHome === true,
-      sitePremiumAccess: input.sitePremiumAccess !== false,
+      sitePremiumAccess: input.sitePremiumAccess === true,
       scheduledAt: input.status === "scheduled" ? parseScheduledAt(input.scheduledAt) : null,
       ...(input.locales ? { locales: input.locales } : {}),
       thumbnailUrl: input.thumbnailUrl?.trim() || null,

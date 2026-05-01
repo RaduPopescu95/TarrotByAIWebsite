@@ -8,6 +8,7 @@ import {
   mapStripeSubscriptionStatus,
 } from "../../../../lib/premiumAccess";
 import { emitPremiumSubscriptionOblioInvoice } from "../../../../lib/premiumSubscriptionOblio";
+import { resolvePremiumAbonamentWebhookSecret } from "../../../../lib/stripePremiumEnv";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_EVENTS_COLLECTION = "stripePremiumWebhookEvents";
@@ -113,15 +114,7 @@ async function persistPremiumBillingFromCheckoutSession(db, session) {
 }
 
 function resolvePremiumWebhookSecret() {
-  const explicit =
-    typeof process.env.STRIPE_WEBHOOK_SECRET_ABONAMENT === "string"
-      ? process.env.STRIPE_WEBHOOK_SECRET_ABONAMENT.trim()
-      : "";
-  const legacy =
-    typeof process.env.STRIPE_WEBHOOK_SECRET === "string"
-      ? process.env.STRIPE_WEBHOOK_SECRET.trim()
-      : "";
-  return explicit || legacy || "";
+  return resolvePremiumAbonamentWebhookSecret();
 }
 
 export default async function handler(req, res) {
@@ -133,7 +126,7 @@ export default async function handler(req, res) {
   const webhookSecret = resolvePremiumWebhookSecret();
   if (!webhookSecret) {
     console.error(
-      "[premium.webhook] missing signing secret: set STRIPE_WEBHOOK_SECRET_ABONAMENT or STRIPE_WEBHOOK_SECRET"
+      "[premium.webhook] missing signing secret: set STRIPE_WEBHOOK_SECRET_ABONAMENT_TEST (dev), or STRIPE_WEBHOOK_SECRET_ABONAMENT / STRIPE_WEBHOOK_SECRET",
     );
     return res.status(500).json({ error: "Webhook not configured" });
   }

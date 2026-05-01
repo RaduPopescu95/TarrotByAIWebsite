@@ -13,6 +13,10 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../../../utils/billingAudit.mjs";
+import {
+  isStripePremiumUsingLocalOverrides,
+  resolvePremiumStripePriceId,
+} from "../../../../lib/stripePremiumEnv";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PREMIUM_CHECKOUT_SESSION_COLLECTION = "premiumCheckoutSessions";
@@ -23,10 +27,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const priceId = process.env.STRIPE_PREMIUM_PRICE_ID;
-  if (!priceId || typeof priceId !== "string") {
-    console.error("[premium.checkout] missing STRIPE_PREMIUM_PRICE_ID");
+  const priceId = resolvePremiumStripePriceId();
+  if (!priceId) {
+    console.error(
+      "[premium.checkout] missing price id: STRIPE_PREMIUM_PRICE_ID" +
+        (process.env.NODE_ENV === "development" ? " or STRIPE_PREMIUM_PRICE_ID_TEST" : ""),
+    );
     return res.status(500).json({ error: "Premium billing is not configured" });
+  }
+  if (isStripePremiumUsingLocalOverrides() && process.env.STRIPE_PREMIUM_PRICE_ID_TEST) {
+    console.info("[premium.checkout] using STRIPE_PREMIUM_PRICE_ID_TEST for development");
   }
 
   let authUser;

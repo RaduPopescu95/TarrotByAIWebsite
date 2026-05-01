@@ -173,7 +173,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
     categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
     featuredOnHome: initialValue?.featuredOnHome === true,
-    sitePremiumAccess: initialValue?.sitePremiumAccess !== false,
+    sitePremiumAccess: initialValue?.sitePremiumAccess === true,
     notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
     contactContent:
       typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -197,7 +197,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
       categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
       featuredOnHome: initialValue?.featuredOnHome === true,
-      sitePremiumAccess: initialValue?.sitePremiumAccess !== false,
+      sitePremiumAccess: initialValue?.sitePremiumAccess === true,
       notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
       contactContent:
         typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -801,10 +801,10 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
                 />
                 <span className="block">
-                  <span className="text-sm font-medium text-gray-900">Inclus în abonamentul site</span>
+                  <span className="text-sm font-medium text-gray-900">Metadată „inclus în abonament” (neutilizată)</span>
                   <span className="mt-1 block text-xs text-gray-500">
-                    Dacă este activ, abonații premium au acces la video fără achiziție separată. Poate
-                    fi dezactivat pentru cursuri doar cu plată unică.
+                    Accesul la cursuri este doar prin achiziție sau curs gratuit. Bifarea nu deschide conținutul pentru
+                    abonați; poți ignora sau debifa.
                   </span>
                 </span>
               </label>

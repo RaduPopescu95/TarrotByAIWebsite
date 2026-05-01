@@ -24,6 +24,7 @@ import {
   mapBillingAuditErrorsToForm,
 } from "../../utils/billingAddressData.mjs";
 import { normalizeBillingContext } from "../../utils/billingAudit.mjs";
+import { hasPremiumAccess } from "../../lib/premiumAccess";
 
 function Copyright(props) {
   return (
@@ -104,13 +105,17 @@ export default function SignInSide() {
 
   const router = useRouter();
 
-  const openBillingPortal = async () => {
+  const openBillingPortal = async (flow = "default") => {
     setPortalLoading(true);
     try {
       const headers = await getFirebaseBearerHeader({ required: true });
       const res = await fetch("/api/stripe/premium/create-portal-session", {
         method: "POST",
-        headers: { ...headers },
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body: JSON.stringify({ flow }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -503,17 +508,38 @@ export default function SignInSide() {
                     {t("premiumSubscribePageTitle")}
                   </button>
                   {userData?.stripeCustomerId ? (
-                    <button
-                      type="button"
-                      onClick={openBillingPortal}
-                      disabled={portalLoading}
-                      style={{
-                        ...styles.historyLink,
-                        opacity: portalLoading ? 0.7 : 1,
-                      }}
-                    >
-                      {portalLoading ? t("premiumManageLoading") : t("premiumManageSubscription")}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openBillingPortal("default")}
+                        disabled={portalLoading}
+                        style={{
+                          ...styles.historyLink,
+                          opacity: portalLoading ? 0.7 : 1,
+                        }}
+                      >
+                        {portalLoading ? t("premiumManageLoading") : t("premiumManageSubscription")}
+                      </button>
+                      {typeof userData?.stripeSubscriptionId === "string" &&
+                      userData.stripeSubscriptionId.trim() &&
+                      hasPremiumAccess(userData) ? (
+                        <button
+                          type="button"
+                          onClick={() => openBillingPortal("cancel")}
+                          disabled={portalLoading}
+                          style={{
+                            ...styles.historyLinkSecondary,
+                            border: "1px solid rgba(248,113,113,0.85)",
+                            borderRadius: "8px",
+                            color: "#991b1b",
+                            textDecoration: "none",
+                            opacity: portalLoading ? 0.7 : 1,
+                          }}
+                        >
+                          {t("premiumCancelSubscription")}
+                        </button>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
 

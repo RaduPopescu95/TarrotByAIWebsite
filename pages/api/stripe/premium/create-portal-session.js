@@ -2,8 +2,15 @@ import Stripe from "stripe";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../../lib/requireAuth";
 import { resolvePremiumPublicBaseUrl } from "../../../../lib/premiumServerUtils";
+import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+function parseFlow(req) {
+  const body = req.body;
+  if (!body || typeof body !== "object") return "default";
+  return body.flow === "cancel" ? "cancel" : "default";
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -24,15 +31,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing site URL configuration" });
   }
 
+  const flow = parseFlow(req);
   const uid = authUser.uid;
   const db = getAdminDb();
   let stripeCustomerId = null;
+  let stripeSubscriptionId = "";
   try {
     const snap = await db.collection("Users").doc(uid).get();
     if (snap.exists) {
-      const c = snap.data()?.stripeCustomerId;
+      const data = snap.data() || {};
+      const c = data.stripeCustomerId;
       if (typeof c === "string" && c.trim()) {
         stripeCustomerId = c.trim();
+      }
+      const s = data.stripeSubscriptionId;
+      if (typeof s === "string" && s.trim()) {
+        stripeSubscriptionId = s.trim();
       }
     }
   } catch (e) {
@@ -45,11 +59,34 @@ export default async function handler(req, res) {
     });
   }
 
+  const returnUrl = `${baseUrl}/settings`;
+  const baseParams = { customer: stripeCustomerId, return_url: returnUrl };
+
   try {
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: stripeCustomerId,
-      return_url: `${baseUrl}/settings`,
-    });
+    let portalSession;
+
+    if (flow === "cancel" && stripeSubscriptionId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        const subCustomer = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+        if (subCustomer === stripeCustomerId && sub.metadata?.flow === PREMIUM_FLOW_METADATA) {
+          portalSession = await stripe.billingPortal.sessions.create({
+            ...baseParams,
+            flow_data: {
+              type: "subscription_cancel",
+              subscription_cancel: { subscription: stripeSubscriptionId },
+            },
+          });
+        }
+      } catch (subErr) {
+        console.warn("[premium.portal] cancel_flow_preflight_failed", { message: subErr?.message });
+      }
+    }
+
+    if (!portalSession) {
+      portalSession = await stripe.billingPortal.sessions.create(baseParams);
+    }
+
     if (!portalSession?.url) {
       return res.status(500).json({ error: "Portal session missing URL" });
     }

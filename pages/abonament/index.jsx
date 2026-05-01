@@ -160,6 +160,7 @@ export default function AbonamentPage() {
     phone: "",
   });
   const [billingForm, setBillingForm] = React.useState(createInitialBillingFormValues());
+  const [premiumLegalConsentAccepted, setPremiumLegalConsentAccepted] = React.useState(false);
   const profileHydratedRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -170,7 +171,14 @@ export default function AbonamentPage() {
     setWizardStep(1);
     setFormErrors({});
     setError("");
+    setPremiumLegalConsentAccepted(false);
   }, [currentUser?.uid]);
+
+  React.useEffect(() => {
+    if (wizardStep !== 3) {
+      setPremiumLegalConsentAccepted(false);
+    }
+  }, [wizardStep]);
 
   React.useEffect(() => {
     const derivedName = splitDisplayName(currentUser?.displayName || "");
@@ -303,6 +311,10 @@ export default function AbonamentPage() {
 
   const startCheckout = async () => {
     setError("");
+    if (!premiumLegalConsentAccepted) {
+      setError(t("premiumSubscribeLegalConsentRequired"));
+      return;
+    }
     setCheckoutLoading(true);
 
     try {
@@ -636,6 +648,45 @@ export default function AbonamentPage() {
                         <dd className="mt-0.5 font-medium">{billingValuesIndividual.billingCity || "—"}</dd>
                       </div>
                     </dl>
+                    <div className="border-t border-slate-200 pt-4">
+                      <div className="flex gap-3">
+                        <input
+                          id="premium-subscribe-legal-consent"
+                          type="checkbox"
+                          checked={premiumLegalConsentAccepted}
+                          onChange={(e) => {
+                            setPremiumLegalConsentAccepted(e.target.checked);
+                            setError("");
+                          }}
+                          disabled={checkoutLoading}
+                          className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                        />
+                        <label
+                          htmlFor="premium-subscribe-legal-consent"
+                          className="text-sm leading-snug text-slate-700"
+                        >
+                          {t("premiumSubscribeLegalConsentBefore")}
+                          <Link
+                            href="/politica-platforma"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900"
+                          >
+                            {t("premiumSubscribeLegalLinkPlatform")}
+                          </Link>
+                          {t("premiumSubscribeLegalConsentBetween")}
+                          <Link
+                            href="/privacypolicy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900"
+                          >
+                            {t("premiumSubscribeLegalLinkPrivacy")}
+                          </Link>
+                          {t("premiumSubscribeLegalConsentAfter")}
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 
@@ -665,9 +716,11 @@ export default function AbonamentPage() {
                     <button
                       type="button"
                       onClick={() => startCheckout()}
-                      disabled={checkoutLoading}
+                      disabled={checkoutLoading || !premiumLegalConsentAccepted}
                       className={`w-full rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition sm:ml-auto sm:w-auto sm:min-w-[12rem] ${
-                        checkoutLoading ? "cursor-not-allowed bg-slate-400" : "bg-slate-900 hover:bg-slate-800"
+                        checkoutLoading || !premiumLegalConsentAccepted
+                          ? "cursor-not-allowed bg-slate-400"
+                          : "bg-slate-900 hover:bg-slate-800"
                       }`}
                     >
                       {checkoutLoading ? (

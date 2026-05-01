@@ -939,9 +939,7 @@ export default function CourseDetailPage() {
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                           {accessSource === "free"
                             ? t("coursesAccessFreeBadge")
-                            : accessSource === "site_premium"
-                              ? t("coursesAccessViaSubscription")
-                              : t("coursesAccessAlreadyGranted")}
+                            : t("coursesAccessAlreadyGranted")}
                         </div>
                       ) : waitingForCheckoutConfirmation ? (
                         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">

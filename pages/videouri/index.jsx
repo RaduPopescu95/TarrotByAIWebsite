@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -27,8 +27,10 @@ function formatDuration(seconds, fallback) {
 const skeletonBg =
   "bg-skeleton-shine bg-[length:200%_100%] animate-skeleton-shine";
 
+const VIDEO_LIBRARY_PAGE_SIZE = 15;
+
 function VideoLibrarySkeletonGrid({ loadingLabel }) {
-  const placeholders = Array.from({ length: 12 }, (_, i) => `sk-${i}`);
+  const placeholders = Array.from({ length: VIDEO_LIBRARY_PAGE_SIZE }, (_, i) => `sk-${i}`);
   return (
     <div
       className="mx-auto grid w-full max-w-[1920px] grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -61,6 +63,8 @@ export default function VideoLibraryPage() {
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [paginationPage, setPaginationPage] = useState(1);
+  const listTopRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,6 +124,34 @@ export default function VideoLibraryPage() {
       return title.includes(normalizedSearch) || desc.includes(normalizedSearch) || cat.includes(normalizedSearch);
     });
   }, [categoryFilteredVideos, normalizedSearch]);
+
+  const filteredTotal = filteredVideos.length;
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / VIDEO_LIBRARY_PAGE_SIZE));
+
+  useEffect(() => {
+    setPaginationPage(1);
+  }, [selectedCategory, normalizedSearch]);
+
+  useEffect(() => {
+    setPaginationPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages, filteredTotal]);
+
+  const paginationPageSafe = Math.min(Math.max(1, paginationPage), totalPages);
+
+  const paginatedVideos = useMemo(() => {
+    const start = (paginationPageSafe - 1) * VIDEO_LIBRARY_PAGE_SIZE;
+    return filteredVideos.slice(start, start + VIDEO_LIBRARY_PAGE_SIZE);
+  }, [filteredVideos, paginationPageSafe]);
+
+  const showPagination = filteredTotal > VIDEO_LIBRARY_PAGE_SIZE;
+  const rangeFrom = filteredTotal === 0 ? 0 : (paginationPageSafe - 1) * VIDEO_LIBRARY_PAGE_SIZE + 1;
+  const rangeTo = filteredTotal === 0 ? 0 : Math.min(paginationPageSafe * VIDEO_LIBRARY_PAGE_SIZE, filteredTotal);
+
+  const scrollListTop = useCallback(() => {
+    const el = listTopRef.current;
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const gridClass =
     filteredVideos.length === 0 && videos.length > 0
@@ -258,8 +290,10 @@ export default function VideoLibraryPage() {
                       {normalizedSearch ? t("videoLibrarySearchNoResults") : t("videoLibraryFilteredEmpty")}
                     </p>
                   ) : (
-                    <div className={gridClass}>
-                      {filteredVideos.map((v) => {
+                    <>
+                      <div ref={listTopRef} className="-mt-px h-px w-px shrink-0 scroll-mt-28" aria-hidden />
+                      <div className={gridClass}>
+                      {paginatedVideos.map((v) => {
                         const durationLabel =
                           typeof v.durationSeconds === "number"
                             ? formatDuration(v.durationSeconds, "")
@@ -382,7 +416,42 @@ export default function VideoLibraryPage() {
                           </article>
                         );
                       })}
-                    </div>
+                      </div>
+                      {showPagination ? (
+                        <nav
+                          aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
+                          className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-8 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <p className="text-sm tabular-nums text-slate-600">
+                            {t("videoLibraryPaginationRange", { from: rangeFrom, to: rangeTo, total: filteredTotal })}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={paginationPageSafe <= 1}
+                              onClick={() => {
+                                setPaginationPage((p) => Math.max(1, p - 1));
+                                requestAnimationFrame(() => scrollListTop());
+                              }}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {t("videoLibraryPaginationPrev")}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={paginationPageSafe >= totalPages}
+                              onClick={() => {
+                                setPaginationPage((p) => Math.min(totalPages, p + 1));
+                                requestAnimationFrame(() => scrollListTop());
+                              }}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {t("videoLibraryPaginationNext")}
+                            </button>
+                          </div>
+                        </nav>
+                      ) : null}
+                    </>
                   )}
                 </>
               )}
