@@ -117,7 +117,7 @@ export default async function handler(req, res) {
     subscription_data: {
       metadata,
     },
-    success_url: `${baseUrl}/premium?checkout=success`,
+    success_url: `${baseUrl}/premium?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/abonament?checkout=cancel`,
   };
 
