@@ -285,7 +285,7 @@ function Mixed(props) {
       href: "/settings",
       label: t("settings"),
       icon: <PersonIcon style={{ width: "16px", height: "16px" }} />,
-      active: router.pathname === "/settings"
+      active: router.pathname?.startsWith("/settings"),
     }
   ];
 

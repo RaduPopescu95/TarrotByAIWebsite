@@ -239,6 +239,9 @@ export default function AbonamentPage() {
       t("premiumSubscribePoint3", {
         defaultValue: "You can cancel your subscription anytime in the Stripe customer portal.",
       }),
+      t("premiumSubscribePoint4", {
+        defaultValue: "If you cancel, you keep premium access until the paid period ends.",
+      }),
     ],
     [t],
   );
