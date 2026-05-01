@@ -146,17 +146,7 @@ function VideoLibraryPrimaryCta({ label, hint }) {
       className="group flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 px-6 py-5 text-center shadow-lg shadow-emerald-900/15 ring-2 ring-white/30 transition hover:from-emerald-500 hover:via-emerald-500 hover:to-teal-500 hover:shadow-emerald-800/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:py-6"
     >
       <span className="inline-flex items-center gap-2 text-base font-semibold tracking-tight text-white sm:text-lg">
-        <svg
-          viewBox="0 0 24 24"
-          className="h-6 w-6 shrink-0 text-emerald-100"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-9.197-5.19A1 1 0 004 6.845v10.31a1 1 0 001.555.832l9.197-5.19a1 1 0 000-1.738z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+      
         {label}
       </span>
       {hint ? (
@@ -515,10 +505,7 @@ export default function PremiumZonePage() {
                           {t("premiumCheckoutSuccessActivatedHint")}
                         </p>
                       </CelebrationPanel>
-                      <Divider />
-                      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {t("premiumContinueEyebrow")}
-                      </p>
+                    
                       <VideoLibraryPrimaryCta
                         label={t("premiumVideoLibraryBigCta")}
                         hint={t("premiumVideoLibraryBigCtaHint")}
