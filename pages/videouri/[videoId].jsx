@@ -10,6 +10,7 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+import { LANGUAGE_LABELS } from "../../data/constants";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -65,6 +66,7 @@ export default function VideoDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [fullscreenActive, setFullscreenActive] = useState(false);
+  const [availableLocales, setAvailableLocales] = useState([]);
 
   const videoIdRaw = router.query.videoId;
   const videoId = useMemo(
@@ -79,6 +81,7 @@ export default function VideoDetailPage() {
     setLoadError("");
     setVideo(null);
     setRelated([]);
+    setAvailableLocales([]);
     try {
       const locale = router.locale || "ro";
       const headers = await getFirebaseBearerHeader({ required: false });
@@ -101,6 +104,7 @@ export default function VideoDetailPage() {
       }
       setVideo(data?.video || null);
       setRelated(Array.isArray(data?.related) ? data.related : []);
+      setAvailableLocales(Array.isArray(data?.availableLocales) ? data.availableLocales : []);
     } catch (e) {
       console.error("[video-detail]", e?.message || e);
       setLoadError(t("videoLibraryLoadError"));
@@ -199,6 +203,7 @@ export default function VideoDetailPage() {
                     {video.canPlay && video.embedSrc ? (
                       <>
                         <iframe
+                          key={video.embedSrc || video.id}
                           title={video.title}
                           src={video.embedSrc}
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -263,6 +268,31 @@ export default function VideoDetailPage() {
                       </div>
                     )}
                   </div>
+
+                  {availableLocales.length > 1 ? (
+                    <div className="mt-4 flex max-w-full flex-col gap-2 sm:max-w-xs">
+                      <label htmlFor="video-playback-locale" className="text-sm font-medium text-slate-700">
+                        {t("videoLibraryPlaybackLanguage")}
+                      </label>
+                      <select
+                        id="video-playback-locale"
+                        value={router.locale || "ro"}
+                        onChange={(e) => {
+                          const nextLocale = e.target.value;
+                          if (nextLocale && nextLocale !== router.locale) {
+                            router.push(router.asPath, router.asPath, { locale: nextLocale });
+                          }
+                        }}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      >
+                        {availableLocales.map((lc) => (
+                          <option key={lc} value={lc}>
+                            {(LANGUAGE_LABELS && LANGUAGE_LABELS[lc]?.denumire) || lc.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
 
                   <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                     {video.title}

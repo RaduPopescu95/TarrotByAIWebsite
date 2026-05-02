@@ -37,6 +37,7 @@ function buildUserPremiumPayload(subscription) {
     subscriptionStatus: appStatus,
     stripeSubscriptionId: subscription.id,
     subscriptionProvider: "stripe",
+    premiumSubscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end === true,
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (currentPeriodEnd) {

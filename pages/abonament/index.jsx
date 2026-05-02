@@ -424,7 +424,7 @@ export default function AbonamentPage() {
         mainVerticalAlign="start"
         topSlot={
           <Link
-            href="/premium"
+            href="/videouri"
             className="mx-auto mb-4 inline-flex w-full max-w-6xl shrink-0 items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 lg:mb-3 xl:max-w-7xl"
           >
             <span aria-hidden>←</span>
@@ -450,6 +450,9 @@ export default function AbonamentPage() {
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl lg:text-2xl">
               {t("premiumSubscribeHeading")}
             </h1>
+            <p className="mt-1 text-lg font-semibold text-indigo-700 lg:text-xl">
+              {t("premiumSubscribePriceLine")}
+            </p>
             <p
               className={`mt-2 max-w-md text-sm leading-relaxed text-slate-600 lg:mt-1.5 lg:max-w-none lg:text-sm lg:leading-snug ${
                 showCompactHero ? "line-clamp-2 lg:line-clamp-3" : ""

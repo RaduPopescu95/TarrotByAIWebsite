@@ -11,6 +11,13 @@ import {
 const COLLECTION = "videosVideoModule";
 const RELATED_LIMIT = 12;
 
+// eslint-disable-next-line global-require, import/no-dynamic-require
+const nextI18nRoot = require("../../../../next-i18next.config.js");
+const SITE_LOCALES =
+  Array.isArray(nextI18nRoot.i18n?.locales) && nextI18nRoot.i18n.locales.length > 0
+    ? nextI18nRoot.i18n.locales
+    : ["ro"];
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -51,6 +58,9 @@ export default async function handler(req, res) {
     if (!targetRow) {
       return res.status(404).json({ error: "Not found" });
     }
+
+    const availableLocales = SITE_LOCALES.filter((lc) => rowHasValidEmbedForLocale(targetRow, lc));
+
     if (!rowHasValidEmbedForLocale(targetRow, locale)) {
       return res.status(404).json({ error: "Not found" });
     }
@@ -77,6 +87,7 @@ export default async function handler(req, res) {
       video,
       related,
       locale,
+      availableLocales,
       premiumActive,
       loggedIn: Boolean(uid),
     });
