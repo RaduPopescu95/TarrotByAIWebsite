@@ -2,6 +2,7 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
 import { hasPremiumAccess } from "../../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
+import { rowHasValidEmbedForLocale } from "../../../../lib/videoLibraryPublic";
 import {
   collectAndSortPublishedVideos,
   mapVideoRowToPublicDto,
@@ -50,6 +51,9 @@ export default async function handler(req, res) {
     if (!targetRow) {
       return res.status(404).json({ error: "Not found" });
     }
+    if (!rowHasValidEmbedForLocale(targetRow, locale)) {
+      return res.status(404).json({ error: "Not found" });
+    }
 
     const ctx = { locale, premiumActive };
     const video = mapVideoRowToPublicDto(targetRow, ctx);
@@ -63,13 +67,11 @@ export default async function handler(req, res) {
       relatedRows = sortedRows.filter((r) => {
         if (r.id === rawId) return false;
         const c = typeof r.category === "string" ? r.category.trim() : "";
-        return c === catTrim;
+        return c === catTrim && rowHasValidEmbedForLocale(r, locale);
       });
     }
 
-    const related = relatedRows
-      .slice(0, RELATED_LIMIT)
-      .map((row) => mapVideoRowToPublicDto(row, ctx));
+    const related = relatedRows.slice(0, RELATED_LIMIT).map((row) => mapVideoRowToPublicDto(row, ctx));
 
     return res.status(200).json({
       video,

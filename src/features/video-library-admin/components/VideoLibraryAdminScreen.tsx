@@ -23,8 +23,13 @@ import VideoForm from "./VideoForm";
 import VideoTable from "./VideoTable";
 import Modal from "./Modal";
 import { LANGUAGE_LABELS } from "../../../../data/constants";
-import { resolveLibraryEmbedSrc } from "../../../../lib/videoLibraryPublic";
+import {
+  deriveRootVideoUrlFromLocales,
+  resolveLibraryEmbedSrc,
+} from "../../../../lib/videoLibraryPublic";
 import { gTranslateFetch } from "../../../../utils/apiUtils";
+import { SITE_LOCALES } from "../utils/siteLocales";
+import { siteLocalesRootPreferredOrder } from "../utils/localeVideoMerge";
 
 type PublishFilter = "all" | "published" | "unpublished";
 type PremiumFilter = "all" | "premium" | "nonPremium";
@@ -32,6 +37,15 @@ type ScheduleFilter = "all" | "scheduled" | "active";
 
 const DEFAULT_SORT_FIELD: VideoSortField = "createdAt";
 const DEFAULT_SORT_DIRECTION: VideoSortDirection = "desc";
+const ADMIN_VIDEO_ROOT_PREF = siteLocalesRootPreferredOrder(SITE_LOCALES);
+
+function adminPrimaryVideoUrl(video: VideoDoc): string {
+  return (
+    deriveRootVideoUrlFromLocales(video.locales ?? {}, ADMIN_VIDEO_ROOT_PREF) ||
+    video.videoUrl?.trim() ||
+    ""
+  );
+}
 const CREATE_CLICK_FEEDBACK_MS = 600;
 const CREATE_MODAL_OPEN_TIMEOUT_MS = 800;
 const DESC_FIRST_FIELDS: ReadonlySet<VideoSortField> = new Set<VideoSortField>([
@@ -685,14 +699,20 @@ export default function VideoLibraryAdminScreen() {
   };
 
   const handleOpen = (video: VideoDoc) => {
-    if (video.videoUrl) {
-      window.open(video.videoUrl, "_blank", "noopener,noreferrer");
+    const raw = adminPrimaryVideoUrl(video);
+    if (raw) {
+      window.open(raw, "_blank", "noopener,noreferrer");
     }
   };
 
   const handleCopy = async (video: VideoDoc) => {
     try {
-      await navigator.clipboard.writeText(video.videoUrl);
+      const raw = adminPrimaryVideoUrl(video);
+      if (!raw) {
+        setErrorMessage("Nu există link video de copiat.");
+        return;
+      }
+      await navigator.clipboard.writeText(raw);
       setSuccessMessage("Link copiat.");
     } catch (_) {
       setErrorMessage("Nu am putut copia linkul.");
@@ -715,7 +735,7 @@ export default function VideoLibraryAdminScreen() {
   };
 
   const getEmbedUrl = (video: VideoDoc) =>
-    resolveLibraryEmbedSrc(video.platform, video.videoUrl ?? "") || null;
+    resolveLibraryEmbedSrc(video.platform, adminPrimaryVideoUrl(video)) || null;
 
   const stats = useMemo(() => {
     const total = videos.length;
@@ -1152,7 +1172,7 @@ export default function VideoLibraryAdminScreen() {
 
           <Modal open={showCategoryDetails} onClose={closeCategoryDetails} title="Detalii categorie">
             {selectedCategory ? (
-              <div className="space-y-5">
+              <div className="max-h-full min-h-0 space-y-5 overflow-y-auto">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-xl font-semibold text-gray-900">{selectedCategory.name}</div>

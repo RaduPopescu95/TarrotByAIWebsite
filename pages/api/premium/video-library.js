@@ -2,6 +2,7 @@ import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../lib/courses";
+import { rowHasValidEmbedForLocale } from "../../../lib/videoLibraryPublic";
 import {
   collectAndSortPublishedVideos,
   mapVideoRowToPublicDto,
@@ -39,8 +40,9 @@ export default async function handler(req, res) {
     const nowMs = Date.now();
     const snap = await db.collection(COLLECTION).get();
     const sorted = collectAndSortPublishedVideos(snap, nowMs);
+    const playable = sorted.filter((row) => rowHasValidEmbedForLocale(row, locale));
 
-    const videos = sorted.map((row) =>
+    const videos = playable.map((row) =>
       mapVideoRowToPublicDto(row, { locale, premiumActive })
     );
 

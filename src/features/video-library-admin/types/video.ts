@@ -5,6 +5,8 @@ export type VideoPlatform = "bunny" | "vimeo" | "youtube";
 export type VideoLocaleFields = {
   title: string;
   description?: string;
+  /** Per-language playback URL when platform differs per locale (e.g. Bunny). */
+  videoUrl?: string;
 };
 
 export type VideoLocales = Record<string, VideoLocaleFields>;
@@ -25,7 +27,8 @@ export type VideoDoc = {
   title: string;
   description?: string;
   platform: VideoPlatform;
-  videoUrl: string;
+  /** Legacy / denormalized; used when no locales.*.videoUrl exist. */
+  videoUrl?: string;
   thumbnailUrl?: string;
   category?: string;
   createdAt: Timestamp | null;
@@ -49,7 +52,8 @@ export type VideoCreateInput = {
   title: string;
   description?: string;
   platform: VideoPlatform;
-  videoUrl: string;
+  /** Denormalized; derived from locales on save when possible. */
+  videoUrl?: string;
   thumbnailUrl?: string;
   category?: string;
   publishAt?: Timestamp | null;

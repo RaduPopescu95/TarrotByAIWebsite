@@ -27,12 +27,10 @@ export default function Modal({ title, open, onClose, children }: Props) {
         aria-hidden="true"
       />
       <div className="absolute inset-0 overflow-y-auto">
-        <div className="flex min-h-full items-start justify-center px-4 py-12 sm:px-6">
-          <div className="w-full max-w-6xl">
-            <div className="rounded-2xl border-4 border-black bg-white shadow-2xl">
-              <div className="max-h-[calc(100vh-16rem)] overflow-y-auto px-6 py-6">
-                {children}
-              </div>
+        <div className="flex min-h-full items-center justify-center px-4 py-6 sm:px-6">
+          <div className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border-4 border-black bg-white shadow-2xl">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6">
+              {children}
             </div>
           </div>
         </div>
@@ -40,4 +38,3 @@ export default function Modal({ title, open, onClose, children }: Props) {
     </div>
   );
 }
-

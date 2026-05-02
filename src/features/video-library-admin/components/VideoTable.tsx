@@ -1,6 +1,38 @@
 import React from "react";
 import type { VideoDoc, VideoSortDirection, VideoSortField } from "../types/video";
 import { formatTimestamp } from "../utils/videoFormat";
+import { SITE_LOCALES } from "../utils/siteLocales";
+import { hasAnyLocalizedVideoUrl } from "../../../../lib/videoLibraryPublic";
+
+function LocaleVideoBadge({ video }: { video: VideoDoc }) {
+  if (!hasAnyLocalizedVideoUrl(video)) {
+    return (
+      <span className="inline-flex rounded-md bg-gray-100 px-2 py-1 text-[10px] font-medium uppercase text-gray-600 ring-1 ring-gray-200">
+        unic (toate)
+      </span>
+    );
+  }
+  return (
+    <div className="flex max-w-[220px] flex-wrap gap-1">
+      {SITE_LOCALES.map((lc) => {
+        const ok = Boolean(video.locales?.[lc]?.videoUrl?.trim());
+        return (
+          <span
+            key={lc}
+            title={`${lc}: ${ok ? "are link" : "lipsește link"}`}
+            className={`rounded px-1 py-px font-mono text-[10px] font-semibold uppercase ring-1 ${
+              ok
+                ? "bg-emerald-50 text-emerald-800 ring-emerald-700/25"
+                : "bg-gray-50 text-gray-400 ring-gray-200"
+            }`}
+          >
+            {lc}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 type Props = {
   videos: VideoDoc[];
@@ -101,6 +133,9 @@ export default function VideoTable({
                   <span className="text-[10px] text-gray-500">{getSortIndicator("platform")}</span>
                 </button>
               </th>
+              <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-wide text-gray-700">
+                Link / limbă
+              </th>
               <th className="px-6 py-4" aria-sort={getAriaSort("category")}>
                 <button
                   type="button"
@@ -167,6 +202,9 @@ export default function VideoTable({
                         ? "Vimeo"
                         : "YouTube"}
                   </span>
+                </td>
+                <td className="px-6 py-4 align-top">
+                  <LocaleVideoBadge video={video} />
                 </td>
                 <td className="px-6 py-4 text-gray-600">
                   {video.category ? (
