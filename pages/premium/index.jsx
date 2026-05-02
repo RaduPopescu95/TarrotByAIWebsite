@@ -6,9 +6,141 @@ import Image from "next/image";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import AuthFunnelShell from "../../components/auth/AuthFunnelShell";
+import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
+import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { handleGetUserInfoJobs } from "../../utils/handleFirebaseQuery";
+import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import { hasPremiumAccess } from "../../lib/premiumAccess";
+
+function formatDuration(seconds, fallback = "") {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 1) return fallback;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function PremiumZoneVideoSpotlight({ locale }) {
+  const { t } = useTranslation("common");
+  const { currentUser } = useAuth();
+  const [videos, setVideos] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const lc = locale || "ro";
+        const headers = await getFirebaseBearerHeader({ required: Boolean(currentUser) });
+        const res = await fetch(
+          `/api/premium/video-library?locale=${encodeURIComponent(lc)}&scope=premium_zone`,
+          {
+            headers: {
+              Accept: "application/json",
+              ...headers,
+            },
+          },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok && Array.isArray(data?.videos)) {
+          setVideos(data.videos);
+        } else if (!cancelled) {
+          setVideos([]);
+        }
+      } catch {
+        if (!cancelled) setVideos([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, currentUser?.uid]);
+
+  return (
+    <section className="mt-10 border-t border-slate-200 pt-10" aria-labelledby="premium-zone-videos-heading">
+      <h2 id="premium-zone-videos-heading" className="text-lg font-semibold text-slate-900 sm:text-xl">
+        {t("premiumZoneExclusiveVideosHeading")}
+      </h2>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
+        {t("premiumZoneExclusiveVideosLead")}
+      </p>
+
+      {loading ? (
+        <div className="mt-8 flex items-center gap-3 text-sm text-slate-500">
+          <span
+            className="h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-slate-200 border-t-sky-600"
+            aria-hidden
+          />
+          {t("videoLibraryLoading")}
+        </div>
+      ) : videos.length === 0 ? (
+        <p className="mt-8 text-sm text-slate-600">{t("premiumZoneExclusiveVideosEmpty")}</p>
+      ) : (
+        <ul className="mt-8 grid list-none gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
+          {videos.map((v) => {
+            const durationLabel =
+              typeof v.durationSeconds === "number" ? formatDuration(v.durationSeconds, "") : "";
+            return (
+              <li key={v.id} className="min-w-0">
+                <Link
+                  href={`/videouri/${encodeURIComponent(v.id)}`}
+                  className="group block text-left text-inherit no-underline"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-200">
+                    <PublicVideoThumbnail
+                      src={v.thumbnailUrl}
+                      alt=""
+                      imgClassName="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                      fallback={
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
+                          <svg
+                            className="h-12 w-12 opacity-50"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.25"
+                            aria-hidden
+                          >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
+                          </svg>
+                        </div>
+                      }
+                    />
+                    {v.isPremium ? (
+                      <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
+                    ) : null}
+                    {durationLabel ? (
+                      <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+                        {durationLabel}
+                      </span>
+                    ) : null}
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
+                      <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-lg">
+                        {t("videoLibraryPlay")}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{v.title}</p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <div className="mt-10">
+        <VideoLibraryPrimaryCta
+          label={t("premiumVideoLibraryBigCta")}
+          hint={t("premiumVideoLibraryBigCtaHint")}
+        />
+      </div>
+    </section>
+  );
+}
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -361,6 +493,7 @@ export default function PremiumZonePage() {
             <p className="mt-4 text-sm font-medium text-slate-600">{t("premiumPageLoading")}</p>
           </div>
         ) : (
+          <>
           <section
             className={cn(
               "rounded-2xl border px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 lg:px-10 lg:py-10 xl:gap-x-14 xl:px-12",
@@ -502,16 +635,10 @@ export default function PremiumZonePage() {
               ) : access ? (
                 <div className="space-y-0">
                   {checkoutSuccess ? (
-                    <>
-                      <CelebrationPanel
-                        eyebrow={t("premiumCheckoutSuccessEyebrow")}
-                        title={t("premiumCheckoutSuccessTitle")}
-                      />
-                      <VideoLibraryPrimaryCta
-                        label={t("premiumVideoLibraryBigCta")}
-                        hint={t("premiumVideoLibraryBigCtaHint")}
-                      />
-                    </>
+                    <CelebrationPanel
+                      eyebrow={t("premiumCheckoutSuccessEyebrow")}
+                      title={t("premiumCheckoutSuccessTitle")}
+                    />
                   ) : (
                     <p className="mb-6 border-b border-slate-100 pb-6 text-sm text-slate-600">{t("premiumZoneDescription")}</p>
                   )}
@@ -532,6 +659,8 @@ export default function PremiumZonePage() {
               </ul>
             ) : null}
           </section>
+          {access ? <PremiumZoneVideoSpotlight locale={router.locale || "ro"} /> : null}
+          </>
         )}
       </AuthFunnelShell>
     </>

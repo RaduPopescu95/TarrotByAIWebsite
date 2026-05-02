@@ -31,7 +31,14 @@ export default async function handler(req, res) {
       "ro"
     );
 
-    const videos = await loadPremiumVideoLibraryVideos({ locale, premiumActive });
+    const scopeRaw = readSingleQueryValue(req.query.scope);
+    const premiumSpotlightOnly = scopeRaw === "premium_zone";
+
+    const videos = await loadPremiumVideoLibraryVideos({
+      locale,
+      premiumActive,
+      premiumSpotlightOnly,
+    });
 
     return res.status(200).json({
       videos,
