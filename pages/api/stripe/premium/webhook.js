@@ -29,7 +29,21 @@ function getStripeCustomerId(subscription) {
 
 function buildUserPremiumPayload(subscription) {
   const appStatus = mapStripeSubscriptionStatus(subscription.status);
-  const endSec = subscription.current_period_end;
+  let endSec =
+    typeof subscription.current_period_end === "number" ? subscription.current_period_end : null;
+  const endedSec = typeof subscription.ended_at === "number" ? subscription.ended_at : null;
+  /**
+   * Stripe keeps subscription.current_period_end at the invoiced period end even after an
+   * *immediate* cancel; ended_at is when the subscription actually ended. Without capping,
+   * hasPremiumAccess would extend premium until current_period_end (user sees "still valid until X").
+   */
+  if (appStatus === "canceled" && endedSec != null) {
+    if (endSec == null) {
+      endSec = endedSec;
+    } else {
+      endSec = Math.min(endSec, endedSec);
+    }
+  }
   const currentPeriodEnd =
     typeof endSec === "number" ? Timestamp.fromMillis(endSec * 1000) : null;
   const stripeCustomerId = getStripeCustomerId(subscription);
