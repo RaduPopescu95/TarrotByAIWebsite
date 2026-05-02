@@ -21,7 +21,7 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
     const embed = resolveLibraryEmbedSrc("bunny", input.videoUrl);
     if (!embed) {
       errors.videoUrl =
-        "Introdu un embed Bunny Stream valid (player.mediadelivery.net/embed/…).";
+        "Introdu link play/embed Bunny (player.mediadelivery.net), bibliotecă/id-video sau UUID video dacă NEXT_PUBLIC_BUNNY_STREAM_LIBRARY_ID e setat în mediu.";
     }
   }
   return errors;

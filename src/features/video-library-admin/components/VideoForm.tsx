@@ -301,11 +301,14 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                 {errors.videoUrl && <p className="mt-1.5 text-xs text-red-600">{errors.videoUrl}</p>}
                 <p className="mt-1.5 text-xs text-gray-500">
                   YouTube: link standard sau youtu.be. Vimeo: link complet către videoclip. Bunny Stream:
-                  Folosește linkul de embed din panoul Bunny, de forma{" "}
+                  link play sau embed (
                   <span className="break-all font-mono text-[11px]">
-                    https://player.mediadelivery.net/embed/[id-bibliotecă]/[id-video]
+                    …/play/… sau …/embed/…
                   </span>
-                  .
+                  ), sau{" "}
+                  <span className="font-mono text-[11px]">id-bibliotecă/id-video</span>, sau doar UUID
+                  video dacă <span className="font-mono text-[11px]">NEXT_PUBLIC_BUNNY_STREAM_LIBRARY_ID</span>{" "}
+                  e setat.
                 </p>
               </div>
 
