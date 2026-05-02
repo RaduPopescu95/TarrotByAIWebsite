@@ -340,5 +340,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Достъп",
+  "videoLibraryAccessChipAll": "Всички видеоклипове",
+  "videoLibraryAccessChipFree": "Безплатни",
+  "videoLibraryAccessChipPremium": "Премиум",
+  "videoLibraryHomePreviewTitle": "Последни видеоклипове",
+  "videoLibraryHomePreviewSubtitle": "Наскоро добавени от видеотеката.",
+  "videoLibraryHomePreviewAll": "Всички видеоклипове"
 }

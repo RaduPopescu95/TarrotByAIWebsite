@@ -1,14 +1,8 @@
-import { getAdminDb } from "../../../lib/firebaseAdmin";
-import { getOptionalAuth } from "../../../lib/requireAuth";
-import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../lib/courses";
-import { rowHasValidEmbedForLocale } from "../../../lib/videoLibraryPublic";
-import {
-  collectAndSortPublishedVideos,
-  mapVideoRowToPublicDto,
-} from "../../../lib/videoLibraryPublicMapper";
-
-const COLLECTION = "videosVideoModule";
+import { getAdminDb } from "../../../lib/firebaseAdmin";
+import { loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
+import { hasPremiumAccess } from "../../../lib/premiumAccess";
+import { getOptionalAuth } from "../../../lib/requireAuth";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -37,14 +31,7 @@ export default async function handler(req, res) {
       "ro"
     );
 
-    const nowMs = Date.now();
-    const snap = await db.collection(COLLECTION).get();
-    const sorted = collectAndSortPublishedVideos(snap, nowMs);
-    const playable = sorted.filter((row) => rowHasValidEmbedForLocale(row, locale));
-
-    const videos = playable.map((row) =>
-      mapVideoRowToPublicDto(row, { locale, premiumActive })
-    );
+    const videos = await loadPremiumVideoLibraryVideos({ locale, premiumActive });
 
     return res.status(200).json({
       videos,

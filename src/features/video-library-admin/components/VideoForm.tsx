@@ -44,6 +44,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     description: "",
     platform: "youtube",
     category: "",
+    thumbnailUrl: "",
     order: undefined,
     isPublished: false,
     isPremium: true,
@@ -105,6 +106,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         description: initialValue.description || "",
         platform: initialValue.platform,
         category: initialValue.category || "",
+        thumbnailUrl: typeof initialValue.thumbnailUrl === "string" ? initialValue.thumbnailUrl : "",
         order: initialValue.order,
         isPublished: initialValue.isPublished,
         isPremium: initialValue.isPremium === true,
@@ -120,8 +122,21 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         setPublishAtInput("");
       }
     } else {
+      setForm({
+        title: "",
+        description: "",
+        platform: "youtube",
+        category: "",
+        thumbnailUrl: "",
+        order: undefined,
+        isPublished: false,
+        isPremium: true,
+        publishAt: null,
+      });
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(null));
       setLocales(undefined);
+      setErrors({});
+      setTranslateMessage("");
     }
   }, [initialValue]);
 
@@ -219,6 +234,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         description: form.description?.trim() || "",
         videoUrl: denormUrl || "",
         category: form.category?.trim() || "",
+        thumbnailUrl:
+          form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
         locales: mergedLocales,
       });
       console.log("[VideoForm] Submit resolved");
@@ -255,6 +272,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       ...form,
       videoUrl: denormUrl || "",
       locales: mergedLocales,
+      thumbnailUrl:
+        form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
     });
     setErrors(validation);
     if (Object.keys(validation).length > 0) return;
@@ -276,6 +295,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       ...form,
       videoUrl: denormUrl || "",
       locales: mergedLocales,
+      thumbnailUrl:
+        form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
     });
     setErrors(validation);
     if (Object.keys(validation).length > 0) {
@@ -387,6 +408,35 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               </p>
             </div>
           </div>
+
+          {form.platform === "bunny" ? (
+            <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3 shadow-sm">
+              <label className="text-sm font-medium text-gray-800">
+                Thumbnail Bunny <span className="font-normal text-gray-600">(opțional, același pentru toate limbile)</span>
+              </label>
+              <input
+                type="url"
+                value={typeof form.thumbnailUrl === "string" ? form.thumbnailUrl : ""}
+                onChange={(e) => handleChange("thumbnailUrl", e.target.value)}
+                disabled={uiLocked}
+                className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                  errors.thumbnailUrl
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-violet-200 focus:border-violet-500 focus:ring-violet-500/20"
+                } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                placeholder="https://vz-….b-cdn.net/uuid-video/thumbnail.jpg"
+                autoComplete="off"
+              />
+              {errors.thumbnailUrl ? (
+                <p className="mt-1.5 text-xs text-red-600">{errors.thumbnailUrl}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-violet-900/80">
+                  Din Bunny Stream → video and assets url → thumbnail url → copiază URL-ul imaginii thumbnail pentru videoclip (nu depinde de
+                  limbă).
+                </p>
+              )}
+            </div>
+          ) : null}
 
           <div>
             <label className="text-sm font-medium text-gray-700">Descriere</label>

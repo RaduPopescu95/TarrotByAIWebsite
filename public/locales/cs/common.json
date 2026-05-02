@@ -342,5 +342,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Typ přístupu",
+  "videoLibraryAccessChipAll": "Všechna videa",
+  "videoLibraryAccessChipFree": "Zdarma",
+  "videoLibraryAccessChipPremium": "Prémiová",
+  "videoLibraryHomePreviewTitle": "Nejnovější videa",
+  "videoLibraryHomePreviewSubtitle": "Nedávno přidané z videotéky.",
+  "videoLibraryHomePreviewAll": "Zobrazit všechna videa"
 }

@@ -340,5 +340,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Accesso",
+  "videoLibraryAccessChipAll": "Tutti i video",
+  "videoLibraryAccessChipFree": "Gratis",
+  "videoLibraryAccessChipPremium": "Premium",
+  "videoLibraryHomePreviewTitle": "Video recenti",
+  "videoLibraryHomePreviewSubtitle": "Aggiunti di recente in videoteca.",
+  "videoLibraryHomePreviewAll": "Tutti i video"
 }

@@ -320,5 +320,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Akses",
+  "videoLibraryAccessChipAll": "Semua video",
+  "videoLibraryAccessChipFree": "Gratis",
+  "videoLibraryAccessChipPremium": "Premium",
+  "videoLibraryHomePreviewTitle": "Video terbaru",
+  "videoLibraryHomePreviewSubtitle": "Baru ditambahkan di perpustakaan video.",
+  "videoLibraryHomePreviewAll": "Lihat semua video"
 }

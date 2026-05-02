@@ -6,6 +6,7 @@ export type VideoValidationErrors = {
   platform?: string;
   localizedVideo?: string;
   localeVideos?: Partial<Record<string, string>>;
+  thumbnailUrl?: string;
 };
 
 function embedHintForPlatform(platform: string | undefined): string {
@@ -53,6 +54,21 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
         platform === "bunny"
           ? "Un sau mai multe linkuri Bunny sunt invalide. Verifică câmpurile marcate mai jos."
           : "Un sau mai multe linkuri video sunt invalide. Verifică câmpurile marcate mai jos.";
+    }
+  }
+
+  const bunnyThumb =
+    platform === "bunny" && typeof input.thumbnailUrl === "string"
+      ? input.thumbnailUrl.trim()
+      : "";
+  if (bunnyThumb) {
+    try {
+      const u = new URL(bunnyThumb);
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        errors.thumbnailUrl = "Thumbnail-ul trebuie să fie un URL http(s) valid.";
+      }
+    } catch {
+      errors.thumbnailUrl = "Thumbnail-ul nu este un URL valid.";
     }
   }
 

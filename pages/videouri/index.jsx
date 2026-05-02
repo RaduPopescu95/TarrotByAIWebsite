@@ -6,6 +6,8 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
+import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
@@ -62,6 +64,7 @@ export default function VideoLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [accessFilter, setAccessFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [paginationPage, setPaginationPage] = useState(1);
   const listTopRef = useRef(null);
@@ -113,24 +116,30 @@ export default function VideoLibraryPage() {
     return videos.filter((v) => (typeof v.category === "string" ? v.category.trim() : "") === selectedCategory);
   }, [videos, selectedCategory]);
 
+  const accessFilteredVideos = useMemo(() => {
+    if (accessFilter === "all") return categoryFilteredVideos;
+    if (accessFilter === "free") return categoryFilteredVideos.filter((v) => !v.isPremium);
+    return categoryFilteredVideos.filter((v) => v.isPremium);
+  }, [categoryFilteredVideos, accessFilter]);
+
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
   const filteredVideos = useMemo(() => {
-    if (!normalizedSearch) return categoryFilteredVideos;
-    return categoryFilteredVideos.filter((v) => {
+    if (!normalizedSearch) return accessFilteredVideos;
+    return accessFilteredVideos.filter((v) => {
       const title = (v.title || "").toLowerCase();
       const desc = (typeof v.description === "string" ? v.description : "").toLowerCase();
       const cat = (typeof v.category === "string" ? v.category : "").toLowerCase();
       return title.includes(normalizedSearch) || desc.includes(normalizedSearch) || cat.includes(normalizedSearch);
     });
-  }, [categoryFilteredVideos, normalizedSearch]);
+  }, [accessFilteredVideos, normalizedSearch]);
 
   const filteredTotal = filteredVideos.length;
   const totalPages = Math.max(1, Math.ceil(filteredTotal / VIDEO_LIBRARY_PAGE_SIZE));
 
   useEffect(() => {
     setPaginationPage(1);
-  }, [selectedCategory, normalizedSearch]);
+  }, [selectedCategory, normalizedSearch, accessFilter]);
 
   useEffect(() => {
     setPaginationPage((p) => Math.min(Math.max(1, p), totalPages));
@@ -179,6 +188,89 @@ export default function VideoLibraryPage() {
 
   const channelName = t("videoLibraryChannelName");
 
+  const searchInput = (
+    <div className="relative">
+      <svg
+        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <input
+        id="video-library-search"
+        type="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        disabled={loading}
+        placeholder={t("videoLibrarySearchPlaceholder")}
+        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+      />
+      {searchQuery.trim() ? (
+        <button
+          type="button"
+          onClick={() => setSearchQuery("")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          aria-label={t("videoLibrarySearchClear")}
+        >
+          ×
+        </button>
+      ) : null}
+    </div>
+  );
+
+  const accessFilterControls = (
+    <>
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 lg:text-right">
+        {t("videoLibraryAccessSectionLabel")}
+      </span>
+      <div className="flex flex-wrap gap-2 lg:justify-end">
+        <button
+          type="button"
+          onClick={() => setAccessFilter("all")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            accessFilter === "all"
+              ? "bg-slate-900 text-white"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          {t("videoLibraryAccessChipAll")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAccessFilter("free")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            accessFilter === "free"
+              ? "bg-slate-900 text-white"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          {t("videoLibraryAccessChipFree")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAccessFilter("premium")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            accessFilter === "premium"
+              ? "bg-slate-900 text-white"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          {t("videoLibraryAccessChipPremium")}
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <>
       <Head>
@@ -190,99 +282,114 @@ export default function VideoLibraryPage() {
         <div className="pb-12 pt-24 px-4 sm:px-6 sm:pt-28 lg:px-8 xl:px-12 lg:pt-24">
           <div className="mx-auto w-full max-w-[1920px]">
             <main className="min-w-0">
-              <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                  {t("videoLibraryHeroTitle")}
-                </h1>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="w-full max-w-md">
-                    <label htmlFor="video-library-search" className="sr-only">
-                      {t("videoLibrarySearchLabel")}
-                    </label>
-                    <div className="relative">
-                      <svg
-                        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                      </svg>
-                      <input
-                        id="video-library-search"
-                        type="search"
-                        enterKeyHint="search"
-                        autoComplete="off"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        disabled={loading}
-                        placeholder={t("videoLibrarySearchPlaceholder")}
-                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
-                      />
-                      {searchQuery.trim() ? (
-                        <button
-                          type="button"
-                          onClick={() => setSearchQuery("")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                          aria-label={t("videoLibrarySearchClear")}
-                        >
-                          ×
-                        </button>
-                      ) : null}
+              {loading ? (
+                <>
+                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                      {t("videoLibraryHeroTitle")}
+                    </h1>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div className="w-full max-w-md">
+                        <label htmlFor="video-library-search" className="sr-only">
+                          {t("videoLibrarySearchLabel")}
+                        </label>
+                        {searchInput}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {loading ? (
-                <VideoLibrarySkeletonGrid loadingLabel={t("videoLibraryLoading")} />
+                  <VideoLibrarySkeletonGrid loadingLabel={t("videoLibraryLoading")} />
+                </>
               ) : error ? (
-                <div className="max-w-md rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-center text-sm text-red-800">
-                  {error}
-                  <button
-                    type="button"
-                    className="mt-4 rounded-full bg-red-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-red-800"
-                    onClick={() => load()}
-                  >
-                    {t("videoLibraryRetry")}
-                  </button>
-                </div>
-              ) : videos.length === 0 ? (
-                <p className="py-12 text-center text-slate-600">{t("videoLibraryEmpty")}</p>
-              ) : (
                 <>
-                  <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto pb-2 pl-4 pr-4 sm:-mx-0 sm:pl-0 sm:pr-0">
+                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                      {t("videoLibraryHeroTitle")}
+                    </h1>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div className="w-full max-w-md">
+                        <label htmlFor="video-library-search" className="sr-only">
+                          {t("videoLibrarySearchLabel")}
+                        </label>
+                        {searchInput}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="max-w-md rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-center text-sm text-red-800">
+                    {error}
                     <button
                       type="button"
-                      onClick={() => setSelectedCategory(null)}
-                      className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                        selectedCategory === null
-                          ? "bg-slate-900 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className="mt-4 rounded-full bg-red-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-red-800"
+                      onClick={() => load()}
                     >
-                      {t("videoLibraryChipAll")}
+                      {t("videoLibraryRetry")}
                     </button>
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                          selectedCategory === cat
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                  </div>
+                </>
+              ) : videos.length === 0 ? (
+                <>
+                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                      {t("videoLibraryHeroTitle")}
+                    </h1>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div className="w-full max-w-md">
+                        <label htmlFor="video-library-search" className="sr-only">
+                          {t("videoLibrarySearchLabel")}
+                        </label>
+                        {searchInput}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="py-12 text-center text-slate-600">{t("videoLibraryEmpty")}</p>
+                </>
+              ) : (
+                <>
+                  <div className="mb-6 grid grid-cols-1 gap-5 border-b border-slate-100 pb-6 lg:mb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-x-10 lg:gap-y-4 xl:gap-x-14 lg:border-b-0 lg:pb-0">
+                    <div className="min-w-0 flex flex-col gap-3 sm:gap-4">
+                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                        {t("videoLibraryHeroTitle")}
+                      </h1>
+                      <div className="w-full max-w-md">
+                        <label htmlFor="video-library-search" className="sr-only">
+                          {t("videoLibrarySearchLabel")}
+                        </label>
+                        {searchInput}
+                      </div>
+                      <div className="-mx-4 flex gap-2 overflow-x-auto pb-2 pl-4 pr-4 sm:mx-0 sm:px-0">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategory(null)}
+                          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                            selectedCategory === null
+                              ? "bg-slate-900 text-white"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          {t("videoLibraryChipAll")}
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                              selectedCategory === cat
+                                ? "bg-slate-900 text-white"
+                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:border-t-0 sm:pt-0 lg:max-w-none lg:border-t-0 lg:pt-0.5 lg:pl-2"
+                      role="group"
+                      aria-label={t("videoLibraryAccessSectionLabel")}
+                    >
+                      {accessFilterControls}
+                    </div>
                   </div>
 
                   {filteredVideos.length === 0 ? (
@@ -319,39 +426,39 @@ export default function VideoLibraryPage() {
                               onClick={() => handleVideoIntent(v)}
                               aria-label={v.title}
                             >
-                              {v.thumbnailUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={v.thumbnailUrl}
-                                  alt=""
-                                  className={
-                                    v.canPlay && v.embedSrc
-                                      ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
-                                      : "h-full w-full object-cover"
-                                  }
-                                />
-                              ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
-                                  <svg
-                                    className="h-12 w-12 opacity-50"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.25"
-                                    aria-hidden
-                                  >
-                                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                                    <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
-                                  </svg>
-                                  <span className="text-[10px] uppercase tracking-[0.2em]">
-                                    {v.platform === "bunny"
-                                      ? "Bunny"
-                                      : v.platform === "vimeo"
-                                        ? "Vimeo"
-                                        : "YouTube"}
-                                  </span>
-                                </div>
-                              )}
+                              <PublicVideoThumbnail
+                                src={v.thumbnailUrl}
+                                imgClassName={
+                                  v.canPlay && v.embedSrc
+                                    ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                                    : "h-full w-full object-cover"
+                                }
+                                fallback={
+                                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
+                                    <svg
+                                      className="h-12 w-12 opacity-50"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="1.25"
+                                      aria-hidden
+                                    >
+                                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                                      <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
+                                    </svg>
+                                    <span className="text-[10px] uppercase tracking-[0.2em]">
+                                      {v.platform === "bunny"
+                                        ? "Bunny"
+                                        : v.platform === "vimeo"
+                                          ? "Vimeo"
+                                          : "YouTube"}
+                                    </span>
+                                  </div>
+                                }
+                              />
+                              {v.isPremium ? (
+                                <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
+                              ) : null}
                               {durationLabel ? (
                                 <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
                                   {durationLabel}

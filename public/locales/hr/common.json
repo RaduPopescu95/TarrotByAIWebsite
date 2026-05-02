@@ -341,5 +341,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Pristup",
+  "videoLibraryAccessChipAll": "Svi videi",
+  "videoLibraryAccessChipFree": "Besplatno",
+  "videoLibraryAccessChipPremium": "Premium",
+  "videoLibraryHomePreviewTitle": "Najnoviji videozapisi",
+  "videoLibraryHomePreviewSubtitle": "Nedavno dodano u videoteku.",
+  "videoLibraryHomePreviewAll": "Svi videi"
 }

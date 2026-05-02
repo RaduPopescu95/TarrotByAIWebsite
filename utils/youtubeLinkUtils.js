@@ -15,8 +15,8 @@ export const getYoutubeEmbedUrl = (youtubeLink) => {
   let embedUrl = null;
   
   try {
-    if (cleanLink.includes("list=")) {
-      // Este o listă de redare
+    if (cleanLink.includes("list=") && !cleanLink.includes("watch?v=")) {
+      // Este o listă de redare (fără videoclip principal în URL)
       const listId = cleanLink.split("list=")[1]?.split("&")[0];
       if (listId) {
         embedUrl = `https://www.youtube.com/embed/videoseries?list=${listId}`;
@@ -36,6 +36,16 @@ export const getYoutubeEmbedUrl = (youtubeLink) => {
     } else if (cleanLink.includes("youtube.com/embed/")) {
       // Link deja în format embed
       embedUrl = cleanLink;
+    } else if (cleanLink.includes("youtube.com/shorts/")) {
+      const videoId = cleanLink.split("youtube.com/shorts/")[1]?.split(/[?#/]/)[0];
+      if (videoId) {
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      }
+    } else if (cleanLink.includes("youtube.com/live/")) {
+      const videoId = cleanLink.split("youtube.com/live/")[1]?.split(/[?#/]/)[0];
+      if (videoId) {
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      }
     }
   } catch (error) {
     console.error('Error processing YouTube link:', cleanLink, error);
@@ -58,6 +68,10 @@ export const getYoutubeVideoId = (youtubeLink) => {
       return cleanLink.split("youtu.be/")[1]?.split("?")[0];
     } else if (cleanLink.includes("youtube.com/embed/")) {
       return cleanLink.split("youtube.com/embed/")[1]?.split("?")[0];
+    } else if (cleanLink.includes("youtube.com/shorts/")) {
+      return cleanLink.split("youtube.com/shorts/")[1]?.split(/[?#/]/)[0] || null;
+    } else if (cleanLink.includes("youtube.com/live/")) {
+      return cleanLink.split("youtube.com/live/")[1]?.split(/[?#/]/)[0] || null;
     }
   } catch (error) {
     console.error('Error extracting video ID:', cleanLink, error);

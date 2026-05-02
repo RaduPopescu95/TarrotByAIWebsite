@@ -6,6 +6,8 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
+import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
@@ -203,6 +205,9 @@ export default function VideoDetailPage() {
                           allowFullScreen
                           className="h-full w-full"
                         />
+                        {video.isPremium ? (
+                          <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => toggleFullscreen()}
@@ -215,18 +220,23 @@ export default function VideoDetailPage() {
                       </>
                     ) : (
                       <div className="relative flex h-full flex-col items-center justify-center gap-4 bg-slate-900 px-6 text-center text-white">
-                        {video.thumbnailUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={video.thumbnailUrl}
-                            alt=""
-                            className={
-                              video.lockedReason === "source_invalid"
-                                ? "absolute inset-0 h-full w-full object-cover opacity-30"
-                                : "absolute inset-0 h-full w-full object-cover"
-                            }
-                          />
+                        {video.isPremium ? (
+                          <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
                         ) : null}
+                        <PublicVideoThumbnail
+                          src={video.thumbnailUrl}
+                          imgClassName={
+                            video.lockedReason === "source_invalid"
+                              ? "absolute inset-0 h-full w-full object-cover opacity-30"
+                              : "absolute inset-0 h-full w-full object-cover"
+                          }
+                          fallback={
+                            <div
+                              className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950"
+                              aria-hidden
+                            />
+                          }
+                        />
                         {video.thumbnailUrl && video.lockedReason !== "source_invalid" ? (
                           <div className="absolute inset-0 bg-black/50" aria-hidden />
                         ) : null}
@@ -295,18 +305,21 @@ export default function VideoDetailPage() {
                               className="group flex gap-3 rounded-lg p-1 transition hover:bg-slate-50"
                             >
                               <div className="relative aspect-video w-36 shrink-0 overflow-hidden rounded-lg bg-slate-200">
-                                {thumb ? (
-                                  /* eslint-disable-next-line @next/next/no-img-element */
-                                  <img
-                                    src={thumb}
-                                    alt=""
-                                    className="h-full w-full object-cover transition group-hover:scale-[1.03]"
+                                <PublicVideoThumbnail
+                                  src={thumb}
+                                  imgClassName="h-full w-full object-cover transition group-hover:scale-[1.03]"
+                                  fallback={
+                                    <div className="flex h-full w-full items-center justify-center bg-slate-700 text-[10px] text-slate-400">
+                                      {rv.platform || "video"}
+                                    </div>
+                                  }
+                                />
+                                {rv.isPremium ? (
+                                  <VideoPremiumThumbBadge
+                                    compact
+                                    label={t("videoLibraryPremiumCornerBadge")}
                                   />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center bg-slate-700 text-[10px] text-slate-400">
-                                    {rv.platform || "video"}
-                                  </div>
-                                )}
+                                ) : null}
                                 {dur ? (
                                   <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-px text-[10px] text-white">
                                     {dur}

@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 import Head from "next/head";
 import Link from "next/link";
 import Header from "../components/Header";
@@ -21,6 +20,8 @@ import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
 import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
+import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnail";
+import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
 import CourseCard from "../components/Courses/CourseCard";
 import {
   collection,
@@ -34,6 +35,17 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
+import { normalizeLocale } from "../lib/courses";
+import { loadPremiumVideoLibraryVideos } from "../lib/loadPremiumVideoLibrary";
+
+const HOME_VIDEO_PREVIEW_LIMIT = 6;
+
+function formatVideoDuration(seconds, fallback) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 1) return fallback;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 export async function getServerSideProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
@@ -102,10 +114,23 @@ export async function getServerSideProps({ locale }) {
       latestFiveArticles: [],
     };
   }
+
+  let homeVideosPreview = [];
+  try {
+    homeVideosPreview = await loadPremiumVideoLibraryVideos({
+      locale: normalizeLocale(locale, "ro"),
+      premiumActive: false,
+      previewLimit: HOME_VIDEO_PREVIEW_LIMIT,
+    });
+  } catch (err) {
+    console.error("[index getServerSideProps] homeVideosPreview", err?.message || err);
+  }
+
   return {
     props: {
       articles,
       lastVisibleId,
+      homeVideosPreview,
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };
@@ -144,9 +169,25 @@ function Landing(props) {
   } = useApiData();
   const { t, i18n } = useTranslation("common");
 
-  const { articles, lastVisibleId } = props;
+  const { articles, lastVisibleId, homeVideosPreview = [] } = props;
 
   const router = useRouter();
+
+  const handleHomeVideoIntent = (v) => {
+    if (v.canPlay && v.embedSrc) {
+      router.push(`/videouri/${v.id}`);
+      return;
+    }
+    if (v.lockedReason === "source_invalid") return;
+    const returnPath = router.asPath || "/";
+    const signedIn = Boolean(currentUser) && !isGuestUser;
+    if (!signedIn) {
+      router.push(`/login/videoteca?returnUrl=${encodeURIComponent(returnPath)}`);
+      return;
+    }
+    router.push("/abonament");
+  };
+
   const currentLanguage = i18n.language || 'ro';
 
   const baseUrl =
@@ -696,6 +737,115 @@ function Landing(props) {
                 </div>
               </section>
             )}
+
+            {homeVideosPreview.length > 0 ? (
+              <section className="border-t border-gray-200 bg-white py-14">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+                        {t("videoLibraryHomePreviewTitle")}
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-sm text-gray-600">
+                        {t("videoLibraryHomePreviewSubtitle")}
+                      </p>
+                    </div>
+                    <Link
+                      href="/videouri"
+                      className="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+                    >
+                      {t("videoLibraryHomePreviewAll")}
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                    {homeVideosPreview.map((v) => {
+                      const durationLabel =
+                        typeof v.durationSeconds === "number"
+                          ? formatVideoDuration(v.durationSeconds, "")
+                          : "";
+                      const accessLabel = !v.isPremium
+                        ? t("videoLibraryBadgeFree")
+                        : t("videoLibraryBadgeSubscriber");
+                      return (
+                        <article key={v.id} className="group flex flex-col">
+                          <button
+                            type="button"
+                            disabled={
+                              !(v.canPlay && v.embedSrc) && v.lockedReason === "source_invalid"
+                            }
+                            className={`relative aspect-video w-full overflow-hidden rounded-xl bg-slate-200 text-left ${
+                              v.canPlay && v.embedSrc
+                                ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                                : v.lockedReason === "source_invalid"
+                                  ? "cursor-not-allowed"
+                                  : "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                            }`}
+                            onClick={() => handleHomeVideoIntent(v)}
+                            aria-label={v.title}
+                          >
+                            <PublicVideoThumbnail
+                              src={v.thumbnailUrl}
+                              imgClassName={
+                                v.canPlay && v.embedSrc
+                                  ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                                  : "h-full w-full object-cover"
+                              }
+                              fallback={
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
+                                  <svg
+                                    className="h-12 w-12 opacity-50"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.25"
+                                    aria-hidden
+                                  >
+                                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                                    <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
+                                  </svg>
+                                </div>
+                              }
+                            />
+                            {v.isPremium ? (
+                              <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
+                            ) : null}
+                            {durationLabel ? (
+                              <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+                                {durationLabel}
+                              </span>
+                            ) : null}
+                            {v.lockedReason === "source_invalid" && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/55 px-4 text-center backdrop-blur-[1px]">
+                                <p className="max-w-[12rem] text-xs font-medium text-amber-50">
+                                  {t("videoLibrarySourceMissing")}
+                                </p>
+                              </div>
+                            )}
+                            {v.canPlay && v.embedSrc && (
+                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
+                                <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-lg">
+                                  {t("videoLibraryPlay")}
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => handleHomeVideoIntent(v)}
+                              className="line-clamp-2 block w-full text-left text-sm font-medium leading-snug text-gray-900 hover:text-indigo-700"
+                            >
+                              {v.title}
+                            </button>
+                            <p className="mt-1 text-xs text-gray-500">{accessLabel}</p>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             {shouldRenderHomeCoursesSection && (
             <section className="bg-transparent">

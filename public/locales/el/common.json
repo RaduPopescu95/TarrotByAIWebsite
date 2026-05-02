@@ -340,5 +340,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "Πρόσβαση",
+  "videoLibraryAccessChipAll": "Όλα τα βίντεο",
+  "videoLibraryAccessChipFree": "Δωρεάν",
+  "videoLibraryAccessChipPremium": "Premium",
+  "videoLibraryHomePreviewTitle": "Πρόσφατα βίντεο",
+  "videoLibraryHomePreviewSubtitle": "Πρόσφατες προσθήκες από τη βιντεοθήκη.",
+  "videoLibraryHomePreviewAll": "Όλα τα βίντεο"
 }

@@ -321,5 +321,12 @@
   "coursesDetailLessonDurationLabel": "Duration",
   "coursesDetailLessonDurationUnknown": "Duration unavailable",
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
-  "coursesDetailContactEmpty": "No contact details are available for this course yet."
+  "coursesDetailContactEmpty": "No contact details are available for this course yet.",
+  "videoLibraryAccessSectionLabel": "उपलब्धता",
+  "videoLibraryAccessChipAll": "सभी वीडियो",
+  "videoLibraryAccessChipFree": "मुफ़्त",
+  "videoLibraryAccessChipPremium": "प्रीमियम",
+  "videoLibraryHomePreviewTitle": "नवीनतम वीडियो",
+  "videoLibraryHomePreviewSubtitle": "वीडियो लाइब्रेरी की हाल की जोड़।",
+  "videoLibraryHomePreviewAll": "सभी वीडियो देखें"
 }
