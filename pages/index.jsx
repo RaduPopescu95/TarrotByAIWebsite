@@ -403,7 +403,7 @@ function Landing(props) {
           </div>
 
           {/* Main Hero Content */}
-          <div className="relative z-10 container mx-auto px-6 pt-32 pb-20">
+          <div className="relative z-10 container mx-auto px-6 pt-28 pb-20">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               
               {/* Hero Header with Stunning Typography */}
@@ -414,7 +414,7 @@ function Landing(props) {
                   <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse animation-delay-500"></div>
                 </div>
                 
-                <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-6 leading-none">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-4 leading-none whitespace-nowrap">
                   Cristina Zurba
                 </h1>
                 
@@ -423,7 +423,19 @@ function Landing(props) {
                 </p>
 
                 {/* Animated CTA Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 max-w-5xl mx-auto mt-12">
+                <div className="max-w-5xl mx-auto mt-12 space-y-6">
+                  <Link
+                    href="/videouri"
+                    className="group relative flex w-full items-center justify-center px-8 py-4 bg-gradient-to-r from-fuchsia-600 to-violet-700 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-fuchsia-500/30 text-decoration-none shadow-lg ring-2 ring-white/25"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-700 to-violet-800 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <span className="relative flex items-center justify-center gap-2 text-center leading-tight">
+                      <i className="fa fa-play-circle" aria-hidden />
+                      {t("homeHeroVideoLibrary")}
+                    </span>
+                  </Link>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
                   
                   {/* Ședințe individuale */}
                   <Link href="/calendar" className="group relative px-8 py-4 sm:col-span-1 lg:col-span-2 lg:order-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/25 text-decoration-none">
@@ -465,6 +477,7 @@ function Landing(props) {
                     </span>
                   </Link>
                   
+                  </div>
                 </div>
               </div>
                              {/* Right column – Hero image */}
