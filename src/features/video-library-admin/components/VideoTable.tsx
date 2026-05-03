@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { VideoDoc, VideoSortDirection, VideoSortField } from "../types/video";
 import { formatTimestamp } from "../utils/videoFormat";
 import { SITE_LOCALES } from "../utils/siteLocales";
@@ -13,14 +13,14 @@ function LocaleVideoBadge({ video }: { video: VideoDoc }) {
     );
   }
   return (
-    <div className="flex max-w-[220px] flex-wrap gap-1">
+    <div className="grid w-max grid-cols-7 gap-1">
       {SITE_LOCALES.map((lc) => {
         const ok = Boolean(video.locales?.[lc]?.videoUrl?.trim());
         return (
           <span
             key={lc}
             title={`${lc}: ${ok ? "are link" : "lipsește link"}`}
-            className={`rounded px-1 py-px font-mono text-[10px] font-semibold uppercase ring-1 ${
+            className={`inline-flex min-w-[2rem] justify-center rounded px-1 py-px font-mono text-[10px] font-semibold uppercase ring-1 ${
               ok
                 ? "bg-emerald-50 text-emerald-800 ring-emerald-700/25"
                 : "bg-gray-50 text-gray-400 ring-gray-200"
@@ -30,6 +30,127 @@ function LocaleVideoBadge({ video }: { video: VideoDoc }) {
           </span>
         );
       })}
+    </div>
+  );
+}
+
+function RowActionsMenu({
+  video,
+  isOpen,
+  onToggle,
+  onClose,
+  onPreview,
+  onEdit,
+  onOpen,
+  onCopy,
+  onDelete,
+}: {
+  video: VideoDoc;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onPreview: (v: VideoDoc) => void;
+  onEdit: (v: VideoDoc) => void;
+  onOpen: (v: VideoDoc) => void;
+  onCopy: (v: VideoDoc) => void;
+  onDelete: (v: VideoDoc) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      const el = wrapRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      onClose();
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <div className="relative flex justify-end" ref={wrapRef}>
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label="Acțiuni videoclip"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
+        onClick={onToggle}
+      >
+        <span className="text-lg leading-none" aria-hidden>
+          ⋯
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-40 mt-1 min-w-[10rem] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+            onClick={() => {
+              onPreview(video);
+              onClose();
+            }}
+          >
+            Test video
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+            onClick={() => {
+              onEdit(video);
+              onClose();
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
+            onClick={() => {
+              onOpen(video);
+              onClose();
+            }}
+          >
+            Open
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+            onClick={() => {
+              onCopy(video);
+              onClose();
+            }}
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50"
+            onClick={() => {
+              onDelete(video);
+              onClose();
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -61,6 +182,8 @@ export default function VideoTable({
   onCopy,
   onPreview,
 }: Props) {
+  const [actionsMenuVideoId, setActionsMenuVideoId] = useState<string | null>(null);
+
   const getAriaSort = (field: VideoSortField): "ascending" | "descending" | "none" => {
     if (sortField !== field) return "none";
     return sortDirection === "asc" ? "ascending" : "descending";
@@ -133,7 +256,7 @@ export default function VideoTable({
                   <span className="text-[10px] text-gray-500">{getSortIndicator("platform")}</span>
                 </button>
               </th>
-              <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-wide text-gray-700">
+              <th className="min-w-[16rem] px-6 py-4 text-[10px] font-semibold uppercase tracking-wide text-gray-700">
                 Link / limbă
               </th>
               <th className="px-6 py-4" aria-sort={getAriaSort("category")}>
@@ -179,7 +302,9 @@ export default function VideoTable({
                   <span className="text-[10px] text-gray-500">{getSortIndicator("createdAt")}</span>
                 </button>
               </th>
-              <th className="px-6 py-4 text-right">Acțiuni</th>
+              <th className="whitespace-nowrap px-3 py-4 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-700">
+                Acțiuni
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -203,7 +328,7 @@ export default function VideoTable({
                         : "YouTube"}
                   </span>
                 </td>
-                <td className="px-6 py-4 align-top">
+                <td className="min-w-[16rem] px-6 py-4 align-top">
                   <LocaleVideoBadge video={video} />
                 </td>
                 <td className="px-6 py-4 text-gray-600">
@@ -261,39 +386,20 @@ export default function VideoTable({
                   )}
                 </td>
                 <td className="px-6 py-4 text-gray-600">{formatTimestamp(video.createdAt)}</td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button
-                    onClick={() => onPreview(video)}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:bg-indigo-50 hover:text-indigo-700 hover:shadow"
-                  >
-                    Test video
-                  </button>
-                  <button
-                      onClick={() => onEdit(video)}
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:bg-blue-50 hover:text-blue-700 hover:shadow"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onOpen(video)}
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:bg-emerald-50 hover:text-emerald-700 hover:shadow"
-                    >
-                      Open
-                    </button>
-                    <button
-                      onClick={() => onCopy(video)}
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:bg-amber-50 hover:text-amber-700 hover:shadow"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      onClick={() => onDelete(video)}
-                      className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm transition-all hover:bg-red-50 hover:shadow"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <td className="px-3 py-4">
+                  <RowActionsMenu
+                    video={video}
+                    isOpen={actionsMenuVideoId === video.id}
+                    onToggle={() =>
+                      setActionsMenuVideoId((prev) => (prev === video.id ? null : video.id))
+                    }
+                    onClose={() => setActionsMenuVideoId(null)}
+                    onPreview={onPreview}
+                    onEdit={onEdit}
+                    onOpen={onOpen}
+                    onCopy={onCopy}
+                    onDelete={onDelete}
+                  />
                 </td>
               </tr>
             ))}
