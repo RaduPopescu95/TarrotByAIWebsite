@@ -349,5 +349,18 @@
   "videoLibraryAccessChipPremium": "Premium",
   "videoLibraryHomePreviewTitle": "Najnoviji videozapisi",
   "videoLibraryHomePreviewSubtitle": "Nedavno dodano u videoteku.",
-  "videoLibraryHomePreviewAll": "Svi videi"
+  "videoLibraryHomePreviewAll": "Svi videi",
+  "sq": "Albanian",
+  "ar": "Arabic",
+  "bs": "Bosnian",
+  "zh": "Chinese (Taiwan)",
+  "ko": "Korean",
+  "he": "Hebrew",
+  "ja": "Japanese",
+  "hu": "Hungarian",
+  "mn": "Mongolian",
+  "pt": "Portuguese",
+  "ru": "Russian",
+  "sr": "Serbian",
+  "tr": "Turkish"
 }

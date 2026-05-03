@@ -12,6 +12,7 @@ import { DatabaseProvider } from "../context/DatabaseContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
+import { resolveUiLocale } from "../lib/siteLocales";
 import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
 import { useFirstVisit } from "../hooks/useFirstVisit";
 import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
@@ -106,29 +107,28 @@ function MyApp({ Component, pageProps }) {
     if (typeof window === 'undefined' || !router.isReady) return;
     
     try {
-      // Simple language synchronization
-      const currentLocale = router.locale;
+      const routingLocale = router.locale;
+      const uiLocale = resolveUiLocale(routingLocale);
       const detectedLng = languageDetector.detect();
 
       if (shouldLog) {
         console.log('🔄 [CLIENT] Language sync:', {
-          routerLocale: currentLocale,
+          routingLocale,
+          uiLocale,
           detectedLng,
           i18nLanguage: i18n?.language,
-          needsSync: i18n?.language && i18n.language !== currentLocale
+          needsSync: Boolean(i18n?.changeLanguage && i18n.language !== uiLocale),
         });
       }
 
-      // Ensure i18n is synced with router locale
-      if (i18n?.language && i18n.language !== currentLocale && i18n.changeLanguage) {
-        i18n.changeLanguage(currentLocale);
-        languageDetector.cache(currentLocale);
+      // i18next uses UI locale (English for video-only routing locales); URLs/API keep routing locale
+      if (i18n?.changeLanguage && i18n.language !== uiLocale) {
+        i18n.changeLanguage(uiLocale);
       }
 
-      // Save current locale for consistency
-      if (currentLocale) {
-        localStorage.setItem("locale", currentLocale);
-        languageDetector.cache(currentLocale);
+      if (routingLocale) {
+        localStorage.setItem("locale", routingLocale);
+        languageDetector.cache(routingLocale);
       }
 
     } catch (error) {

@@ -348,5 +348,18 @@
   "videoLibraryAccessChipPremium": "Премиум",
   "videoLibraryHomePreviewTitle": "Последни видеоклипове",
   "videoLibraryHomePreviewSubtitle": "Наскоро добавени от видеотеката.",
-  "videoLibraryHomePreviewAll": "Всички видеоклипове"
+  "videoLibraryHomePreviewAll": "Всички видеоклипове",
+  "sq": "Albanian",
+  "ar": "Arabic",
+  "bs": "Bosnian",
+  "zh": "Chinese (Taiwan)",
+  "ko": "Korean",
+  "he": "Hebrew",
+  "ja": "Japanese",
+  "hu": "Hungarian",
+  "mn": "Mongolian",
+  "pt": "Portuguese",
+  "ru": "Russian",
+  "sr": "Serbian",
+  "tr": "Turkish"
 }

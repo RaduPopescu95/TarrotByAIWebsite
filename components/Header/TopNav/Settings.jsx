@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "next-i18next";
+import { useRouter } from "next/router";
 import i18nextConfig from "../../../next-i18next.config";
 import LanguageSwitch from "../../LangSwitch/Menu";
+import { getLocaleFlagSrc } from "../../../lib/localeFlags";
 
 function Settings(props) {
   const [open, setOpen] = useState(false);
   const [currentLocale, setCurrentLocale] = useState("");
   const anchorRef = useRef(null);
+  const router = useRouter();
 
   const { t, i18n } = useTranslation("common");
   const { toggleDark, toggleDir, invert, isMobile } = props;
@@ -51,23 +54,6 @@ function Settings(props) {
     };
   }, [open]);
 
-  const flagImages = {
-    en: "/flags/english.png",
-    ro: "/flags/romania.png",
-    bg: "/flags/bulgaria.png",
-    hr: "/flags/croatia.png",
-    cs: "/flags/czech.png",
-    fr: "/flags/france.png",
-    de: "/flags/germany.png",
-    el: "/flags/greece.png",
-    hi: "/flags/india.png",
-    id: "/flags/indonesia.png",
-    it: "/flags/italy.png",
-    pl: "/flags/poland.png",
-    sk: "/flags/slovakia.png",
-    es: "/flags/spanish.png",
-  };
-
   return (
     <div style={{ ...styles.setting, margin: isMobile && 20 }}>
       <button
@@ -79,8 +65,8 @@ function Settings(props) {
       >
         <img
           className="flag"
-          src={flagImages[i18n.language]}
-          alt={i18n.language}
+          src={getLocaleFlagSrc(router.locale || i18n.language)}
+          alt={router.locale || i18n.language}
           width={45}
           height={45}
           style={styles.flagImage}
@@ -99,7 +85,7 @@ function Settings(props) {
                   ssg={i18nextConfig.ssg}
                   locale={locale}
                   key={locale}
-                  checked={locale === i18n.language}
+                  checked={locale === (router.locale || "")}
                   toggleDir={toggleDir}
                   closePopup={handleClose}
                 />

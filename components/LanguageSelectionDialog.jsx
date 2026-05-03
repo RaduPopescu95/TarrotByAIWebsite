@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
+import i18nextConfig from '../next-i18next.config';
+import { getLocaleFlagSrc, getLocaleNativeLabel } from '../lib/localeFlags';
 
 // Helper function to set language cookie for next-i18next
 const setLanguageCookie = (locale) => {
@@ -15,24 +17,20 @@ const setLanguageCookie = (locale) => {
 const LanguageSelectionDialog = ({ isOpen, onClose, onLanguageSelect }) => {
   const router = useRouter();
   const { t, i18n } = useTranslation('common');
-  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+  const languages = useMemo(
+    () =>
+      i18nextConfig.i18n.locales.map((code) => ({
+        code,
+        name: getLocaleNativeLabel(code),
+        flag: getLocaleFlagSrc(code),
+      })),
+    []
+  );
+  const [selectedLanguage, setSelectedLanguage] = useState(() => router.locale || i18n.language || 'ro');
 
-  const languages = [
-    { code: 'ro', name: 'Română', flag: '/flags/romania.png' },
-    { code: 'en', name: 'English', flag: '/flags/english.png' },
-    { code: 'es', name: 'Español', flag: '/flags/spanish.png' },
-    { code: 'fr', name: 'Français', flag: '/flags/france.png' },
-    { code: 'de', name: 'Deutsch', flag: '/flags/germany.png' },
-    { code: 'it', name: 'Italiano', flag: '/flags/italy.png' },
-    { code: 'bg', name: 'Български', flag: '/flags/bulgaria.png' },
-    { code: 'hr', name: 'Hrvatski', flag: '/flags/croatia.png' },
-    { code: 'cs', name: 'Čeština', flag: '/flags/czech.png' },
-    { code: 'el', name: 'Ελληνικά', flag: '/flags/greece.png' },
-    { code: 'hi', name: 'हिन्दी', flag: '/flags/india.png' },
-    { code: 'id', name: 'Bahasa Indonesia', flag: '/flags/indonesia.png' },
-    { code: 'pl', name: 'Polski', flag: '/flags/poland.png' },
-    { code: 'sk', name: 'Slovenčina', flag: '/flags/slovakia.png' }
-  ];
+  useEffect(() => {
+    if (router.locale) setSelectedLanguage(router.locale);
+  }, [router.locale]);
 
   const handleLanguageSelect = (langCode) => {
     setSelectedLanguage(langCode);
@@ -116,7 +114,7 @@ const LanguageSelectionDialog = ({ isOpen, onClose, onLanguageSelect }) => {
         </div>
 
         {/* Content */}
-        <div className="p-8" style={{ flex: '1', minHeight: '200px', maxHeight: '350px', overflowY: 'auto' }}>
+        <div className="p-8" style={{ flex: '1', minHeight: '200px', maxHeight: '520px', overflowY: 'auto' }}>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
             {languages.map((lang) => (
               <button

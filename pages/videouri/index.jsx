@@ -10,11 +10,13 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+import { resolveUiLocale } from "../../lib/siteLocales";
 
 export async function getServerSideProps({ locale }) {
+  const uiLocale = resolveUiLocale(locale);
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common"])),
+      ...(await serverSideTranslations(uiLocale, ["common"])),
     },
   };
 }

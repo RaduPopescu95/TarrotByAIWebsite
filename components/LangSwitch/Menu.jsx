@@ -4,6 +4,7 @@ import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
 import i18nextConfig from "../../next-i18next.config";
 import languageDetector from "../../lib/languageDetector";
+import { getLocaleFlagSrc } from "../../lib/localeFlags";
 
 const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
   const [currentLocale, setCurrentLocale] = useState("");
@@ -42,24 +43,6 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
     }
   };
 
-  // Definește calea către imagini pentru fiecare limbă
-  const flagImages = {
-    en: "/flags/english.png",
-    ro: "/flags/romania.png",
-    bg: "/flags/bulgaria.png",
-    hr: "/flags/croatia.png",
-    cs: "/flags/czech.png",
-    fr: "/flags/france.png",
-    de: "/flags/germany.png",
-    el: "/flags/greece.png",
-    hi: "/flags/india.png",
-    id: "/flags/indonesia.png",
-    it: "/flags/italy.png",
-    pl: "/flags/poland.png",
-    sk: "/flags/slovakia.png",
-    es: "/flags/spanish.png",
-  };
-
   return ssg ? (
     <div 
       style={styles.listItem}
@@ -84,7 +67,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
     >
       <img
         className="flag"
-        src={flagImages[locale]}
+        src={getLocaleFlagSrc(locale)}
         alt={locale}
         style={styles.flagImage}
       />

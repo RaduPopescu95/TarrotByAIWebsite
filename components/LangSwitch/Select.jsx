@@ -1,55 +1,22 @@
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { setCookie } from "../../utils/cookies";
-import { useTranslation } from "next-i18next";
-import { imgAPI } from "../../utils/images";
 import languageDetector from "../../lib/languageDetector";
+import i18nextConfig from "../../next-i18next.config";
+import { getLocaleFlagSrc, getLocaleNativeLabel } from "../../lib/localeFlags";
 
-const options = [
-  { value: "en", label: "English", flag: "/flags/us.png" },
-  { value: "ro", label: "Romana", flag: "/flags/ro.png" },
-  { value: "es", label: "Español", flag: "/flags/es.png" },
-  { value: "de", label: "Deutsch", flag: "/flags/de.png" },
-  { value: "fr", label: "Français", flag: "/flags/fr.png" },
-  { value: "it", label: "Italiano", flag: "/flags/it.png" },
-  { value: "pt", label: "Português", flag: "/flags/pt.png" },
-  { value: "nl", label: "Nederlands", flag: "/flags/nl.png" },
-  { value: "pl", label: "Polski", flag: "/flags/pl.png" },
-  { value: "ru", label: "Русский", flag: "/flags/ru.png" },
-  { value: "hu", label: "Magyar", flag: "/flags/hu.png" },
-  { value: "sv", label: "Svenska", flag: "/flags/sv.png" },
-  { value: "da", label: "Dansk", flag: "/flags/da.png" },
-  { value: "no", label: "Norsk", flag: "/flags/no.png" },
-  { value: "fi", label: "Suomi", flag: "/flags/fi.png" },
-  { value: "is", label: "Íslenska", flag: "/flags/is.png" },
-  { value: "cs", label: "Čeština", flag: "/flags/cs.png" },
-  { value: "sk", label: "Slovenčina", flag: "/flags/sk.png" },
-  { value: "sl", label: "Slovenščina", flag: "/flags/sl.png" },
-  { value: "hr", label: "Hrvatski", flag: "/flags/hr.png" },
-  { value: "bg", label: "Български", flag: "/flags/bg.png" },
-  { value: "lt", label: "Lietuvių", flag: "/flags/lt.png" },
-  { value: "lv", label: "Latviešu", flag: "/flags/lv.png" },
-  { value: "et", label: "Eesti", flag: "/flags/et.png" },
-  { value: "mt", label: "Malti", flag: "/flags/mt.png" },
-  { value: "el", label: "Ελληνικά", flag: "/flags/el.png" },
-  { value: "ar", label: "العربية", flag: "/flags/ar.png" },
-  { value: "he", label: "עברית", flag: "/flags/he.png" },
-  { value: "hi", label: "हिन्दी", flag: "/flags/hi.png" },
-  { value: "tr", label: "Türkçe", flag: "/flags/tr.png" },
-  { value: "zh", label: "中文", flag: "/flags/zh.png" },
-  { value: "ja", label: "日本語", flag: "/flags/ja.png" },
-  { value: "ko", label: "한국어", flag: "/flags/ko.png" },
-  { value: "th", label: "ไทย", flag: "/flags/th.png" },
-  { value: "vi", label: "Tiếng Việt", flag: "/flags/vi.png" },
-  { value: "id", label: "Bahasa Indonesia", flag: "/flags/id.png" },
-  { value: "ms", label: "Bahasa Melayu", flag: "/flags/ms.png" },
-];
+const siteLocales = i18nextConfig.i18n.locales;
+const options = siteLocales.map((value) => ({
+  value,
+  label: getLocaleNativeLabel(value),
+  flag: getLocaleFlagSrc(value),
+}));
 
 export default function SelectLang() {
-  const { t } = useTranslation("common");
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const detectedLng = languageDetector.detect();
+  const activeLocale =
+    (router.isReady && router.locale) || languageDetector.detect() || siteLocales[0];
 
   const handleLanguageChange = (lang) => {
     setCookie("next-i18next", lang);
@@ -61,7 +28,8 @@ export default function SelectLang() {
     setIsOpen(false);
   };
 
-  const currentLanguage = options.find(option => option.value === detectedLng) || options[0];
+  const currentLanguage =
+    options.find((option) => option.value === activeLocale) || options[0];
 
   return (
     <div style={styles.container}>
@@ -92,7 +60,7 @@ export default function SelectLang() {
                 key={option.value}
                 style={{
                   ...styles.option,
-                  ...(option.value === detectedLng && styles.optionActive)
+                  ...(option.value === activeLocale && styles.optionActive)
                 }}
                 onClick={() => handleLanguageChange(option.value)}
               >

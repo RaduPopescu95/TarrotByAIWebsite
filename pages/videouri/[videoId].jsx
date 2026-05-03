@@ -11,11 +11,13 @@ import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumTh
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import { LANGUAGE_LABELS } from "../../data/constants";
+import { resolveUiLocale } from "../../lib/siteLocales";
 
 export async function getServerSideProps({ locale }) {
+  const uiLocale = resolveUiLocale(locale);
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common"])),
+      ...(await serverSideTranslations(uiLocale, ["common"])),
     },
   };
 }

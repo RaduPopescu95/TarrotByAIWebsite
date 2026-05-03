@@ -348,5 +348,18 @@
   "videoLibraryAccessChipPremium": "Premium",
   "videoLibraryHomePreviewTitle": "Neueste Videos",
   "videoLibraryHomePreviewSubtitle": "Kürzlich in der Videothek hinzugefügt.",
-  "videoLibraryHomePreviewAll": "Alle Videos ansehen"
+  "videoLibraryHomePreviewAll": "Alle Videos ansehen",
+  "sq": "Albanian",
+  "ar": "Arabic",
+  "bs": "Bosnian",
+  "zh": "Chinese (Taiwan)",
+  "ko": "Korean",
+  "he": "Hebrew",
+  "ja": "Japanese",
+  "hu": "Hungarian",
+  "mn": "Mongolian",
+  "pt": "Portuguese",
+  "ru": "Russian",
+  "sr": "Serbian",
+  "tr": "Turkish"
 }
