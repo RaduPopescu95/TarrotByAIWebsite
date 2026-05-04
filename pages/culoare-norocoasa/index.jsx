@@ -151,8 +151,6 @@ export function NumarNorocos() {
           name="description"
           content={t("luckyColorDescription")}
         />
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9577714849380446"
-          crossorigin="anonymous"></script>
         <meta property="og:url" content={currentUrl} />
         <meta property="og:title" content={t("luckyColorTitle")} />
         <meta
