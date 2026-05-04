@@ -70,7 +70,13 @@ export default async (req, res) => {
 
         // 🔍 Detectează tipul de plată prin metadata
         const isConferencePayment = session.metadata?.conferintaId || session.metadata?.tipConferinta;
+        const isPremiumSubscription = session.metadata?.flow === "site_premium";
         
+        if (isPremiumSubscription) {
+          console.log(`⚠️ [${requestId}] Plată pentru ABONAMENT PREMIUM detectată (flow=site_premium) - ignorată în webhook consultații`);
+          break; // Skip processing — abonamentele sunt gestionate de webhook-ul premium dedicat
+        }
+
         if (isConferencePayment) {
           console.log(`⚠️ [${requestId}] Plată pentru CONFERINȚĂ detectată - redirect către webhook conferințe`);
           console.log(`⚠️ [${requestId}] Metadata conferință:`, {

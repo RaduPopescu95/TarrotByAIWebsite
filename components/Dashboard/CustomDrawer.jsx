@@ -34,6 +34,7 @@ import LayersIcon from "@mui/icons-material/Layers";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import PaletteIcon from "@mui/icons-material/Palette";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -107,6 +108,7 @@ const dashboardPrefetchScreens = [
   "numere-norocoase",
   "ore-norocoase",
   "poza-api",
+  "abonati",
 ];
 
 export default function CustomDrawer(props) {
@@ -520,6 +522,26 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText
                   primary="Cursuri video"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "abonati",
+                    text: "Abonați Premium",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Abonați Premium" ? "#ffc045" : "white",
+                  }}
+                >
+                  <PeopleAltIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Abonați Premium"
                   sx={{ color: "white" }}
                 />
               </ListItemButton>

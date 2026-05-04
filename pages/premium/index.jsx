@@ -377,12 +377,25 @@ export default function PremiumZonePage() {
   React.useEffect(() => {
     if (!checkoutSuccess) return;
     let cancelled = false;
-    (async () => {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 12;
+    const POLL_INTERVAL_MS = 2500;
+
+    const poll = async () => {
+      if (cancelled) return;
+      attempts += 1;
       const profile = await handleGetUserInfoJobs();
-      if (!cancelled && profile) {
+      if (cancelled) return;
+      if (profile) {
         setUserData(profile);
+        if (hasPremiumAccess(profile)) return; // access confirmed — stop polling
       }
-    })();
+      if (attempts < MAX_ATTEMPTS) {
+        setTimeout(poll, POLL_INTERVAL_MS);
+      }
+    };
+
+    poll();
     return () => {
       cancelled = true;
     };
