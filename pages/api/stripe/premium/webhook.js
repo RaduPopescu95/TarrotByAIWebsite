@@ -1,14 +1,15 @@
 import Stripe from "stripe";
 import { buffer } from "micro";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
-import {
-  PREMIUM_FLOW_METADATA,
-  computePremiumBoolean,
-  mapStripeSubscriptionStatus,
-} from "../../../../lib/premiumAccess";
+import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
 import { emitPremiumSubscriptionOblioInvoice } from "../../../../lib/premiumSubscriptionOblio";
 import { resolvePremiumAbonamentWebhookSecret } from "../../../../lib/stripePremiumEnv";
+import {
+  buildUserPremiumPayload,
+  syncPremiumSubscriptionById,
+  writePremiumToUser,
+} from "../../../../lib/stripePremiumSubscriptionSync";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_EVENTS_COLLECTION = "stripePremiumWebhookEvents";
@@ -19,73 +20,6 @@ export const config = {
     bodyParser: false,
   },
 };
-
-function getStripeCustomerId(subscription) {
-  const c = subscription?.customer;
-  if (typeof c === "string") return c;
-  if (c && typeof c.id === "string") return c.id;
-  return null;
-}
-
-function buildUserPremiumPayload(subscription) {
-  const appStatus = mapStripeSubscriptionStatus(subscription.status);
-  let endSec =
-    typeof subscription.current_period_end === "number" ? subscription.current_period_end : null;
-  const endedSec = typeof subscription.ended_at === "number" ? subscription.ended_at : null;
-  /**
-   * Stripe keeps subscription.current_period_end at the invoiced period end even after an
-   * *immediate* cancel; ended_at is when the subscription actually ended. Without capping,
-   * hasPremiumAccess would extend premium until current_period_end (user sees "still valid until X").
-   */
-  if (appStatus === "canceled" && endedSec != null) {
-    if (endSec == null) {
-      endSec = endedSec;
-    } else {
-      endSec = Math.min(endSec, endedSec);
-    }
-  }
-  const currentPeriodEnd =
-    typeof endSec === "number" ? Timestamp.fromMillis(endSec * 1000) : null;
-  const stripeCustomerId = getStripeCustomerId(subscription);
-  const fields = {
-    subscriptionStatus: appStatus,
-    stripeSubscriptionId: subscription.id,
-    subscriptionProvider: "stripe",
-    premiumSubscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end === true,
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (currentPeriodEnd) {
-    fields.currentPeriodEnd = currentPeriodEnd;
-  }
-  if (stripeCustomerId) {
-    fields.stripeCustomerId = stripeCustomerId;
-  }
-  fields.premium = computePremiumBoolean({
-    subscriptionStatus: appStatus,
-    currentPeriodEnd: currentPeriodEnd || undefined,
-    subscriptionProvider: "stripe",
-  });
-  return fields;
-}
-
-async function writePremiumToUser(uid, payload) {
-  const db = getAdminDb();
-  await db.collection("Users").doc(uid).set(payload, { merge: true });
-}
-
-async function syncSubscriptionById(subscriptionId) {
-  const sub = await stripe.subscriptions.retrieve(subscriptionId);
-  if (!sub?.metadata || sub.metadata.flow !== PREMIUM_FLOW_METADATA) {
-    return { skipped: true, reason: "not_site_premium" };
-  }
-  const uid = sub.metadata.uid;
-  if (!uid || typeof uid !== "string") {
-    return { skipped: true, reason: "missing_uid" };
-  }
-  const payload = buildUserPremiumPayload(sub);
-  await writePremiumToUser(uid, payload);
-  return { skipped: false, uid };
-}
 
 async function persistPremiumBillingFromCheckoutSession(db, session) {
   if (session.mode !== "subscription") return;
@@ -185,7 +119,7 @@ export default async function handler(req, res) {
           console.warn("[premium.webhook] checkout missing subscription id");
           break;
         }
-        await syncSubscriptionById(subId);
+        await syncPremiumSubscriptionById(stripe, subId);
         await persistPremiumBillingFromCheckoutSession(db, session);
         break;
       }
@@ -205,7 +139,7 @@ export default async function handler(req, res) {
         const invoice = event.data.object;
         const subId = invoice.subscription;
         if (!subId || typeof subId !== "string") break;
-        await syncSubscriptionById(subId);
+        await syncPremiumSubscriptionById(stripe, subId);
         if (event.type === "invoice.payment_succeeded") {
           const oblioResult = await emitPremiumSubscriptionOblioInvoice({
             db,
