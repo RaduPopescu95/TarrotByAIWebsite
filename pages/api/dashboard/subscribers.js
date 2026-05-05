@@ -94,6 +94,46 @@ async function clearPremiumFieldsOnUser(db, uid) {
   );
 }
 
+async function loadSubscriberUserDocs(db) {
+  const users = db.collection("Users");
+  const subscriberQueries = [
+    users.where("premium", "==", true),
+    users.where("subscriptionProvider", "==", "manual"),
+    users.where("stripeSubscriptionId", ">", ""),
+    users.where("manualPremiumGrantedAt", ">", Timestamp.fromMillis(0)),
+    users.where("subscriptionStatus", "in", [
+      "active",
+      "trialing",
+      "past_due",
+      "canceled",
+      "unpaid",
+      "incomplete",
+      "incomplete_expired",
+      "paused",
+    ]),
+  ];
+
+  const snapshots = await Promise.all(
+    subscriberQueries.map(async (subscriberQuery) => {
+      try {
+        return await subscriberQuery.get();
+      } catch (error) {
+        console.warn("[dashboard/subscribers] subscriber query skipped", error?.message || error);
+        return null;
+      }
+    }),
+  );
+
+  const docsById = new Map();
+  snapshots.forEach((snapshot) => {
+    if (!snapshot) return;
+    snapshot.docs.forEach((docSnap) => {
+      docsById.set(docSnap.id, docSnap);
+    });
+  });
+  return [...docsById.values()];
+}
+
 /**
  * Find Users doc by Firebase uid (doc id), owner_uid, or email.
  * @returns {{ ref: FirebaseFirestore.DocumentReference, id: string, data: object } | null | { ambiguous: true, count?: number }}
@@ -143,9 +183,9 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const db = getAdminDb();
-      const snap = await db.collection("Users").get();
+      const docs = await loadSubscriberUserDocs(db);
       const subscribers = [];
-      snap.forEach((docSnap) => {
+      docs.forEach((docSnap) => {
         const row = mapDocToSubscriber(docSnap);
         if (row) subscribers.push(row);
       });

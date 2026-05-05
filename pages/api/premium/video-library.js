@@ -4,17 +4,29 @@ import { loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibr
 import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 
+function buildRequestId() {
+  return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default async function handler(req, res) {
+  const requestId = buildRequestId();
+  res.setHeader("X-Request-Id", requestId);
+
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed", requestId });
   }
 
-  res.setHeader("Cache-Control", "private, no-store, max-age=0");
-
+  const hasAuthHeader = typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
   let premiumActive = false;
+
+  if (uid || hasAuthHeader) {
+    res.setHeader("Cache-Control", "private, no-store, max-age=0");
+  } else {
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+  }
 
   try {
     const db = getAdminDb();
@@ -40,14 +52,28 @@ export default async function handler(req, res) {
       premiumSpotlightOnly,
     });
 
-    return res.status(200).json({
+    const responsePayload = {
       videos,
       locale,
       premiumActive,
       loggedIn: Boolean(uid),
+    };
+    console.info("[premium.video-library] success", {
+      requestId,
+      uid: uid || null,
+      locale,
+      scope: scopeRaw || null,
+      videosCount: Array.isArray(videos) ? videos.length : 0,
     });
+    return res.status(200).json(responsePayload);
   } catch (error) {
-    console.error("[premium.video-library] failed", error?.message || error);
-    return res.status(500).json({ error: "Failed to load video library" });
+    console.error("[premium.video-library] failed", {
+      requestId,
+      message: error?.message || String(error),
+      stackTop: typeof error?.stack === "string" ? error.stack.split("\n").slice(0, 3).join(" | ") : null,
+      uid: uid || null,
+      query: req.query || {},
+    });
+    return res.status(500).json({ error: "Failed to load video library", requestId });
   }
 }

@@ -11,11 +11,12 @@ import type {
 import {
   createVideo,
   deleteVideo,
-  listVideos,
+  listVideosPage,
   listVideoCategories,
   addVideoCategory,
   deleteVideoCategoryByName,
   togglePublish,
+  type VideoListCursor,
   updateVideo,
 } from "../services/videos.service";
 import { flushAdminUiLogQueue, logAdminUiEvent } from "../services/adminUiLogs.client";
@@ -179,6 +180,7 @@ const sortVideosForAdminTable = (
 export default function VideoLibraryAdminScreen() {
   const [videos, setVideos] = useState<VideoDoc[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"videos" | "categories">("videos");
   const [errorMessage, setErrorMessage] = useState("");
@@ -190,8 +192,11 @@ export default function VideoLibraryAdminScreen() {
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>("all");
   const [sortField, setSortField] = useState<VideoSortField>(DEFAULT_SORT_FIELD);
   const [sortDirection, setSortDirection] = useState<VideoSortDirection>(DEFAULT_SORT_DIRECTION);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [nextCursor, setNextCursor] = useState<VideoListCursor | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<Array<VideoListCursor | null>>([null]);
   const [showForm, setShowForm] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoDoc | null>(null);
   const [previewVideo, setPreviewVideo] = useState<VideoDoc | null>(null);
@@ -260,8 +265,12 @@ export default function VideoLibraryAdminScreen() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const data = await listVideos();
-      setVideos(data);
+      const result = await listVideosPage(pageSize, null);
+      setVideos(result.items);
+      setHasNextPage(result.hasNextPage);
+      setNextCursor(result.nextCursor);
+      setCursorHistory([null]);
+      setPage(1);
     } catch (err) {
       setErrorMessage("Nu am putut încărca lista de videoclipuri.");
     } finally {
@@ -271,7 +280,44 @@ export default function VideoLibraryAdminScreen() {
 
   useEffect(() => {
     refreshVideos();
-  }, []);
+  }, [pageSize]);
+
+  const loadNextVideosPage = async () => {
+    if (!hasNextPage || !nextCursor || loading || loadingPage) return;
+    setLoadingPage(true);
+    setErrorMessage("");
+    try {
+      const result = await listVideosPage(pageSize, nextCursor);
+      setVideos(result.items);
+      setHasNextPage(result.hasNextPage);
+      setNextCursor(result.nextCursor);
+      setCursorHistory((prev) => [...prev, nextCursor]);
+      setPage((prev) => prev + 1);
+    } catch (_) {
+      setErrorMessage("Nu am putut încărca pagina următoare.");
+    } finally {
+      setLoadingPage(false);
+    }
+  };
+
+  const loadPrevVideosPage = async () => {
+    if (page <= 1 || loading || loadingPage) return;
+    const prevStartCursor = cursorHistory[cursorHistory.length - 2] ?? null;
+    setLoadingPage(true);
+    setErrorMessage("");
+    try {
+      const result = await listVideosPage(pageSize, prevStartCursor);
+      setVideos(result.items);
+      setHasNextPage(result.hasNextPage);
+      setNextCursor(result.nextCursor);
+      setCursorHistory((prev) => prev.slice(0, -1));
+      setPage((prev) => Math.max(1, prev - 1));
+    } catch (_) {
+      setErrorMessage("Nu am putut încărca pagina anterioară.");
+    } finally {
+      setLoadingPage(false);
+    }
+  };
 
   const refreshCategories = async () => {
     setCategoriesLoading(true);
@@ -401,45 +447,6 @@ export default function VideoLibraryAdminScreen() {
     () => sortVideosForAdminTable(filteredVideos, sortField, sortDirection),
     [filteredVideos, sortField, sortDirection]
   );
-
-  const totalPages = Math.max(1, Math.ceil(sortedVideos.length / pageSize));
-  const pagedVideos = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedVideos.slice(start, start + pageSize);
-  }, [sortedVideos, page, pageSize]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  const paginationItems = useMemo(() => {
-    // Returns a list like: [1, "…", 7, 8, 9, "…", 20]
-    const pages: Array<number | "ellipsis"> = [];
-    if (totalPages <= 9) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-      return pages;
-    }
-
-    const clamp = (n: number) => Math.max(1, Math.min(totalPages, n));
-    const start = clamp(page - 1);
-    const end = clamp(page + 1);
-
-    pages.push(1);
-    if (start > 2) pages.push("ellipsis");
-    for (let p = Math.max(2, start); p <= Math.min(totalPages - 1, end); p++) {
-      pages.push(p);
-    }
-    if (end < totalPages - 1) pages.push("ellipsis");
-    pages.push(totalPages);
-
-    // de-dup just in case
-    return pages.filter((item, idx, arr) => {
-      if (item === "ellipsis") return true;
-      return arr.indexOf(item) === idx;
-    });
-  }, [page, totalPages]);
 
   const handleCreatePointerDown = () => {
     logCreateEvent("create_button_pointerdown", "info", "Create video button pointerdown.");
@@ -915,7 +922,6 @@ export default function VideoLibraryAdminScreen() {
                     setScheduleFilter("all");
                     setSortField(DEFAULT_SORT_FIELD);
                     setSortDirection(DEFAULT_SORT_DIRECTION);
-                    setPage(1);
                   }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50"
                 >
@@ -923,25 +929,24 @@ export default function VideoLibraryAdminScreen() {
                 </button>
           <div className="ml-auto flex items-center gap-4">
             <div className="text-sm text-gray-600">
-              Afișate: <span className="font-semibold text-gray-900">{sortedVideos.length}</span>
+              Afișate pe pagină: <span className="font-semibold text-gray-900">{sortedVideos.length}</span>
                   </div>
-            {loading && <span className="text-sm text-blue-600">Se încarcă...</span>}
+            {(loading || loadingPage) && <span className="text-sm text-blue-600">Se încarcă...</span>}
                 </div>
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
               <div className="flex items-center gap-2 text-gray-700">
-                <span className="font-medium">Afișează:</span>
+                <span className="font-medium">Documente / pagină:</span>
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
-                    setPage(1);
                   }}
                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {[10, 20, 50, 100].map((size) => (
+                  {[10, 20, 30, 50].map((size) => (
                     <option key={size} value={size}>
                       {size} / pagină
                     </option>
@@ -949,14 +954,13 @@ export default function VideoLibraryAdminScreen() {
                 </select>
               </div>
               <div className="text-gray-600">
-                {sortedVideos.length === 0 ? 0 : (page - 1) * pageSize + 1}-
-                {Math.min(page * pageSize, sortedVideos.length)} din {sortedVideos.length}
+                Pagină server: {page}
               </div>
             </div>
 
             <VideoTable
-              videos={pagedVideos}
-              loading={loading}
+              videos={sortedVideos}
+              loading={loading || loadingPage}
               sortField={sortField}
               sortDirection={sortDirection}
               onSortChange={handleSortChange}
@@ -970,45 +974,21 @@ export default function VideoLibraryAdminScreen() {
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-gray-600">
-                Pagina {page} din {totalPages}
+                Pagina {page} {hasNextPage ? "(mai există rezultate)" : "(ultima pagină încărcată)"}
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  onClick={loadPrevVideosPage}
                   disabled={page === 1}
                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Înapoi
                 </button>
-                {paginationItems.map((item, idx) => {
-                  if (item === "ellipsis") {
-                    return (
-                      <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-500">
-                        …
-                      </span>
-                    );
-                  }
-                  const pageNumber = item;
-                  return (
-                    <button
-                      key={pageNumber}
-                      type="button"
-                      onClick={() => setPage(pageNumber)}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition-all ${
-                        pageNumber === page
-                          ? "bg-blue-600 text-white"
-                          : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                })}
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
+                  onClick={loadNextVideosPage}
+                  disabled={!hasNextPage || !nextCursor}
                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Înainte

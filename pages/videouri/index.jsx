@@ -86,14 +86,33 @@ export default function VideoLibraryPage() {
           },
         }
       );
+      const requestId = res.headers.get("x-request-id");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error || "load_failed");
+        console.error("[video-library] api_error", {
+          requestId: data?.requestId || requestId || null,
+          status: res.status,
+          statusText: res.statusText,
+          locale,
+          responseBody: data,
+        });
+        const err = new Error(data?.error || "load_failed");
+        err.requestId = data?.requestId || requestId || null;
+        throw err;
       }
+      console.info("[video-library] api_success", {
+        requestId: data?.requestId || requestId || null,
+        locale,
+        videosCount: Array.isArray(data?.videos) ? data.videos.length : 0,
+      });
       setVideos(Array.isArray(data?.videos) ? data.videos : []);
     } catch (e) {
-      console.error("[video-library]", e?.message || e);
-      setError(t("videoLibraryLoadError"));
+      console.error("[video-library] load_failed", {
+        message: e?.message || String(e),
+        requestId: e?.requestId || null,
+      });
+      const requestLabel = e?.requestId ? ` (ref: ${e.requestId})` : "";
+      setError(`${t("videoLibraryLoadError")}${requestLabel}`);
       setVideos([]);
     } finally {
       setLoading(false);

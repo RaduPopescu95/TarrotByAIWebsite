@@ -2,14 +2,15 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
 import { hasPremiumAccess } from "../../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
-import { rowHasValidEmbedForLocale } from "../../../../lib/videoLibraryPublic";
 import {
-  collectAndSortPublishedVideos,
-  mapVideoRowToPublicDto,
-} from "../../../../lib/videoLibraryPublicMapper";
+  isVideoPublishScheduled,
+  rowHasValidEmbedForLocale,
+} from "../../../../lib/videoLibraryPublic";
+import { loadPremiumVideoLibraryRows } from "../../../../lib/loadPremiumVideoLibrary";
+import { mapVideoRowToPublicDto } from "../../../../lib/videoLibraryPublicMapper";
 
-const COLLECTION = "videosVideoModule";
 const RELATED_LIMIT = 12;
+const INTERNAL_VIDEO_DOC_IDS = new Set(["_meta", "_publicCache"]);
 
 // eslint-disable-next-line global-require, import/no-dynamic-require
 const nextI18nRoot = require("../../../../next-i18next.config.js");
@@ -24,16 +25,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  res.setHeader("Cache-Control", "private, no-store, max-age=0");
-
   const rawId = typeof req.query.videoId === "string" ? req.query.videoId.trim() : "";
-  if (!rawId || rawId === "_meta") {
+  if (!rawId || INTERNAL_VIDEO_DOC_IDS.has(rawId)) {
     return res.status(404).json({ error: "Not found" });
   }
 
+  const hasAuthHeader = typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
   let premiumActive = false;
+
+  if (uid || hasAuthHeader) {
+    res.setHeader("Cache-Control", "private, no-store, max-age=0");
+  } else {
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+  }
 
   try {
     const db = getAdminDb();
@@ -51,11 +57,9 @@ export default async function handler(req, res) {
     );
 
     const nowMs = Date.now();
-    const snap = await db.collection(COLLECTION).get();
-    const sortedRows = collectAndSortPublishedVideos(snap, nowMs);
-
+    const sortedRows = await loadPremiumVideoLibraryRows();
     const targetRow = sortedRows.find((r) => r.id === rawId);
-    if (!targetRow) {
+    if (!targetRow || isVideoPublishScheduled(targetRow.publishAt, nowMs)) {
       return res.status(404).json({ error: "Not found" });
     }
 
@@ -76,6 +80,7 @@ export default async function handler(req, res) {
     } else {
       relatedRows = sortedRows.filter((r) => {
         if (r.id === rawId) return false;
+        if (isVideoPublishScheduled(r.publishAt, nowMs)) return false;
         const c = typeof r.category === "string" ? r.category.trim() : "";
         return c === catTrim && rowHasValidEmbedForLocale(r, locale);
       });

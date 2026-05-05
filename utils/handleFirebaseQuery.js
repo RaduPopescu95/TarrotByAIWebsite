@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, limit, query, where } from "firebase/firestore";
 import { authentication, db } from "../firebase";
 
 export const handleGetUserInfo = async () => {
@@ -10,9 +10,17 @@ export const handleGetUserInfo = async () => {
       return null;
     }
 
+    const directSnap = await getDoc(doc(db, "Users", auth.currentUser.uid));
+    if (directSnap.exists()) {
+      userData = directSnap.data();
+      console.log("handleGetUserInfo result:", "User found");
+      return userData;
+    }
+
     const q = query(
       collection(db, "Users"),
-      where("owner_uid", "==", auth.currentUser.uid)
+      where("owner_uid", "==", auth.currentUser.uid),
+      limit(1)
     );
 
     const querySnapshot = await getDocs(q);
@@ -38,9 +46,17 @@ export const handleGetUserInfoJobs = async () => {
       return null;
     }
 
+    const directSnap = await getDoc(doc(db, "Users", auth.currentUser.uid));
+    if (directSnap.exists()) {
+      userData = directSnap.data();
+      console.log("handleGetUserInfoJobs result:", "User found");
+      return userData;
+    }
+
     const q = query(
       collection(db, "Users"),
-      where("owner_uid", "==", auth.currentUser.uid)
+      where("owner_uid", "==", auth.currentUser.uid),
+      limit(1)
     );
 
     const querySnapshot = await getDocs(q);
