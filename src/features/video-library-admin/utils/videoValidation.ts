@@ -7,6 +7,7 @@ export type VideoValidationErrors = {
   localizedVideo?: string;
   localeVideos?: Partial<Record<string, string>>;
   thumbnailUrl?: string;
+  isPublished?: string;
 };
 
 function embedHintForPlatform(platform: string | undefined): string {
@@ -28,6 +29,11 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
   }
   if (!input.platform) {
     errors.platform = "Platforma este obligatorie";
+  }
+
+  if (input.publishAt && input.isPublished !== true) {
+    errors.isPublished =
+      "Pentru publicare programată, activează \"Publicat în aplicație\"; altfel videoclipul rămâne ascuns.";
   }
 
   const pairs: Array<{ lc: string; url: string }> = [];

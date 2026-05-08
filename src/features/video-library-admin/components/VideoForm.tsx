@@ -404,7 +404,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                 className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
               />
               <p className="mt-1.5 text-xs text-gray-500">
-                Data/ora (UTC) când videoclipul devine vizibil în aplicație.
+                Data/ora locală din browser (fusul tău orar) când videoclipul devine vizibil în aplicație.
               </p>
             </div>
           </div>
@@ -475,6 +475,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               </span>
             </label>
           </div>
+          {errors.isPublished ? <p className="mt-1.5 text-xs text-red-600">{errors.isPublished}</p> : null}
 
           <div>
             <label className="text-sm font-medium text-gray-700">Localizare</label>

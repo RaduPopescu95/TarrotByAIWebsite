@@ -27,6 +27,8 @@ import { sortVideos } from "../utils/videoSorting";
 const COLLECTION_NAME = "videosVideoModule";
 const CATEGORY_COLLECTION_NAME = "videoCategories";
 const INTERNAL_DOC_IDS = new Set(["_meta", "_publicCache"]);
+const VIDEO_NOTIFICATION_STATE_PENDING = "pending";
+const VIDEO_NOTIFICATION_STATE_SENT = "sent";
 const videosCollection = collection(db, COLLECTION_NAME);
 const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
 const metaDocRef = doc(db, COLLECTION_NAME, "_meta");
@@ -65,6 +67,41 @@ async function rebuildPublicCacheAfterMutation(action: string): Promise<void> {
     console.error(`[videos.service] Failed to rebuild public video cache after ${action}`, error);
   }
 }
+
+const toMillisOrNull = (value: unknown): number | null => {
+  if (!value) return null;
+  if (typeof value === "object" && typeof (value as { toMillis?: unknown }).toMillis === "function") {
+    return ((value as { toMillis: () => number }).toMillis?.() ?? null) as number | null;
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  return null;
+};
+
+const hasOwn = <T extends object, K extends PropertyKey>(obj: T, key: K): obj is T & Record<K, unknown> =>
+  Object.prototype.hasOwnProperty.call(obj, key);
+
+const shouldResetNotificationStateToPending = (
+  current: Partial<VideoDoc>,
+  next: VideoUpdateInput
+): boolean => {
+  const currentPublished = current.isPublished === true;
+  const nextPublished = hasOwn(next, "isPublished") ? next.isPublished === true : currentPublished;
+  if (!nextPublished) return false;
+
+  if (nextPublished && !currentPublished) {
+    return true;
+  }
+
+  if (!hasOwn(next, "publishAt")) {
+    return false;
+  }
+
+  const currentPublishAtMs = toMillisOrNull(current.publishAt ?? null);
+  const nextPublishAtMs = toMillisOrNull(next.publishAt ?? null);
+  return currentPublishAtMs !== nextPublishAtMs;
+};
 
 const getNextOrder = async (): Promise<number> => {
   const metaSnapshot = await getDoc(metaDocRef);
@@ -149,9 +186,12 @@ export async function listVideosPage(
 
 export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
   const nextOrder = input.order ?? (await getNextOrder());
+  const isPublished = !!input.isPublished;
   const payload = {
     ...input,
-    isPublished: !!input.isPublished,
+    isPublished,
+    notificationState: isPublished ? VIDEO_NOTIFICATION_STATE_PENDING : VIDEO_NOTIFICATION_STATE_SENT,
+    notificationSentAt: null,
     order: nextOrder,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -163,7 +203,20 @@ export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
 
 export async function updateVideo(id: string, data: VideoUpdateInput): Promise<void> {
   const ref = doc(db, COLLECTION_NAME, id);
-  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+  const snapshot = await getDoc(ref);
+  const current = snapshot.exists() ? ((snapshot.data() as Partial<VideoDoc>) ?? {}) : {};
+  const updatePayload: Record<string, unknown> = {
+    ...data,
+    updatedAt: serverTimestamp(),
+  };
+  if (shouldResetNotificationStateToPending(current, data)) {
+    updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_PENDING;
+    updatePayload.notificationSentAt = null;
+  } else if (hasOwn(data, "isPublished") && data.isPublished === false) {
+    updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_SENT;
+    updatePayload.notificationSentAt = null;
+  }
+  await updateDoc(ref, updatePayload);
   await rebuildPublicCacheAfterMutation("update");
 }
 
@@ -175,7 +228,12 @@ export async function deleteVideo(id: string): Promise<void> {
 
 export async function togglePublish(id: string, isPublished: boolean): Promise<void> {
   const ref = doc(db, COLLECTION_NAME, id);
-  await updateDoc(ref, { isPublished, updatedAt: serverTimestamp() });
+  await updateDoc(ref, {
+    isPublished,
+    notificationState: isPublished ? VIDEO_NOTIFICATION_STATE_PENDING : VIDEO_NOTIFICATION_STATE_SENT,
+    notificationSentAt: null,
+    updatedAt: serverTimestamp(),
+  });
   await rebuildPublicCacheAfterMutation("togglePublish");
 }
 

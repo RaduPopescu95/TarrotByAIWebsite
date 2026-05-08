@@ -1,6 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
 export type VideoPlatform = "bunny" | "vimeo" | "youtube";
+export type VideoNotificationState = "pending" | "sent";
 
 export type VideoLocaleFields = {
   title: string;
@@ -35,6 +36,8 @@ export type VideoDoc = {
   updatedAt?: Timestamp;
   publishAt?: Timestamp | null;
   isPublished: boolean;
+  notificationState?: VideoNotificationState;
+  notificationSentAt?: Timestamp | null;
   isPremium?: boolean;
   order?: number | null;
   durationSeconds?: number | null;
