@@ -121,19 +121,13 @@ export default async function handler(req, res) {
       limit: 10,
     });
     for (const sub of existingSubs.data) {
+      if (sub.metadata?.flow !== PREMIUM_FLOW_METADATA) continue;
       console.log("[premium.mobile.payment_sheet] Canceling existing incomplete subscription:", sub.id);
       try {
         await stripe.subscriptions.cancel(sub.id);
       } catch (cancelErr) {
         console.warn("[premium.mobile.payment_sheet] Failed to cancel incomplete sub:", sub.id, cancelErr?.message);
       }
-    }
-
-    // Fetch the price to get the amount
-    const price = await stripe.prices.retrieve(priceId);
-    if (!price.unit_amount || !price.currency) {
-      console.error("[premium.mobile.payment_sheet] Invalid price configuration", { priceId });
-      return res.status(500).json({ error: "Invalid price configuration" });
     }
 
     const metadata = {
@@ -157,42 +151,100 @@ export default async function handler(req, res) {
       metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
     }
 
-    // Create PaymentIntent with setup_future_usage to save the payment method
-    // This shows the correct amount in PaymentSheet (e.g., 5 EUR)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: price.unit_amount,
-      currency: price.currency,
-      customer: customerId,
-      setup_future_usage: "off_session",
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: "never",
-      },
-      metadata,
+    // Canonical Stripe flow for mobile subscriptions:
+    // 1. Create the Subscription with payment_behavior: 'default_incomplete'
+    // 2. Stripe auto-creates the first invoice with a PaymentIntent
+    // 3. Mobile pays that PaymentIntent via PaymentSheet
+    // 4. Stripe auto-activates the subscription when payment succeeds
+    // This guarantees that a Subscription always exists - no race conditions.
+    let subscription;
+    try {
+      subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: priceId, quantity: 1 }],
+        payment_behavior: "default_incomplete",
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+          payment_method_types: ["card"],
+        },
+        expand: [
+          "latest_invoice.payment_intent",
+          "latest_invoice.confirmation_secret",
+        ],
+        metadata,
+      });
+    } catch (subErr) {
+      console.error("[premium.mobile.payment_sheet] Failed to create incomplete subscription", {
+        message: subErr?.message,
+        code: subErr?.code,
+        type: subErr?.type,
+        customerId,
+        priceId,
+      });
+      return res.status(500).json({ error: "Could not start subscription" });
+    }
+
+    const invoice = subscription.latest_invoice;
+    const piFromInvoice =
+      invoice && typeof invoice === "object" && typeof invoice.payment_intent === "object"
+        ? invoice.payment_intent
+        : null;
+    const confirmationSecret =
+      invoice && typeof invoice === "object" && invoice.confirmation_secret
+        ? invoice.confirmation_secret
+        : null;
+
+    let paymentIntentClientSecret = null;
+    let paymentIntentId = null;
+    if (piFromInvoice?.client_secret) {
+      paymentIntentClientSecret = piFromInvoice.client_secret;
+      paymentIntentId = piFromInvoice.id;
+    } else if (confirmationSecret?.client_secret) {
+      // Newer API versions expose confirmation_secret instead of payment_intent
+      paymentIntentClientSecret = confirmationSecret.client_secret;
+    }
+
+    if (!paymentIntentClientSecret) {
+      console.error(
+        "[premium.mobile.payment_sheet] No client secret on subscription invoice",
+        {
+          subscriptionId: subscription.id,
+          invoiceId: invoice?.id,
+          hasPaymentIntent: Boolean(piFromInvoice),
+          hasConfirmationSecret: Boolean(confirmationSecret),
+        }
+      );
+      // Cleanup the incomplete subscription so we don't leak it
+      try {
+        await stripe.subscriptions.cancel(subscription.id);
+      } catch (_) {}
+      return res
+        .status(500)
+        .json({ error: "Could not start subscription payment" });
+    }
+
+    console.log("[premium.mobile.payment_sheet] Subscription created (incomplete)", {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      invoiceId: invoice?.id,
+      paymentIntentId,
+      hasClientSecret: Boolean(paymentIntentClientSecret),
     });
 
-    console.log("[premium.mobile.payment_sheet] PaymentIntent created", {
-      paymentIntentId: paymentIntent.id,
-      amount: price.unit_amount,
-      currency: price.currency,
-      status: paymentIntent.status,
-      hasClientSecret: !!paymentIntent.client_secret,
-    });
-
-    // Store payment session data - will create subscription after payment succeeds
+    // Store session data indexed by subscription ID (most stable identifier)
     await db
       .collection(PREMIUM_MOBILE_SESSION_COLLECTION)
-      .doc(paymentIntent.id)
+      .doc(subscription.id)
       .set(
         {
           uid,
           stripeCustomerId: customerId,
-          stripePaymentIntentId: paymentIntent.id,
+          stripeSubscriptionId: subscription.id,
+          stripePaymentIntentId: paymentIntentId || null,
+          stripeInvoiceId: invoice?.id || null,
           pendingPriceId: priceId,
           pendingMetadata: metadata,
-          amount: price.unit_amount,
-          currency: price.currency,
-          status: "pending_payment",
+          status: subscription.status,
           flow: PREMIUM_FLOW_METADATA,
           billing: billingDetails,
           rawFormValues: rawBillingDetails || null,
@@ -206,6 +258,30 @@ export default async function handler(req, res) {
         { merge: true }
       );
 
+    // Also index by PaymentIntent ID for backwards-compat lookups
+    if (paymentIntentId) {
+      await db
+        .collection(PREMIUM_MOBILE_SESSION_COLLECTION)
+        .doc(paymentIntentId)
+        .set(
+          {
+            uid,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscription.id,
+            stripePaymentIntentId: paymentIntentId,
+            stripeInvoiceId: invoice?.id || null,
+            pendingPriceId: priceId,
+            pendingMetadata: metadata,
+            status: subscription.status,
+            flow: PREMIUM_FLOW_METADATA,
+            indexedBy: "paymentIntentId",
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+    }
+
     await db.collection("Users").doc(uid).set(
       {
         premiumBillingProfile: {
@@ -214,7 +290,8 @@ export default async function handler(req, res) {
           normalizedBeforeCheckout: billingAudit.normalizedClient,
           stripeMetadataSnapshot: metadata,
           invoiceDecision,
-          paymentSheetPendingPaymentIntentId: paymentIntent.id,
+          paymentSheetPendingSubscriptionId: subscription.id,
+          paymentSheetPendingPaymentIntentId: paymentIntentId || null,
           updatedAt: FieldValue.serverTimestamp(),
         },
         updatedAt: FieldValue.serverTimestamp(),
@@ -227,12 +304,14 @@ export default async function handler(req, res) {
       { apiVersion: STRIPE_API_VERSION }
     );
 
-    // Return PaymentIntent client secret - shows correct amount in PaymentSheet
     return res.status(200).json({
-      paymentIntentClientSecret: paymentIntent.client_secret,
+      // PaymentSheet uses this client secret; correct amount comes from the invoice
+      paymentIntentClientSecret,
       customerEphemeralKeySecret: ephemeralKey.secret,
       customerId,
-      paymentIntentId: paymentIntent.id,
+      // New canonical identifier — client should prefer this for confirm calls
+      subscriptionId: subscription.id,
+      paymentIntentId,
     });
   } catch (err) {
     console.error("[premium.mobile.payment_sheet] stripe_error", { message: err?.message });
