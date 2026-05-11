@@ -107,6 +107,46 @@ async function resolvePaymentIntentClientSecret(stripe, subscription) {
     }
   }
 
+  // PaymentIntent doesn't exist on invoice - create one manually for mobile payment sheet
+  const invoiceData = subscription?.latest_invoice;
+  const invoiceForPayment = typeof invoiceData === "object" ? invoiceData : null;
+  
+  if (invoiceForPayment && invoiceForPayment.amount_due > 0 && invoiceForPayment.status === "open") {
+    console.log("[resolvePI] Creating PaymentIntent manually for invoice", invoiceForPayment.id);
+    try {
+      const newPI = await stripe.paymentIntents.create({
+        amount: invoiceForPayment.amount_due,
+        currency: invoiceForPayment.currency,
+        customer: typeof invoiceForPayment.customer === "string" ? invoiceForPayment.customer : invoiceForPayment.customer?.id,
+        metadata: {
+          invoice_id: invoiceForPayment.id,
+          subscription_id: subscription.id,
+          created_by: "mobile_payment_sheet_fallback",
+        },
+        automatic_payment_methods: {
+          enabled: true,
+          allow_redirects: "never",
+        },
+      });
+      console.log("[resolvePI] Manually created PaymentIntent", newPI.id, "status:", newPI.status);
+      
+      // Attach the PaymentIntent to the invoice
+      await stripe.invoices.update(invoiceForPayment.id, {
+        default_payment_method: null, // Will be set after payment
+        metadata: {
+          ...invoiceForPayment.metadata,
+          manual_payment_intent_id: newPI.id,
+        },
+      });
+      
+      if (newPI.client_secret) {
+        return { clientSecret: newPI.client_secret, paymentIntentId: newPI.id };
+      }
+    } catch (createErr) {
+      console.error("[resolvePI] Failed to create manual PaymentIntent:", createErr?.message);
+    }
+  }
+
   console.warn("[resolvePI] FAILED to resolve client_secret");
   return { clientSecret: null, paymentIntentId: null };
 }
