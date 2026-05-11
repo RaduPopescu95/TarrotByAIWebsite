@@ -156,14 +156,119 @@ export default async function handler(req, res) {
         break;
       }
       case "payment_intent.succeeded": {
-        // Handle manual PaymentIntents created for mobile payment sheet
         const pi = event.data.object;
+        
+        // Handle mobile payment sheet PaymentIntent - create subscription if client didn't
+        if (pi.metadata?.platform === "expo" && pi.metadata?.priceId && pi.metadata?.uid) {
+          const uid = pi.metadata.uid;
+          const priceId = pi.metadata.priceId;
+          const paymentMethodId = pi.payment_method;
+          const customerId = typeof pi.customer === "string" ? pi.customer : pi.customer?.id;
+          
+          console.log("[premium.webhook] Mobile PaymentIntent succeeded", { 
+            piId: pi.id, 
+            uid, 
+            priceId,
+            customerId,
+          });
+          
+          // Check if subscription was already created by the client
+          const sessionRef = db.collection("premiumMobilePaymentSheets").doc(pi.id);
+          const sessionSnap = await sessionRef.get();
+          const sessionData = sessionSnap.exists ? sessionSnap.data() : null;
+          
+          if (sessionData?.stripeSubscriptionId) {
+            console.log("[premium.webhook] Subscription already created by client", {
+              subscriptionId: sessionData.stripeSubscriptionId,
+            });
+            // Just sync to ensure user access is up to date
+            await syncPremiumSubscriptionById(stripe, sessionData.stripeSubscriptionId);
+            break;
+          }
+          
+          // Client didn't create subscription - create it now (user may have closed app)
+          if (!customerId || !paymentMethodId) {
+            console.warn("[premium.webhook] Missing customerId or paymentMethodId", { 
+              customerId, 
+              paymentMethodId,
+            });
+            break;
+          }
+          
+          try {
+            // Set payment method as customer's default
+            await stripe.customers.update(customerId, {
+              invoice_settings: {
+                default_payment_method: typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
+              },
+            });
+            
+            // Get price to determine billing interval
+            const price = await stripe.prices.retrieve(priceId);
+            const interval = price.recurring?.interval || "month";
+            const intervalCount = price.recurring?.interval_count || 1;
+            
+            // Calculate trial_end (first period already paid via PaymentIntent)
+            const now = Math.floor(Date.now() / 1000);
+            let trialEndTimestamp = now;
+            if (interval === "month") {
+              trialEndTimestamp = now + (30 * 24 * 60 * 60 * intervalCount);
+            } else if (interval === "year") {
+              trialEndTimestamp = now + (365 * 24 * 60 * 60 * intervalCount);
+            } else if (interval === "week") {
+              trialEndTimestamp = now + (7 * 24 * 60 * 60 * intervalCount);
+            } else if (interval === "day") {
+              trialEndTimestamp = now + (24 * 60 * 60 * intervalCount);
+            }
+            
+            // Create the subscription
+            const subscriptionMetadata = {
+              uid,
+              flow: pi.metadata.flow || PREMIUM_FLOW_METADATA,
+              firstPaymentIntentId: pi.id,
+              createdByWebhook: "true",
+            };
+            
+            const subscription = await stripe.subscriptions.create({
+              customer: customerId,
+              items: [{ price: priceId, quantity: 1 }],
+              metadata: subscriptionMetadata,
+              default_payment_method: typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
+              trial_end: trialEndTimestamp,
+            });
+            
+            console.log("[premium.webhook] Subscription created via webhook", {
+              subscriptionId: subscription.id,
+              status: subscription.status,
+            });
+            
+            // Update session data
+            await sessionRef.set({
+              stripeSubscriptionId: subscription.id,
+              status: subscription.status,
+              createdByWebhook: true,
+              confirmedAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp(),
+            }, { merge: true });
+            
+            // Sync premium access
+            await syncPremiumSubscriptionById(stripe, subscription.id);
+            
+          } catch (subErr) {
+            console.error("[premium.webhook] Failed to create subscription from webhook", {
+              piId: pi.id,
+              error: subErr?.message,
+            });
+          }
+          break;
+        }
+        
+        // Legacy: Handle manual PaymentIntents for old fallback flow
         const invoiceId = pi.metadata?.invoice_id;
         const subscriptionId = pi.metadata?.subscription_id;
         if (invoiceId && subscriptionId && pi.metadata?.created_by === "mobile_payment_sheet_fallback") {
           console.log("[premium.webhook] Manual PI succeeded, paying invoice", { invoiceId, subscriptionId, piId: pi.id });
           try {
-            // Pay the invoice with the payment method from the PaymentIntent
             if (pi.payment_method) {
               const invoice = await stripe.invoices.retrieve(invoiceId);
               if (invoice.status === "open") {
