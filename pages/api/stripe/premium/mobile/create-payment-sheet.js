@@ -33,6 +33,61 @@ function getPaymentIntentFromSubscription(subscription) {
   return null;
 }
 
+/** payment_intent may be an id string even when expand is requested; invoice may be id-only. */
+async function resolvePaymentIntentClientSecret(stripe, subscription) {
+  let pi = getPaymentIntentFromSubscription(subscription);
+  if (pi?.client_secret) {
+    return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
+  }
+
+  const invoiceRef = subscription?.latest_invoice;
+  let paymentIntentId =
+    typeof invoiceRef === "object" && typeof invoiceRef?.payment_intent === "string"
+      ? invoiceRef.payment_intent
+      : null;
+
+  if (paymentIntentId) {
+    const retrieved = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (retrieved?.client_secret) {
+      return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
+    }
+  }
+
+  const invoiceId = typeof invoiceRef === "string" ? invoiceRef : invoiceRef?.id;
+  if (invoiceId) {
+    const invoice = await stripe.invoices.retrieve(invoiceId, {
+      expand: ["payment_intent"],
+    });
+    const pir = invoice.payment_intent;
+    if (pir && typeof pir === "object" && pir.client_secret) {
+      return { clientSecret: pir.client_secret, paymentIntentId: pir.id };
+    }
+    if (typeof pir === "string") {
+      const retrieved = await stripe.paymentIntents.retrieve(pir);
+      if (retrieved?.client_secret) {
+        return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
+      }
+    }
+  }
+
+  const refreshed = await stripe.subscriptions.retrieve(subscription.id, {
+    expand: ["latest_invoice.payment_intent"],
+  });
+  pi = getPaymentIntentFromSubscription(refreshed);
+  if (pi?.client_secret) {
+    return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
+  }
+  const again = refreshed?.latest_invoice?.payment_intent;
+  if (typeof again === "string") {
+    const retrieved = await stripe.paymentIntents.retrieve(again);
+    if (retrieved?.client_secret) {
+      return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
+    }
+  }
+
+  return { clientSecret: null, paymentIntentId: null };
+}
+
 async function resolveOrCreateCustomer({ db, uid, email }) {
   const userRef = db.collection("Users").doc(uid);
   const snap = await userRef.get();
@@ -156,7 +211,10 @@ export default async function handler(req, res) {
       expand: ["latest_invoice.payment_intent"],
     });
 
-    const paymentIntent = getPaymentIntentFromSubscription(subscription);
+    const { clientSecret, paymentIntentId } = await resolvePaymentIntentClientSecret(
+      stripe,
+      subscription
+    );
 
     await db
       .collection(PREMIUM_MOBILE_SESSION_COLLECTION)
@@ -166,7 +224,7 @@ export default async function handler(req, res) {
           uid,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscription.id,
-          stripePaymentIntentId: paymentIntent?.id || null,
+          stripePaymentIntentId: paymentIntentId,
           status: subscription.status || "unknown",
           flow: PREMIUM_FLOW_METADATA,
           billing: billingDetails,
@@ -197,7 +255,12 @@ export default async function handler(req, res) {
       { merge: true }
     );
 
-    if (!paymentIntent?.client_secret) {
+    if (!clientSecret) {
+      console.warn("[premium.mobile.payment_sheet] missing_payment_intent_client_secret", {
+        subscriptionId: subscription.id,
+        latestInvoice: subscription.latest_invoice,
+        status: subscription.status,
+      });
       const syncResult = await syncPremiumSubscription(subscription);
       return res.status(200).json({
         subscriptionId: subscription.id,
@@ -213,7 +276,7 @@ export default async function handler(req, res) {
     );
 
     return res.status(200).json({
-      paymentIntentClientSecret: paymentIntent.client_secret,
+      paymentIntentClientSecret: clientSecret,
       customerEphemeralKeySecret: ephemeralKey.secret,
       customerId,
       subscriptionId: subscription.id,
