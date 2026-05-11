@@ -277,45 +277,36 @@ export default async function handler(req, res) {
       metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
     }
 
-    const subscription = await stripe.subscriptions.create({
+    // Use SetupIntent approach: collect payment method first, then create subscription
+    const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
-      items: [{ price: priceId, quantity: 1 }],
-      metadata,
-      payment_behavior: "default_incomplete",
-      payment_settings: {
-        payment_method_types: ["card"],
-        save_default_payment_method: "on_subscription",
+      payment_method_types: ["card"],
+      usage: "off_session",
+      metadata: {
+        ...metadata,
+        pending_subscription: "true",
+        price_id: priceId,
       },
-      expand: ["latest_invoice.payment_intent"],
     });
 
-    console.log("[premium.mobile.payment_sheet] Subscription created", {
-      subscriptionId: subscription.id,
-      status: subscription.status,
-      latestInvoiceType: typeof subscription.latest_invoice,
-      latestInvoiceId: typeof subscription.latest_invoice === "object" ? subscription.latest_invoice?.id : subscription.latest_invoice,
-      paymentIntentType: typeof subscription.latest_invoice?.payment_intent,
-      paymentIntentId: typeof subscription.latest_invoice?.payment_intent === "object" 
-        ? subscription.latest_invoice?.payment_intent?.id 
-        : subscription.latest_invoice?.payment_intent,
-      hasClientSecret: !!subscription.latest_invoice?.payment_intent?.client_secret,
+    console.log("[premium.mobile.payment_sheet] SetupIntent created", {
+      setupIntentId: setupIntent.id,
+      status: setupIntent.status,
+      hasClientSecret: !!setupIntent.client_secret,
     });
 
-    const { clientSecret, paymentIntentId } = await resolvePaymentIntentClientSecret(
-      stripe,
-      subscription
-    );
-
+    // Store pending subscription data - will create actual subscription after setup completes
     await db
       .collection(PREMIUM_MOBILE_SESSION_COLLECTION)
-      .doc(subscription.id)
+      .doc(setupIntent.id)
       .set(
         {
           uid,
           stripeCustomerId: customerId,
-          stripeSubscriptionId: subscription.id,
-          stripePaymentIntentId: paymentIntentId,
-          status: subscription.status || "unknown",
+          stripeSetupIntentId: setupIntent.id,
+          pendingPriceId: priceId,
+          pendingMetadata: metadata,
+          status: "pending_setup",
           flow: PREMIUM_FLOW_METADATA,
           billing: billingDetails,
           rawFormValues: rawBillingDetails || null,
@@ -337,7 +328,7 @@ export default async function handler(req, res) {
           normalizedBeforeCheckout: billingAudit.normalizedClient,
           stripeMetadataSnapshot: metadata,
           invoiceDecision,
-          paymentSheetPendingSubscriptionId: subscription.id,
+          paymentSheetPendingSetupIntentId: setupIntent.id,
           updatedAt: FieldValue.serverTimestamp(),
         },
         updatedAt: FieldValue.serverTimestamp(),
@@ -345,31 +336,17 @@ export default async function handler(req, res) {
       { merge: true }
     );
 
-    if (!clientSecret) {
-      console.warn("[premium.mobile.payment_sheet] missing_payment_intent_client_secret", {
-        subscriptionId: subscription.id,
-        latestInvoice: subscription.latest_invoice,
-        status: subscription.status,
-      });
-      const syncResult = await syncPremiumSubscription(subscription);
-      return res.status(200).json({
-        subscriptionId: subscription.id,
-        customerId,
-        premiumActive: syncResult.premiumActive === true,
-        subscriptionStatus: syncResult.subscriptionStatus || subscription.status || null,
-      });
-    }
-
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: customerId },
       { apiVersion: STRIPE_API_VERSION }
     );
 
+    // Return SetupIntent client secret - subscription will be created after setup succeeds
     return res.status(200).json({
-      paymentIntentClientSecret: clientSecret,
+      setupIntentClientSecret: setupIntent.client_secret,
       customerEphemeralKeySecret: ephemeralKey.secret,
       customerId,
-      subscriptionId: subscription.id,
+      setupIntentId: setupIntent.id,
     });
   } catch (err) {
     console.error("[premium.mobile.payment_sheet] stripe_error", { message: err?.message });
