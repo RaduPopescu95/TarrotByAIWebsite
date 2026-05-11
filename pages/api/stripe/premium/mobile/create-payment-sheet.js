@@ -16,140 +16,12 @@ import {
   isStripePremiumUsingLocalOverrides,
   resolvePremiumStripePriceId,
 } from "../../../../../lib/stripePremiumEnv";
-import { syncPremiumSubscription } from "../../../../../lib/stripePremiumSubscriptionSync";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: STRIPE_API_VERSION,
 });
 const PREMIUM_MOBILE_SESSION_COLLECTION = "premiumMobilePaymentSheets";
-
-function getPaymentIntentFromSubscription(subscription) {
-  const invoice = subscription?.latest_invoice;
-  const paymentIntent = invoice?.payment_intent;
-  if (paymentIntent && typeof paymentIntent === "object") {
-    return paymentIntent;
-  }
-  return null;
-}
-
-/** payment_intent may be an id string even when expand is requested; invoice may be id-only. */
-async function resolvePaymentIntentClientSecret(stripe, subscription) {
-  console.log("[resolvePI] Starting", {
-    subscriptionId: subscription?.id,
-    status: subscription?.status,
-    latestInvoiceType: typeof subscription?.latest_invoice,
-    latestInvoiceId: typeof subscription?.latest_invoice === "object" ? subscription?.latest_invoice?.id : subscription?.latest_invoice,
-  });
-
-  let pi = getPaymentIntentFromSubscription(subscription);
-  if (pi?.client_secret) {
-    console.log("[resolvePI] Found client_secret directly from subscription");
-    return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
-  }
-
-  console.log("[resolvePI] No direct client_secret, pi type:", typeof pi, pi ? "has pi" : "no pi");
-
-  const invoiceRef = subscription?.latest_invoice;
-  let paymentIntentId =
-    typeof invoiceRef === "object" && typeof invoiceRef?.payment_intent === "string"
-      ? invoiceRef.payment_intent
-      : null;
-
-  console.log("[resolvePI] paymentIntentId from invoice:", paymentIntentId, "invoice.payment_intent type:", typeof invoiceRef?.payment_intent);
-
-  if (paymentIntentId) {
-    console.log("[resolvePI] Retrieving PI by ID:", paymentIntentId);
-    const retrieved = await stripe.paymentIntents.retrieve(paymentIntentId);
-    console.log("[resolvePI] Retrieved PI status:", retrieved?.status, "has client_secret:", !!retrieved?.client_secret);
-    if (retrieved?.client_secret) {
-      return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
-    }
-  }
-
-  const invoiceId = typeof invoiceRef === "string" ? invoiceRef : invoiceRef?.id;
-  if (invoiceId) {
-    console.log("[resolvePI] Retrieving invoice with expand:", invoiceId);
-    const invoice = await stripe.invoices.retrieve(invoiceId, {
-      expand: ["payment_intent"],
-    });
-    const pir = invoice.payment_intent;
-    console.log("[resolvePI] Invoice PI type:", typeof pir, pir?.id || pir);
-    if (pir && typeof pir === "object" && pir.client_secret) {
-      return { clientSecret: pir.client_secret, paymentIntentId: pir.id };
-    }
-    if (typeof pir === "string") {
-      console.log("[resolvePI] Retrieving PI from invoice ID string:", pir);
-      const retrieved = await stripe.paymentIntents.retrieve(pir);
-      if (retrieved?.client_secret) {
-        return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
-      }
-    }
-  }
-
-  console.log("[resolvePI] Refreshing subscription");
-  const refreshed = await stripe.subscriptions.retrieve(subscription.id, {
-    expand: ["latest_invoice.payment_intent"],
-  });
-  console.log("[resolvePI] Refreshed subscription status:", refreshed?.status);
-  pi = getPaymentIntentFromSubscription(refreshed);
-  if (pi?.client_secret) {
-    console.log("[resolvePI] Found client_secret from refreshed subscription");
-    return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
-  }
-  const again = refreshed?.latest_invoice?.payment_intent;
-  console.log("[resolvePI] Refreshed PI type:", typeof again, again?.id || again);
-  if (typeof again === "string") {
-    console.log("[resolvePI] Final attempt - retrieving PI:", again);
-    const retrieved = await stripe.paymentIntents.retrieve(again);
-    if (retrieved?.client_secret) {
-      return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
-    }
-  }
-
-  // PaymentIntent doesn't exist on invoice - create one manually for mobile payment sheet
-  const invoiceData = subscription?.latest_invoice;
-  const invoiceForPayment = typeof invoiceData === "object" ? invoiceData : null;
-  
-  if (invoiceForPayment && invoiceForPayment.amount_due > 0 && invoiceForPayment.status === "open") {
-    console.log("[resolvePI] Creating PaymentIntent manually for invoice", invoiceForPayment.id);
-    try {
-      const newPI = await stripe.paymentIntents.create({
-        amount: invoiceForPayment.amount_due,
-        currency: invoiceForPayment.currency,
-        customer: typeof invoiceForPayment.customer === "string" ? invoiceForPayment.customer : invoiceForPayment.customer?.id,
-        metadata: {
-          invoice_id: invoiceForPayment.id,
-          subscription_id: subscription.id,
-          created_by: "mobile_payment_sheet_fallback",
-        },
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never",
-        },
-      });
-      console.log("[resolvePI] Manually created PaymentIntent", newPI.id, "status:", newPI.status);
-      
-      // Attach the PaymentIntent to the invoice
-      await stripe.invoices.update(invoiceForPayment.id, {
-        default_payment_method: null, // Will be set after payment
-        metadata: {
-          ...invoiceForPayment.metadata,
-          manual_payment_intent_id: newPI.id,
-        },
-      });
-      
-      if (newPI.client_secret) {
-        return { clientSecret: newPI.client_secret, paymentIntentId: newPI.id };
-      }
-    } catch (createErr) {
-      console.error("[resolvePI] Failed to create manual PaymentIntent:", createErr?.message);
-    }
-  }
-
-  console.warn("[resolvePI] FAILED to resolve client_secret");
-  return { clientSecret: null, paymentIntentId: null };
-}
 
 async function resolveOrCreateCustomer({ db, uid, email }) {
   const userRef = db.collection("Users").doc(uid);
@@ -257,11 +129,19 @@ export default async function handler(req, res) {
       }
     }
 
+    // Fetch the price to get the amount
+    const price = await stripe.prices.retrieve(priceId);
+    if (!price.unit_amount || !price.currency) {
+      console.error("[premium.mobile.payment_sheet] Invalid price configuration", { priceId });
+      return res.status(500).json({ error: "Invalid price configuration" });
+    }
+
     const metadata = {
       uid,
       flow: PREMIUM_FLOW_METADATA,
       platform: "expo",
       checkoutSurface: "payment_sheet",
+      priceId,
       invoiceSendEmail: String(billingDetails?.invoicePreferences?.sendEmail !== false),
       invoiceEInvoice: String(invoiceDecision.sendEInvoice),
       invoiceDeliveryInRomania: String(billingAudit.normalizedClient.deliveryInRomania),
@@ -277,36 +157,42 @@ export default async function handler(req, res) {
       metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
     }
 
-    // Use SetupIntent approach: collect payment method first, then create subscription
-    const setupIntent = await stripe.setupIntents.create({
+    // Create PaymentIntent with setup_future_usage to save the payment method
+    // This shows the correct amount in PaymentSheet (e.g., 5 EUR)
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: price.unit_amount,
+      currency: price.currency,
       customer: customerId,
-      payment_method_types: ["card"],
-      usage: "off_session",
-      metadata: {
-        ...metadata,
-        pending_subscription: "true",
-        price_id: priceId,
+      setup_future_usage: "off_session",
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never",
       },
+      metadata,
     });
 
-    console.log("[premium.mobile.payment_sheet] SetupIntent created", {
-      setupIntentId: setupIntent.id,
-      status: setupIntent.status,
-      hasClientSecret: !!setupIntent.client_secret,
+    console.log("[premium.mobile.payment_sheet] PaymentIntent created", {
+      paymentIntentId: paymentIntent.id,
+      amount: price.unit_amount,
+      currency: price.currency,
+      status: paymentIntent.status,
+      hasClientSecret: !!paymentIntent.client_secret,
     });
 
-    // Store pending subscription data - will create actual subscription after setup completes
+    // Store payment session data - will create subscription after payment succeeds
     await db
       .collection(PREMIUM_MOBILE_SESSION_COLLECTION)
-      .doc(setupIntent.id)
+      .doc(paymentIntent.id)
       .set(
         {
           uid,
           stripeCustomerId: customerId,
-          stripeSetupIntentId: setupIntent.id,
+          stripePaymentIntentId: paymentIntent.id,
           pendingPriceId: priceId,
           pendingMetadata: metadata,
-          status: "pending_setup",
+          amount: price.unit_amount,
+          currency: price.currency,
+          status: "pending_payment",
           flow: PREMIUM_FLOW_METADATA,
           billing: billingDetails,
           rawFormValues: rawBillingDetails || null,
@@ -328,7 +214,7 @@ export default async function handler(req, res) {
           normalizedBeforeCheckout: billingAudit.normalizedClient,
           stripeMetadataSnapshot: metadata,
           invoiceDecision,
-          paymentSheetPendingSetupIntentId: setupIntent.id,
+          paymentSheetPendingPaymentIntentId: paymentIntent.id,
           updatedAt: FieldValue.serverTimestamp(),
         },
         updatedAt: FieldValue.serverTimestamp(),
@@ -341,12 +227,12 @@ export default async function handler(req, res) {
       { apiVersion: STRIPE_API_VERSION }
     );
 
-    // Return SetupIntent client secret - subscription will be created after setup succeeds
+    // Return PaymentIntent client secret - shows correct amount in PaymentSheet
     return res.status(200).json({
-      setupIntentClientSecret: setupIntent.client_secret,
+      paymentIntentClientSecret: paymentIntent.client_secret,
       customerEphemeralKeySecret: ephemeralKey.secret,
       customerId,
-      setupIntentId: setupIntent.id,
+      paymentIntentId: paymentIntent.id,
     });
   } catch (err) {
     console.error("[premium.mobile.payment_sheet] stripe_error", { message: err?.message });
