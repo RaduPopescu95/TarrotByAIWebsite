@@ -202,6 +202,21 @@ export default async function handler(req, res) {
       email: authUser.email || billingDetails?.email || "",
     });
 
+    // Cancel any existing incomplete subscriptions for this customer
+    const existingSubs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "incomplete",
+      limit: 10,
+    });
+    for (const sub of existingSubs.data) {
+      console.log("[premium.mobile.payment_sheet] Canceling existing incomplete subscription:", sub.id);
+      try {
+        await stripe.subscriptions.cancel(sub.id);
+      } catch (cancelErr) {
+        console.warn("[premium.mobile.payment_sheet] Failed to cancel incomplete sub:", sub.id, cancelErr?.message);
+      }
+    }
+
     const metadata = {
       uid,
       flow: PREMIUM_FLOW_METADATA,
@@ -232,6 +247,18 @@ export default async function handler(req, res) {
         save_default_payment_method: "on_subscription",
       },
       expand: ["latest_invoice.payment_intent"],
+    });
+
+    console.log("[premium.mobile.payment_sheet] Subscription created", {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      latestInvoiceType: typeof subscription.latest_invoice,
+      latestInvoiceId: typeof subscription.latest_invoice === "object" ? subscription.latest_invoice?.id : subscription.latest_invoice,
+      paymentIntentType: typeof subscription.latest_invoice?.payment_intent,
+      paymentIntentId: typeof subscription.latest_invoice?.payment_intent === "object" 
+        ? subscription.latest_invoice?.payment_intent?.id 
+        : subscription.latest_invoice?.payment_intent,
+      hasClientSecret: !!subscription.latest_invoice?.payment_intent?.client_secret,
     });
 
     const { clientSecret, paymentIntentId } = await resolvePaymentIntentClientSecret(
