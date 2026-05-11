@@ -155,6 +155,31 @@ export default async function handler(req, res) {
         }
         break;
       }
+      case "payment_intent.succeeded": {
+        // Handle manual PaymentIntents created for mobile payment sheet
+        const pi = event.data.object;
+        const invoiceId = pi.metadata?.invoice_id;
+        const subscriptionId = pi.metadata?.subscription_id;
+        if (invoiceId && subscriptionId && pi.metadata?.created_by === "mobile_payment_sheet_fallback") {
+          console.log("[premium.webhook] Manual PI succeeded, paying invoice", { invoiceId, subscriptionId, piId: pi.id });
+          try {
+            // Pay the invoice with the payment method from the PaymentIntent
+            if (pi.payment_method) {
+              const invoice = await stripe.invoices.retrieve(invoiceId);
+              if (invoice.status === "open") {
+                await stripe.invoices.pay(invoiceId, {
+                  payment_method: typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method.id,
+                });
+                console.log("[premium.webhook] Invoice paid via webhook");
+              }
+            }
+            await syncPremiumSubscriptionById(stripe, subscriptionId);
+          } catch (payErr) {
+            console.error("[premium.webhook] Failed to pay invoice from PI webhook", payErr?.message);
+          }
+        }
+        break;
+      }
       default:
         break;
     }

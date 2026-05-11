@@ -40,8 +40,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ["latest_invoice.payment_intent"],
+    let subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["latest_invoice.payment_intent", "latest_invoice"],
     });
 
     if (subscription.metadata?.flow !== PREMIUM_FLOW_METADATA) {
@@ -49,6 +49,68 @@ export default async function handler(req, res) {
     }
     if (subscription.metadata?.uid !== authUser.uid) {
       return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // If subscription is incomplete and invoice is open, try to pay it with manual PaymentIntent
+    const invoice = subscription.latest_invoice;
+    if (
+      subscription.status === "incomplete" &&
+      invoice &&
+      typeof invoice === "object" &&
+      invoice.status === "open"
+    ) {
+      const manualPiId = invoice.metadata?.manual_payment_intent_id;
+      if (manualPiId) {
+        console.log("[premium.mobile.confirm] Found manual PI, attempting to pay invoice", {
+          subscriptionId,
+          invoiceId: invoice.id,
+          manualPiId,
+        });
+        try {
+          // Retrieve the PaymentIntent to get the payment method
+          const pi = await stripe.paymentIntents.retrieve(manualPiId);
+          if (pi.status === "succeeded" && pi.payment_method) {
+            console.log("[premium.mobile.confirm] Manual PI succeeded, paying invoice with PM", pi.payment_method);
+            // Pay the invoice with the payment method from the succeeded PaymentIntent
+            await stripe.invoices.pay(invoice.id, {
+              payment_method: typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method.id,
+            });
+            // Refresh subscription after payment
+            subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+              expand: ["latest_invoice.payment_intent", "latest_invoice"],
+            });
+            console.log("[premium.mobile.confirm] Invoice paid, new subscription status:", subscription.status);
+          } else {
+            console.log("[premium.mobile.confirm] Manual PI not yet succeeded", { status: pi.status });
+          }
+        } catch (payErr) {
+          console.warn("[premium.mobile.confirm] Failed to pay invoice with manual PI", payErr?.message);
+        }
+      } else {
+        // Check if there's a stripePaymentIntentId in our Firestore record
+        const db2 = getAdminDb();
+        const sessionSnap = await db2.collection(PREMIUM_MOBILE_SESSION_COLLECTION).doc(subscriptionId).get();
+        const sessionData = sessionSnap.exists ? sessionSnap.data() : null;
+        const storedPiId = sessionData?.stripePaymentIntentId;
+        if (storedPiId) {
+          console.log("[premium.mobile.confirm] Found stored PI in Firestore", storedPiId);
+          try {
+            const pi = await stripe.paymentIntents.retrieve(storedPiId);
+            if (pi.status === "succeeded" && pi.payment_method) {
+              console.log("[premium.mobile.confirm] Stored PI succeeded, paying invoice with PM", pi.payment_method);
+              await stripe.invoices.pay(invoice.id, {
+                payment_method: typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method.id,
+              });
+              subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+                expand: ["latest_invoice.payment_intent", "latest_invoice"],
+              });
+              console.log("[premium.mobile.confirm] Invoice paid via stored PI, new status:", subscription.status);
+            }
+          } catch (payErr2) {
+            console.warn("[premium.mobile.confirm] Failed to pay invoice with stored PI", payErr2?.message);
+          }
+        }
+      }
     }
 
     const syncResult = await syncPremiumSubscription(subscription);
