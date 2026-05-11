@@ -13,8 +13,10 @@ function SettingsScreen() {
   const [success, setSuccess] = useState("");
   const [settings, setSettings] = useState({
     subscriptionSystemEnabled: true,
+    mobileUpdatePromptEnabled: false,
   });
   const [pendingToggle, setPendingToggle] = useState(null);
+  const [pendingMobileToggle, setPendingMobileToggle] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,7 +27,12 @@ function SettingsScreen() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "load_failed");
-      setSettings(data.settings || { subscriptionSystemEnabled: true });
+      setSettings(
+        data.settings || {
+          subscriptionSystemEnabled: true,
+          mobileUpdatePromptEnabled: false,
+        }
+      );
     } catch (e) {
       setError(e?.message || "Eroare la încărcare");
     } finally {
@@ -75,6 +82,46 @@ function SettingsScreen() {
 
   const cancelToggle = () => {
     setPendingToggle(null);
+  };
+
+  const handleMobileToggleClick = (newValue) => {
+    setPendingMobileToggle(newValue);
+  };
+
+  const confirmMobileToggle = async () => {
+    if (pendingMobileToggle === null) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dashboard-token": DASHBOARD_SECRET,
+        },
+        body: JSON.stringify({
+          mobileUpdatePromptEnabled: pendingMobileToggle,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess(
+        pendingMobileToggle
+          ? "Modalul de actualizare este activat în aplicația mobilă (Tarot, Mesaje magice, Noroc)."
+          : "Modalul de actualizare este dezactivat pe mobil."
+      );
+      setPendingMobileToggle(null);
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelMobileToggle = () => {
+    setPendingMobileToggle(null);
   };
 
   return (
@@ -135,11 +182,13 @@ function SettingsScreen() {
         {loading && (
           <div className="space-y-3">
             <div className="h-32 animate-pulse rounded-xl bg-slate-200" />
+            <div className="h-32 animate-pulse rounded-xl bg-slate-200" />
           </div>
         )}
 
         {/* Settings Card */}
         {!loading && (
+          <>
           <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Sistem de Abonament Premium
@@ -174,7 +223,11 @@ function SettingsScreen() {
                   onClick={() =>
                     handleToggleClick(!settings.subscriptionSystemEnabled)
                   }
-                  disabled={saving}
+                  disabled={
+                    saving ||
+                    pendingToggle !== null ||
+                    pendingMobileToggle !== null
+                  }
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
                     settings.subscriptionSystemEnabled
                       ? "bg-emerald-500"
@@ -238,9 +291,80 @@ function SettingsScreen() {
               </p>
             )}
           </div>
+
+          <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">
+              Actualizare aplicație mobilă
+            </h2>
+            <p className="mb-4 text-sm text-slate-600">
+              Controlează dacă utilizatorii văd modalul care îi îndeamnă să
+              actualizeze aplicația (ecrane Tarot, Mesaje magice, Noroc).
+              Același semnal ca documentul Firestore{" "}
+              <code className="rounded bg-slate-100 px-1 text-xs">
+                ShouldUpdate/unicde
+              </code>{" "}
+              — câmpul <code className="rounded bg-slate-100 px-1 text-xs">update</code>.
+            </p>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">
+                    Modalul de actualizare este{" "}
+                    <span
+                      className={
+                        settings.mobileUpdatePromptEnabled === true
+                          ? "text-emerald-600"
+                          : "text-slate-500"
+                      }
+                    >
+                      {settings.mobileUpdatePromptEnabled === true
+                        ? "ACTIVAT"
+                        : "DEZACTIVAT"}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {settings.mobileUpdatePromptEnabled === true
+                      ? "Utilizatorii pot vedea promptul (respectă amânarea de pe telefon, ex. după respingere)."
+                      : "Nu se mai afișează promptul de actualizare pe acele ecrane."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleMobileToggleClick(
+                      !(settings.mobileUpdatePromptEnabled === true)
+                    )
+                  }
+                  disabled={
+                    saving ||
+                    pendingToggle !== null ||
+                    pendingMobileToggle !== null
+                  }
+                  className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
+                    settings.mobileUpdatePromptEnabled === true
+                      ? "bg-emerald-500"
+                      : "bg-slate-300"
+                  }`}
+                  role="switch"
+                  aria-checked={settings.mobileUpdatePromptEnabled === true}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      settings.mobileUpdatePromptEnabled === true
+                        ? "translate-x-7"
+                        : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+          </>
         )}
 
-        {/* Confirmation Modal */}
+        {/* Confirmation Modal — abonament */}
         {pendingToggle !== null && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -304,6 +428,77 @@ function SettingsScreen() {
                   {saving
                     ? "Se salvează…"
                     : pendingToggle
+                    ? "Activează"
+                    : "Dezactivează"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal — actualizare mobil */}
+        {pendingMobileToggle !== null && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+              onClick={cancelMobileToggle}
+              aria-label="Închide"
+            />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Confirmare — aplicație mobilă
+              </h2>
+
+              {pendingMobileToggle ? (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="font-medium text-emerald-900">
+                    Activezi modalul de actualizare
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-800">
+                    Pe ecranele Tarot, Mesaje magice și Noroc, utilizatorii pot
+                    primi îndemnul să actualizeze aplicația (conform regulilor
+                    de pe telefon, inclusiv amânarea după închidere).
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="font-medium text-slate-900">
+                    Dezactivezi modalul de actualizare
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    Nu se va mai afișa promptul de actualizare legat de acest
+                    semnal din Firestore, până îl reactivezi.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={cancelMobileToggle}
+                  disabled={saving}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmMobileToggle}
+                  disabled={saving}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 ${
+                    pendingMobileToggle
+                      ? "bg-emerald-600 hover:bg-emerald-500"
+                      : "bg-slate-600 hover:bg-slate-500"
+                  }`}
+                >
+                  {saving
+                    ? "Se salvează…"
+                    : pendingMobileToggle
                     ? "Activează"
                     : "Dezactivează"}
                 </button>
