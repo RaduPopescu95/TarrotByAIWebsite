@@ -170,6 +170,8 @@ export default async function handler(req, res) {
             uid, 
             priceId,
             customerId,
+            paymentMethodId: paymentMethodId ? "present" : "missing",
+            metadataFlow: pi.metadata?.flow,
           });
           
           // Check if subscription was already created by the client
@@ -177,26 +179,44 @@ export default async function handler(req, res) {
           const sessionSnap = await sessionRef.get();
           const sessionData = sessionSnap.exists ? sessionSnap.data() : null;
           
+          console.log("[premium.webhook] Session data lookup", {
+            piId: pi.id,
+            sessionExists: sessionSnap.exists,
+            hasSubscriptionId: Boolean(sessionData?.stripeSubscriptionId),
+          });
+          
           if (sessionData?.stripeSubscriptionId) {
-            console.log("[premium.webhook] Subscription already created by client", {
+            console.log("[premium.webhook] Subscription already created", {
               subscriptionId: sessionData.stripeSubscriptionId,
+              createdBy: sessionData.createdByWebhook ? "webhook" : "client",
             });
             // Just sync to ensure user access is up to date
-            await syncPremiumSubscriptionById(stripe, sessionData.stripeSubscriptionId);
+            try {
+              await syncPremiumSubscriptionById(stripe, sessionData.stripeSubscriptionId);
+              console.log("[premium.webhook] Synced existing subscription successfully");
+            } catch (syncErr) {
+              console.error("[premium.webhook] Failed to sync existing subscription", {
+                subscriptionId: sessionData.stripeSubscriptionId,
+                error: syncErr?.message,
+              });
+            }
             break;
           }
           
           // Client didn't create subscription - create it now (user may have closed app)
-          if (!customerId || !paymentMethodId) {
-            console.warn("[premium.webhook] Missing customerId or paymentMethodId", { 
-              customerId, 
-              paymentMethodId,
-            });
+          if (!customerId) {
+            console.error("[premium.webhook] Cannot create subscription - missing customerId", { piId: pi.id });
+            break;
+          }
+          
+          if (!paymentMethodId) {
+            console.error("[premium.webhook] Cannot create subscription - missing paymentMethodId", { piId: pi.id });
             break;
           }
           
           try {
             // Set payment method as customer's default
+            console.log("[premium.webhook] Setting default payment method", { customerId, paymentMethodId });
             await stripe.customers.update(customerId, {
               invoice_settings: {
                 default_payment_method: typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
@@ -207,6 +227,13 @@ export default async function handler(req, res) {
             const price = await stripe.prices.retrieve(priceId);
             const interval = price.recurring?.interval || "month";
             const intervalCount = price.recurring?.interval_count || 1;
+            
+            console.log("[premium.webhook] Price retrieved", {
+              priceId,
+              interval,
+              intervalCount,
+              unitAmount: price.unit_amount,
+            });
             
             // Calculate trial_end (first period already paid via PaymentIntent)
             const now = Math.floor(Date.now() / 1000);
@@ -221,13 +248,21 @@ export default async function handler(req, res) {
               trialEndTimestamp = now + (24 * 60 * 60 * intervalCount);
             }
             
-            // Create the subscription
+            // Create the subscription with proper flow metadata
             const subscriptionMetadata = {
               uid,
               flow: pi.metadata.flow || PREMIUM_FLOW_METADATA,
+              platform: "expo",
               firstPaymentIntentId: pi.id,
               createdByWebhook: "true",
             };
+            
+            console.log("[premium.webhook] Creating subscription via webhook", {
+              customerId,
+              priceId,
+              trialEnd: new Date(trialEndTimestamp * 1000).toISOString(),
+              metadata: subscriptionMetadata,
+            });
             
             const subscription = await stripe.subscriptions.create({
               customer: customerId,
@@ -237,9 +272,10 @@ export default async function handler(req, res) {
               trial_end: trialEndTimestamp,
             });
             
-            console.log("[premium.webhook] Subscription created via webhook", {
+            console.log("[premium.webhook] Subscription created via webhook successfully", {
               subscriptionId: subscription.id,
               status: subscription.status,
+              trialEnd: subscription.trial_end,
             });
             
             // Update session data
@@ -251,13 +287,23 @@ export default async function handler(req, res) {
               updatedAt: FieldValue.serverTimestamp(),
             }, { merge: true });
             
-            // Sync premium access
-            await syncPremiumSubscriptionById(stripe, subscription.id);
+            // Sync premium access to user document
+            const syncResult = await syncPremiumSubscriptionById(stripe, subscription.id);
+            console.log("[premium.webhook] Synced premium access", {
+              subscriptionId: subscription.id,
+              syncResult: syncResult.skipped ? "skipped" : "synced",
+              premiumActive: syncResult.premiumActive,
+            });
             
           } catch (subErr) {
             console.error("[premium.webhook] Failed to create subscription from webhook", {
               piId: pi.id,
-              error: subErr?.message,
+              uid,
+              customerId,
+              priceId,
+              errorMessage: subErr?.message,
+              errorCode: subErr?.code,
+              errorType: subErr?.type,
             });
           }
           break;
