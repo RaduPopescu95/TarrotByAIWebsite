@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../../lib/firebaseAdmin";
-import { requireAuth } from "../../../../../lib/requireAuth";
+import { omitFirebaseIdTokenFromPayload, requireAuth } from "../../../../../lib/requireAuth";
 import { PREMIUM_FLOW_METADATA } from "../../../../../lib/premiumAccess";
 import {
   normalizeBillingDetails,
@@ -174,7 +174,7 @@ export default async function handler(req, res) {
           normalizedBeforeCheckout: billingAudit.normalizedClient,
           stripeMetadataSnapshot: metadata,
           invoiceDecision,
-          checkoutRequestPayload: req.body || {},
+          checkoutRequestPayload: omitFirebaseIdTokenFromPayload(req.body) || {},
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         },

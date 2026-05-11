@@ -1,4 +1,5 @@
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
+import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
 import { hasPremiumAccess } from "../../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
@@ -48,6 +49,11 @@ export default async function handler(req, res) {
       if (userSnap.exists) {
         premiumActive = hasPremiumAccess(userSnap.data() || {});
       }
+    }
+
+    const subscriptionEnabled = await isSubscriptionSystemEnabled();
+    if (!subscriptionEnabled) {
+      premiumActive = true;
     }
 
     const localeRaw = readSingleQueryValue(req.query.locale);

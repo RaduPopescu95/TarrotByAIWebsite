@@ -35,6 +35,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import PaletteIcon from "@mui/icons-material/Palette";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -109,6 +110,7 @@ const dashboardPrefetchScreens = [
   "ore-norocoase",
   "poza-api",
   "abonati",
+  "setari",
 ];
 
 export default function CustomDrawer(props) {
@@ -629,6 +631,23 @@ export default function CustomDrawer(props) {
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "setari",
+                    text: "Setări",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Setări" ? "#ffc045" : "white",
+                  }}
+                >
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="Setări" sx={{ color: "white" }} />
+              </ListItemButton>
               <ListItemButton onClick={() => { clearDashboardAccess(); router.replace("/dashboard"); }}>
                 <ListItemIcon
                   sx={{
