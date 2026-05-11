@@ -35,10 +35,20 @@ function getPaymentIntentFromSubscription(subscription) {
 
 /** payment_intent may be an id string even when expand is requested; invoice may be id-only. */
 async function resolvePaymentIntentClientSecret(stripe, subscription) {
+  console.log("[resolvePI] Starting", {
+    subscriptionId: subscription?.id,
+    status: subscription?.status,
+    latestInvoiceType: typeof subscription?.latest_invoice,
+    latestInvoiceId: typeof subscription?.latest_invoice === "object" ? subscription?.latest_invoice?.id : subscription?.latest_invoice,
+  });
+
   let pi = getPaymentIntentFromSubscription(subscription);
   if (pi?.client_secret) {
+    console.log("[resolvePI] Found client_secret directly from subscription");
     return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
   }
+
+  console.log("[resolvePI] No direct client_secret, pi type:", typeof pi, pi ? "has pi" : "no pi");
 
   const invoiceRef = subscription?.latest_invoice;
   let paymentIntentId =
@@ -46,8 +56,12 @@ async function resolvePaymentIntentClientSecret(stripe, subscription) {
       ? invoiceRef.payment_intent
       : null;
 
+  console.log("[resolvePI] paymentIntentId from invoice:", paymentIntentId, "invoice.payment_intent type:", typeof invoiceRef?.payment_intent);
+
   if (paymentIntentId) {
+    console.log("[resolvePI] Retrieving PI by ID:", paymentIntentId);
     const retrieved = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log("[resolvePI] Retrieved PI status:", retrieved?.status, "has client_secret:", !!retrieved?.client_secret);
     if (retrieved?.client_secret) {
       return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
     }
@@ -55,14 +69,17 @@ async function resolvePaymentIntentClientSecret(stripe, subscription) {
 
   const invoiceId = typeof invoiceRef === "string" ? invoiceRef : invoiceRef?.id;
   if (invoiceId) {
+    console.log("[resolvePI] Retrieving invoice with expand:", invoiceId);
     const invoice = await stripe.invoices.retrieve(invoiceId, {
       expand: ["payment_intent"],
     });
     const pir = invoice.payment_intent;
+    console.log("[resolvePI] Invoice PI type:", typeof pir, pir?.id || pir);
     if (pir && typeof pir === "object" && pir.client_secret) {
       return { clientSecret: pir.client_secret, paymentIntentId: pir.id };
     }
     if (typeof pir === "string") {
+      console.log("[resolvePI] Retrieving PI from invoice ID string:", pir);
       const retrieved = await stripe.paymentIntents.retrieve(pir);
       if (retrieved?.client_secret) {
         return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
@@ -70,21 +87,27 @@ async function resolvePaymentIntentClientSecret(stripe, subscription) {
     }
   }
 
+  console.log("[resolvePI] Refreshing subscription");
   const refreshed = await stripe.subscriptions.retrieve(subscription.id, {
     expand: ["latest_invoice.payment_intent"],
   });
+  console.log("[resolvePI] Refreshed subscription status:", refreshed?.status);
   pi = getPaymentIntentFromSubscription(refreshed);
   if (pi?.client_secret) {
+    console.log("[resolvePI] Found client_secret from refreshed subscription");
     return { clientSecret: pi.client_secret, paymentIntentId: pi.id || null };
   }
   const again = refreshed?.latest_invoice?.payment_intent;
+  console.log("[resolvePI] Refreshed PI type:", typeof again, again?.id || again);
   if (typeof again === "string") {
+    console.log("[resolvePI] Final attempt - retrieving PI:", again);
     const retrieved = await stripe.paymentIntents.retrieve(again);
     if (retrieved?.client_secret) {
       return { clientSecret: retrieved.client_secret, paymentIntentId: retrieved.id };
     }
   }
 
+  console.warn("[resolvePI] FAILED to resolve client_secret");
   return { clientSecret: null, paymentIntentId: null };
 }
 
