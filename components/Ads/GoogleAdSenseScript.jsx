@@ -1,11 +1,34 @@
 import Script from "next/script";
+import { useRouter } from "next/router";
 
-const ADSENSE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID ||
-  "ca-pub-9577714849380446";
+const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID;
+const ADSENSE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ADSENSE === "true";
+const HIDE_ADSENSE_ON_PREFIXES = [
+  "/dashboard",
+  "/admin",
+  "/login",
+  "/signin",
+  "/signup",
+  "/settings",
+  "/cont-client",
+  "/panou-utilizator",
+  "/meeting",
+  "/meeting-admin",
+  "/meeting-daily",
+  "/meeting-agora",
+];
 
 export default function GoogleAdSenseScript() {
-  if (!ADSENSE_CLIENT_ID) return null;
+  const router = useRouter();
+  const pathname = router?.pathname || "";
+  const isProduction = process.env.NODE_ENV === "production";
+  const shouldHideOnRoute = HIDE_ADSENSE_ON_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+  const shouldLoad =
+    isProduction && ADSENSE_ENABLED && ADSENSE_CLIENT_ID && !shouldHideOnRoute;
+
+  if (!shouldLoad) return null;
 
   return (
     <Script

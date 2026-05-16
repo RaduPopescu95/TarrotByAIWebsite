@@ -62,7 +62,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                     });
                   }
                 });
-                gtag('event', 'conversion', {'send_to': 'AW-11367210761/oIR1COThkpYZEIm-p6wq'});
               `,
             }}
           />

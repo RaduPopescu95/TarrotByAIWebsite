@@ -64,7 +64,7 @@ export default function SettingsFacturarePage() {
           <Header isOnlySettngs={true} />
         </section>
 
-        <main className="mx-auto w-full max-w-3xl px-4 pb-14 pt-[5.5rem] sm:pt-24">
+        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-[5.5rem] sm:pb-32 sm:pt-24">
           <div style={styles.backButton}>
             <Link href="/settings" style={styles.backButtonElement}>
               {t("settingsFacturareBackToSettings")}

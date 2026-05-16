@@ -212,7 +212,9 @@ export default function SettingsHubPage() {
       ? userData.stripeSubscriptionId.trim()
       : "";
   const subStatus =
-    typeof userData?.subscriptionStatus === "string" ? userData.subscriptionStatus.trim() : "";
+    typeof userData?.subscriptionStatus === "string"
+      ? userData.subscriptionStatus.trim().toLowerCase()
+      : "";
   const cancelScheduled =
     userData?.premiumSubscriptionCancelAtPeriodEnd === true ||
     userData?.premiumSubscriptionCancelAtPeriodEnd === "true";
@@ -224,12 +226,13 @@ export default function SettingsHubPage() {
   const periodEndFormatted =
     periodEndDate ? formatSubscriptionDisplayDate(periodEndDate, subscriptionLocale) : "";
 
-  const scheduledCancelBanner = premiumNow && subStatus === "active" && cancelScheduled;
   const canceledWithResidualAccess =
     premiumNow &&
     subStatus === "canceled" &&
     periodEndDate &&
     periodEndDate.getTime() > Date.now();
+  const scheduledCancelBanner =
+    premiumNow && cancelScheduled && !canceledWithResidualAccess;
   const showCancelButton =
     stripeSubId && premiumNow && subStatus === "active" && !cancelScheduled;
 
@@ -383,7 +386,7 @@ export default function SettingsHubPage() {
           <Header isOnlySettngs={true} />
         </section>
 
-        <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-[5.25rem] sm:pt-24">
+        <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-[5.25rem] sm:pb-36 sm:pt-24">
           <div className="mb-4">
             <Link
               href="/"
