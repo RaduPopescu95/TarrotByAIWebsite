@@ -78,7 +78,7 @@ export default function VideoLibraryPage() {
       const locale = router.locale || "ro";
       const authHeaders = await getFirebaseBearerHeader({ required: false });
       const res = await fetch(
-        `/api/premium/video-library?locale=${encodeURIComponent(locale)}`,
+        `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
         {
           headers: {
             Accept: "application/json",

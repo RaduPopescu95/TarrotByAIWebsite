@@ -38,8 +38,11 @@ export default async function handler(req, res) {
       }
     }
 
+    const clientRaw = readSingleQueryValue(req.query.client);
+    const isWebClient =
+      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
     const subscriptionEnabled = await isSubscriptionSystemEnabled();
-    if (!subscriptionEnabled) {
+    if (!subscriptionEnabled && !isWebClient) {
       premiumActive = true;
     }
 
@@ -67,6 +70,7 @@ export default async function handler(req, res) {
     console.info("[premium.video-library] success", {
       requestId,
       uid: uid || null,
+      client: isWebClient ? "web" : "default",
       locale,
       scope: scopeRaw || null,
       videosCount: Array.isArray(videos) ? videos.length : 0,

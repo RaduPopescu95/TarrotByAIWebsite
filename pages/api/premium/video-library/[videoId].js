@@ -51,8 +51,11 @@ export default async function handler(req, res) {
       }
     }
 
+    const clientRaw = readSingleQueryValue(req.query.client);
+    const isWebClient =
+      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
     const subscriptionEnabled = await isSubscriptionSystemEnabled();
-    if (!subscriptionEnabled) {
+    if (!subscriptionEnabled && !isWebClient) {
       premiumActive = true;
     }
 

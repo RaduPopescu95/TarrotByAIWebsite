@@ -34,7 +34,7 @@ function PremiumZoneVideoSpotlight({ locale }) {
         const lc = locale || "ro";
         const headers = await getFirebaseBearerHeader({ required: Boolean(currentUser) });
         const res = await fetch(
-          `/api/premium/video-library?locale=${encodeURIComponent(lc)}&scope=premium_zone`,
+          `/api/premium/video-library?locale=${encodeURIComponent(lc)}&scope=premium_zone&client=web`,
           {
             headers: {
               Accept: "application/json",
