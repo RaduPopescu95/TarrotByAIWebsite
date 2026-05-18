@@ -21,7 +21,7 @@ const LAYOUT_TYPES = {
   grid: 0,
   pin: 1
 };
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 // Chat imports removed - using custom chat implementation
 import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../../utils/chatUtils";
@@ -57,6 +57,58 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
   // Chat functionality replaced with custom chat
   const chatCleanupMonitorRef = useRef(null);
+
+  const getConferenceIdFromAccessLink = (link) => {
+    if (typeof link !== "string") return null;
+    const match = link.match(/^grup_([^_]+)_/);
+    return match?.[1] || null;
+  };
+
+  const findParticipantByAccessLink = (conferenceData, link) =>
+    conferenceData?.participanti?.find(p =>
+      p?.uniqueAccessLink === link || p?.accessLink === link
+    ) || null;
+
+  const loadConferenceByAccessLink = async (link) => {
+    const directConferenceId = getConferenceIdFromAccessLink(link);
+    if (directConferenceId) {
+      const snapshot = await getDoc(doc(db, "ConferinteGrup", directConferenceId));
+      if (snapshot.exists()) {
+        const directConference = {
+          documentId: snapshot.id,
+          ...snapshot.data(),
+        };
+        const directParticipant = findParticipantByAccessLink(directConference, link);
+        if (directParticipant) {
+          return {
+            conferintaFound: directConference,
+            participantFound: directParticipant,
+            lookupMethod: "direct",
+          };
+        }
+      }
+    }
+
+    // Legacy links may not contain the conference id, so keep the old scan only as fallback.
+    const conferinte = await handleGetFirestore("ConferinteGrup");
+    console.log("📦 [ACCESS] Legacy fallback conferințe găsite:", conferinte.length);
+    for (const conf of conferinte) {
+      const participant = findParticipantByAccessLink(conf, link);
+      if (participant) {
+        return {
+          conferintaFound: conf,
+          participantFound: participant,
+          lookupMethod: "legacy_scan",
+        };
+      }
+    }
+
+    return {
+      conferintaFound: null,
+      participantFound: null,
+      lookupMethod: directConferenceId ? "direct_not_found" : "legacy_not_found",
+    };
+  };
 
 
 
@@ -129,30 +181,17 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         return;
       }
 
-      // Căutăm conferința și participantul cu link-ul unic
-      const conferinte = await handleGetFirestore("ConferinteGrup");
-      console.log("📦 [ACCESS] Conferințe găsite:", conferinte.length);
-      
-      let conferintaFound = null;
-      let participantFound = null;
-
-      for (const conf of conferinte) {
-        const participant = conf.participanti?.find(p => 
-          p.uniqueAccessLink === accessLink || p.accessLink === accessLink
-        );
-        if (participant) {
-          conferintaFound = conf;
-          participantFound = participant;
-          console.log("✅ [ACCESS] Participant găsit:", participant.nume, participant.prenume);
-          console.log("✅ [ACCESS] Este guest user:", participant.isGuestUser ? "DA" : "NU");
-          break;
-        }
-      }
+      const { conferintaFound, participantFound, lookupMethod } =
+        await loadConferenceByAccessLink(accessLink);
+      console.log("🔎 [ACCESS] Lookup method:", lookupMethod);
 
       if (!conferintaFound || !participantFound) {
         setError("Link de acces invalid sau expirat");
         return;
       }
+
+      console.log("✅ [ACCESS] Participant găsit:", participantFound.nume, participantFound.prenume);
+      console.log("✅ [ACCESS] Este guest user:", participantFound.isGuestUser ? "DA" : "NU");
 
       // Verifică dacă participantul este autentificat cu contul corect (doar pentru utilizatori cu cont)
       if (currentUser && participantFound.userId && !participantFound.isGuestUser && participantFound.userId !== currentUser.uid) {
@@ -385,12 +424,6 @@ const ConferintaGrupAccess = ({ accessLink }) => {
                   console.log("🔗 [USER CUSTOM CHAT] Connecting to Firebase...");
         console.log("🔧 [USER CUSTOM CHAT] Database object:", database);
         console.log("🔧 [USER CUSTOM CHAT] Database app:", database.app);
-        
-        // Test Firebase connection
-        console.log("🧪 [USER CUSTOM CHAT] Testing Firebase write access...");
-        const testRef = ref(database, `test/${Date.now()}`);
-        await set(testRef, { test: true, timestamp: Date.now(), userId: stableUserId });
-        console.log("✅ [USER CUSTOM CHAT] Firebase write test successful!");
         
         // Setup participants listener
           const participantsRef = ref(database, `chats/${chatRoomId}/participants`);

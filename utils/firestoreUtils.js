@@ -308,10 +308,7 @@ export const handleGetFirestoreWithLimit = async (location, limitCount = 50, ord
     
   } catch (error) {
     console.error(`❌ [OPTIMIZED] Error fetching ${location}:`, error);
-    
-    // FALLBACK LA VERSIUNEA ORIGINALĂ în caz de eroare
-    console.log(`🔄 [FALLBACK] Falling back to original handleGetFirestore for ${location}`);
-    return await handleGetFirestore(location);
+    return [];
   }
 };
 
@@ -383,12 +380,8 @@ export const handleGetFirestorePaginated = async (location, limitCount = 20, las
     
   } catch (error) {
     console.error(`❌ [PAGINATED] Error fetching ${location}:`, error);
-    
-    // FALLBACK - returnează datele cu versiunea originală
-    console.log(`🔄 [FALLBACK] Using original handleGetFirestore for ${location}`);
-    const fallbackData = await handleGetFirestore(location);
     return {
-      data: fallbackData,
+      data: [],
       lastVisible: null,
       hasMore: false
     };
@@ -472,10 +465,7 @@ export const handleGetConferinteActiveOptimized = async (limitCount = 100) => {
     
   } catch (error) {
     console.error(`❌ [CONFERENCES OPTIMIZED] Error fetching active conferences:`, error);
-    
-    // FALLBACK - folosește funcția existentă handleGetConferinteActive
-    console.log(`🔄 [FALLBACK] Using existing handleGetConferinteActive function`);
-    return await handleGetConferinteActive();
+    return [];
   }
 };
 

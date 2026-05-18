@@ -1,10 +1,13 @@
 import { buffer } from "micro";
 import Stripe from 'stripe';
-import { handleGetFirestore, handleUpdateFirestore, handleUploadFirestoreGeneral } from '../../utils/firestoreUtils';
+import { handleUpdateFirestore, handleUploadFirestoreGeneral } from '../../utils/firestoreUtils';
 import { createOlbioInvoice } from '../../utils/olbioClient';
+import { getAdminDb } from "../../lib/firebaseAdmin";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_CONFERINTA;
+
+const adminDb = getAdminDb();
 
 export default async function handler(req, res) {
   const requestId = `WH_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -157,10 +160,18 @@ async function handleSuccessfulPayment(session, requestId) {
     console.log(`💳 [${requestId}] [${paymentId}] Verifică sesiunea de plată existentă...`);
     let paymentSession = null;
     try {
-      const platiConferinte = await handleGetFirestore('PlatiConferinteGrup');
-      console.log(`💳 [${requestId}] [${paymentId}] Plăți încărcate: ${platiConferinte.length} în total`);
-      
-      paymentSession = platiConferinte.find(p => p.stripeSessionId === session.id) || null;
+      const paymentSnapshot = await adminDb
+        .collection('PlatiConferinteGrup')
+        .where('stripeSessionId', '==', session.id)
+        .limit(1)
+        .get();
+
+      paymentSession = paymentSnapshot.empty
+        ? null
+        : {
+            documentId: paymentSnapshot.docs[0].id,
+            ...paymentSnapshot.docs[0].data(),
+          };
       
       if (paymentSession) {
         console.log(`💳 [${requestId}] [${paymentId}] Sesiune de plată găsită, actualizez...`);
@@ -180,27 +191,25 @@ async function handleSuccessfulPayment(session, requestId) {
       } else {
         console.log(`⚠️ [${requestId}] [${paymentId}] Sesiunea de plată nu a fost găsită în Firestore`);
         console.log(`⚠️ [${requestId}] [${paymentId}] Session ID căutat: ${session.id}`);
-        console.log(`⚠️ [${requestId}] [${paymentId}] Sesiuni existente:`, platiConferinte.map(p => p.stripeSessionId));
       }
     } catch (paymentUpdateError) {
       console.error(`💥 [${requestId}] [${paymentId}] Eroare la actualizarea sesiunii:`, paymentUpdateError.message);
       // Continuă procesul chiar dacă actualizarea sesiunii eșuează
     }
 
-    // 2. Încarcă conferințele din Firestore
-    console.log(`💳 [${requestId}] [${paymentId}] Încarcă conferințele din Firestore...`);
-    const conferinte = await handleGetFirestore('ConferinteGrup');
-    console.log(`💳 [${requestId}] [${paymentId}] Conferințe încărcate: ${conferinte.length} în total`);
-    
-    const conferinta = conferinte.find(c => c.documentId === conferintaId);
+    // 2. Încarcă direct conferința din Firestore
+    console.log(`💳 [${requestId}] [${paymentId}] Încarcă direct conferința din Firestore...`);
+    const conferintaSnapshot = await adminDb.collection('ConferinteGrup').doc(conferintaId).get();
+    const conferinta = conferintaSnapshot.exists
+      ? {
+          documentId: conferintaSnapshot.id,
+          ...conferintaSnapshot.data(),
+        }
+      : null;
     
     if (!conferinta) {
       console.error(`💥 [${requestId}] [${paymentId}] CRITICĂ: Conferința nu a fost găsită!`);
       console.error(`💥 [${requestId}] [${paymentId}] ConferintaID căutat: ${conferintaId}`);
-      console.error(`💥 [${requestId}] [${paymentId}] Conferințe disponibile:`, conferinte.map(c => ({
-        id: c.documentId,
-        titlu: c.titlu
-      })));
       return;
     }
 

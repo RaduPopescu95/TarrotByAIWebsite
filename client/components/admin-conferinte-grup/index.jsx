@@ -4,7 +4,6 @@ import Home1Header from "../home/home-1/header";
 import DoctorSidebar from "../doctors/sidebar";
 import StickyBox from "react-sticky-box";
 import { 
-  handleGetFirestore, 
   handleUpdateFirestore, 
   handleUploadFirestoreGeneral,
   handleGetConferintePaginated
@@ -13,7 +12,7 @@ import AlertMessage from "../AlertMessage";
 import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
-import { doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, getCountFromServer, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../../../firebase";
 import QuillEditor from "../../../components/QuillForm";
@@ -73,7 +72,6 @@ const AdminConferinteGrup = () => {
 
   // Log pentru a verifica dacă funcțiile Firestore sunt importate corect
   console.log("🔧 [INIT] Funcții Firestore disponibile:", {
-    handleGetFirestore: typeof handleGetFirestore,
     handleUpdateFirestore: typeof handleUpdateFirestore,
     handleUploadFirestoreGeneral: typeof handleUploadFirestoreGeneral
   });
@@ -161,17 +159,16 @@ const AdminConferinteGrup = () => {
       const result = await handleGetConferintePaginated(8, reset ? null : lastVisible);
       console.log("📦 [FETCH] Date primite din Firestore:", result);
       
-      if (reset) {
-        setConferinte(result.conferinte || []);
-      } else {
-        setConferinte(prev => [...prev, ...(result.conferinte || [])]);
-      }
+      const nextConferinte = reset
+        ? (result.conferinte || [])
+        : [...conferinte, ...(result.conferinte || [])];
+
+      setConferinte(nextConferinte);
       
       setLastVisible(result.lastVisible);
       setHasMore(result.hasMore);
       
-      // Calculează statisticile pentru toate conferințele (nu doar cele încărcate)
-      await calculateTotalStats();
+      await calculateTotalStats(nextConferinte);
       
       console.log("✅ [FETCH] Conferințele au fost setate în state");
     } catch (error) {
@@ -195,9 +192,11 @@ const AdminConferinteGrup = () => {
       const result = await handleGetConferintePaginated(8, lastVisible);
       console.log("📦 [LOAD MORE] Date suplimentare primite:", result);
       
-      setConferinte(prev => [...prev, ...(result.conferinte || [])]);
+      const nextConferinte = [...conferinte, ...(result.conferinte || [])];
+      setConferinte(nextConferinte);
       setLastVisible(result.lastVisible);
       setHasMore(result.hasMore);
+      await calculateTotalStats(nextConferinte);
       
       console.log("✅ [LOAD MORE] Conferințele suplimentare au fost adăugate");
     } catch (error) {
@@ -208,16 +207,20 @@ const AdminConferinteGrup = () => {
     }
   };
 
-  const calculateTotalStats = async () => {
+  const calculateTotalStats = async (loadedConferinte = conferinte) => {
     try {
-      // Pentru statistici, încărcăm toate conferințele o singură dată
-      const allConferinte = await handleGetFirestore("ConferinteGrup");
-      
+      const conferinteRef = collection(db, "ConferinteGrup");
+      const [totalSnap, activeSnap, courseSnap] = await Promise.all([
+        getCountFromServer(conferinteRef),
+        getCountFromServer(query(conferinteRef, where("status", "==", "activa"))),
+        getCountFromServer(query(conferinteRef, where("tipConferinta", "==", "course"))),
+      ]);
+
       const stats = {
-        total: allConferinte.length,
-        active: allConferinte.filter(c => c.status === "activa").length,
-        participants: allConferinte.reduce((total, c) => total + (c.participanti?.length || 0), 0),
-        courses: allConferinte.filter(c => c.tipConferinta === "course").length
+        total: totalSnap.data().count,
+        active: activeSnap.data().count,
+        participants: loadedConferinte.reduce((total, c) => total + (c.participanti?.length || 0), 0),
+        courses: courseSnap.data().count
       };
       
       setTotalStats(stats);
@@ -791,9 +794,17 @@ const AdminConferinteGrup = () => {
       setLoading(true);
       console.log("➕ [ADD PARTICIPANT] Adăugare participant manual...");
 
-      // Verifică din nou dacă mai sunt locuri disponibile
-      const conferinte = await handleGetFirestore("ConferinteGrup");
-      const conferintaUpdated = conferinte.find(c => c.documentId === selectedConferinta.documentId);
+      const conferintaSnapshot = await getDoc(doc(db, "ConferinteGrup", selectedConferinta.documentId));
+      if (!conferintaSnapshot.exists()) {
+        showAlert("danger", "Conferința nu a fost găsită");
+        setLoading(false);
+        return;
+      }
+
+      const conferintaUpdated = {
+        documentId: conferintaSnapshot.id,
+        ...conferintaSnapshot.data(),
+      };
       
       if (conferintaUpdated.numarMaxParticipanti && 
           (conferintaUpdated.participanti?.length || 0) >= conferintaUpdated.numarMaxParticipanti) {
@@ -1574,7 +1585,7 @@ const AdminConferinteGrup = () => {
                             <i className="fa fa-users fa-lg text-white"></i>
                           </div>
                           <h3 className="text-white mb-1 fw-bold">{totalStats.participants}</h3>
-                          <p className="text-white-50 mb-0 small">Total Participanți</p>
+                          <p className="text-white-50 mb-0 small">Participanți încărcați</p>
                         </div>
                       </div>
                     </div>

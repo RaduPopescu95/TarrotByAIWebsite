@@ -3,10 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import Home1Header from "../home/home-1/header";
 import { 
-  handleGetFirestore, 
   handleUpdateFirestore,
   handleUploadFirestoreGeneral 
 } from "../../../utils/firestoreUtils";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../../firebase";
 import { useAuth } from "../../../context/AuthContext";
 import AlertMessage from "../AlertMessage";
 import moment from "moment";
@@ -81,14 +82,23 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
     }, 5000);
   };
 
+  const fetchConferenceById = async (id) => {
+    if (!id) return null;
+    const snapshot = await getDoc(doc(db, "ConferinteGrup", id));
+    if (!snapshot.exists()) return null;
+    return {
+      documentId: snapshot.id,
+      ...snapshot.data(),
+    };
+  };
+
   // Fetch conferinta details
   const fetchConferinta = async () => {
     if (!conferintaId) return;
     
     try {
       setLoading(true);
-      const conferinte = await handleGetFirestore("ConferinteGrup");
-      const conferintaFound = conferinte.find(c => c.documentId === conferintaId);
+      const conferintaFound = await fetchConferenceById(conferintaId);
       
       if (!conferintaFound) {
         showAlert("danger", "Conferința nu a fost găsită");
@@ -256,8 +266,12 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       console.log("🧪 [TEST MODE] Simulez plata reușită fără Stripe...");
 
       // Verifică din nou dacă mai sunt locuri disponibile
-      const conferinte = await handleGetFirestore("ConferinteGrup");
-      const conferintaUpdated = conferinte.find(c => c.documentId === conferintaId);
+      const conferintaUpdated = await fetchConferenceById(conferintaId);
+      if (!conferintaUpdated) {
+        showAlert("danger", "Conferința nu a fost găsită");
+        setProcessing(false);
+        return;
+      }
       
       if (conferintaUpdated.numarMaxParticipanti && 
           (conferintaUpdated.participanti?.length || 0) >= conferintaUpdated.numarMaxParticipanti) {
@@ -382,8 +396,12 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
       }
 
       // Verifică din nou dacă mai sunt locuri disponibile
-      const conferinte = await handleGetFirestore("ConferinteGrup");
-      const conferintaUpdated = conferinte.find(c => c.documentId === conferintaId);
+      const conferintaUpdated = await fetchConferenceById(conferintaId);
+      if (!conferintaUpdated) {
+        showAlert("danger", "Conferința nu a fost găsită");
+        setProcessing(false);
+        return;
+      }
       
       if (conferintaUpdated.numarMaxParticipanti && 
           (conferintaUpdated.participanti?.length || 0) >= conferintaUpdated.numarMaxParticipanti) {

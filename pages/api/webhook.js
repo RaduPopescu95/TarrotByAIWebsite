@@ -1,7 +1,7 @@
 // pages/api/webhook.js
 import { buffer } from "micro";
 import Stripe from "stripe";
-import { handleUploadFirestoreGeneral, handleGetFirestore } from "../../utils/firestoreUtils";
+import { handleUploadFirestoreGeneral } from "../../utils/firestoreUtils";
 import { createOlbioInvoice } from "../../utils/olbioClient";
 import { v4 as uuidv4 } from "uuid"; // Pentru generarea meetingCode identic cu frontend-ul
 import { getAdminDb } from "../../lib/firebaseAdmin";
@@ -20,11 +20,19 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST;
 // Funcție pentru verificarea duplicatelor (identică cu frontend-ul)
 const checkIfSessionExists = async (session_id) => {
   try {
-    const querySnapshot = await handleGetFirestore("RezervariConsultatii");
-    const existingDocument = querySnapshot.find(
-      (doc) => doc.session_id === session_id
-    );
-    return existingDocument || null;
+    const db = getAdminDb();
+    const snapshot = await db
+      .collection("RezervariConsultatii")
+      .where("session_id", "==", session_id)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+    const docSnap = snapshot.docs[0];
+    return {
+      documentId: docSnap.id,
+      ...docSnap.data(),
+    };
   } catch (error) {
     console.error(
       "Eroare la verificarea existenței session_id în Firestore:",

@@ -6,6 +6,8 @@ import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { useAuth } from "../../../context/AuthContext";
 import moment from "moment";
 import "moment/locale/ro";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../../firebase";
 
 moment.locale("ro");
 
@@ -17,6 +19,27 @@ const SuccessConferintaGrup = () => {
   const [participant, setParticipant] = useState(null);
   const [isTestMode, setIsTestMode] = useState(false);
   const { session_id, conferinta_id, access_link } = router.query;
+
+  const getConferenceIdFromAccessLink = (link) => {
+    if (typeof link !== "string") return null;
+    const match = link.match(/^grup_([^_]+)_/);
+    return match?.[1] || null;
+  };
+
+  const fetchConferenceById = async (id) => {
+    if (!id) return null;
+    const snapshot = await getDoc(doc(db, "ConferinteGrup", id));
+    if (!snapshot.exists()) return null;
+    return {
+      documentId: snapshot.id,
+      ...snapshot.data(),
+    };
+  };
+
+  const findParticipantByAccessLink = (conferenceData, link) =>
+    conferenceData?.participanti?.some(p =>
+      p?.uniqueAccessLink === link || p?.accessLink === link
+    );
 
   useEffect(() => {
     if (session_id) {
@@ -43,20 +66,23 @@ const SuccessConferintaGrup = () => {
         currentUser: currentUser ? "LOGAT" : "GUEST"
       });
 
-      // Fetch toate conferințele
-      const conferinte = await handleGetFirestore("ConferinteGrup");
       let conferintaFound = null;
 
       if (conferinta_id) {
-        // Căutare după ID conferință (metoda normală)
-        conferintaFound = conferinte.find(c => c.documentId === conferinta_id);
+        conferintaFound = await fetchConferenceById(conferinta_id);
       } else if (access_link) {
-        // Căutare după access link (pentru test mode și guest users)
-        conferintaFound = conferinte.find(c => 
-          c.participanti?.some(p => 
-            p.uniqueAccessLink === access_link || p.accessLink === access_link
-          )
-        );
+        const parsedConferenceId = getConferenceIdFromAccessLink(access_link);
+        if (parsedConferenceId) {
+          const directConference = await fetchConferenceById(parsedConferenceId);
+          if (findParticipantByAccessLink(directConference, access_link)) {
+            conferintaFound = directConference;
+          }
+        }
+
+        if (!conferintaFound) {
+          const conferinte = await handleGetFirestore("ConferinteGrup");
+          conferintaFound = conferinte.find(c => findParticipantByAccessLink(c, access_link));
+        }
       }
       
       if (conferintaFound) {

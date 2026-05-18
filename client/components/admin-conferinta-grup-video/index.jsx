@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import Home1Header from "../home/home-1/header";
 // REMOVED: import { useAuth } from "../../../context/AuthContext"; - Now using simple password auth
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { AgoraStreamRecorder } from "../../../utils/agoraStreamRecorder";
 import moment from "moment";
 import "moment/locale/ro";
@@ -23,7 +22,7 @@ const LAYOUT_TYPES = {
   grid: 0,
   pin: 1
 };
-import { doc, onSnapshot, updateDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
 moment.locale("ro");
@@ -519,39 +518,21 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
         setTimeout(() => reject(new Error("Timeout: Firestore call took too long")), 15000);
       });
       
-      console.log("📥 [ADMIN VIDEO] Pornește handleGetFirestore('ConferinteGrup')...");
-      console.log("📥 [FIRESTORE] About to call getDocs on ConferinteGrup collection");
+      console.log("📥 [ADMIN VIDEO] Pornește getDoc('ConferinteGrup/{id}')...");
       console.log("📥 [FIRESTORE] Database instance:", db ? "AVAILABLE" : "NULL");
       
-      // 🔥 IMPORTANT: Use manual Firestore call to ensure documentId is included
-      const firestorePromise = getDocs(collection(db, "ConferinteGrup")).then(querySnapshot => {
-        console.log("📥 [FIRESTORE] getDocs completed successfully");
-        console.log("📥 [FIRESTORE] Query snapshot received:", querySnapshot ? "YES" : "NO");
-        console.log("📥 [FIRESTORE] Snapshot size:", querySnapshot.size);
-        console.log("📥 [FIRESTORE] Snapshot empty:", querySnapshot.empty);
-        
-        const arr = [];
-        console.log(`🔍 [FIRESTORE] Processing ${querySnapshot.size} documents from ConferinteGrup`);
-        
-        querySnapshot.forEach((doc) => {
-          const docData = {
-            documentId: doc.id, // 🔥 Include documentId
-            ...doc.data()
-          };
-          console.log(`🔍 [FIRESTORE] Document found:`, {
-            id: doc.id,
-            titlu: docData.titlu,
-            status: docData.status,
-            dataInceput: docData.dataInceput
-          });
-          arr.push(docData);
-        });
-        
-        console.log(`🔍 [FIRESTORE] Total documents processed: ${arr.length}`);
-        console.log(`🔍 [FIRESTORE] Returning array with ${arr.length} items`);
-        return arr;
+      const firestorePromise = getDoc(doc(db, "ConferinteGrup", actualConferenceId)).then(snapshot => {
+        console.log("📥 [FIRESTORE] getDoc completed successfully");
+        console.log("📥 [FIRESTORE] Document exists:", snapshot.exists());
+        if (!snapshot.exists()) {
+          return null;
+        }
+        return {
+          documentId: snapshot.id,
+          ...snapshot.data(),
+        };
       }).catch(firestoreError => {
-        console.error("💥 [FIRESTORE] getDocs failed:", firestoreError);
+        console.error("💥 [FIRESTORE] getDoc failed:", firestoreError);
         console.error("💥 [FIRESTORE] Error type:", firestoreError.constructor.name);
         console.error("💥 [FIRESTORE] Error message:", firestoreError.message);
         console.error("💥 [FIRESTORE] Error code:", firestoreError.code);
@@ -559,79 +540,24 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       });
       
       console.log("📥 [ADMIN VIDEO] Așteaptă răspuns Firestore...");
-      const conferinte = await Promise.race([firestorePromise, timeoutPromise]);
+      const conferintaFound = await Promise.race([firestorePromise, timeoutPromise]);
       
       const endTime = Date.now();
       console.log("📦 [ADMIN VIDEO] Firestore răspuns în", endTime - startTime, "ms");
-      console.log("📦 [ADMIN VIDEO] Tip răspuns:", typeof conferinte);
-      console.log("📦 [ADMIN VIDEO] Este array:", Array.isArray(conferinte));
-      console.log("📦 [ADMIN VIDEO] Conferințe găsite:", conferinte?.length || 0);
-      
-      console.log(`📦 DEBUGGING: Firestore response: ${conferinte?.length || 0} conferences found`);
+      console.log("📦 [ADMIN VIDEO] Document găsit:", !!conferintaFound);
 
       // 🔥 DEBUG: Firestore call completed successfully
       console.log("🔍 [ADMIN VIDEO] Firestore call completed successfully");
-
-      if (!conferinte) {
-        console.error("💥 [ADMIN VIDEO] Conferinte este null/undefined");
-        throw new Error("Firestore a returnat null/undefined");
-      }
-
-      if (!Array.isArray(conferinte)) {
-        console.error("💥 [ADMIN VIDEO] Conferinte nu este array:", typeof conferinte);
-        throw new Error("Date invalide din Firestore - nu este array");
-      }
-
-      if (conferinte.length === 0) {
-        console.warn("⚠️ [ADMIN VIDEO] Array-ul conferințe este gol");
-        throw new Error("Nu există conferințe în baza de date");
-      }
 
       console.log("🔍 [CONFERENCE SEARCH] === DETAILED SEARCH ANALYSIS ===");
       console.log(`🔍 [CONFERENCE SEARCH] Searching for ID: "${actualConferenceId}"`);
       console.log(`🔍 [CONFERENCE SEARCH] ID length: ${actualConferenceId.length}`);
       console.log(`🔍 [CONFERENCE SEARCH] ID type: ${typeof actualConferenceId}`);
-      
-      // Log toate conferințele disponibile cu detalii complete
-      console.log("🔍 [CONFERENCE SEARCH] Available conferences:");
-      conferinte.forEach((conf, index) => {
-        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID: "${conf.documentId}" (length: ${conf.documentId?.length}) - Title: "${conf.titlu}" - Status: "${conf.status}"`);
-        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID === actualConferenceId: ${conf.documentId === actualConferenceId}`);
-        console.log(`🔍 [CONFERENCE SEARCH] [${index}] ID comparison chars:`, {
-          confId: conf.documentId.split(''),
-          searchId: actualConferenceId.split('')
-        });
-      });
-      
-      // Încercăm să găsim conferința cu logging detaliat
-      console.log("🔍 [CONFERENCE SEARCH] Starting find operation...");
-      const conferintaFound = conferinte.find((c, index) => {
-        const match = c.documentId === actualConferenceId;
-        console.log(`🔍 [CONFERENCE SEARCH] Checking [${index}]: "${c.documentId}" === "${actualConferenceId}" = ${match}`);
-        return match;
-      });
-      
+
       if (!conferintaFound) {
         console.error("💥 [CONFERENCE SEARCH] === CONFERENCE NOT FOUND ===");
         console.error("💥 [CONFERENCE SEARCH] Searched ID:", `"${actualConferenceId}"`);
-        console.error("💥 [CONFERENCE SEARCH] Available IDs:", conferinte.map(c => `"${c.documentId}"`));
-        console.error("💥 [CONFERENCE SEARCH] Total conferences searched:", conferinte.length);
-        
-        // Check for similar IDs
-        const similarIds = conferinte.filter(c => 
-          c.documentId.includes(actualConferenceId) || 
-          actualConferenceId.includes(c.documentId) ||
-          c.documentId.toLowerCase() === actualConferenceId.toLowerCase()
-        );
-        
-        if (similarIds.length > 0) {
-          console.error("💥 [CONFERENCE SEARCH] Similar IDs found:", similarIds.map(c => c.documentId));
-          console.error(`❌ DEBUGGING: Conference NOT FOUND! Searching for: "${actualConferenceId}". Similar found: ${similarIds.map(c => c.documentId).join(', ')}`);
-        } else {
-          console.error(`❌ DEBUGGING: Conference NOT FOUND! Searching for: "${actualConferenceId}". Available: ${conferinte.map(c => c.documentId).join(', ')}`);
-        }
-        
-        throw new Error(`Conferința cu ID "${actualConferenceId}" nu a fost găsită în ${conferinte.length} conferințe`);
+        throw new Error(`Conferința cu ID "${actualConferenceId}" nu a fost găsită`);
       }
 
       console.log("✅ [CONFERENCE SEARCH] === CONFERENCE FOUND ===");

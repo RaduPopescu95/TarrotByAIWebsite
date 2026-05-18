@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
 import { AuthContext } from '../../context/AuthContext';
-import { DatabaseContext } from '../../context/DatabaseContext';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
-import { db } from '../../firebase';
 import Home1Header from '../../client/components/home/home-1/header';
 import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
@@ -16,7 +13,6 @@ moment.locale('ro');
 const InregistrariDescarcare = () => {
   const router = useRouter();
   const { currentUser } = useContext(AuthContext);
-  const { handleGetFirestore } = useContext(DatabaseContext);
   
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,23 +35,21 @@ const InregistrariDescarcare = () => {
 
       console.log('🎥 Loading recordings for user:', currentUser?.email);
 
-      // 🎯 Load recordings from SimpleRecordings only (single source of truth)
-      const recordings = await loadFromCollection('SimpleRecordings');
+      if (!currentUser?.email) {
+        throw new Error('Email-ul utilizatorului lipsește');
+      }
 
-      console.log('✅ Loaded recordings from SimpleRecordings:', recordings.length);
+      const response = await fetch(
+        `/api/recordings/list?userEmail=${encodeURIComponent(currentUser.email)}&limit=100`
+      );
+      const result = await response.json();
 
-      // Enrich recordings with additional data
-      const enrichedRecordings = await enrichRecordingsWithMetadata(recordings);
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Eroare la încărcarea înregistrărilor');
+      }
 
-      // Sort by creation date (newest first)
-      enrichedRecordings.sort((a, b) => {
-        const dateA = a.createdAt || a.uploadTime || a.startTimestamp || 0;
-        const dateB = b.createdAt || b.uploadTime || b.startTimestamp || 0;
-        return dateB - dateA;
-      });
-
-      setRecordings(enrichedRecordings);
-      console.log('✅ Loaded recordings:', enrichedRecordings.length);
+      setRecordings(result.recordings || []);
+      console.log('✅ Loaded recordings:', result.recordings?.length || 0);
 
     } catch (error) {
       console.error('❌ Error loading recordings:', error);
@@ -63,112 +57,6 @@ const InregistrariDescarcare = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadFromCollection = async (collectionName) => {
-    try {
-      const snapshot = await getDocs(
-        query(
-          collection(db, collectionName),
-          orderBy('createdAt', 'desc'),
-          limit(100)
-        )
-      );
-
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        collection: collectionName
-      }));
-    } catch (error) {
-      console.error(`Error loading from ${collectionName}:`, error);
-      return [];
-    }
-  };
-
-  const enrichRecordingsWithMetadata = async (recordings) => {
-    try {
-      // Load conference and consultation data for context
-      const [conferinte, consultatii] = await Promise.all([
-        handleGetFirestore('ConferinteGrup'),
-        handleGetFirestore('RezervariConsultatii')
-      ]);
-
-      return recordings.map(recording => {
-        const enriched = { ...recording };
-
-        // Determine recording type and add context
-        if (recording.meetingCode?.startsWith('group_')) {
-          enriched.type = 'group_conference';
-          enriched.typeLabel = 'Conferință de Grup';
-          
-          // Find conference details
-          const conferenceId = recording.meetingCode.replace('group_', '');
-          const conferinta = conferinte?.find(c => c.documentId === conferenceId);
-          
-          if (conferinta) {
-            enriched.title = conferinta.titlu;
-            enriched.date = conferinta.dataInceput;
-            enriched.time = conferinta.oraInceput;
-            enriched.description = conferinta.descriere;
-            enriched.participants = conferinta.participanti?.length || 0;
-          }
-        } else {
-          enriched.type = 'consultation';
-          enriched.typeLabel = 'Consultație Individuală';
-          
-          // Find consultation details
-          const consultatie = consultatii?.find(c => 
-            c.documentId === recording.meetingCode || 
-            c.meetingCode === recording.meetingCode
-          );
-          
-          if (consultatie) {
-            enriched.title = `Consultație cu ${consultatie.nume || 'Client'}`;
-            enriched.date = consultatie.data;
-            enriched.time = consultatie.ora;
-            enriched.clientName = consultatie.nume;
-            enriched.clientEmail = consultatie.email;
-          }
-        }
-
-        // Format file size
-        if (enriched.size) {
-          enriched.sizeFormatted = formatFileSize(enriched.size);
-        }
-
-        // Format duration
-        if (enriched.duration) {
-          enriched.durationFormatted = formatDuration(enriched.duration);
-        }
-
-        // Format date
-        if (enriched.createdAt || enriched.uploadTime || enriched.startTimestamp) {
-          const timestamp = enriched.createdAt || enriched.uploadTime || enriched.startTimestamp;
-          enriched.createdAtFormatted = moment(timestamp).format('DD MMMM YYYY, HH:mm');
-          enriched.createdAtRelative = moment(timestamp).fromNow();
-        }
-
-        return enriched;
-      });
-    } catch (error) {
-      console.error('Error enriching recordings:', error);
-      return recordings;
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (!bytes) return 'N/A';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return 'N/A';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const filteredRecordings = recordings.filter(recording => {
