@@ -9,7 +9,7 @@ import moment from "moment";
 import "moment/locale/ro";
 // Old chat imports removed - using custom chat implementation
 import { setUserOfflineInChat } from "../../../utils/chatUtils";
-import { ref, push, onValue, off, serverTimestamp, set, update } from 'firebase/database';
+import { ref, push, onValue, off, serverTimestamp, set, update, query as rtdbQuery, limitToLast } from 'firebase/database';
 import { database } from "../../../firebase";
 
 // Import dinamic pentru AgoraUIKit pentru a evita SSR issues
@@ -826,13 +826,16 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
     useEffect(() => {
       if (!meetingId) return;
 
+      let unsubscribeParticipants = null;
+      let unsubscribeMessages = null;
+
       const initAdminChat = async () => {
         try {
           console.log("🔗 [ADMIN CUSTOM CHAT] Connecting to Firebase...");
           
           // Setup participants listener
           const participantsRef = ref(database, `chats/${chatRoomId}/participants`);
-          onValue(participantsRef, (snapshot) => {
+          unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
             const data = snapshot.val();
             console.log("👥 [ADMIN CUSTOM CHAT] Participants update:", data);
             setParticipants(data || {});
@@ -840,7 +843,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
 
           // Setup messages listener
           const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
-          onValue(messagesRef, (snapshot) => {
+          const recentMessagesQuery = rtdbQuery(messagesRef, limitToLast(50));
+          unsubscribeMessages = onValue(recentMessagesQuery, (snapshot) => {
             const data = snapshot.val();
             console.log("💬 [ADMIN CUSTOM CHAT] Messages update:", data);
             if (data) {
@@ -875,6 +879,8 @@ const AdminConferintaGrupVideo = ({ conferenceId }) => {
       // Cleanup
       return () => {
         console.log("🧹 [ADMIN CUSTOM CHAT] Cleaning up...");
+        unsubscribeParticipants?.();
+        unsubscribeMessages?.();
         const chatRef = ref(database, `chats/${chatRoomId}`);
         off(chatRef);
       };

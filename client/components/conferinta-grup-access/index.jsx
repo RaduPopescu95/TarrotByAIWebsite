@@ -25,7 +25,7 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 // Chat imports removed - using custom chat implementation
 import { setUserOfflineInChat, monitorConferenceForChatCleanup } from "../../../utils/chatUtils";
-import { ref, push, onValue, off, serverTimestamp, set, update } from 'firebase/database';
+import { ref, push, onValue, off, serverTimestamp, set, update, query as rtdbQuery, limitToLast } from 'firebase/database';
 import { database } from "../../../firebase";
 
 moment.locale("ro");
@@ -377,6 +377,9 @@ const ConferintaGrupAccess = ({ accessLink }) => {
     useEffect(() => {
       if (!meetingId) return;
 
+      let unsubscribeParticipants = null;
+      let unsubscribeMessages = null;
+
       const initUserChat = async () => {
         try {
                   console.log("🔗 [USER CUSTOM CHAT] Connecting to Firebase...");
@@ -391,7 +394,7 @@ const ConferintaGrupAccess = ({ accessLink }) => {
         
         // Setup participants listener
           const participantsRef = ref(database, `chats/${chatRoomId}/participants`);
-          onValue(participantsRef, (snapshot) => {
+          unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
             const data = snapshot.val();
             console.log("👥 [USER CUSTOM CHAT] Participants update:", data);
             setParticipants(data || {});
@@ -399,7 +402,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
 
           // Setup messages listener
           const messagesRef = ref(database, `chats/${chatRoomId}/messages`);
-          onValue(messagesRef, (snapshot) => {
+          const recentMessagesQuery = rtdbQuery(messagesRef, limitToLast(50));
+          unsubscribeMessages = onValue(recentMessagesQuery, (snapshot) => {
             const data = snapshot.val();
             console.log("💬 [USER CUSTOM CHAT] Messages update:", data);
             if (data) {
@@ -438,6 +442,8 @@ const ConferintaGrupAccess = ({ accessLink }) => {
       // Cleanup
       return () => {
         console.log("🧹 [USER CUSTOM CHAT] Cleaning up...");
+        unsubscribeParticipants?.();
+        unsubscribeMessages?.();
         const chatRef = ref(database, `chats/${chatRoomId}`);
         off(chatRef);
         

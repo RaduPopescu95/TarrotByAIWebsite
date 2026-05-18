@@ -1,7 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -13,6 +12,9 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
+const RECORDINGS_COLLECTION = 'SimpleRecordings';
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -20,78 +22,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userEmail, type, limit = 50 } = req.query;
+    const { userEmail, type } = req.query;
+    const safeLimit = clampLimit(req.query.limit);
+    const email = normalizeEmail(userEmail);
 
-    console.log('📋 [RECORDINGS LIST] Loading recordings for user:', userEmail);
+    console.log('📋 [RECORDINGS LIST] Loading indexed recordings for user:', email);
 
-    if (!userEmail) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User email is required' 
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'User email is required'
       });
     }
 
-    // Load recordings from SimpleRecordings (single source of truth)
-    const collections = ['SimpleRecordings'];
-    const allRecordings = [];
+    const recordings = await loadRecordingsForEmail(email, safeLimit);
+    const uniqueRecordings = deduplicateRecordings(recordings);
 
-    for (const collectionName of collections) {
-      try {
-        console.log(`📋 [RECORDINGS LIST] Loading from ${collectionName}...`);
-        
-        const snapshot = await db.collection(collectionName)
-          .orderBy('createdAt', 'desc')
-          .limit(parseInt(limit))
-          .get();
-
-        const collectionRecordings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          collection: collectionName
-        }));
-
-        allRecordings.push(...collectionRecordings);
-        console.log(`📋 [RECORDINGS LIST] Found ${collectionRecordings.length} recordings in ${collectionName}`);
-      } catch (error) {
-        console.error(`Error loading from ${collectionName}:`, error);
-        // Continue with other collections even if one fails
-      }
-    }
-
-    // Remove duplicates based on meetingCode
-    const uniqueRecordings = allRecordings.reduce((unique, recording) => {
-      const existing = unique.find(r => r.meetingCode === recording.meetingCode);
-      if (!existing) {
-        unique.push(recording);
-      } else if (recording.downloadURL && !existing.downloadURL) {
-        // Replace with recording that has downloadURL
-        const index = unique.indexOf(existing);
-        unique[index] = recording;
-      }
-      return unique;
-    }, []);
-
-    // Filter by type if specified
-    const filteredRecordings = type && type !== 'all' 
-      ? uniqueRecordings.filter(recording => {
+    const filteredRecordings = type && type !== 'all'
+      ? uniqueRecordings.filter((recording) => {
           if (type === 'group_conferences') {
             return recording.meetingCode?.startsWith('group_');
-          } else if (type === 'consultations') {
+          }
+          if (type === 'consultations') {
             return !recording.meetingCode?.startsWith('group_');
           }
           return true;
         })
       : uniqueRecordings;
 
-    // Sort by creation date (newest first)
-    filteredRecordings.sort((a, b) => {
-      const dateA = a.createdAt || a.uploadTime || a.startTimestamp || 0;
-      const dateB = b.createdAt || b.uploadTime || b.startTimestamp || 0;
-      return dateB - dateA;
-    });
-
-    // Enrich recordings with metadata
     const enrichedRecordings = await enrichRecordingsWithMetadata(filteredRecordings);
+    enrichedRecordings.sort((a, b) => getRecordingTime(b) - getRecordingTime(a));
 
     console.log(`📋 [RECORDINGS LIST] Returning ${enrichedRecordings.length} recordings`);
 
@@ -99,9 +59,8 @@ export default async function handler(req, res) {
       success: true,
       recordings: enrichedRecordings,
       total: enrichedRecordings.length,
-      userEmail: userEmail
+      userEmail: email
     });
-
   } catch (error) {
     console.error('❌ [RECORDINGS LIST] Error:', error);
     res.status(500).json({
@@ -112,89 +71,211 @@ export default async function handler(req, res) {
   }
 }
 
+async function loadRecordingsForEmail(email, limitCount) {
+  const recordingsByKey = new Map();
+  const emailCandidates = uniqueValues([email, email.toLowerCase()]);
+  const fields = ['userEmail', 'recipientEmail', 'adminEmail'];
+
+  for (const field of fields) {
+    for (const candidate of emailCandidates) {
+      try {
+        const snapshot = await db
+          .collection(RECORDINGS_COLLECTION)
+          .where(field, '==', candidate)
+          .limit(limitCount)
+          .get();
+
+        snapshot.forEach((docSnap) => {
+          addRecording(recordingsByKey, docSnap, {
+            matchMethod: field,
+            type: field === 'adminEmail' ? 'admin_email_match' : 'direct_email_match',
+          });
+        });
+      } catch (error) {
+        console.error(`⚠️ [RECORDINGS LIST] Query failed for ${field}:`, error.message);
+      }
+    }
+  }
+
+  return Array.from(recordingsByKey.values())
+    .sort((a, b) => getRecordingTime(b) - getRecordingTime(a))
+    .slice(0, limitCount);
+}
+
 async function enrichRecordingsWithMetadata(recordings) {
-  try {
-    // Load conference and consultation data for context
-    const conferenceSnapshot = await db.collection('ConferinteGrup').get();
-    const consultationSnapshot = await db.collection('RezervariConsultatii').get();
-    
-    const conferinte = conferenceSnapshot.docs.map(doc => ({
-      documentId: doc.id,
-      ...doc.data()
-    }));
-    
-    const consultatii = consultationSnapshot.docs.map(doc => ({
-      documentId: doc.id,
-      ...doc.data()
-    }));
+  const enriched = await Promise.all(
+    recordings.map(async (recording) => {
+      const next = { ...recording };
 
-    return recordings.map(recording => {
-      const enriched = { ...recording };
-
-      // Determine recording type and add context
       if (recording.meetingCode?.startsWith('group_')) {
-        enriched.type = 'group_conference';
-        enriched.typeLabel = 'Conferință de Grup';
-        
-        // Find conference details
-        const conferenceId = recording.meetingCode.replace('group_', '');
-        const conferinta = conferinte.find(c => c.documentId === conferenceId);
-        
+        next.type = 'group_conference';
+        next.typeLabel = 'Conferință de Grup';
+
+        const conferinta = await loadConference(recording.meetingCode);
         if (conferinta) {
-          enriched.title = conferinta.titlu;
-          enriched.date = conferinta.dataInceput || conferinta.dataIncepere;
-          enriched.time = conferinta.oraInceput || conferinta.oraIncepere;
-          enriched.description = conferinta.descriere;
-          enriched.participants = conferinta.participanti?.length || 0;
-          enriched.conferenceId = conferenceId;
+          next.title = conferinta.titlu;
+          next.date = conferinta.dataInceput || conferinta.dataIncepere;
+          next.time = conferinta.oraInceput || conferinta.oraIncepere;
+          next.description = conferinta.descriere;
+          next.participants = conferinta.participanti?.length || 0;
+          next.conferenceId = conferinta.documentId;
         }
       } else {
-        enriched.type = 'consultation';
-        enriched.typeLabel = 'Consultație Individuală';
-        
-        // Find consultation details
-        const consultatie = consultatii.find(c => 
-          c.documentId === recording.meetingCode || 
-          c.meetingCode === recording.meetingCode
-        );
-        
+        next.type = 'consultation';
+        next.typeLabel = 'Consultație Individuală';
+
+        const consultatie = await loadConsultation(recording.meetingCode);
         if (consultatie) {
-          enriched.title = `Consultație cu ${consultatie.nume || 'Client'}`;
-          enriched.date = consultatie.data;
-          enriched.time = consultatie.ora;
-          enriched.clientName = consultatie.nume;
-          enriched.clientEmail = consultatie.email;
+          next.title = `Consultație cu ${consultatie.nume || 'Client'}`;
+          next.date = consultatie.selectedSlot?.data || consultatie.data;
+          next.time = consultatie.selectedSlot?.ora || consultatie.ora;
+          next.clientName = consultatie.nume;
+          next.clientEmail = consultatie.email;
+          next.category = consultatie.categorie;
         }
       }
 
-      // Format file size
-      if (enriched.size) {
-        enriched.sizeFormatted = formatFileSize(enriched.size);
-      }
+      applyPresentationFields(next);
+      return next;
+    })
+  );
 
-      // Format duration
-      if (enriched.duration) {
-        enriched.durationFormatted = formatDuration(enriched.duration);
-      }
+  return enriched;
+}
 
-      // Format dates
-      if (enriched.createdAt || enriched.uploadTime || enriched.startTimestamp) {
-        const timestamp = enriched.createdAt || enriched.uploadTime || enriched.startTimestamp;
-        enriched.createdAtFormatted = new Date(timestamp).toLocaleDateString('ro-RO', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
+async function loadConference(meetingCode) {
+  const conferenceId = getConferenceId(meetingCode);
+  if (!conferenceId) return null;
 
-      return enriched;
-    });
+  try {
+    const docSnap = await db.collection('ConferinteGrup').doc(conferenceId).get();
+    if (!docSnap.exists) return null;
+    return { documentId: docSnap.id, ...docSnap.data() };
   } catch (error) {
-    console.error('Error enriching recordings:', error);
-    return recordings;
+    console.error('⚠️ [RECORDINGS LIST] Conference metadata read failed:', error.message);
+    return null;
   }
+}
+
+async function loadConsultation(meetingCode) {
+  for (const candidate of getMeetingCodeVariants(meetingCode)) {
+    try {
+      const directSnap = await db.collection('RezervariConsultatii').doc(candidate).get();
+      if (directSnap.exists) {
+        return { documentId: directSnap.id, ...directSnap.data() };
+      }
+
+      const querySnap = await db
+        .collection('RezervariConsultatii')
+        .where('meetingCode', '==', candidate)
+        .limit(1)
+        .get();
+
+      if (!querySnap.empty) {
+        const docSnap = querySnap.docs[0];
+        return { documentId: docSnap.id, ...docSnap.data() };
+      }
+    } catch (error) {
+      console.error('⚠️ [RECORDINGS LIST] Consultation metadata read failed:', error.message);
+    }
+  }
+
+  return null;
+}
+
+function addRecording(target, docSnap, metadata = {}) {
+  const data = docSnap.data();
+  const recording = {
+    id: docSnap.id,
+    ...data,
+    collection: RECORDINGS_COLLECTION,
+    ...metadata,
+  };
+  const key = recording.meetingCode || docSnap.id;
+  const existing = target.get(key);
+
+  if (!existing || shouldReplaceRecording(existing, recording)) {
+    target.set(key, recording);
+  }
+}
+
+function shouldReplaceRecording(existing, candidate) {
+  if (candidate.downloadURL && !existing.downloadURL) return true;
+  if (candidate.status === 'completed' && existing.status !== 'completed') return true;
+  return getRecordingTime(candidate) > getRecordingTime(existing);
+}
+
+function deduplicateRecordings(recordings) {
+  const uniqueMap = new Map();
+  recordings.forEach((recording) => {
+    const key = recording.meetingCode || recording.id;
+    const existing = uniqueMap.get(key);
+    if (!existing || shouldReplaceRecording(existing, recording)) {
+      uniqueMap.set(key, recording);
+    }
+  });
+  return Array.from(uniqueMap.values());
+}
+
+function applyPresentationFields(recording) {
+  if (recording.size) {
+    recording.sizeFormatted = formatFileSize(recording.size);
+  }
+
+  if (recording.duration) {
+    recording.durationFormatted = formatDuration(recording.duration);
+  }
+
+  const timestamp = recording.createdAt || recording.uploadTime || recording.startTimestamp;
+  if (timestamp) {
+    recording.createdAtFormatted = new Date(getRecordingTime(recording)).toLocaleDateString('ro-RO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  if (recording.downloadURL && !recording.status) {
+    recording.status = 'completed';
+  } else if (!recording.downloadURL) {
+    recording.status = 'processing';
+  }
+}
+
+function getConferenceId(meetingCode) {
+  if (!meetingCode?.startsWith('group_')) return null;
+  return String(meetingCode).replace(/^group_/, '').split('__')[0];
+}
+
+function getMeetingCodeVariants(meetingCode) {
+  if (!meetingCode) return [];
+  const code = String(meetingCode);
+  return uniqueValues([code, code.split('__')[0]]);
+}
+
+function getRecordingTime(recording) {
+  const value = recording?.createdAt || recording?.uploadTime || recording?.startTimestamp || 0;
+  if (typeof value === 'number') return value;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?._seconds === 'number') return value._seconds * 1000;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeEmail(value) {
+  return Array.isArray(value) ? value[0]?.trim() : value?.trim();
+}
+
+function clampLimit(value) {
+  const parsed = parseInt(Array.isArray(value) ? value[0] : value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_LIMIT;
+  return Math.min(parsed, MAX_LIMIT);
+}
+
+function uniqueValues(values) {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 function formatFileSize(bytes) {
@@ -209,4 +290,4 @@ function formatDuration(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-} 
+}

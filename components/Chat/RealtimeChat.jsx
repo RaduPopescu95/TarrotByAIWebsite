@@ -7,7 +7,9 @@ import {
   serverTimestamp, 
   onDisconnect,
   set,
-  update
+  update,
+  query as rtdbQuery,
+  limitToLast
 } from 'firebase/database';
 import { useAuth } from '../../context/AuthContext';
 import { database } from '../../firebase';
@@ -75,6 +77,7 @@ const RealtimeChat = ({
   
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const listenerUnsubscribesRef = useRef([]);
   const chatRoomId = `${meetingType}_${meetingId}`;
   
   // Determine user role and initial name
@@ -130,6 +133,8 @@ const RealtimeChat = ({
     try {
       // Folosește Firebase Realtime Database
       const realtimeDb = database;
+      listenerUnsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
+      listenerUnsubscribesRef.current = [];
       
       // Test connection first
       console.log("🧪 [RealtimeChat] Testing database write/read...");
@@ -188,7 +193,8 @@ const RealtimeChat = ({
 
       console.log("📨 [RealtimeChat] Setting up messages listener...");
       // Listen to messages
-      onValue(messagesRef, (snapshot) => {
+      const recentMessagesQuery = rtdbQuery(messagesRef, limitToLast(50));
+      const unsubscribeMessages = onValue(recentMessagesQuery, (snapshot) => {
         const data = snapshot.val();
         console.log("💬 [RealtimeChat] Messages received:", data);
         if (data) {
@@ -206,18 +212,20 @@ const RealtimeChat = ({
           setMessages([]);
         }
       });
+      listenerUnsubscribesRef.current.push(unsubscribeMessages);
 
       console.log("👥 [RealtimeChat] Setting up participants listener...");
       // Listen to participants
-      onValue(participantsRef, (snapshot) => {
+      const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
         const data = snapshot.val();
         console.log("👥 [RealtimeChat] Participants received:", data);
         setParticipants(data || {});
       });
+      listenerUnsubscribesRef.current.push(unsubscribeParticipants);
 
       console.log("⌨️ [RealtimeChat] Setting up typing listener...");
       // Listen to typing indicators
-      onValue(typingRef, (snapshot) => {
+      const unsubscribeTyping = onValue(typingRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           // Filtrează utilizatorul curent din typing indicators
@@ -233,6 +241,7 @@ const RealtimeChat = ({
           setTypingUsers({});
         }
       });
+      listenerUnsubscribesRef.current.push(unsubscribeTyping);
 
       // Initialize metadata
       const metadataRef = ref(realtimeDb, `chats/${chatRoomId}/metadata`);
@@ -261,6 +270,8 @@ const RealtimeChat = ({
       const realtimeDb = database;
       
       // Remove listeners
+      listenerUnsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
+      listenerUnsubscribesRef.current = [];
       const chatRef = ref(realtimeDb, `chats/${chatRoomId}`);
       off(chatRef);
       
