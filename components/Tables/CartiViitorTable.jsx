@@ -7,6 +7,7 @@ import IconInSelect from "../ProcessTable/IconInSelect";
 import CustomTableContainer from "../ProcessTable/CustomTableContainer";
 import { useStyles } from "../../styles/ProcessTableStyles";
 import { editData, getData, writeData } from "../../utils/realtimeUtils";
+import { rebuildPublicTarotCacheAfterMutation } from "../../utils/publicTarotCacheClient";
 import { getCurrentDateTime } from "../../utils/timeUtils";
 import { uploadImage } from "../../utils/storageUtils";
 import { authentication, storage } from "../../firebase";
@@ -139,58 +140,47 @@ export default function CartiViitorTable() {
     setOpenDeleteDialog(!openDeleteDialog);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const authInstance = authentication;
     const currentUser = authInstance.currentUser;
     const database = getDatabase();
 
-    // 1. Ștergeți elementul din Firebase
-    const dataRef = ref(database, "Citire-Viitor/Carti/" + dialogData.id);
-    remove(dataRef);
+    try {
+      const dataRef = ref(database, "Citire-Viitor/Carti/" + dialogData.id);
+      await remove(dataRef);
 
-    // Creează o nouă matrice care exclude articolul cu ID-ul specificat
-    const updatedDb = db.filter((a) => a.id !== dialogData.id);
-
-    // 2. Resetarea ID-urilor pentru continuitate
-    const finalDb = updatedDb.map((item, index) => {
-      return {
+      const updatedDb = db.filter((a) => a.id !== dialogData.id);
+      const finalDb = updatedDb.map((item, index) => ({
         ...item,
         id: index + 1,
-      };
-    });
+      }));
 
-    // // Șterge toate nodurile existente sub "Services/"
-    const dbRef = ref(database, "Citire-Viitor/Carti/");
-    set(dbRef, {}).then(() => {
-      // După ce toate nodurile sunt șterse, adaugă finalDb ca noile noduri copil
-      finalDb.forEach((item) => {
-        const newDbRef = child(dbRef, String(item.id));
-        set(newDbRef, item);
-      });
-    });
+      const dbRef = ref(database, "Citire-Viitor/Carti/");
+      await set(dbRef, {});
+      await Promise.all(
+        finalDb.map((item) => {
+          const newDbRef = child(dbRef, String(item.id));
+          return set(newDbRef, item);
+        })
+      );
 
-    // Create a reference to the file to delete
-    const deletedRef = storageRef(
-      storage,
-      `images/Citire-Viitor/${currentUser?.uid}/${dialogData.image.fileName}`
-    );
-
-    // Delete the file
-    deleteObject(deletedRef)
-      .then(() => {
-        console.log("File deleted successfully");
-      })
-      .catch((error) => {
-        console.log(
-          "Uh-oh, an error occurred! AT uploadImage DELETE...",
-          error
+      if (dialogData?.image?.fileName) {
+        const deletedRef = storageRef(
+          storage,
+          `images/Citire-Viitor/${currentUser?.uid}/${dialogData.image.fileName}`
         );
-      });
+        deleteObject(deletedRef).catch((error) => {
+          console.log("Uh-oh, an error occurred! AT uploadImage DELETE...", error);
+        });
+      }
 
-    // Actualizează starea db cu noua matrice filtrată
-    setDb(finalDb);
-    handleShowDialog();
-    handleDelete();
+      setDb(finalDb);
+      handleShowDialog();
+      handleDelete();
+      await rebuildPublicTarotCacheAfterMutation("delete future card");
+    } catch (error) {
+      console.log("Error confirmDelete...", error);
+    }
   };
 
   const handleEdit = async (info, image, initialImage, oldFileName) => {
@@ -232,7 +222,7 @@ export default function CartiViitorTable() {
               time: dateTime.time,
             };
           }
-          editData(data, "Citire-Viitor", "Carti", dialogData.id);
+          await editData(data, "Citire-Viitor", "Carti", dialogData.id);
           return data;
         } else {
           console.log("is not found");
@@ -243,6 +233,7 @@ export default function CartiViitorTable() {
       const updatedData = await Promise.all(updateData);
       setDb([...updatedData]);
       handleShowDialog();
+      await rebuildPublicTarotCacheAfterMutation("update future card");
     } catch (err) {
       console.log("Error handleEdit...", err);
     }
@@ -271,13 +262,11 @@ export default function CartiViitorTable() {
       // Folosește await pentru a aștepta finalizarea promisiunii
       await writeData(data, "Citire-Viitor", "Carti");
 
-      let newData = db;
-
-      newData.push(data);
-
-      setDb([...newData]);
+      const newData = [...db, data];
+      setDb(newData);
 
       setShowSettings(!showSettings);
+      await rebuildPublicTarotCacheAfterMutation("create future card");
     } catch (err) {
       console.log("Error handleUpload...", err);
     }

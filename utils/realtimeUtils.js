@@ -10,7 +10,7 @@ import {
   update,
 } from "firebase/database";
 
-export const editData = (data, locationName, secondLocationName, id) => {
+export const editData = async (data, locationName, secondLocationName, id) => {
   console.log("Start edit...");
   console.log(locationName);
   console.log(secondLocationName);
@@ -23,13 +23,13 @@ export const editData = (data, locationName, secondLocationName, id) => {
   const dataRef = ref(db, `${locationName}/${secondLocationName}/` + id);
 
   // Use the update method to update the data
-  update(dataRef, data)
-    .then(() => {
-      console.log("Data updated successfully");
-    })
-    .catch((error) => {
-      console.error("Error updating data: ", error);
-    });
+  try {
+    await update(dataRef, data);
+    console.log("Data updated successfully");
+  } catch (error) {
+    console.error("Error updating data: ", error);
+    throw error;
+  }
 };
 
 export const getData = async (locationName, secondLocationName) => {
@@ -63,14 +63,15 @@ export const getData = async (locationName, secondLocationName) => {
   }
 };
 
-export const writeData = (data, locationName, secondLocationName) => {
+export const writeData = async (data, locationName, secondLocationName) => {
   console.log("Start write...");
   try {
     const db = getDatabase();
 
-    set(ref(db, `${locationName}/${secondLocationName}/` + data.id), data);
+    await set(ref(db, `${locationName}/${secondLocationName}/` + data.id), data);
   } catch (err) {
     console.log("Error on writeServiceData...", err);
+    throw err;
   }
 };
 
