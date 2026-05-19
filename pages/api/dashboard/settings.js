@@ -1,6 +1,8 @@
 import { getGlobalSettings, updateGlobalSettings } from "../../../lib/globalSettings";
 import {
+  getMobileForceUpdateEnabled,
   getMobileUpdatePromptEnabled,
+  setMobileForceUpdateEnabled,
   setMobileUpdatePromptEnabled,
 } from "../../../lib/mobileUpdatePromptSettings";
 
@@ -9,9 +11,11 @@ const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
 async function mergeSettingsForResponse() {
   const global = await getGlobalSettings();
   const mobileUpdatePromptEnabled = await getMobileUpdatePromptEnabled();
+  const mobileForceUpdateEnabled = await getMobileForceUpdateEnabled();
   return {
     ...global,
     mobileUpdatePromptEnabled,
+    mobileForceUpdateEnabled,
   };
 }
 
@@ -42,8 +46,16 @@ export default async function handler(req, res) {
         typeof body.mobileUpdatePromptEnabled === "boolean"
           ? body.mobileUpdatePromptEnabled
           : undefined;
+      const mobileForceUpdate =
+        typeof body.mobileForceUpdateEnabled === "boolean"
+          ? body.mobileForceUpdateEnabled
+          : undefined;
 
-      if (subscriptionUpdate === undefined && mobilePromptUpdate === undefined) {
+      if (
+        subscriptionUpdate === undefined &&
+        mobilePromptUpdate === undefined &&
+        mobileForceUpdate === undefined
+      ) {
         return res.status(400).json({ error: "No valid settings to update" });
       }
 
@@ -55,6 +67,9 @@ export default async function handler(req, res) {
       }
       if (mobilePromptUpdate !== undefined) {
         await setMobileUpdatePromptEnabled(mobilePromptUpdate, "dashboard");
+      }
+      if (mobileForceUpdate !== undefined) {
+        await setMobileForceUpdateEnabled(mobileForceUpdate, "dashboard");
       }
 
       const settings = await mergeSettingsForResponse();

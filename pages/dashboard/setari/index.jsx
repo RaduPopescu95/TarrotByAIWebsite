@@ -14,9 +14,11 @@ function SettingsScreen() {
   const [settings, setSettings] = useState({
     subscriptionSystemEnabled: true,
     mobileUpdatePromptEnabled: false,
+    mobileForceUpdateEnabled: false,
   });
   const [pendingToggle, setPendingToggle] = useState(null);
   const [pendingMobileToggle, setPendingMobileToggle] = useState(null);
+  const [pendingMobileForceToggle, setPendingMobileForceToggle] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,6 +33,7 @@ function SettingsScreen() {
         data.settings || {
           subscriptionSystemEnabled: true,
           mobileUpdatePromptEnabled: false,
+          mobileForceUpdateEnabled: false,
         }
       );
     } catch (e) {
@@ -122,6 +125,46 @@ function SettingsScreen() {
 
   const cancelMobileToggle = () => {
     setPendingMobileToggle(null);
+  };
+
+  const handleMobileForceToggleClick = (newValue) => {
+    setPendingMobileForceToggle(newValue);
+  };
+
+  const confirmMobileForceToggle = async () => {
+    if (pendingMobileForceToggle === null) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dashboard-token": DASHBOARD_SECRET,
+        },
+        body: JSON.stringify({
+          mobileForceUpdateEnabled: pendingMobileForceToggle,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess(
+        pendingMobileForceToggle
+          ? "Force update este activat. Aplicația mobilă este blocată până la actualizare."
+          : "Force update este dezactivat. Promptul poate rămâne activ ca mod soft."
+      );
+      setPendingMobileForceToggle(null);
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelMobileForceToggle = () => {
+    setPendingMobileForceToggle(null);
   };
 
   return (
@@ -298,12 +341,12 @@ function SettingsScreen() {
             </h2>
             <p className="mb-4 text-sm text-slate-600">
               Controlează dacă utilizatorii văd modalul care îi îndeamnă să
-              actualizeze aplicația (ecrane Tarot, Mesaje magice, Noroc).
+              actualizeze aplicația și dacă actualizarea devine obligatorie.
               Același semnal ca documentul Firestore{" "}
               <code className="rounded bg-slate-100 px-1 text-xs">
                 ShouldUpdate/unicde
               </code>{" "}
-              — câmpul <code className="rounded bg-slate-100 px-1 text-xs">update</code>.
+              — câmpurile <code className="rounded bg-slate-100 px-1 text-xs">update</code> și <code className="rounded bg-slate-100 px-1 text-xs">forceUpdate</code>.
             </p>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -340,7 +383,8 @@ function SettingsScreen() {
                   disabled={
                     saving ||
                     pendingToggle !== null ||
-                    pendingMobileToggle !== null
+                    pendingMobileToggle !== null ||
+                    pendingMobileForceToggle !== null
                   }
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
                     settings.mobileUpdatePromptEnabled === true
@@ -353,6 +397,62 @@ function SettingsScreen() {
                   <span
                     className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                       settings.mobileUpdatePromptEnabled === true
+                        ? "translate-x-7"
+                        : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">
+                    Force update este{" "}
+                    <span
+                      className={
+                        settings.mobileForceUpdateEnabled === true
+                          ? "text-rose-600"
+                          : "text-slate-500"
+                      }
+                    >
+                      {settings.mobileForceUpdateEnabled === true
+                        ? "ACTIVAT"
+                        : "DEZACTIVAT"}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {settings.mobileForceUpdateEnabled === true
+                      ? "Utilizatorii nu pot închide modalul și nu pot continua în aplicație până nu fac update."
+                      : "Modalul poate rămâne soft (închidere permisă), în funcție de toggle-ul de prompt."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleMobileForceToggleClick(
+                      !(settings.mobileForceUpdateEnabled === true)
+                    )
+                  }
+                  disabled={
+                    saving ||
+                    pendingToggle !== null ||
+                    pendingMobileToggle !== null ||
+                    pendingMobileForceToggle !== null
+                  }
+                  className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
+                    settings.mobileForceUpdateEnabled === true
+                      ? "bg-rose-500"
+                      : "bg-slate-300"
+                  }`}
+                  role="switch"
+                  aria-checked={settings.mobileForceUpdateEnabled === true}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      settings.mobileForceUpdateEnabled === true
                         ? "translate-x-7"
                         : "translate-x-0"
                     }`}
@@ -499,6 +599,76 @@ function SettingsScreen() {
                   {saving
                     ? "Se salvează…"
                     : pendingMobileToggle
+                    ? "Activează"
+                    : "Dezactivează"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal — force update mobil */}
+        {pendingMobileForceToggle !== null && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+              onClick={cancelMobileForceToggle}
+              aria-label="Închide"
+            />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Confirmare — force update
+              </h2>
+
+              {pendingMobileForceToggle ? (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                  <p className="font-medium text-rose-900">
+                    Activezi actualizare obligatorie
+                  </p>
+                  <p className="mt-2 text-sm text-rose-800">
+                    Utilizatorii nu vor putea închide modalul de actualizare și
+                    nu vor putea continua în aplicație până nu fac update.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="font-medium text-slate-900">
+                    Dezactivezi actualizare obligatorie
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    Utilizatorii revin la modul soft (promptul se poate închide
+                    dacă rămâne activ).
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={cancelMobileForceToggle}
+                  disabled={saving}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmMobileForceToggle}
+                  disabled={saving}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 ${
+                    pendingMobileForceToggle
+                      ? "bg-rose-600 hover:bg-rose-500"
+                      : "bg-slate-600 hover:bg-slate-500"
+                  }`}
+                >
+                  {saving
+                    ? "Se salvează…"
+                    : pendingMobileForceToggle
                     ? "Activează"
                     : "Dezactivează"}
                 </button>
