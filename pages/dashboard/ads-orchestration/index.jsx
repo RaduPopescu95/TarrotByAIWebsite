@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import Head from "next/head";
-import CustomDrawer from "../../../../components/Dashboard/CustomDrawer";
-import LocalPasswordGate from "../../../../components/Dashboard/LocalPasswordGate";
-import { getAdsEnv } from "../../../../lib/ads/env";
+import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
+import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
+import { getAdsEnv } from "../../../lib/ads/env";
 import {
   getRouteSlots,
   isRouteEligibleForAds,
   isSlotEnabledForRoute,
   resolveActiveAdProvider,
-} from "../../../../lib/ads/orchestrator";
-import { AD_SLOT_KEYS } from "../../../../lib/ads/config";
-import useAdsConsent from "../../../../hooks/useAdsConsent";
+} from "../../../lib/ads/orchestrator";
+import { AD_SLOT_KEYS } from "../../../lib/ads/config";
+import useAdsConsent from "../../../hooks/useAdsConsent";
 
 function formatValue(value) {
   if (value === null || typeof value === "undefined" || value === "") return "not set";
