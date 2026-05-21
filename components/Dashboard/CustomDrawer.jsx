@@ -36,6 +36,7 @@ import PaletteIcon from "@mui/icons-material/Palette";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
+import AdsClickIcon from "@mui/icons-material/AdsClick";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -111,6 +112,7 @@ const dashboardPrefetchScreens = [
   "poza-api",
   "abonati",
   "setari",
+  "ads-orchestration",
 ];
 
 export default function CustomDrawer(props) {
@@ -647,6 +649,23 @@ export default function CustomDrawer(props) {
                   <SettingsIcon />
                 </ListItemIcon>
                 <ListItemText primary="Setări" sx={{ color: "white" }} />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "ads-orchestration",
+                    text: "Orchestrare Ads",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Orchestrare Ads" ? "#ffc045" : "white",
+                  }}
+                >
+                  <AdsClickIcon />
+                </ListItemIcon>
+                <ListItemText primary="Orchestrare Ads" sx={{ color: "white" }} />
               </ListItemButton>
               <ListItemButton onClick={() => { clearDashboardAccess(); router.replace("/dashboard"); }}>
                 <ListItemIcon

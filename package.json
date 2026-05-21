@@ -8,6 +8,10 @@
     "dev:debug": "ENABLE_I18N_LOGS=true next dev",
     "build": "next build",
     "build:debug": "ENABLE_I18N_LOGS=true next build",
+    "test": "npm run test:unit && npm run test:smoke",
+    "test:unit": "jest --testPathIgnorePatterns=smoke",
+    "test:smoke": "jest --testRegex='.*\\.smoke\\.test\\.(js|jsx|ts|tsx)$'",
+    "test:smoke:live": "RUN_LIVE_SMOKE=1 jest --testRegex='.*\\.live-smoke\\.test\\.(js|jsx|ts|tsx)$'",
     "start": "next start",
     "lint": "next lint",
     "migrate:courses-media": "node scripts/migrate-course-media-private.cjs",
@@ -174,6 +178,8 @@
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
+    "jest": "^30.4.2",
+    "jest-environment-node": "^30.4.1",
     "typescript": "5.4.5"
   }
 }

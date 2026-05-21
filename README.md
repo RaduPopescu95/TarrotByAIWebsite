@@ -53,3 +53,45 @@ You can temporarily disable Stripe checkout session creation (both individual co
   - `?maintenance_key=<PAYMENTS_MAINTENANCE_KEY>`
 
 Users without the key will see a maintenance message and will be prevented from starting payment.
+
+## Ads orchestration (policy-first)
+
+This project uses a centralized multi-network ad orchestration layer:
+
+- Route and slot policy: `lib/ads/config.js`
+- Env parsing and toggles: `lib/ads/env.js`
+- Provider resolution per route: `lib/ads/orchestrator.js`
+- Runtime script loader: `components/Ads/AdsProviderScripts.jsx`
+- Slot renderer: `components/Ads/AdSlot.jsx`
+
+### Environment variables
+
+- `NEXT_PUBLIC_ADS_ENABLED`: `true` or `false`
+- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`: `adsense`, `monetag`, or `adsterra`
+- `NEXT_PUBLIC_ADS_CONSENT_REQUIRED`: `true` or `false` (default expected: `true`)
+
+AdSense:
+
+- `NEXT_PUBLIC_ENABLE_ADSENSE`: `true` or `false`
+- `NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID`: your `ca-pub-...` client id
+- `NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO`: slot id used by the `after-hero` placement
+- `NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED`: slot id used by the `in-feed` placement
+
+Monetag:
+
+- `NEXT_PUBLIC_ENABLE_MONETAG`: `true` or `false`
+- `NEXT_PUBLIC_MONETAG_ZONE_ID`: Monetag zone id
+- `NEXT_PUBLIC_MONETAG_FORMAT`: default `inpage_push` (intrusive formats are blocked)
+- `NEXT_PUBLIC_MONETAG_SCRIPT_SRC`: optional explicit script source (overrides derived URL)
+
+Adsterra (prepared, disabled by default):
+
+- `NEXT_PUBLIC_ENABLE_ADSTERRA`: `true` or `false` (default expected: `false`)
+- `NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC`: explicit script source
+
+### Compliance guardrails
+
+- Ads render only on explicitly allowed public content routes and slot placements.
+- Ads are blocked on sensitive/private/transactional routes.
+- Intrusive secondary formats are blocked (`popunder`, `onclick`, `smartlink`).
+- When consent is required, ad scripts are loaded only after valid CMP consent is available via TCF API (`window.__tcfapi`).

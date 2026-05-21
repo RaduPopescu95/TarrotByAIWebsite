@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import languageDetector from "../lib/languageDetector";
 import { resolveUiLocale } from "../lib/siteLocales";
 import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
-import GoogleAdSenseScript from "../components/Ads/GoogleAdSenseScript";
+import AdsProviderScripts from "../components/Ads/AdsProviderScripts";
 import { useFirstVisit } from "../hooks/useFirstVisit";
 import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
 import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
@@ -168,7 +168,7 @@ function MyApp({ Component, pageProps }) {
             <CacheProvider value={createCache({ key: "css" })}>
               <ThemeProvider theme={defaultTheme}>
                 <CssBaseline />
-                <GoogleAdSenseScript />
+                <AdsProviderScripts />
                 
                 {/* Language Selection Dialog for First Visit */}
                 <LanguageSelectionDialog
