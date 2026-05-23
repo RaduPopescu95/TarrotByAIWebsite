@@ -5,7 +5,7 @@ import useAdsRuntime from "../../hooks/useAdsRuntime";
 import { AD_PROVIDERS } from "../../lib/ads/config";
 
 export default function AdsProviderScripts() {
-  const { adsEnv, canLoadScripts, hasConsent, consentResolved } =
+  const { adsEnv, activeProvider, canLoadScripts, hasConsent, consentResolved } =
     useAdsRuntime();
 
   if (adsEnv.consentRequired && !consentResolved) return null;
@@ -19,7 +19,7 @@ export default function AdsProviderScripts() {
           canLoadScripts &&
           adsEnv.enableAdSense &&
           Boolean(adsEnv.adSenseClientId) &&
-          adsEnv.primaryProvider === AD_PROVIDERS.ADSENSE
+          activeProvider === AD_PROVIDERS.ADSENSE
         }
       />
       <MonetagScript
@@ -29,7 +29,8 @@ export default function AdsProviderScripts() {
           canLoadScripts &&
           adsEnv.enableMonetag &&
           Boolean(adsEnv.monetagScriptSrc) &&
-          adsEnv.monetagFormat !== "onclick"
+          adsEnv.monetagFormat !== "onclick" &&
+          activeProvider === AD_PROVIDERS.MONETAG
         }
       />
       <AdsterraScript
@@ -37,7 +38,8 @@ export default function AdsProviderScripts() {
         shouldLoad={
           canLoadScripts &&
           adsEnv.enableAdsterra &&
-          Boolean(adsEnv.adsterraScriptSrc)
+          Boolean(adsEnv.adsterraScriptSrc) &&
+          activeProvider === AD_PROVIDERS.ADSTERRA
         }
       />
     </>
