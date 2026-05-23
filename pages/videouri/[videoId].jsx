@@ -6,6 +6,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import AdSlot from "../../components/Ads/AdSlot";
 import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
@@ -316,6 +317,7 @@ export default function VideoDetailPage() {
                       {video.description}
                     </p>
                   ) : null}
+                  <AdSlot slotKey="after-hero" className="mt-6" />
                 </div>
 
                 <aside className="mt-10 min-w-0 xl:mt-0 xl:border-l xl:border-slate-200 xl:pl-8">

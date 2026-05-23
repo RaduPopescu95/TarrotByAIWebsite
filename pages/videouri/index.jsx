@@ -6,6 +6,7 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import AdSlot from "../../components/Ads/AdSlot";
 import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
@@ -412,6 +413,7 @@ export default function VideoLibraryPage() {
                       {accessFilterControls}
                     </div>
                   </div>
+                  <AdSlot slotKey="after-hero" className="mb-6 lg:mb-7" />
 
                   {filteredVideos.length === 0 ? (
                     <p className="py-12 text-center text-slate-600">
@@ -545,6 +547,7 @@ export default function VideoLibraryPage() {
                         );
                       })}
                       </div>
+                      <AdSlot slotKey="in-feed" className="mt-8" />
                       {showPagination ? (
                         <nav
                           aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
