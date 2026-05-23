@@ -21,6 +21,7 @@ export default function AdsProviderScripts() {
       />
       <MonetagScript
         scriptSrc={adsEnv.monetagScriptSrc}
+        zoneId={adsEnv.monetagZoneId}
         shouldLoad={
           canLoadScripts && activeProvider === AD_PROVIDERS.MONETAG
         }
