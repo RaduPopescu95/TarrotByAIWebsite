@@ -9,6 +9,7 @@ export default function AdsterraScript({ scriptSrc, shouldLoad }) {
       async
       strategy="afterInteractive"
       src={scriptSrc}
+      data-cfasync="false"
     />
   );
 }
