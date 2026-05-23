@@ -5,7 +5,7 @@ import useAdsRuntime from "../../hooks/useAdsRuntime";
 import { AD_PROVIDERS } from "../../lib/ads/config";
 
 export default function AdsProviderScripts() {
-  const { adsEnv, activeProvider, canLoadScripts, hasConsent, consentResolved } =
+  const { adsEnv, canLoadScripts, hasConsent, consentResolved } =
     useAdsRuntime();
 
   if (adsEnv.consentRequired && !consentResolved) return null;
@@ -16,20 +16,28 @@ export default function AdsProviderScripts() {
       <GoogleAdSenseScript
         clientId={adsEnv.adSenseClientId}
         shouldLoad={
-          canLoadScripts && activeProvider === AD_PROVIDERS.ADSENSE
+          canLoadScripts &&
+          adsEnv.enableAdSense &&
+          Boolean(adsEnv.adSenseClientId) &&
+          adsEnv.primaryProvider === AD_PROVIDERS.ADSENSE
         }
       />
       <MonetagScript
         scriptSrc={adsEnv.monetagScriptSrc}
         zoneId={adsEnv.monetagZoneId}
         shouldLoad={
-          canLoadScripts && activeProvider === AD_PROVIDERS.MONETAG
+          canLoadScripts &&
+          adsEnv.enableMonetag &&
+          Boolean(adsEnv.monetagScriptSrc) &&
+          adsEnv.monetagFormat !== "onclick"
         }
       />
       <AdsterraScript
         scriptSrc={adsEnv.adsterraScriptSrc}
         shouldLoad={
-          canLoadScripts && activeProvider === AD_PROVIDERS.ADSTERRA
+          canLoadScripts &&
+          adsEnv.enableAdsterra &&
+          Boolean(adsEnv.adsterraScriptSrc)
         }
       />
     </>
