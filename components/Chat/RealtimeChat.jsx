@@ -136,12 +136,6 @@ const RealtimeChat = ({
       listenerUnsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
       listenerUnsubscribesRef.current = [];
       
-      // Test connection first
-      console.log("🧪 [RealtimeChat] Testing database write/read...");
-      const testRef = ref(realtimeDb, `test/${Date.now()}`);
-      await set(testRef, { test: true, timestamp: Date.now() });
-      console.log("✅ [RealtimeChat] Database write test successful!");
-      
       // Determine display name
       let displayName = 'Guest User';
       

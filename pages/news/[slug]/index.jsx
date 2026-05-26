@@ -5,17 +5,21 @@ import { CalendarDays, Clock, User, ArrowLeft, Share2, BookOpen, Tag } from "luc
 import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
-import { filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
+import { buildArticleHref, filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import languageDetector from "../../../lib/languageDetector";
-import { toUrlSlug } from "../../../utils/commonUtils";
 import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
+import {
+  DEFAULT_ISR_REVALIDATE_SECONDS,
+  withFirestoreCostLog,
+} from "../../../lib/firestoreCostLogger";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
 const LEGACY_LOOKUP_LIMIT = 120;
+const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
 
 function convertFirestoreData(obj) {
   if (obj === null || obj === undefined) return obj;
@@ -45,7 +49,7 @@ function mapDocToArticle(docSnap) {
   };
 }
 
-async function findArticleByLegacyId(rawId) {
+async function findArticleByLegacyId(rawId, { locale, page } = {}) {
   const normalizedId = typeof rawId === "string" ? rawId.trim() : "";
   if (!normalizedId) return null;
 
@@ -56,12 +60,21 @@ async function findArticleByLegacyId(rawId) {
   }
 
   for (const candidate of candidates) {
-    const legacySnapshot = await getDocs(
-      query(
-        collection(db, "BlogArticole"),
-        where("id", "==", candidate),
-        limit(1)
-      )
+    const legacySnapshot = await withFirestoreCostLog(
+      {
+        page: page || "news.detail",
+        locale,
+        queryName: "news.detail.articleByLegacyId",
+        isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+      },
+      () =>
+        getDocs(
+          query(
+            collection(db, "BlogArticole"),
+            where("id", "==", candidate),
+            limit(1)
+          )
+        )
     );
     if (!legacySnapshot.empty) {
       return mapDocToArticle(legacySnapshot.docs[0]);
@@ -71,15 +84,16 @@ async function findArticleByLegacyId(rawId) {
   return null;
 }
 
-export async function getServerSideProps(context) {
+export async function getStaticPaths() {
+  return {
+    paths: [],
+    fallback: "blocking",
+  };
+}
+
+export async function getStaticProps(context) {
   try {
-    const { locale, params, req, query: queryParams } = context;
-    const idFromQuery =
-      typeof queryParams?.id === "string"
-        ? queryParams.id.trim()
-        : Array.isArray(queryParams?.id)
-        ? queryParams.id[0]?.trim() || ""
-        : "";
+    const { locale, params } = context;
 
     let filteredArticle = null;
     let articlesData = [];
@@ -87,48 +101,46 @@ export async function getServerSideProps(context) {
     const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
     const slugPrefixId = slug ? slug.split("-")[0].trim() : "";
 
-    if (idFromQuery) {
-      const articleDoc = await getDoc(doc(db, "BlogArticole", idFromQuery));
-      if (articleDoc.exists()) {
-        filteredArticle = mapDocToArticle(articleDoc);
-      }
-      if (!filteredArticle) {
-        filteredArticle = await findArticleByLegacyId(idFromQuery);
-      }
-
-      if (filteredArticle) {
-        const sidebarSnapshot = await getDocs(
-          query(
-            collection(db, "BlogArticole"),
-            orderBy("firstUploadTimestamp", "desc"),
-            limit(SIDEBAR_ARTICLES_LIMIT)
-          )
-        );
-        articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
-        articlesData = filterArticlesBeforeCurrentTime(articlesData);
-      }
-    }
-
     if (!filteredArticle) {
       if (slugPrefixId) {
-        const legacyArticleDoc = await getDoc(doc(db, "BlogArticole", slugPrefixId));
+        const legacyArticleDoc = await withFirestoreCostLog(
+          {
+            page: "news.detail",
+            locale,
+            queryName: "news.detail.articleByDocumentId",
+            isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+          },
+          () => getDoc(doc(db, "BlogArticole", slugPrefixId))
+        );
         if (legacyArticleDoc.exists()) {
           filteredArticle = mapDocToArticle(legacyArticleDoc);
         }
       }
 
       if (!filteredArticle && slugPrefixId) {
-        filteredArticle = await findArticleByLegacyId(slugPrefixId);
+        filteredArticle = await findArticleByLegacyId(slugPrefixId, {
+          locale,
+          page: "news.detail",
+        });
       }
     }
 
     if (!filteredArticle) {
-      const fallbackSnapshot = await getDocs(
-        query(
-          collection(db, "BlogArticole"),
-          orderBy("firstUploadTimestamp", "desc"),
-          limit(LEGACY_LOOKUP_LIMIT)
-        )
+      const fallbackSnapshot = await withFirestoreCostLog(
+        {
+          page: "news.detail",
+          locale,
+          queryName: "news.detail.legacyFallback120",
+          isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+        },
+        () =>
+          getDocs(
+            query(
+              collection(db, "BlogArticole"),
+              orderBy("firstUploadTimestamp", "desc"),
+              limit(LEGACY_LOOKUP_LIMIT)
+            )
+          )
       );
       articlesData = fallbackSnapshot.docs.map(mapDocToArticle);
       articlesData = filterArticlesBeforeCurrentTime(articlesData);
@@ -140,17 +152,40 @@ export async function getServerSideProps(context) {
             String(article?.id || "") === fallbackId
         ) || null;
       if (!filteredArticle) {
-        return { notFound: true };
+        return {
+          props: {
+            articles: {
+              articlesData: [],
+              latestArticles: [],
+              lastArticle: null,
+              latestFiveArticles: [],
+            },
+            filteredArticle: null,
+            relatedArticles: [],
+            slug,
+            ...(await serverSideTranslations(locale, ["common"])),
+          },
+          revalidate: ISR_REVALIDATE_SECONDS,
+        };
       }
     }
 
     if (articlesData.length === 0) {
-      const sidebarSnapshot = await getDocs(
-        query(
-          collection(db, "BlogArticole"),
-          orderBy("firstUploadTimestamp", "desc"),
-          limit(SIDEBAR_ARTICLES_LIMIT)
-        )
+      const sidebarSnapshot = await withFirestoreCostLog(
+        {
+          page: "news.detail",
+          locale,
+          queryName: "news.detail.sidebar",
+          isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+        },
+        () =>
+          getDocs(
+            query(
+              collection(db, "BlogArticole"),
+              orderBy("firstUploadTimestamp", "desc"),
+              limit(SIDEBAR_ARTICLES_LIMIT)
+            )
+          )
       );
       articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
       articlesData = filterArticlesBeforeCurrentTime(articlesData);
@@ -162,11 +197,9 @@ export async function getServerSideProps(context) {
       articlesData = [filteredArticle, ...articlesData].slice(0, SIDEBAR_ARTICLES_LIMIT);
     }
 
-    // Get URL for meta tags
-    const protocol = req.headers['x-forwarded-proto'] || 'http';
-    const host = req.headers.host;
-    const baseUrl = `${protocol}://${host}`;
-    const currentUrl = `${baseUrl}${req.url}`;
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com").replace(/\/$/, "");
+    const localePrefix = locale && locale !== "ro" ? `/${locale}` : "";
+    const currentUrl = `${baseUrl}${localePrefix}/news/${slug}`;
 
     // Add current URL to article
     filteredArticle.currentUrl = currentUrl;
@@ -200,6 +233,7 @@ export async function getServerSideProps(context) {
         relatedArticles,
         ...(await serverSideTranslations(locale, ["common"])),
       },
+      revalidate: ISR_REVALIDATE_SECONDS,
     };
   } catch (error) {
     console.error("Eroare la preluarea datelor în slug:", error.message);
@@ -207,14 +241,25 @@ export async function getServerSideProps(context) {
       props: {
         error: error.message,
       },
+      revalidate: ISR_REVALIDATE_SECONDS,
     };
   }
 }
 
-function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
+function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
   const detectedLng = languageDetector.detect();
+
+  React.useEffect(() => {
+    if (filteredArticle || !router.isReady) return;
+    const legacyId = Array.isArray(router.query?.id) ? router.query.id[0] : router.query?.id;
+    if (typeof legacyId === "string" && legacyId.trim()) {
+      const safeId = encodeURIComponent(legacyId.trim());
+      const safeSlug = typeof slug === "string" && slug.trim() ? slug.trim() : "article";
+      router.replace(`/news/${safeId}-${safeSlug}`);
+    }
+  }, [filteredArticle, router, slug]);
 
   // Function to get article URL with proper language and slug
   const getArticleUrl = (article) => {
@@ -224,10 +269,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error }) {
       ? article?.info?.ru?.nume 
       : article?.info?.[detectedLng]?.nume || article?.info?.ro?.nume || "untitled";
     
-    return {
-      pathname: `/news/${toUrlSlug(articleTitle)}`,
-      query: { id: article?.id },
-    };
+    return buildArticleHref(article, articleTitle);
   };
 
   if (error) {

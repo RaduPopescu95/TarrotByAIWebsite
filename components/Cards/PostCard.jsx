@@ -1,5 +1,5 @@
 import React from "react";
-import { toUrlSlug } from "../../utils/commonUtils";
+import { buildArticleHref } from "../../utils/commonUtils";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
 
@@ -10,16 +10,14 @@ function PostCard({ article, isRo }) {
   return (
     <article style={styles.cardContainer}>
       <Link
-        href={{
-          pathname: `/news/${toUrlSlug(
-            currentLanguage === "hi"
-              ? article?.info?.hu?.nume
-              : currentLanguage === "id"
-                ? article?.info?.ru?.nume
-                : article?.info?.[currentLanguage]?.nume || article?.info?.ro?.nume || "untitled"
-          )}`,
-          query: { id: article?.id },
-        }}
+        href={buildArticleHref(
+          article,
+          currentLanguage === "hi"
+            ? article?.info?.hu?.nume
+            : currentLanguage === "id"
+              ? article?.info?.ru?.nume
+              : article?.info?.[currentLanguage]?.nume || article?.info?.ro?.nume || "untitled"
+        )}
         passHref={false}
         style={styles.linkWrapper}
       >

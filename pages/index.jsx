@@ -19,27 +19,30 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
-import { filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
+import { buildArticleHref, filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
 import Footer from "../components/Footer";
 import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
 import CourseCard from "../components/Courses/CourseCard";
 import {
   collection,
-  doc,
-  getDoc,
   getDocs,
   limit,
   orderBy,
   query,
-  startAfter,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { normalizeLocale } from "../lib/courses";
 import { loadPremiumVideoLibraryVideos } from "../lib/loadPremiumVideoLibrary";
+import {
+  DEFAULT_ISR_REVALIDATE_SECONDS,
+  logFirestoreCost,
+  withFirestoreCostLog,
+} from "../lib/firestoreCostLogger";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
+const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
 
 function formatVideoDuration(seconds, fallback) {
   if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 1) return fallback;
@@ -48,10 +51,9 @@ function formatVideoDuration(seconds, fallback) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export async function getServerSideProps({ locale }) {
+export async function getStaticProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   let PAGE_SIZE = 12;
-  console.log("Start fetch...");
   let articlesRef = collection(db, "BlogArticole");
   let q = query(
     articlesRef,
@@ -59,12 +61,21 @@ export async function getServerSideProps({ locale }) {
     limit(PAGE_SIZE)
   );
 
-  const documentSnapshots = await getDocs(q);
+  const documentSnapshots = await withFirestoreCostLog(
+    {
+      page: "home",
+      locale,
+      queryName: "home.blogArticles.initial",
+      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+    },
+    () => getDocs(q)
+  );
   let articlesData = documentSnapshots.docs.map((doc) => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: data?.id ?? doc.id,
+      documentId: doc.id,
       // Convertim firstUploadTimestamp la un format serializabil
       firstUploadTimestamp: data.firstUploadTimestamp
         ? data.firstUploadTimestamp.toDate().toISOString()
@@ -78,7 +89,6 @@ export async function getServerSideProps({ locale }) {
       ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
       : null;
 
-  console.log("Articole...aici...", articlesData.length);
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -117,14 +127,34 @@ export async function getServerSideProps({ locale }) {
   }
 
   let homeVideosPreview = [];
+  const videoStartedAt = Date.now();
   try {
     homeVideosPreview = await loadPremiumVideoLibraryVideos({
       locale: normalizeLocale(locale, "ro"),
       premiumActive: false,
       previewLimit: HOME_VIDEO_PREVIEW_LIMIT,
     });
+    logFirestoreCost({
+      page: "home",
+      locale,
+      queryName: "home.videoPreview",
+      docsRead: Array.isArray(homeVideosPreview) ? homeVideosPreview.length : 0,
+      queryCount: 1,
+      durationMs: Date.now() - videoStartedAt,
+      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+    });
   } catch (err) {
-    console.error("[index getServerSideProps] homeVideosPreview", err?.message || err);
+    logFirestoreCost({
+      page: "home",
+      locale,
+      queryName: "home.videoPreview",
+      docsRead: 0,
+      queryCount: 1,
+      durationMs: Date.now() - videoStartedAt,
+      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+      error: err,
+    });
+    console.error("[index getStaticProps] homeVideosPreview", err?.message || err);
   }
 
   return {
@@ -134,6 +164,7 @@ export async function getServerSideProps({ locale }) {
       homeVideosPreview,
       ...(await serverSideTranslations(locale, ["common"])),
     },
+    revalidate: ISR_REVALIDATE_SECONDS,
   };
 }
 
@@ -170,7 +201,7 @@ function Landing(props) {
   } = useApiData();
   const { t, i18n } = useTranslation("common");
 
-  const { articles, lastVisibleId, homeVideosPreview = [] } = props;
+  const { articles, homeVideosPreview = [] } = props;
 
   const router = useRouter();
 
@@ -200,7 +231,6 @@ function Landing(props) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 4; // Setează numărul de articole pe pagină la 4
-  const [lastVisible, setLastVisible] = useState(null);
 
   // Calculează indexul de start și de sfârșit pentru articolele de pe pagina curentă
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -289,22 +319,6 @@ function Landing(props) {
 
     setArticlesToDisplay(newArticlesToDisplay);
   }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
-
-  useEffect(() => {
-    const loadInitialLastVisible = async () => {
-      if (lastVisibleId) {
-        const lastVisibleDocRef = doc(db, "BlogArticole", lastVisibleId);
-        const lastVisibleSnapshot = await getDoc(lastVisibleDocRef);
-        if (lastVisibleSnapshot.exists()) {
-          setLastVisible(lastVisibleSnapshot);
-        } else {
-          console.log("Nu s-a găsit documentul pentru lastVisibleId.");
-        }
-      }
-    };
-
-    loadInitialLastVisible();
-  }, [lastVisibleId]); // Dependența de lastVisibleId asigură că efectul se rulează la încărcarea componentei
 
   useEffect(() => {
     let mounted = true;
@@ -703,7 +717,7 @@ function Landing(props) {
                                   
                                   return (
                                     <div key={index} className="group">
-                                      <a href={`/news/${articleTitle?.toLowerCase()?.replace(/[^\w\s]/gi, '')?.replace(/\s+/g, '-')}?id=${article.id}`} className="flex items-center gap-4 p-3 rounded-xl hover:bg-indigo-50 transition-colors duration-200">
+                                      <a href={buildArticleHref(article, articleTitle)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-indigo-50 transition-colors duration-200">
                                         <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden">
                                           <img 
                                             src={article.image?.finalUri} 

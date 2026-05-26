@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { toUrlSlug } from "../../../utils/commonUtils";
+import { buildArticleHref } from "../../../utils/commonUtils";
 
 function PostWidget({ lastFiveArticles }) {
   const { t } = useTranslation("common");
@@ -36,10 +36,7 @@ function PostWidget({ lastFiveArticles }) {
           return (
             <Link
               key={index}
-              href={{
-                pathname: `/news/${toUrlSlug(articleTitle)}`,
-                query: { id: article?.id },
-              }}
+              href={buildArticleHref(article, articleTitle)}
               passHref={false}
               style={styles.linkWrapper}
             >

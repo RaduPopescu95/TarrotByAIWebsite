@@ -20,6 +20,21 @@ export const toUrlSlug = (string) => {
     .replace(/^-+|-+$/g, ""); // Remove leading and trailing hyphens
 };
 
+export const getArticleRouteId = (article) => {
+  const candidates = [article?.documentId, article?.id];
+  const value = candidates.find(
+    (candidate) => candidate !== undefined && candidate !== null && String(candidate).trim()
+  );
+  return value === undefined ? "" : String(value).trim();
+};
+
+export const buildArticleHref = (article, title) => {
+  const articleId = getArticleRouteId(article);
+  const articleSlug = toUrlSlug(title || article?.info?.ro?.nume || "article");
+  const slug = articleId ? `${encodeURIComponent(articleId)}-${articleSlug}` : articleSlug;
+  return `/news/${slug}`;
+};
+
 const languages = [
   "ro",
   "en",

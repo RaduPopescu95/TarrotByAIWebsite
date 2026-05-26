@@ -24,12 +24,17 @@ import AdSlot from "../../components/Ads/AdSlot";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
-import { toUrlSlug } from "../../utils/commonUtils";
+import { buildArticleHref } from "../../utils/commonUtils";
+import {
+  DEFAULT_ISR_REVALIDATE_SECONDS,
+  withFirestoreCostLog,
+} from "../../lib/firestoreCostLogger";
 
-export async function getServerSideProps({ locale }) {
+const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
+
+export async function getStaticProps({ locale }) {
   // Obținerea datelor articolelor din Firestore
   let PAGE_SIZE = 12;
-  console.log("Start fetch...");
   let articlesRef = collection(db, "BlogArticole");
   let q = query(
     articlesRef,
@@ -37,7 +42,15 @@ export async function getServerSideProps({ locale }) {
     limit(PAGE_SIZE)
   );
 
-  const documentSnapshots = await getDocs(q);
+  const documentSnapshots = await withFirestoreCostLog(
+    {
+      page: "news.list",
+      locale,
+      queryName: "news.list.blogArticles.initial",
+      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+    },
+    () => getDocs(q)
+  );
   let articlesData = documentSnapshots.docs.map((doc) => {
     const data = doc.data();
     
@@ -68,8 +81,9 @@ export async function getServerSideProps({ locale }) {
     };
     
     return {
-      id: doc.id,
       ...convertFirestoreData(data),
+      id: data?.id ?? doc.id,
+      documentId: doc.id,
     };
   });
   articlesData = filterArticlesBeforeCurrentTime(articlesData);
@@ -79,7 +93,6 @@ export async function getServerSideProps({ locale }) {
       ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
       : null;
 
-  console.log("Articole...aici...", articlesData.length);
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
@@ -122,6 +135,7 @@ export async function getServerSideProps({ locale }) {
       lastVisibleId,
       ...(await serverSideTranslations(locale, ["common"])),
     },
+    revalidate: ISR_REVALIDATE_SECONDS,
   };
 }
 
@@ -133,10 +147,8 @@ function BlogHome(props) {
   const { articles } = props;
 
   // Helper function to generate article URL
-  const getArticleUrl = (article) => ({
-    pathname: `/news/${toUrlSlug(article.info?.ro?.nume || 'article')}`,
-    query: { id: article.id }
-  });
+  const getArticleUrl = (article) =>
+    buildArticleHref(article, article.info?.ro?.nume || "article");
   // Removed mobile detection - using Tailwind responsive classes instead
 
   const baseUrl =

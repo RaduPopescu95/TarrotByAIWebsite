@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "next-i18next";
 import Link from "next/link";
-import { toUrlSlug } from "../../utils/commonUtils";
+import { buildArticleHref } from "../../utils/commonUtils";
 
 function Headline({ newestArticle, isRo }) {
   const { t, i18n } = useTranslation("common");
@@ -33,10 +33,7 @@ function Headline({ newestArticle, isRo }) {
   return (
     <div style={styles.headlineContainer}>
       <Link
-        href={{
-          pathname: `/news/${toUrlSlug(articleTitle)}`,
-          query: { id: newestArticle?.id },
-        }}
+        href={buildArticleHref(newestArticle, articleTitle)}
         passHref={false}
       >
         <div style={styles.headlineCard} className="headline-card">
