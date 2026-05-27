@@ -15,7 +15,8 @@ export default function useAdsRuntime() {
   const isProduction = process.env.NODE_ENV === "production";
   const adsEnv = useMemo(() => getAdsEnv(), []);
   const { hasConsent, resolved: consentResolved } = useAdsConsent(
-    adsEnv.consentRequired
+    adsEnv.consentRequired,
+    adsEnv.cmpEnabled && Boolean(adsEnv.cmpScriptSrc)
   );
 
   const routeEligible = isRouteEligibleForAds(pathname);

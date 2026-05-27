@@ -54,41 +54,52 @@ You can temporarily disable Stripe checkout session creation (both individual co
 
 Users without the key will see a maintenance message and will be prevented from starting payment.
 
-## Ads orchestration (AdSense-only temporary mode)
+## Ads orchestration (manual AdSense + CMP TCF)
 
-This project uses a centralized ad orchestration layer with AdSense as the only active runtime provider:
+This project uses manual AdSense placements (`after-hero`, `in-feed`) with route-level policy and TCF consent gating:
 
-- Route and slot policy: `lib/ads/config.js`
-- Env parsing and toggles: `lib/ads/env.js`
-- Provider resolution per route: `lib/ads/orchestrator.js`
-- Runtime script loader: `components/Ads/AdsProviderScripts.jsx`
-- Slot renderer: `components/Ads/AdSlot.jsx`
+- Route allow/exclude policy: `lib/ads/config.js`
+- Env parsing: `lib/ads/env.js`
+- Provider + eligibility resolution: `lib/ads/orchestrator.js`
+- CMP script loader + AdSense script loader: `components/Ads/AdsProviderScripts.jsx`
+- Manual slot renderer: `components/Ads/AdSlot.jsx`
 
 ### Environment variables
 
 - `NEXT_PUBLIC_ADS_ENABLED`: `true` or `false`
-- `NEXT_PUBLIC_ADS_CONSENT_REQUIRED`: `true` or `false` (default expected: `true`)
-- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`: accepted for backward compatibility but ignored at runtime (provider is forced to AdSense)
-
-AdSense:
-
 - `NEXT_PUBLIC_ENABLE_ADSENSE`: `true` or `false`
 - `NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID`: your `ca-pub-...` client id
-- `NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO`: slot id used by the `after-hero` placement
-- `NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED`: slot id used by the `in-feed` placement
+- `NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO`: slot id used by `after-hero`
+- `NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED`: slot id used by `in-feed`
+- `NEXT_PUBLIC_ADS_CONSENT_REQUIRED`: `true` or `false` (recommended: `true`)
+- `NEXT_PUBLIC_ADS_DEBUG`: `true` or `false` (runtime debug logs for ads flow)
 
-Ignored/deprecated in AdSense-only mode:
+CMP (generic TCF loader):
+
+- `NEXT_PUBLIC_CMP_ENABLED`: `true` or `false`
+- `NEXT_PUBLIC_CMP_PROVIDER`: `cookiebot` or `generic`
+- `NEXT_PUBLIC_CMP_SCRIPT_SRC`: external CMP script URL (must expose `window.__tcfapi`)
+- `NEXT_PUBLIC_CMP_SITE_ID`: optional CMP parameter passed as `data-site-id`
+- `NEXT_PUBLIC_CMP_COOKIEBOT_CBID`: required when provider is `cookiebot` (maps to `data-cbid`)
+- `NEXT_PUBLIC_CMP_COOKIEBOT_BLOCKING_MODE`: Cookiebot blocking mode (default: `auto`)
+
+Legacy/deprecated (ignored in runtime):
 
 - `NEXT_PUBLIC_ENABLE_MONETAG`
-- `NEXT_PUBLIC_MONETAG_ZONE_ID`
-- `NEXT_PUBLIC_MONETAG_FORMAT`
-- `NEXT_PUBLIC_MONETAG_SCRIPT_SRC`
 - `NEXT_PUBLIC_ENABLE_ADSTERRA`
-- `NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC`
-- `NEXT_PUBLIC_ADSTERRA_CONTAINER_ID`
+- `NEXT_PUBLIC_MONETAG_*`
+- `NEXT_PUBLIC_ADSTERRA_*`
+- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`
 
 ### Compliance guardrails
 
-- Ads render only on explicitly allowed public content routes and slot placements.
-- Ads are blocked on sensitive/private/transactional routes.
-- When consent is required, ad scripts are loaded only after valid CMP consent is available via TCF API (`window.__tcfapi`).
+- Ads are rendered only on whitelisted public content routes.
+- Ads are blocked on admin/auth/sensitive/transactional prefixes (for example `/dashboard*` and `/admin*`).
+- If `NEXT_PUBLIC_ADS_CONSENT_REQUIRED=true`, AdSense loads only after valid TCF consent from `window.__tcfapi`.
+
+### IVT hardening checklist
+
+- Keep Auto Ads disabled in AdSense UI for this domain.
+- Add AdSense page exclusions for `/dashboard*` and `/admin*`.
+- Never click production ads from internal/admin sessions.
+- Keep manual density moderate (avoid aggressive stacking).

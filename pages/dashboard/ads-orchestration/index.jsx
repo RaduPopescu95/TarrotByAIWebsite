@@ -28,7 +28,8 @@ export default function AdsOrchestrationDashboardPage() {
   const adsEnv = useMemo(() => getAdsEnv(), []);
   const [previewPath, setPreviewPath] = useState("/");
   const { hasConsent, resolved: consentResolved } = useAdsConsent(
-    adsEnv.consentRequired
+    adsEnv.consentRequired,
+    adsEnv.cmpEnabled && Boolean(adsEnv.cmpScriptSrc)
   );
 
   const previewEligible = isRouteEligibleForAds(previewPath);
@@ -42,6 +43,15 @@ export default function AdsOrchestrationDashboardPage() {
     ["NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID", formatValue(adsEnv.adSenseClientId)],
     ["NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO", formatValue(adsEnv.adSenseSlotAfterHero)],
     ["NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED", formatValue(adsEnv.adSenseSlotInFeed)],
+    ["NEXT_PUBLIC_CMP_ENABLED", formatValue(adsEnv.cmpEnabled)],
+    ["NEXT_PUBLIC_CMP_SCRIPT_SRC", formatValue(adsEnv.cmpScriptSrc)],
+    ["NEXT_PUBLIC_CMP_SITE_ID", formatValue(adsEnv.cmpSiteId)],
+    ["NEXT_PUBLIC_CMP_PROVIDER", formatValue(adsEnv.cmpProvider)],
+    ["NEXT_PUBLIC_CMP_COOKIEBOT_CBID", formatValue(adsEnv.cmpCookiebotCbid)],
+    [
+      "NEXT_PUBLIC_CMP_COOKIEBOT_BLOCKING_MODE",
+      formatValue(adsEnv.cmpCookiebotBlockingMode),
+    ],
     ["NEXT_PUBLIC_PRIMARY_AD_PROVIDER", "adsense (forced in runtime)"],
     ["NEXT_PUBLIC_ADS_FORCE_PROVIDER", formatValue(adsEnv.forceProvider)],
     ["NEXT_PUBLIC_ENABLE_MONETAG", "deprecated (ignored)"],
@@ -166,10 +176,11 @@ export default function AdsOrchestrationDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
-                <h2 className="text-base font-semibold">AdSense-only temporary mode</h2>
+                <h2 className="text-base font-semibold">Manual AdSense + CMP mode</h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   <li>Monetag și Adsterra sunt dezactivate în runtime până la reactivare explicită în cod.</li>
-                  <li>Providerul activ este doar AdSense dacă ruta este eligibilă și env-urile AdSense sunt valide.</li>
+                  <li>Providerul activ este doar AdSense dacă ruta este eligibilă, consentul este valid și env-urile sunt setate.</li>
+                  <li>Plasarea este manuală prin sloturi `after-hero` și `in-feed`.</li>
                   <li>Nu folosi formate intruzive pe același domeniu cu AdSense (popunder/onclick/smartlink).</li>
                 </ul>
               </div>

@@ -76,9 +76,10 @@ const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
-  const shouldRenderGlobalAdSlot = /^\/(citire-personalizata|citire-viitor|numar-norocos|culoare-norocoasa|ora-norocoasa|citat-motivational|ce-gandeste|ce-simte|cartea-ta)(?:\/|$)/.test(
-    router?.pathname || "/"
-  );
+  const shouldRenderGlobalAdSlot =
+    /^\/(citire-personalizata|citire-viitor|numar-norocos|culoare-norocoasa|ora-norocoasa|citat-motivational|ce-gandeste|ce-simte|cartea-ta)(?:\/|$)/.test(
+      router?.pathname || "/"
+    );
   
   // First visit detection for language selection dialog
   const { 

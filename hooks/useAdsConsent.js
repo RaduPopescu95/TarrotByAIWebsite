@@ -34,7 +34,7 @@ function readConsentFromTcfApi() {
   });
 }
 
-export default function useAdsConsent(consentRequired = true) {
+export default function useAdsConsent(consentRequired = true, cmpExpected = false) {
   const [hasConsent, setHasConsent] = useState(!consentRequired);
   const [resolved, setResolved] = useState(!consentRequired);
 
@@ -46,6 +46,12 @@ export default function useAdsConsent(consentRequired = true) {
 
     if (!consentRequired) {
       setHasConsent(true);
+      setResolved(true);
+      return undefined;
+    }
+
+    if (!cmpExpected) {
+      setHasConsent(false);
       setResolved(true);
       return undefined;
     }
@@ -76,7 +82,7 @@ export default function useAdsConsent(consentRequired = true) {
       active = false;
       if (timerId) window.clearTimeout(timerId);
     };
-  }, [consentRequired]);
+  }, [consentRequired, cmpExpected]);
 
   return { hasConsent, resolved };
 }

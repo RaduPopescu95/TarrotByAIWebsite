@@ -44,23 +44,20 @@ export default function AdSlot({ slotKey, className = "" }) {
   }, [activeProvider, adSenseSlotId, canShowSlots]);
 
   if (!slotKey || !canShowSlots || !isSlotEnabled(slotKey)) return null;
+  if (activeProvider !== AD_PROVIDERS.ADSENSE) return null;
+  if (!adSenseSlotId || !adsEnv.adSenseClientId) return null;
 
-  if (activeProvider === AD_PROVIDERS.ADSENSE) {
-    if (!adSenseSlotId || !adsEnv.adSenseClientId) return null;
-    return (
-      <div className={className} style={slotStyles.wrapper}>
-        <ins
-          ref={adRef}
-          className="adsbygoogle"
-          style={slotStyles.adsense}
-          data-ad-client={adsEnv.adSenseClientId}
-          data-ad-slot={adSenseSlotId}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className={className} style={slotStyles.wrapper}>
+      <ins
+        ref={adRef}
+        className="adsbygoogle"
+        style={slotStyles.adsense}
+        data-ad-client={adsEnv.adSenseClientId}
+        data-ad-slot={adSenseSlotId}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
 }
