@@ -36,9 +36,7 @@ export default function useAdsRuntime() {
     canLoadScripts,
     canShowSlots:
       canLoadScripts &&
-      (activeProvider === AD_PROVIDERS.ADSENSE ||
-        activeProvider === AD_PROVIDERS.MONETAG ||
-        activeProvider === AD_PROVIDERS.ADSTERRA),
+      activeProvider === AD_PROVIDERS.ADSENSE,
     isSlotEnabled: (slotKey) => isSlotEnabledForRoute(pathname, slotKey),
   };
 }

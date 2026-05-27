@@ -37,18 +37,19 @@ export default function AdsOrchestrationDashboardPage() {
 
   const envRows = [
     ["NEXT_PUBLIC_ADS_ENABLED", formatValue(adsEnv.adsEnabled)],
-    ["NEXT_PUBLIC_PRIMARY_AD_PROVIDER", formatValue(adsEnv.primaryProvider)],
     ["NEXT_PUBLIC_ADS_CONSENT_REQUIRED", formatValue(adsEnv.consentRequired)],
     ["NEXT_PUBLIC_ENABLE_ADSENSE", formatValue(adsEnv.enableAdSense)],
     ["NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID", formatValue(adsEnv.adSenseClientId)],
     ["NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO", formatValue(adsEnv.adSenseSlotAfterHero)],
     ["NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED", formatValue(adsEnv.adSenseSlotInFeed)],
-    ["NEXT_PUBLIC_ENABLE_MONETAG", formatValue(adsEnv.enableMonetag)],
-    ["NEXT_PUBLIC_MONETAG_ZONE_ID", formatValue(adsEnv.monetagZoneId)],
-    ["NEXT_PUBLIC_MONETAG_FORMAT", formatValue(adsEnv.monetagFormat)],
-    ["NEXT_PUBLIC_MONETAG_SCRIPT_SRC", formatValue(adsEnv.monetagScriptSrc)],
-    ["NEXT_PUBLIC_ENABLE_ADSTERRA", formatValue(adsEnv.enableAdsterra)],
-    ["NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC", formatValue(adsEnv.adsterraScriptSrc)],
+    ["NEXT_PUBLIC_PRIMARY_AD_PROVIDER", "adsense (forced in runtime)"],
+    ["NEXT_PUBLIC_ADS_FORCE_PROVIDER", formatValue(adsEnv.forceProvider)],
+    ["NEXT_PUBLIC_ENABLE_MONETAG", "deprecated (ignored)"],
+    ["NEXT_PUBLIC_MONETAG_ZONE_ID", "deprecated (ignored)"],
+    ["NEXT_PUBLIC_MONETAG_FORMAT", "deprecated (ignored)"],
+    ["NEXT_PUBLIC_MONETAG_SCRIPT_SRC", "deprecated (ignored)"],
+    ["NEXT_PUBLIC_ENABLE_ADSTERRA", "deprecated (ignored)"],
+    ["NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC", "deprecated (ignored)"],
   ];
 
   return (
@@ -88,11 +89,11 @@ export default function AdsOrchestrationDashboardPage() {
                       : "Pending"}
                   </p>
                 </div>
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
-                  <p className="font-semibold">Primary Provider</p>
-                  <p className="mt-1 uppercase">{adsEnv.primaryProvider}</p>
-                </div>
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
+                <p className="font-semibold">Primary Provider</p>
+                <p className="mt-1 uppercase">adsense</p>
               </div>
+            </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Route Simulator</h2>
@@ -165,16 +166,10 @@ export default function AdsOrchestrationDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
-                <h2 className="text-base font-semibold">Adsterra configuration notes</h2>
+                <h2 className="text-base font-semibold">AdSense-only temporary mode</h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>
-                    Activează doar cu <code>NEXT_PUBLIC_ENABLE_ADSTERRA=true</code> și setează{" "}
-                    <code>NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC</code>.
-                  </li>
-                  <li>
-                    Dacă <code>NEXT_PUBLIC_PRIMARY_AD_PROVIDER</code> nu este <code>adsterra</code>, providerul
-                    rămâne fallback.
-                  </li>
+                  <li>Monetag și Adsterra sunt dezactivate în runtime până la reactivare explicită în cod.</li>
+                  <li>Providerul activ este doar AdSense dacă ruta este eligibilă și env-urile AdSense sunt valide.</li>
                   <li>Nu folosi formate intruzive pe același domeniu cu AdSense (popunder/onclick/smartlink).</li>
                 </ul>
               </div>

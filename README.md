@@ -54,9 +54,9 @@ You can temporarily disable Stripe checkout session creation (both individual co
 
 Users without the key will see a maintenance message and will be prevented from starting payment.
 
-## Ads orchestration (policy-first)
+## Ads orchestration (AdSense-only temporary mode)
 
-This project uses a centralized multi-network ad orchestration layer:
+This project uses a centralized ad orchestration layer with AdSense as the only active runtime provider:
 
 - Route and slot policy: `lib/ads/config.js`
 - Env parsing and toggles: `lib/ads/env.js`
@@ -67,8 +67,8 @@ This project uses a centralized multi-network ad orchestration layer:
 ### Environment variables
 
 - `NEXT_PUBLIC_ADS_ENABLED`: `true` or `false`
-- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`: `adsense`, `monetag`, or `adsterra`
 - `NEXT_PUBLIC_ADS_CONSENT_REQUIRED`: `true` or `false` (default expected: `true`)
+- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`: accepted for backward compatibility but ignored at runtime (provider is forced to AdSense)
 
 AdSense:
 
@@ -77,21 +77,18 @@ AdSense:
 - `NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO`: slot id used by the `after-hero` placement
 - `NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED`: slot id used by the `in-feed` placement
 
-Monetag:
+Ignored/deprecated in AdSense-only mode:
 
-- `NEXT_PUBLIC_ENABLE_MONETAG`: `true` or `false`
-- `NEXT_PUBLIC_MONETAG_ZONE_ID`: Monetag zone id
-- `NEXT_PUBLIC_MONETAG_FORMAT`: default `inpage_push` (intrusive formats are blocked)
-- `NEXT_PUBLIC_MONETAG_SCRIPT_SRC`: optional explicit script source (overrides derived URL)
-
-Adsterra (prepared, disabled by default):
-
-- `NEXT_PUBLIC_ENABLE_ADSTERRA`: `true` or `false` (default expected: `false`)
-- `NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC`: explicit script source
+- `NEXT_PUBLIC_ENABLE_MONETAG`
+- `NEXT_PUBLIC_MONETAG_ZONE_ID`
+- `NEXT_PUBLIC_MONETAG_FORMAT`
+- `NEXT_PUBLIC_MONETAG_SCRIPT_SRC`
+- `NEXT_PUBLIC_ENABLE_ADSTERRA`
+- `NEXT_PUBLIC_ADSTERRA_SCRIPT_SRC`
+- `NEXT_PUBLIC_ADSTERRA_CONTAINER_ID`
 
 ### Compliance guardrails
 
 - Ads render only on explicitly allowed public content routes and slot placements.
 - Ads are blocked on sensitive/private/transactional routes.
-- Intrusive secondary formats are blocked (`popunder`, `onclick`, `smartlink`).
 - When consent is required, ad scripts are loaded only after valid CMP consent is available via TCF API (`window.__tcfapi`).

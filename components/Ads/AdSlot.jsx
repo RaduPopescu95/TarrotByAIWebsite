@@ -62,31 +62,5 @@ export default function AdSlot({ slotKey, className = "" }) {
     );
   }
 
-  if (activeProvider === AD_PROVIDERS.MONETAG) {
-    return (
-      <div
-        className={className}
-        style={{ ...slotStyles.wrapper, minHeight: "120px" }}
-        data-provider="monetag"
-        data-slot-key={slotKey}
-        data-zone-id={adsEnv.monetagZoneId || ""}
-      />
-    );
-  }
-
-  if (activeProvider === AD_PROVIDERS.ADSTERRA) {
-    if (slotKey !== AD_SLOT_KEYS.AFTER_HERO) return null;
-    if (!adsEnv.adsterraContainerId) return null;
-    return (
-      <div
-        id={adsEnv.adsterraContainerId}
-        className={className}
-        style={{ ...slotStyles.wrapper, minHeight: "120px" }}
-        data-provider="adsterra"
-        data-slot-key={slotKey}
-      />
-    );
-  }
-
   return null;
 }
