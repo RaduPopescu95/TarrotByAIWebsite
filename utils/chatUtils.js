@@ -1,6 +1,7 @@
 import { ref, remove, update, serverTimestamp, onValue, off } from 'firebase/database';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { database, db } from '../firebase';
+import { logRtdbMetric } from './realtimeMetrics';
 
 /**
  * Marchează un chat ca inactiv când meeting-ul se termină
@@ -9,12 +10,14 @@ import { database, db } from '../firebase';
  */
 export const markChatInactive = async (chatId, meetingType) => {
   try {
+    const path = `chats/${chatId}/metadata`;
     const metadataRef = ref(database, `chats/${chatId}/metadata`);
     await update(metadataRef, {
       [`${meetingType}Active`]: false,
       endedAt: serverTimestamp(),
       lastActivity: serverTimestamp()
     });
+    logRtdbMetric("chat_update", { path, action: "mark_inactive" });
     
     console.log(`✅ [CHAT] Chat marcat ca inactiv: ${chatId}`);
   } catch (error) {
@@ -28,8 +31,10 @@ export const markChatInactive = async (chatId, meetingType) => {
  */
 export const deleteChatRoom = async (chatId) => {
   try {
+    const path = `chats/${chatId}`;
     const chatRef = ref(database, `chats/${chatId}`);
     await remove(chatRef);
+    logRtdbMetric("chat_delete", { path });
     
     console.log(`🗑️ [CHAT] Chat șters: ${chatId}`);
   } catch (error) {
@@ -48,6 +53,11 @@ export const cleanupInactiveChats = async (hoursOld = 2) => {
     return new Promise((resolve) => {
       onValue(chatsRef, async (snapshot) => {
         const chats = snapshot.val();
+        logRtdbMetric("chat_read", {
+          path: "chats",
+          count: chats ? Object.keys(chats).length : 0,
+          action: "cleanup_scan",
+        });
         if (!chats) {
           resolve(0);
           return;

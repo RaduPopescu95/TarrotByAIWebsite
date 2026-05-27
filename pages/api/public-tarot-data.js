@@ -2,6 +2,7 @@ import {
   getPublicTarotMemorySnapshot,
   loadPublicTarotDataset,
 } from "../../lib/loadPublicTarotData";
+import { logRtdbMetric } from "../../utils/realtimeMetrics";
 
 const CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
 
@@ -22,10 +23,22 @@ export default async function handler(req, res) {
 
   try {
     const { arr, source } = await loadPublicTarotDataset(category, key);
+    logRtdbMetric("public_tarot_api_response", {
+      category,
+      key,
+      source,
+      count: Array.isArray(arr) ? arr.length : 0,
+    });
     res.setHeader("X-Data-Cache", source);
     return res.status(200).json({ arr });
   } catch (error) {
     if (staleSnapshot?.arr) {
+      logRtdbMetric("public_tarot_api_response", {
+        category,
+        key,
+        source: "STALE",
+        count: Array.isArray(staleSnapshot.arr) ? staleSnapshot.arr.length : 0,
+      });
       res.setHeader("X-Data-Cache", "STALE");
       return res.status(200).json({ arr: staleSnapshot.arr });
     }
