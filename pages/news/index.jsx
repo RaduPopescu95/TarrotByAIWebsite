@@ -20,7 +20,6 @@ import {
 import HeroFilters from "../../components/Blog/FilterBar/HeroFilters";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
-import AdSlot from "../../components/Ads/AdSlot";
 import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
 import {
@@ -284,12 +283,6 @@ function BlogHome(props) {
           </div>
         </div>
       </div>
-
-      <AdSlot
-        slotKey="after-hero"
-        className="mx-auto -mt-4 max-w-7xl px-4 sm:px-6 lg:px-8"
-      />
-
       {/* Main Content */}
       <div className="min-h-screen bg-gray-50 pt-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -412,11 +405,6 @@ function BlogHome(props) {
                       {t("exploreAllArticles")}
                     </p>
                   </div>
-                  <AdSlot
-                    slotKey="in-feed"
-                    className="mb-8"
-                  />
-
                   {/* Articles Grid */}
                   <div className="grid gap-8 mb-12">
                     {articlesToDisplay.map((article, index) => (

@@ -15,7 +15,6 @@ import languageDetector from "../lib/languageDetector";
 import { resolveUiLocale } from "../lib/siteLocales";
 import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
 import AdsProviderScripts from "../components/Ads/AdsProviderScripts";
-import AdSlot from "../components/Ads/AdSlot";
 import { useFirstVisit } from "../hooks/useFirstVisit";
 import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
 import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
@@ -76,10 +75,6 @@ const defaultTheme = createTheme(appTheme("mainTheme", "light"));
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { t, i18n } = useTranslation("common");
-  const shouldRenderGlobalAdSlot =
-    /^\/(citire-personalizata|citire-viitor|numar-norocos|culoare-norocoasa|ora-norocoasa|citat-motivational|ce-gandeste|ce-simte|cartea-ta)(?:\/|$)/.test(
-      router?.pathname || "/"
-    );
   
   // First visit detection for language selection dialog
   const { 
@@ -228,11 +223,6 @@ function MyApp({ Component, pageProps }) {
                 )}
                 
                 <Component {...pageProps} />
-                {shouldRenderGlobalAdSlot ? (
-                  <div style={{ margin: "16px auto", maxWidth: "1200px", padding: "0 16px" }}>
-                    <AdSlot slotKey="after-hero" />
-                  </div>
-                ) : null}
                 
                 <style jsx global>{`
                   @keyframes spin {

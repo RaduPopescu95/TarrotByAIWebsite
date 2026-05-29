@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { CalendarDays, Clock, User, ArrowLeft, Share2, BookOpen, Tag } from "lucide-react";
 import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
-import AdSlot from "../../../components/Ads/AdSlot";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { buildArticleHref } from "../../../utils/commonUtils";
 import { collection, query, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
@@ -476,12 +475,6 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
           </div>
         </div>
       </div>
-
-      <AdSlot
-        slotKey="after-hero"
-        className="mx-auto -mt-4 max-w-7xl px-4 sm:px-6 lg:px-8"
-      />
-
       {/* Main Content */}
       <div className="bg-gray-50 min-h-screen">
         <style jsx>{`
