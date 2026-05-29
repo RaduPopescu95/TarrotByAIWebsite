@@ -21,89 +21,27 @@ import HeroFilters from "../../components/Blog/FilterBar/HeroFilters";
 import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
 import AdSlot from "../../components/Ads/AdSlot";
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import { db } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
 import {
   DEFAULT_ISR_REVALIDATE_SECONDS,
-  withFirestoreCostLog,
 } from "../../lib/firestoreCostLogger";
+import { loadPublicArticles } from "../../lib/publicArticles";
 
 const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
 
 export async function getStaticProps({ locale }) {
-  // Obținerea datelor articolelor din Firestore
-  let PAGE_SIZE = 12;
-  let articlesRef = collection(db, "BlogArticole");
-  let q = query(
-    articlesRef,
-    orderBy("firstUploadTimestamp", "desc"),
-    limit(PAGE_SIZE)
-  );
-
-  const documentSnapshots = await withFirestoreCostLog(
-    {
-      page: "news.list",
-      locale,
-      queryName: "news.list.blogArticles.initial",
-      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-    },
-    () => getDocs(q)
-  );
-  let articlesData = documentSnapshots.docs.map((doc) => {
-    const data = doc.data();
-    
-    // Function to recursively convert Firestore objects to plain objects
-    const convertFirestoreData = (obj) => {
-      if (obj === null || obj === undefined) return obj;
-      
-      // Handle Firestore Timestamps
-      if (obj.toDate && typeof obj.toDate === 'function') {
-        return obj.toDate().toISOString();
-      }
-      
-      // Handle arrays
-      if (Array.isArray(obj)) {
-        return obj.map(convertFirestoreData);
-      }
-      
-      // Handle objects
-      if (typeof obj === 'object' && obj.constructor === Object) {
-        const converted = {};
-        for (const [key, value] of Object.entries(obj)) {
-          converted[key] = convertFirestoreData(value);
-        }
-        return converted;
-      }
-      
-      return obj;
-    };
-    
-    return {
-      ...convertFirestoreData(data),
-      id: data?.id ?? doc.id,
-      documentId: doc.id,
-    };
+  const payload = await loadPublicArticles({
+    limit: 50,
+    locale,
   });
-  articlesData = filterArticlesBeforeCurrentTime(articlesData);
-
-  const lastVisibleId =
-    documentSnapshots.docs.length > 0
-      ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
-      : null;
+  const articlesData = payload?.articles || [];
+  const lastVisibleId = payload?.nextCursor || null;
 
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
-    const sortedArticles = articlesData.sort((a, b) => {
-      // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
-      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
-
-      // Compară obiectele de tip Date
-      return dateTimeB - dateTimeA;
-    });
+    const sortedArticles = [...articlesData];
 
     // Selectarea celor mai noi două articole
     const latestArticles = sortedArticles.slice(0, 2);

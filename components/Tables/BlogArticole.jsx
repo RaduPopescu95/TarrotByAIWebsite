@@ -23,6 +23,7 @@ import {
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
+import { buildScheduledDate } from "../../lib/articleSchedule";
 
 export default function BlogArticole({ articles }) {
   // const { db } = useMockup();
@@ -46,6 +47,18 @@ export default function BlogArticole({ articles }) {
   // Helper pt. sortare desc după dataProgramata+timpProgramat cu fallback pe firstUploadDate/time sau firstUploadTimestamp
   const toMs = (x) => {
     try {
+      if (x?.scheduledAtTs) {
+        if (typeof x.scheduledAtTs === "string") {
+          const ms = Date.parse(x.scheduledAtTs);
+          if (!Number.isNaN(ms)) return ms;
+        }
+        if (x.scheduledAtTs.seconds) {
+          return x.scheduledAtTs.seconds * 1000;
+        }
+        if (typeof x.scheduledAtTs.toDate === "function") {
+          return x.scheduledAtTs.toDate().getTime();
+        }
+      }
       if (
         x?.dataProgramata &&
         x?.dataProgramata.length > 0 &&
@@ -242,30 +255,14 @@ export default function BlogArticole({ articles }) {
         if (item.id === dialogData.id) {
           console.log("is found");
           let data;
+          const fallbackDate = item?.firstUploadTimestamp || new Date();
           if (image.length === 0) {
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
-            let date;
-            if (timpProgramat.length > 0) {
-              const dateParts = dataProgramata.split("-");
-              const timeParts = timpProgramat.split(":");
-              date = new Date(
-                dateParts[2],
-                dateParts[1] - 1,
-                dateParts[0],
-                timeParts[0],
-                timeParts[1]
-              );
-            } else {
-              const dateParts = item.firstUploadDate.split("-");
-              const timeParts = item.firstUploadTime.split(":");
-              date = new Date(
-                dateParts[2],
-                dateParts[1] - 1,
-                dateParts[0],
-                timeParts[0],
-                timeParts[1]
-              );
-            }
+            const date = buildScheduledDate({
+              dataProgramata,
+              timpProgramat,
+              fallbackDate,
+            });
             data = {
               ...item,
               firstUploadtime:
@@ -282,6 +279,7 @@ export default function BlogArticole({ articles }) {
 
               timpProgramat,
               dataProgramata,
+              scheduledAtTs: date,
             };
             console.log("if.....", data);
           } else {
@@ -295,28 +293,11 @@ export default function BlogArticole({ articles }) {
               oldFileName
             );
             let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
-            let date;
-            if (timpProgramat.length > 0) {
-              const dateParts = dataProgramata.split("-");
-              const timeParts = timpProgramat.split(":");
-              date = new Date(
-                dateParts[2],
-                dateParts[1] - 1,
-                dateParts[0],
-                timeParts[0],
-                timeParts[1]
-              );
-            } else {
-              const dateParts = item.firstUploadDate.split("-");
-              const timeParts = item.firstUploadTime.split(":");
-              date = new Date(
-                dateParts[2],
-                dateParts[1] - 1,
-                dateParts[0],
-                timeParts[0],
-                timeParts[1]
-              );
-            }
+            const date = buildScheduledDate({
+              dataProgramata,
+              timpProgramat,
+              fallbackDate,
+            });
 
             data = {
               ...item,
@@ -333,6 +314,7 @@ export default function BlogArticole({ articles }) {
               youtubeLinks,
               timpProgramat,
               dataProgramata,
+              scheduledAtTs: date,
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);

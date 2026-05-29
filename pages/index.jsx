@@ -19,26 +19,18 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useApiData } from "../context/ApiContext";
 import FilterBar from "../components/Blog/FilterBar/FilterBar";
-import { buildArticleHref, filterArticlesBeforeCurrentTime } from "../utils/commonUtils";
+import { buildArticleHref } from "../utils/commonUtils";
 import Footer from "../components/Footer";
 import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
 import CourseCard from "../components/Courses/CourseCard";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { normalizeLocale } from "../lib/courses";
 import { loadPremiumVideoLibraryVideos } from "../lib/loadPremiumVideoLibrary";
+import { loadPublicArticles } from "../lib/publicArticles";
 import {
   DEFAULT_ISR_REVALIDATE_SECONDS,
   logFirestoreCost,
-  withFirestoreCostLog,
 } from "../lib/firestoreCostLogger";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
@@ -52,54 +44,17 @@ function formatVideoDuration(seconds, fallback) {
 }
 
 export async function getStaticProps({ locale }) {
-  // Obținerea datelor articolelor din Firestore
-  let PAGE_SIZE = 12;
-  let articlesRef = collection(db, "BlogArticole");
-  let q = query(
-    articlesRef,
-    orderBy("firstUploadTimestamp", "desc"),
-    limit(PAGE_SIZE)
-  );
-
-  const documentSnapshots = await withFirestoreCostLog(
-    {
-      page: "home",
-      locale,
-      queryName: "home.blogArticles.initial",
-      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-    },
-    () => getDocs(q)
-  );
-  let articlesData = documentSnapshots.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      ...data,
-      id: data?.id ?? doc.id,
-      documentId: doc.id,
-      // Convertim firstUploadTimestamp la un format serializabil
-      firstUploadTimestamp: data.firstUploadTimestamp
-        ? data.firstUploadTimestamp.toDate().toISOString()
-        : null,
-    };
+  const payload = await loadPublicArticles({
+    limit: 12,
+    locale,
   });
-  articlesData = filterArticlesBeforeCurrentTime(articlesData);
-
-  const lastVisibleId =
-    documentSnapshots.docs.length > 0
-      ? documentSnapshots.docs[documentSnapshots.docs.length - 1].id
-      : null;
+  const articlesData = payload?.articles || [];
+  const lastVisibleId = payload?.nextCursor || null;
 
   let articles = {};
   if (articlesData.length > 0) {
     // Sortarea articolelor după data și ora lor
-    const sortedArticles = articlesData.sort((a, b) => {
-      // Combină data și ora într-un singur string și convertește-le în obiecte de tip Date
-      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
-      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
-
-      // Compară obiectele de tip Date
-      return dateTimeB - dateTimeA;
-    });
+    const sortedArticles = [...articlesData];
 
     // Selectarea celor mai noi două articole
     const latestArticles = sortedArticles.slice(0, 2);

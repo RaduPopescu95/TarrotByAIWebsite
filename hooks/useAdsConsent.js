@@ -43,6 +43,7 @@ export default function useAdsConsent(consentRequired = true, cmpExpected = fals
     let timerId;
     let attempts = 0;
     const maxAttempts = 24;
+    let tcfListenerId = null;
 
     if (!consentRequired) {
       setHasConsent(true);
@@ -56,7 +57,36 @@ export default function useAdsConsent(consentRequired = true, cmpExpected = fals
       return undefined;
     }
 
+    const handleTcData = (tcData, success) => {
+      if (!active) return;
+      if (!success || !tcData) return;
+
+      const consentValue = evaluateTcfConsent(tcData);
+      setHasConsent(consentValue);
+      setResolved(true);
+    };
+
+    const attachTcfListener = () => {
+      if (typeof window === "undefined" || typeof window.__tcfapi !== "function") {
+        return false;
+      }
+
+      window.__tcfapi("addEventListener", 2, (tcData, success) => {
+        if (!active || !success || !tcData) return;
+
+        if (typeof tcData.listenerId !== "undefined" && tcData.listenerId !== null) {
+          tcfListenerId = tcData.listenerId;
+        }
+
+        handleTcData(tcData, success);
+      });
+
+      return true;
+    };
+
     const pollConsent = async () => {
+      attachTcfListener();
+
       const consentValue = await readConsentFromTcfApi();
       if (!active) return;
 
@@ -81,6 +111,13 @@ export default function useAdsConsent(consentRequired = true, cmpExpected = fals
     return () => {
       active = false;
       if (timerId) window.clearTimeout(timerId);
+      if (
+        tcfListenerId !== null &&
+        typeof window !== "undefined" &&
+        typeof window.__tcfapi === "function"
+      ) {
+        window.__tcfapi("removeEventListener", 2, () => {}, tcfListenerId);
+      }
     };
   }, [consentRequired, cmpExpected]);
 

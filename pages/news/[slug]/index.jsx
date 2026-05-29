@@ -6,8 +6,8 @@ import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
 import AdSlot from "../../../components/Ads/AdSlot";
 import { handleGetFirestore } from "../../../utils/firestoreUtils";
-import { buildArticleHref, filterArticlesBeforeCurrentTime } from "../../../utils/commonUtils";
-import { collection, query, orderBy, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
+import { buildArticleHref } from "../../../utils/commonUtils";
+import { collection, query, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -17,6 +17,8 @@ import {
   DEFAULT_ISR_REVALIDATE_SECONDS,
   withFirestoreCostLog,
 } from "../../../lib/firestoreCostLogger";
+import { loadPublicArticles } from "../../../lib/publicArticles";
+import { toDateFromUnknown } from "../../../lib/articleSchedule";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
 const LEGACY_LOOKUP_LIMIT = 120;
@@ -50,6 +52,11 @@ function mapDocToArticle(docSnap) {
   };
 }
 
+function isArticleVisibleNow(article, now = new Date()) {
+  const scheduledAt = toDateFromUnknown(article?.scheduledAtTs);
+  return Boolean(scheduledAt && scheduledAt.getTime() <= now.getTime());
+}
+
 async function findArticleByLegacyId(rawId, { locale, page } = {}) {
   const normalizedId = typeof rawId === "string" ? rawId.trim() : "";
   if (!normalizedId) return null;
@@ -78,7 +85,8 @@ async function findArticleByLegacyId(rawId, { locale, page } = {}) {
         )
     );
     if (!legacySnapshot.empty) {
-      return mapDocToArticle(legacySnapshot.docs[0]);
+      const candidateArticle = mapDocToArticle(legacySnapshot.docs[0]);
+      return isArticleVisibleNow(candidateArticle) ? candidateArticle : null;
     }
   }
 
@@ -114,7 +122,8 @@ export async function getStaticProps(context) {
           () => getDoc(doc(db, "BlogArticole", slugPrefixId))
         );
         if (legacyArticleDoc.exists()) {
-          filteredArticle = mapDocToArticle(legacyArticleDoc);
+          const candidateArticle = mapDocToArticle(legacyArticleDoc);
+          filteredArticle = isArticleVisibleNow(candidateArticle) ? candidateArticle : null;
         }
       }
 
@@ -127,24 +136,11 @@ export async function getStaticProps(context) {
     }
 
     if (!filteredArticle) {
-      const fallbackSnapshot = await withFirestoreCostLog(
-        {
-          page: "news.detail",
-          locale,
-          queryName: "news.detail.legacyFallback120",
-          isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-        },
-        () =>
-          getDocs(
-            query(
-              collection(db, "BlogArticole"),
-              orderBy("firstUploadTimestamp", "desc"),
-              limit(LEGACY_LOOKUP_LIMIT)
-            )
-          )
-      );
-      articlesData = fallbackSnapshot.docs.map(mapDocToArticle);
-      articlesData = filterArticlesBeforeCurrentTime(articlesData);
+      const fallbackPayload = await loadPublicArticles({
+        limit: LEGACY_LOOKUP_LIMIT,
+        locale,
+      });
+      articlesData = Array.isArray(fallbackPayload?.articles) ? fallbackPayload.articles : [];
       const fallbackId = slug.split("-")[0];
       filteredArticle =
         articlesData.find(
@@ -172,24 +168,11 @@ export async function getStaticProps(context) {
     }
 
     if (articlesData.length === 0) {
-      const sidebarSnapshot = await withFirestoreCostLog(
-        {
-          page: "news.detail",
-          locale,
-          queryName: "news.detail.sidebar",
-          isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-        },
-        () =>
-          getDocs(
-            query(
-              collection(db, "BlogArticole"),
-              orderBy("firstUploadTimestamp", "desc"),
-              limit(SIDEBAR_ARTICLES_LIMIT)
-            )
-          )
-      );
-      articlesData = sidebarSnapshot.docs.map(mapDocToArticle);
-      articlesData = filterArticlesBeforeCurrentTime(articlesData);
+      const sidebarPayload = await loadPublicArticles({
+        limit: SIDEBAR_ARTICLES_LIMIT,
+        locale,
+      });
+      articlesData = Array.isArray(sidebarPayload?.articles) ? sidebarPayload.articles : [];
     }
 
     // Ensure current article exists in sidebar payload even if not part of latest list.
@@ -214,11 +197,7 @@ export async function getStaticProps(context) {
       .slice(0, 2);
 
     // Prepare articles object for sidebar
-    const sortedArticles = articlesData.sort((a, b) => {
-      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
-      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
-      return dateTimeB - dateTimeA;
-    });
+    const sortedArticles = [...articlesData];
 
     const articles = {
       articlesData,

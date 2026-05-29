@@ -15,7 +15,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:courses-media": "node scripts/migrate-course-media-private.cjs",
-    "migrate:courses-previews": "node scripts/backfill-course-vimeo-previews.cjs"
+    "migrate:courses-previews": "node scripts/backfill-course-vimeo-previews.cjs",
+    "backfill:blog-scheduled-at": "node scripts/backfill-blog-scheduled-at.cjs"
   },
   "dependencies": {
     "@babel/core": "^7.16.5",
