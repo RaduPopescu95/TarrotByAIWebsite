@@ -1,66 +1,40 @@
 import { useEffect } from "react";
 import GoogleAdSenseScript from "./GoogleAdSenseScript";
-import CmpScriptLoader from "./CmpScriptLoader";
-import useAdsRuntime from "../../hooks/useAdsRuntime";
-import { AD_PROVIDERS } from "../../lib/ads/config";
+import { useRouter } from "next/router";
+import { isAdsenseRouteEligible } from "../../lib/ads/config";
 
 export default function AdsProviderScripts() {
-  const {
-    adsEnv,
-    activeProvider,
-    canLoadScripts,
-    hasConsent,
-    consentResolved,
-    pathname,
-    routeEligible,
-  } = useAdsRuntime();
-  const shouldLogAdsDebug =
-    process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_ADS_DEBUG === "true";
+  const router = useRouter();
+  const pathname = router?.pathname || "/";
+  const routeEligible = isAdsenseRouteEligible(pathname);
+  const isProduction = process.env.NODE_ENV === "production";
+  const adSenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const shouldLoadAdSenseScript =
+    isProduction && Boolean(adSenseClientId) && routeEligible;
+  const shouldLogAdsDebug = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     if (!shouldLogAdsDebug) return;
-    console.info("[ADS] runtime", {
+    console.info("[ADS_MINIMAL] runtime", {
       pathname,
       routeEligible,
-      consentRequired: adsEnv.consentRequired,
-      consentResolved,
-      hasConsent,
-      activeProvider,
-      canLoadScripts,
+      isProduction,
+      hasClientId: Boolean(adSenseClientId),
+      shouldLoadAdSenseScript,
     });
   }, [
     shouldLogAdsDebug,
     pathname,
     routeEligible,
-    adsEnv.consentRequired,
-    consentResolved,
-    hasConsent,
-    activeProvider,
-    canLoadScripts,
+    isProduction,
+    adSenseClientId,
+    shouldLoadAdSenseScript,
   ]);
 
-  const shouldLoadAdSenseScript =
-    canLoadScripts &&
-    adsEnv.enableAdSense &&
-    Boolean(adsEnv.adSenseClientId) &&
-    activeProvider === AD_PROVIDERS.ADSENSE &&
-    (!adsEnv.consentRequired || (consentResolved && hasConsent));
-
   return (
-    <>
-      <CmpScriptLoader
-        enabled={adsEnv.cmpEnabled}
-        scriptSrc={adsEnv.cmpScriptSrc}
-        siteId={adsEnv.cmpSiteId}
-        provider={adsEnv.cmpProvider}
-        cookiebotCbid={adsEnv.cmpCookiebotCbid}
-        cookiebotBlockingMode={adsEnv.cmpCookiebotBlockingMode}
-      />
-      <GoogleAdSenseScript
-        clientId={adsEnv.adSenseClientId}
-        shouldLoad={shouldLoadAdSenseScript}
-      />
-    </>
+    <GoogleAdSenseScript
+      clientId={adSenseClientId}
+      shouldLoad={shouldLoadAdSenseScript}
+    />
   );
 }

@@ -54,52 +54,27 @@ You can temporarily disable Stripe checkout session creation (both individual co
 
 Users without the key will see a maintenance message and will be prevented from starting payment.
 
-## Ads orchestration (manual AdSense + CMP TCF)
+## Ads orchestration (AdSense minimal auto)
 
-This project uses manual AdSense placements (`after-hero`, `in-feed`) with route-level policy and TCF consent gating:
+This project uses a minimal AdSense Auto Ads setup:
 
-- Route allow/exclude policy: `lib/ads/config.js`
-- Env parsing: `lib/ads/env.js`
-- Provider + eligibility resolution: `lib/ads/orchestrator.js`
-- CMP script loader + AdSense script loader: `components/Ads/AdsProviderScripts.jsx`
-- Manual slot renderer: `components/Ads/AdSlot.jsx`
+- Single loader: `components/Ads/AdsProviderScripts.jsx`
+- Route policy helper: `lib/ads/config.js`
+- Script loader: `components/Ads/GoogleAdSenseScript.jsx`
 
 ### Environment variables
 
-- `NEXT_PUBLIC_ADS_ENABLED`: `true` or `false`
-- `NEXT_PUBLIC_ENABLE_ADSENSE`: `true` or `false`
 - `NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID`: your `ca-pub-...` client id
-- `NEXT_PUBLIC_ADSENSE_SLOT_AFTER_HERO`: slot id used by `after-hero`
-- `NEXT_PUBLIC_ADSENSE_SLOT_IN_FEED`: slot id used by `in-feed`
-- `NEXT_PUBLIC_ADS_CONSENT_REQUIRED`: `true` or `false` (recommended: `true`)
-- `NEXT_PUBLIC_ADS_DEBUG`: `true` or `false` (runtime debug logs for ads flow)
 
-CMP (generic TCF loader):
+### Runtime behavior
 
-- `NEXT_PUBLIC_CMP_ENABLED`: `true` or `false`
-- `NEXT_PUBLIC_CMP_PROVIDER`: `cookiebot` or `generic`
-- `NEXT_PUBLIC_CMP_SCRIPT_SRC`: external CMP script URL (must expose `window.__tcfapi`)
-- `NEXT_PUBLIC_CMP_SITE_ID`: optional CMP parameter passed as `data-site-id`
-- `NEXT_PUBLIC_CMP_COOKIEBOT_CBID`: required when provider is `cookiebot` (maps to `data-cbid`)
-- `NEXT_PUBLIC_CMP_COOKIEBOT_BLOCKING_MODE`: Cookiebot blocking mode (default: `auto`)
+- AdSense script is injected only in `production`.
+- AdSense script is injected only on `/news*` and `/videouri*`.
+- No manual ad slots are used.
+- No CMP/Cookiebot gating is used in this temporary minimal setup.
 
-Legacy/deprecated (ignored in runtime):
+### Operational notes
 
-- `NEXT_PUBLIC_ENABLE_MONETAG`
-- `NEXT_PUBLIC_ENABLE_ADSTERRA`
-- `NEXT_PUBLIC_MONETAG_*`
-- `NEXT_PUBLIC_ADSTERRA_*`
-- `NEXT_PUBLIC_PRIMARY_AD_PROVIDER`
-
-### Compliance guardrails
-
-- Ads are rendered only on whitelisted public content routes.
-- Ads are blocked on admin/auth/sensitive/transactional prefixes (for example `/dashboard*` and `/admin*`).
-- If `NEXT_PUBLIC_ADS_CONSENT_REQUIRED=true`, AdSense loads only after valid TCF consent from `window.__tcfapi`.
-
-### IVT hardening checklist
-
-- Keep Auto Ads disabled in AdSense UI for this domain.
-- Add AdSense page exclusions for `/dashboard*` and `/admin*`.
-- Never click production ads from internal/admin sessions.
-- Keep manual density moderate (avoid aggressive stacking).
+- Auto Ads must be enabled in AdSense UI for your site.
+- After code/config changes, ads can take up to ~1 hour to appear.
+- Use AdSense page exclusions for URLs where ads must never render.

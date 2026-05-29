@@ -3,9 +3,7 @@ import { useEffect } from "react";
 export default function GoogleAdSenseScript({ clientId, shouldLoad }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const shouldLogAdsDebug =
-      process.env.NODE_ENV === "development" ||
-      process.env.NEXT_PUBLIC_ADS_DEBUG === "true";
+    const shouldLogAdsDebug = process.env.NODE_ENV === "development";
 
     const existingScript = document.getElementById("google-adsense");
     if (!clientId || !shouldLoad) {
