@@ -1,6 +1,6 @@
 import { readSingleQueryValue } from "../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
-import { loadPublicArticleDetail, parseRelatedLimit } from "../../../lib/publicArticles";
+import { loadPublicArticleDetail, parseRelatedLimit } from "../../../lib/publicArticlesSimple";
 
 function buildRequestId() {
   return `article_detail_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

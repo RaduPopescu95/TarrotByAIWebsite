@@ -2,7 +2,7 @@ import { normalizeLocale, parseQueryPositiveLimit, readSingleQueryValue } from "
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
-import { loadPublicArticles } from "../../../lib/publicArticles";
+import { loadPublicArticles } from "../../../lib/publicArticlesSimple";
 import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
 import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { getOptionalAuth } from "../../../lib/requireAuth";
