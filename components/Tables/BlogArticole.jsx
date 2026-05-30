@@ -44,6 +44,23 @@ export default function BlogArticole({ articles }) {
   const [searchedDb, setSearchedDb] = useState([]);
   const [searchValue, setSearchValue] = useState("");
 
+  const rebuildPublicArticlesCacheBestEffort = async (reason) => {
+    try {
+      await fetch("/api/admin/articles-cache/rebuild", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+      console.log("[BlogArticole] public article cache rebuild triggered", { reason });
+    } catch (error) {
+      console.warn("[BlogArticole] public article cache rebuild failed", {
+        reason,
+        message: error?.message || String(error),
+      });
+    }
+  };
+
   // Helper pt. sortare desc după dataProgramata+timpProgramat cu fallback pe firstUploadDate/time sau firstUploadTimestamp
   const toMs = (x) => {
     try {
@@ -234,6 +251,7 @@ export default function BlogArticole({ articles }) {
     setDb(newData);
     handleShowDialog();
     handleDelete();
+    void rebuildPublicArticlesCacheBestEffort("delete");
   };
 
   const handleEdit = async (
@@ -330,6 +348,7 @@ export default function BlogArticole({ articles }) {
       const sorted = [...updatedData].sort((a, b) => toMs(b) - toMs(a));
       setDb(sorted);
       handleShowDialog();
+      void rebuildPublicArticlesCacheBestEffort("edit");
     } catch (err) {
       console.log("[BlogArticole] Error handleEdit...", err);
     }
@@ -377,6 +396,7 @@ export default function BlogArticole({ articles }) {
       setDb(sorted);
 
       setShowSettings(!showSettings);
+      void rebuildPublicArticlesCacheBestEffort("upload");
     } catch (err) {
       console.log("[BlogArticole] Error handleUpload......", err);
     }

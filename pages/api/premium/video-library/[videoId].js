@@ -3,7 +3,9 @@ import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
 import { hasPremiumAccess } from "../../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
+import { setDynamicPublicCacheHeaders } from "../../../../lib/httpCache";
 import {
+  firestoreTsToMillis,
   isVideoPublishScheduled,
   rowHasValidEmbedForLocale,
 } from "../../../../lib/videoLibraryPublic";
@@ -35,12 +37,6 @@ export default async function handler(req, res) {
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
   let premiumActive = false;
-
-  if (uid || hasAuthHeader) {
-    res.setHeader("Cache-Control", "private, no-store, max-age=0");
-  } else {
-    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
-  }
 
   try {
     const db = getAdminDb();
@@ -97,6 +93,27 @@ export default async function handler(req, res) {
 
     const related = relatedRows.slice(0, RELATED_LIMIT).map((row) => mapVideoRowToPublicDto(row, ctx));
 
+    let cacheTtlSec = 0;
+    if (uid || hasAuthHeader) {
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+    } else {
+      let nextPublishAtMs = null;
+      for (const row of sortedRows) {
+        const publishMs = firestoreTsToMillis(row?.publishAt);
+        if (!Number.isFinite(publishMs) || publishMs <= nowMs) continue;
+        if (nextPublishAtMs == null || publishMs < nextPublishAtMs) {
+          nextPublishAtMs = publishMs;
+        }
+      }
+      const cacheMeta = setDynamicPublicCacheHeaders(res, {
+        nowMs,
+        nextPublishAtMs,
+        maxAgeSeconds: 60,
+        staleWhileRevalidateSeconds: 60,
+      });
+      cacheTtlSec = cacheMeta.cacheTtlSec;
+    }
+
     return res.status(200).json({
       video,
       related,
@@ -104,6 +121,8 @@ export default async function handler(req, res) {
       availableLocales,
       premiumActive,
       loggedIn: Boolean(uid),
+      generatedAt: new Date(nowMs).toISOString(),
+      cacheTtlSec,
     });
   } catch (error) {
     console.error("[premium.video-library.detail] failed", error?.message || error);

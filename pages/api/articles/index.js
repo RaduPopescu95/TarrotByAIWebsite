@@ -1,3 +1,4 @@
+import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { loadPublicArticles, parseArticleLimit } from "../../../lib/publicArticles";
 import { readSingleQueryValue } from "../../../lib/courses";
 
@@ -14,33 +15,50 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed", requestId });
   }
 
-  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
-
   try {
     const limit = parseArticleLimit(req.query.limit);
     const category = readSingleQueryValue(req.query.category);
+    const tag = readSingleQueryValue(req.query.tag);
     const search = readSingleQueryValue(req.query.search);
     const cursor = readSingleQueryValue(req.query.cursor);
+    const id = readSingleQueryValue(req.query.id);
     const locale = readSingleQueryValue(req.query.locale);
 
     const payload = await loadPublicArticles({
       limit,
       category,
+      tag,
       search,
       cursor,
+      id,
       locale,
+    });
+    const nowMs = Date.now();
+    const cacheMeta = setDynamicPublicCacheHeaders(res, {
+      nowMs,
+      nextPublishAtMs: payload?.nextPublishAtMs ?? null,
+      maxAgeSeconds: 60,
+      staleWhileRevalidateSeconds: 60,
     });
 
     console.info("[articles.public] success", {
       requestId,
       limit,
       category: category || null,
+      tag: tag || null,
       hasSearch: Boolean(search),
       cursor: cursor || null,
+      id: id || null,
       articlesCount: payload.articles.length,
+      cacheTtlSec: cacheMeta.cacheTtlSec,
     });
 
-    return res.status(200).json({ ...payload, requestId });
+    return res.status(200).json({
+      ...payload,
+      requestId,
+      generatedAt: new Date(nowMs).toISOString(),
+      cacheTtlSec: cacheMeta.cacheTtlSec,
+    });
   } catch (error) {
     console.error("[articles.public] failed", {
       requestId,

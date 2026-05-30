@@ -4,223 +4,107 @@ import { useRouter } from "next/router";
 import { CalendarDays, Clock, User, ArrowLeft, Share2, BookOpen, Tag } from "lucide-react";
 import Header from "../../../components/Header";
 import Footer from "../../../components/Footer/SiteMap";
-import { handleGetFirestore } from "../../../utils/firestoreUtils";
 import { buildArticleHref } from "../../../utils/commonUtils";
-import { collection, query, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
-import { db } from "../../../firebase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import languageDetector from "../../../lib/languageDetector";
 import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
-import {
-  DEFAULT_ISR_REVALIDATE_SECONDS,
-  withFirestoreCostLog,
-} from "../../../lib/firestoreCostLogger";
-import { loadPublicArticles } from "../../../lib/publicArticles";
-import { toDateFromUnknown } from "../../../lib/articleSchedule";
+import { fetchServerApiJson, resolveServerApiBaseUrl } from "../../../lib/serverApiClient";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
-const LEGACY_LOOKUP_LIMIT = 120;
-const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
-
-function convertFirestoreData(obj) {
-  if (obj === null || obj === undefined) return obj;
-  if (obj.toDate && typeof obj.toDate === "function") {
-    return obj.toDate().toISOString();
+function buildArticlesPreview(articlesData = []) {
+  if (!Array.isArray(articlesData) || articlesData.length === 0) {
+    return {
+      articlesData: [],
+      latestArticles: [],
+      lastArticle: null,
+      latestFiveArticles: [],
+    };
   }
-  if (Array.isArray(obj)) {
-    return obj.map(convertFirestoreData);
-  }
-  if (typeof obj === "object" && obj.constructor === Object) {
-    const converted = {};
-    for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertFirestoreData(value);
-    }
-    return converted;
-  }
-  return obj;
-}
-
-function mapDocToArticle(docSnap) {
-  const data = convertFirestoreData(docSnap.data() || {});
+  const sortedArticles = [...articlesData];
   return {
-    ...data,
-    // Keep both identifiers for backward compatibility.
-    id: data?.id ?? docSnap.id,
-    documentId: docSnap.id,
+    articlesData,
+    latestArticles: sortedArticles.slice(0, 2),
+    lastArticle: sortedArticles[0],
+    latestFiveArticles: sortedArticles.slice(0, 5),
   };
 }
 
-function isArticleVisibleNow(article, now = new Date()) {
-  const scheduledAt = toDateFromUnknown(article?.scheduledAtTs);
-  return Boolean(scheduledAt && scheduledAt.getTime() <= now.getTime());
-}
-
-async function findArticleByLegacyId(rawId, { locale, page } = {}) {
-  const normalizedId = typeof rawId === "string" ? rawId.trim() : "";
-  if (!normalizedId) return null;
-
-  const candidates = [normalizedId];
-  const numericId = Number(normalizedId);
-  if (Number.isFinite(numericId)) {
-    candidates.push(numericId);
-  }
-
-  for (const candidate of candidates) {
-    const legacySnapshot = await withFirestoreCostLog(
-      {
-        page: page || "news.detail",
-        locale,
-        queryName: "news.detail.articleByLegacyId",
-        isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-      },
-      () =>
-        getDocs(
-          query(
-            collection(db, "BlogArticole"),
-            where("id", "==", candidate),
-            limit(1)
-          )
-        )
-    );
-    if (!legacySnapshot.empty) {
-      const candidateArticle = mapDocToArticle(legacySnapshot.docs[0]);
-      return isArticleVisibleNow(candidateArticle) ? candidateArticle : null;
-    }
-  }
-
-  return null;
-}
-
-export async function getStaticPaths() {
-  return {
-    paths: [],
-    fallback: "blocking",
-  };
-}
-
-export async function getStaticProps(context) {
+export async function getServerSideProps(context) {
   try {
-    const { locale, params } = context;
-
-    let filteredArticle = null;
-    let articlesData = [];
+    const { locale, params, req } = context;
     const rawSlug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
     const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
     const slugPrefixId = slug ? slug.split("-")[0].trim() : "";
+    const localeForApi = locale || "ro";
 
-    if (!filteredArticle) {
-      if (slugPrefixId) {
-        const legacyArticleDoc = await withFirestoreCostLog(
+    let filteredArticle = null;
+    let relatedArticles = [];
+    if (slugPrefixId) {
+      try {
+        const detailPayload = await fetchServerApiJson(
+          req,
+          `/api/articles/${encodeURIComponent(slugPrefixId)}`,
           {
-            page: "news.detail",
-            locale,
-            queryName: "news.detail.articleByDocumentId",
-            isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-          },
-          () => getDoc(doc(db, "BlogArticole", slugPrefixId))
+            locale: localeForApi,
+            relatedLimit: 2,
+          }
         );
-        if (legacyArticleDoc.exists()) {
-          const candidateArticle = mapDocToArticle(legacyArticleDoc);
-          filteredArticle = isArticleVisibleNow(candidateArticle) ? candidateArticle : null;
+        filteredArticle = detailPayload?.article || null;
+        relatedArticles = Array.isArray(detailPayload?.related) ? detailPayload.related : [];
+      } catch (error) {
+        if (error?.status !== 404) {
+          console.error("[news.detail] detail api failed", error?.message || error);
         }
       }
-
-      if (!filteredArticle && slugPrefixId) {
-        filteredArticle = await findArticleByLegacyId(slugPrefixId, {
-          locale,
-          page: "news.detail",
-        });
-      }
     }
 
-    if (!filteredArticle) {
-      const fallbackPayload = await loadPublicArticles({
-        limit: LEGACY_LOOKUP_LIMIT,
-        locale,
-      });
-      articlesData = Array.isArray(fallbackPayload?.articles) ? fallbackPayload.articles : [];
-      const fallbackId = slug.split("-")[0];
-      filteredArticle =
-        articlesData.find(
-          (article) =>
-            String(article?.documentId || "") === fallbackId ||
-            String(article?.id || "") === fallbackId
-        ) || null;
-      if (!filteredArticle) {
-        return {
-          props: {
-            articles: {
-              articlesData: [],
-              latestArticles: [],
-              lastArticle: null,
-              latestFiveArticles: [],
-            },
-            filteredArticle: null,
-            relatedArticles: [],
-            slug,
-            ...(await serverSideTranslations(locale, ["common"])),
-          },
-          revalidate: ISR_REVALIDATE_SECONDS,
-        };
-      }
-    }
-
-    if (articlesData.length === 0) {
-      const sidebarPayload = await loadPublicArticles({
-        limit: SIDEBAR_ARTICLES_LIMIT,
-        locale,
-      });
-      articlesData = Array.isArray(sidebarPayload?.articles) ? sidebarPayload.articles : [];
-    }
+    const sidebarPayload = await fetchServerApiJson(req, "/api/articles", {
+      locale: localeForApi,
+      limit: SIDEBAR_ARTICLES_LIMIT,
+    }).catch((error) => {
+      console.error("[news.detail] sidebar api failed", error?.message || error);
+      return null;
+    });
+    let articlesData = Array.isArray(sidebarPayload?.articles) ? sidebarPayload.articles : [];
 
     // Ensure current article exists in sidebar payload even if not part of latest list.
-    const hasCurrentInList = articlesData.some((article) => article.id === filteredArticle.id);
-    if (!hasCurrentInList) {
+    const hasCurrentInList =
+      filteredArticle &&
+      articlesData.some(
+        (article) =>
+          String(article?.documentId || article?.id || "") ===
+          String(filteredArticle?.documentId || filteredArticle?.id || "")
+      );
+    if (filteredArticle && !hasCurrentInList) {
       articlesData = [filteredArticle, ...articlesData].slice(0, SIDEBAR_ARTICLES_LIMIT);
     }
 
-    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "https://cristinazurba.com").replace(/\/$/, "");
+    const baseUrl = resolveServerApiBaseUrl(req).replace(/\/$/, "");
     const localePrefix = locale && locale !== "ro" ? `/${locale}` : "";
     const currentUrl = `${baseUrl}${localePrefix}/news/${slug}`;
 
     // Add current URL to article
-    filteredArticle.currentUrl = currentUrl;
+    if (filteredArticle) {
+      filteredArticle.currentUrl = currentUrl;
+    }
 
-    // Get related articles (same category, exclude current article)
-    const relatedArticles = articlesData
-      .filter(article => 
-        article.categorie?.info?.ro?.nume === filteredArticle.categorie?.info?.ro?.nume && 
-        article.id !== filteredArticle.id
-      )
-      .slice(0, 2);
-
-    // Prepare articles object for sidebar
-    const sortedArticles = [...articlesData];
-
-    const articles = {
-      articlesData,
-      latestArticles: sortedArticles.slice(0, 2),
-      lastArticle: sortedArticles[0],
-      latestFiveArticles: sortedArticles.slice(0, 5),
-    };
-    
     return {
       props: {
-        articles,
+        articles: buildArticlesPreview(articlesData),
         filteredArticle,
         relatedArticles,
+        slug,
         ...(await serverSideTranslations(locale, ["common"])),
       },
-      revalidate: ISR_REVALIDATE_SECONDS,
     };
   } catch (error) {
     console.error("Eroare la preluarea datelor în slug:", error.message);
     return {
       props: {
         error: error.message,
+        slug: "",
       },
-      revalidate: ISR_REVALIDATE_SECONDS,
     };
   }
 }

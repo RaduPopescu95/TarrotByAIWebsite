@@ -1,17 +1,28 @@
-import { normalizeLocale, readSingleQueryValue } from "../../../lib/courses";
+import { normalizeLocale, parseQueryPositiveLimit, readSingleQueryValue } from "../../../lib/courses";
 import { getAdminDb } from "../../../lib/firebaseAdmin";
-import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
+import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
+import { loadPublicArticles } from "../../../lib/publicArticles";
 import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
 import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { firestoreTsToMillis } from "../../../lib/videoLibraryPublic";
 
+const DEFAULT_ARTICLES_LIMIT = 3;
+const DEFAULT_VIDEOS_LIMIT = 6;
+const MAX_HOME_LIMIT = 20;
+
 function buildRequestId() {
-  return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `content_home_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const getNextPublishAtMs = (rows, nowMs) => {
+const normalizeHomeLimit = (rawValue, fallback) => {
+  const parsed = parseQueryPositiveLimit(rawValue, MAX_HOME_LIMIT);
+  if (parsed == null) return fallback;
+  return parsed;
+};
+
+function getNextVideoPublishAtMs(rows, nowMs) {
   let nextValue = null;
   for (const row of rows) {
     const publishMs = firestoreTsToMillis(row?.publishAt);
@@ -21,7 +32,7 @@ const getNextPublishAtMs = (rows, nowMs) => {
     }
   }
   return nextValue;
-};
+}
 
 export default async function handler(req, res) {
   const requestId = buildRequestId();
@@ -35,11 +46,16 @@ export default async function handler(req, res) {
   const hasAuthHeader = typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
-  let premiumActive = false;
 
   try {
-    const db = getAdminDb();
+    const localeRaw = readSingleQueryValue(req.query.locale);
+    const locale = normalizeLocale(localeRaw, "ro");
+    const articlesLimit = normalizeHomeLimit(req.query.articlesLimit, DEFAULT_ARTICLES_LIMIT);
+    const videosLimit = normalizeHomeLimit(req.query.videosLimit, DEFAULT_VIDEOS_LIMIT);
+
+    let premiumActive = false;
     if (uid) {
+      const db = getAdminDb();
       const userSnap = await db.collection("Users").doc(uid).get();
       if (userSnap.exists) {
         premiumActive = hasPremiumAccess(userSnap.data() || {});
@@ -47,71 +63,62 @@ export default async function handler(req, res) {
     }
 
     const clientRaw = readSingleQueryValue(req.query.client);
-    const isWebClient =
-      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
+    const isWebClient = typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
     const subscriptionEnabled = await isSubscriptionSystemEnabled();
     if (!subscriptionEnabled && !isWebClient) {
       premiumActive = true;
     }
 
-    const localeRaw = readSingleQueryValue(req.query.locale);
-    const locale = normalizeLocale(
-      typeof localeRaw === "string" ? localeRaw : undefined,
-      "ro"
-    );
-
-    const scopeRaw = readSingleQueryValue(req.query.scope);
-    const premiumSpotlightOnly = scopeRaw === "premium_zone";
-
-    const [videos, rowsForMeta] = await Promise.all([
+    const [articlesPayload, videos, videoRows] = await Promise.all([
+      loadPublicArticles({
+        locale,
+        limit: articlesLimit,
+      }),
       loadPremiumVideoLibraryVideos({
         locale,
         premiumActive,
-        premiumSpotlightOnly,
+        previewLimit: videosLimit,
       }),
       loadPremiumVideoLibraryRows(),
     ]);
 
     const nowMs = Date.now();
+    const nextVideoPublishAtMs = getNextVideoPublishAtMs(videoRows, nowMs);
+    const nextArticlePublishAtMs =
+      typeof articlesPayload?.nextPublishAtMs === "number" ? articlesPayload.nextPublishAtMs : null;
+    const nextPublishAtMs = [nextArticlePublishAtMs, nextVideoPublishAtMs]
+      .filter((value) => Number.isFinite(value) && value > nowMs)
+      .sort((a, b) => a - b)[0] || null;
+
     let cacheTtlSec = 0;
     if (uid || hasAuthHeader) {
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
     } else {
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
-        nextPublishAtMs: getNextPublishAtMs(rowsForMeta, nowMs),
+        nextPublishAtMs,
         maxAgeSeconds: 60,
         staleWhileRevalidateSeconds: 60,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }
 
-    const responsePayload = {
-      videos,
+    return res.status(200).json({
       locale,
+      articles: articlesPayload?.articles || [],
+      videos: Array.isArray(videos) ? videos : [],
+      nextCursor: articlesPayload?.nextCursor || null,
       premiumActive,
       loggedIn: Boolean(uid),
       generatedAt: new Date(nowMs).toISOString(),
       cacheTtlSec,
-    };
-    console.info("[premium.video-library] success", {
-      requestId,
-      uid: uid || null,
-      client: isWebClient ? "web" : "default",
-      locale,
-      scope: scopeRaw || null,
-      videosCount: Array.isArray(videos) ? videos.length : 0,
-      cacheTtlSec,
     });
-    return res.status(200).json(responsePayload);
   } catch (error) {
-    console.error("[premium.video-library] failed", {
+    console.error("[content.home] failed", {
       requestId,
       message: error?.message || String(error),
-      stackTop: typeof error?.stack === "string" ? error.stack.split("\n").slice(0, 3).join(" | ") : null,
-      uid: uid || null,
       query: req.query || {},
     });
-    return res.status(500).json({ error: "Failed to load video library", requestId });
+    return res.status(500).json({ error: "Failed to load home content", requestId });
   }
 }

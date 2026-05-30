@@ -24,16 +24,9 @@ import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnai
 import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
 import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
-import { normalizeLocale } from "../lib/courses";
-import { loadPremiumVideoLibraryVideos } from "../lib/loadPremiumVideoLibrary";
-import { loadPublicArticles } from "../lib/publicArticles";
-import {
-  DEFAULT_ISR_REVALIDATE_SECONDS,
-  logFirestoreCost,
-} from "../lib/firestoreCostLogger";
+import { fetchServerApiJson } from "../lib/serverApiClient";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
-const ISR_REVALIDATE_SECONDS = DEFAULT_ISR_REVALIDATE_SECONDS;
 
 function formatVideoDuration(seconds, fallback) {
   if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 1) return fallback;
@@ -42,83 +35,102 @@ function formatVideoDuration(seconds, fallback) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export async function getStaticProps({ locale }) {
-  const payload = await loadPublicArticles({
-    limit: 12,
-    locale,
-  });
-  const articlesData = payload?.articles || [];
-  const lastVisibleId = payload?.nextCursor || null;
+function toTimestampMs(value) {
+  if (!value) return null;
+  if (typeof value === "string" || typeof value === "number") {
+    const ms = Date.parse(String(value));
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value?.toDate === "function") {
+    const ms = value.toDate()?.getTime?.();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value?.toMillis === "function") {
+    const ms = value.toMillis();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value?.seconds === "number") return value.seconds * 1000;
+  if (typeof value?._seconds === "number") return value._seconds * 1000;
+  return null;
+}
 
-  let articles = {};
-  if (articlesData.length > 0) {
-    // Sortarea articolelor după data și ora lor
-    const sortedArticles = [...articlesData];
+function parseLegacyDateTimeMs(dateRaw, timeRaw) {
+  if (typeof dateRaw !== "string" || !dateRaw.trim()) return null;
+  const normalized = dateRaw.trim().replace(/[./]/g, "-");
+  const [p1, p2, p3] = normalized.split("-");
+  if (!p1 || !p2 || !p3) return null;
+  const n1 = Number.parseInt(p1, 10);
+  const n2 = Number.parseInt(p2, 10);
+  const n3 = Number.parseInt(p3, 10);
+  if (![n1, n2, n3].every(Number.isFinite)) return null;
+  const [hourPart = "0", minutePart = "0"] =
+    typeof timeRaw === "string" ? timeRaw.split(":") : ["0", "0"];
+  const hour = Number.parseInt(hourPart, 10);
+  const minute = Number.parseInt(minutePart, 10);
+  const safeHour = Number.isFinite(hour) ? hour : 0;
+  const safeMinute = Number.isFinite(minute) ? minute : 0;
+  const yearFirst = p1.length === 4;
+  const year = yearFirst ? n1 : n3;
+  const month = n2;
+  const day = yearFirst ? n3 : n1;
+  const dateValue = new Date(year, month - 1, day, safeHour, safeMinute, 0, 0);
+  const ms = dateValue.getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
 
-    // Selectarea celor mai noi două articole
-    const latestArticles = sortedArticles.slice(0, 2);
+function getArticleSortMs(article) {
+  return (
+    toTimestampMs(article?.scheduledAtTs) ??
+    toTimestampMs(article?.firstUploadTimestamp) ??
+    parseLegacyDateTimeMs(article?.dataProgramata, article?.timpProgramat) ??
+    parseLegacyDateTimeMs(article?.firstUploadDate, article?.firstUploadtime) ??
+    0
+  );
+}
 
-    // Selectarea celor mai noi cinci articole
-    const latestFiveArticles = sortedArticles.slice(0, 5);
-
-    // Selectarea celui mai nou articol
-    const lastArticle = sortedArticles[0]; // Primul articol din lista sortată este cel mai recent
-
-    // Returnarea datelor către componenta Next.js
-    articles = {
-      articlesData,
-      latestArticles,
-      lastArticle,
-      latestFiveArticles,
-    };
-  } else {
-    articles = {
+function buildArticlesPreview(articlesData = []) {
+  if (!Array.isArray(articlesData) || articlesData.length === 0) {
+    return {
       articlesData: [],
       latestArticles: [],
       lastArticle: [],
       latestFiveArticles: [],
     };
   }
+  const sortedArticles = [...articlesData];
+  return {
+    articlesData,
+    latestArticles: sortedArticles.slice(0, 2),
+    lastArticle: sortedArticles[0],
+    latestFiveArticles: sortedArticles.slice(0, 5),
+  };
+}
 
+export async function getServerSideProps({ locale, req }) {
+  let articlesData = [];
+  let lastVisibleId = null;
   let homeVideosPreview = [];
-  const videoStartedAt = Date.now();
   try {
-    homeVideosPreview = await loadPremiumVideoLibraryVideos({
-      locale: normalizeLocale(locale, "ro"),
-      premiumActive: false,
-      previewLimit: HOME_VIDEO_PREVIEW_LIMIT,
-    });
-    logFirestoreCost({
-      page: "home",
+    const payload = await fetchServerApiJson(req, "/api/content/home", {
       locale,
-      queryName: "home.videoPreview",
-      docsRead: Array.isArray(homeVideosPreview) ? homeVideosPreview.length : 0,
-      queryCount: 1,
-      durationMs: Date.now() - videoStartedAt,
-      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
+      articlesLimit: 12,
+      videosLimit: HOME_VIDEO_PREVIEW_LIMIT,
+      client: "web",
     });
-  } catch (err) {
-    logFirestoreCost({
-      page: "home",
-      locale,
-      queryName: "home.videoPreview",
-      docsRead: 0,
-      queryCount: 1,
-      durationMs: Date.now() - videoStartedAt,
-      isrRevalidateSeconds: ISR_REVALIDATE_SECONDS,
-      error: err,
-    });
-    console.error("[index getStaticProps] homeVideosPreview", err?.message || err);
+    articlesData = Array.isArray(payload?.articles) ? payload.articles : [];
+    lastVisibleId = typeof payload?.nextCursor === "string" ? payload.nextCursor : null;
+    homeVideosPreview = Array.isArray(payload?.videos) ? payload.videos : [];
+  } catch (error) {
+    console.error("[index getServerSideProps] content.home failed", error?.message || error);
   }
 
   return {
     props: {
-      articles,
+      articles: buildArticlesPreview(articlesData),
       lastVisibleId,
       homeVideosPreview,
       ...(await serverSideTranslations(locale, ["common"])),
     },
-    revalidate: ISR_REVALIDATE_SECONDS,
   };
 }
 
@@ -252,11 +264,9 @@ function Landing(props) {
     }
 
     // Sortarea articolelor filtrate după data și ora
-    const sortedArticles = articlesData.sort((a, b) => {
-      const dateTimeA = new Date(`${a.firstUploadDate} ${a.firstUploadtime}`);
-      const dateTimeB = new Date(`${b.firstUploadDate} ${b.firstUploadtime}`);
-      return dateTimeB - dateTimeA;
-    });
+    const sortedArticles = [...articlesData].sort(
+      (a, b) => getArticleSortMs(b) - getArticleSortMs(a)
+    );
 
     setCurrentPage(1); // Resetarea paginii curente la 1 după filtrare
     setFilteredArticles(sortedArticles); // Actualizează starea cu articolele filtrate și sortate
