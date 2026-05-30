@@ -2,6 +2,14 @@ import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { loadPublicArticles, parseArticleLimit } from "../../../lib/publicArticles";
 import { readSingleQueryValue } from "../../../lib/courses";
 
+// The first request after a cold cache rebuilds the materialized cache by
+// reading the entire BlogArticole collection (can take 8-12s with oversized
+// articles). Give the function enough headroom so the rebuild completes and
+// writes the cache; otherwise it would be killed mid-rebuild and 500 forever.
+export const config = {
+  maxDuration: 60,
+};
+
 function buildRequestId() {
   return `articles_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
