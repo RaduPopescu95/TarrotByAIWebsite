@@ -72,9 +72,29 @@ This project uses a minimal AdSense Auto Ads setup:
 - AdSense script is injected only on `/news*` and `/videouri*`.
 - No manual ad slots are used.
 - No CMP/Cookiebot gating is used in this temporary minimal setup.
+- Client-side anti-abuse guard:
+  - requires visible tab,
+  - waits ~2.5s before loading ads script,
+  - skips likely automated browsers (`navigator.webdriver`, headless signatures).
+- Server-side anti-abuse guard (`middleware.js`) on `/news*` + `/videouri*`:
+  - blocks common automation user agents,
+  - applies burst rate limiting per IP window.
 
 ### Operational notes
 
 - Auto Ads must be enabled in AdSense UI for your site.
 - After code/config changes, ads can take up to ~1 hour to appear.
 - Use AdSense page exclusions for URLs where ads must never render.
+
+### Cloudflare hardening (recommended)
+
+Apply these in Cloudflare dashboard for the same domain:
+
+1. `Security > Bots`: enable Bot Fight Mode (or Super Bot Fight Mode if available).
+2. `Security > WAF > Rate limiting`:
+   - Rule A: path contains `/news` or `/videouri`
+   - Threshold: start with `60 requests / 1 minute / IP`
+   - Action: Managed Challenge.
+3. `Security > WAF > Custom rules`:
+   - Block obvious automation UAs (`curl`, `python-requests`, `wget`, headless agents).
+4. `Analytics / Logs`: monitor sudden spikes by country/referrer/IP ASN and challenge/block those patterns.
