@@ -14,10 +14,7 @@ import { useApiData } from "../../context/ApiContext";
 import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
 import { normalizeString } from "../../utils/strintText";
-import {
-  handleGetFirestoreSingleArrayData,
-  handleQueryFirestore,
-} from "../../utils/firestoreUtils";
+import { queryVarianteCartiUnified } from "../../utils/varianteCartiClient";
 import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";
@@ -166,11 +163,8 @@ const MediaCardConstantService = ({
       const cardNameNormalized = normalizeString(card.info.ro.nume);
       const categoryNameNormalized = normalizeString("Energia generală");
 
-      const filteredVariante = await handleQueryFirestore(
-        "VarianteCarti",
-        "carte",
+      const filteredVariante = await queryVarianteCartiUnified(
         cardNameNormalized,
-        "categorie",
         categoryNameNormalized
       );
 
