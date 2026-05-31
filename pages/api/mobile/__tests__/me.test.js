@@ -49,7 +49,7 @@ describe("/api/mobile/me", () => {
 
     await handler(req, res);
 
-    expect(loadMobileUserProfile).toHaveBeenCalledWith("uid-123");
+    expect(loadMobileUserProfile).toHaveBeenCalledWith("uid-123", { fresh: false });
     expect(res.statusCode).toBe(200);
     expect(res.headers["Cache-Control"]).toBe("private, max-age=30");
     expect(res.body.user).toEqual({ owner_uid: "uid-123", first_name: "Ana" });
@@ -70,6 +70,7 @@ describe("/api/mobile/me", () => {
     await handler(req, res);
 
     expect(res.headers["Cache-Control"]).toBe("private, no-store, max-age=0");
+    expect(loadMobileUserProfile).toHaveBeenCalledWith("uid-123", { fresh: true });
     expect(res.body.source).toBe("query");
   });
 

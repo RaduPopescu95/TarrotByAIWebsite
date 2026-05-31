@@ -1,7 +1,4 @@
-import { getAdminDb } from "../../../../lib/firebaseAdmin";
-import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
-import { hasPremiumAccess } from "../../../../lib/premiumAccess";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../../lib/httpCache";
 import {
@@ -11,6 +8,10 @@ import {
 } from "../../../../lib/videoLibraryPublic";
 import { loadPremiumVideoLibraryRows } from "../../../../lib/loadPremiumVideoLibrary";
 import { mapVideoRowToPublicDto } from "../../../../lib/videoLibraryPublicMapper";
+import {
+  resolvePublicVideoLibraryPremiumActive,
+  resolveVideoLibraryPremiumActiveForUser,
+} from "../../../../lib/videoLibraryAccess";
 
 const RELATED_LIMIT = 12;
 const INTERNAL_VIDEO_DOC_IDS = new Set(["_meta", "_publicCache"]);
@@ -36,30 +37,18 @@ export default async function handler(req, res) {
   const hasAuthHeader = typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
-  let premiumActive = false;
 
   try {
-    const db = getAdminDb();
-    if (uid) {
-      const userSnap = await db.collection("Users").doc(uid).get();
-      if (userSnap.exists) {
-        premiumActive = hasPremiumAccess(userSnap.data() || {});
-      }
-    }
-
-    const clientRaw = readSingleQueryValue(req.query.client);
-    const isWebClient =
-      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
-    const subscriptionEnabled = await isSubscriptionSystemEnabled();
-    if (!subscriptionEnabled && !isWebClient) {
-      premiumActive = true;
-    }
-
     const localeRaw = readSingleQueryValue(req.query.locale);
     const locale = normalizeLocale(
       typeof localeRaw === "string" ? localeRaw : undefined,
       "ro"
     );
+
+    const premiumActive =
+      uid || hasAuthHeader
+        ? await resolveVideoLibraryPremiumActiveForUser(uid)
+        : await resolvePublicVideoLibraryPremiumActive();
 
     const nowMs = Date.now();
     const sortedRows = await loadPremiumVideoLibraryRows();
@@ -108,8 +97,8 @@ export default async function handler(req, res) {
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
         nextPublishAtMs,
-        maxAgeSeconds: 60,
-        staleWhileRevalidateSeconds: 60,
+        maxAgeSeconds: 300,
+        staleWhileRevalidateSeconds: 600,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }

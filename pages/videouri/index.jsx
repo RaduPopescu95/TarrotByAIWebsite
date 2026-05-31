@@ -9,7 +9,7 @@ import Footer from "../../components/Footer";
 import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
-import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { resolveUiLocale } from "../../lib/siteLocales";
 
 export async function getServerSideProps({ locale }) {
@@ -61,7 +61,7 @@ function VideoLibrarySkeletonGrid({ loadingLabel }) {
 export default function VideoLibraryPage() {
   const router = useRouter();
   const { t } = useTranslation("common");
-  const { currentUser, isGuestUser } = useAuth();
+  const { currentUser, isGuestUser, userData } = useAuth();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,13 +76,11 @@ export default function VideoLibraryPage() {
     setError("");
     try {
       const locale = router.locale || "ro";
-      const authHeaders = await getFirebaseBearerHeader({ required: false });
       const res = await fetch(
         `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
         {
           headers: {
             Accept: "application/json",
-            ...authHeaders,
           },
         }
       );
@@ -190,7 +188,7 @@ export default function VideoLibraryPage() {
 
   const handleVideoIntent = useCallback(
     (v) => {
-      if (v.canPlay && v.embedSrc) {
+      if (isVideoPlayableForUser(v, userData)) {
         router.push(`/videouri/${v.id}`);
         return;
       }
@@ -204,7 +202,7 @@ export default function VideoLibraryPage() {
       }
       router.push("/abonament");
     },
-    [currentUser, isGuestUser, router],
+    [currentUser, isGuestUser, router, userData],
   );
 
   const channelName = t("videoLibraryChannelName");
@@ -434,10 +432,10 @@ export default function VideoLibraryPage() {
                             <button
                               type="button"
                               disabled={
-                                !(v.canPlay && v.embedSrc) && v.lockedReason === "source_invalid"
+                                !isVideoPlayableForUser(v, userData) && v.lockedReason === "source_invalid"
                               }
                               className={`relative aspect-video w-full overflow-hidden rounded-xl bg-slate-200 text-left ${
-                                v.canPlay && v.embedSrc
+                                isVideoPlayableForUser(v, userData)
                                   ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
                                   : v.lockedReason === "source_invalid"
                                     ? "cursor-not-allowed"
@@ -449,7 +447,7 @@ export default function VideoLibraryPage() {
                               <PublicVideoThumbnail
                                 src={v.thumbnailUrl}
                                 imgClassName={
-                                  v.canPlay && v.embedSrc
+                                  isVideoPlayableForUser(v, userData)
                                     ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
                                     : "h-full w-full object-cover"
                                 }
@@ -491,7 +489,7 @@ export default function VideoLibraryPage() {
                                   </p>
                                 </div>
                               )}
-                              {v.canPlay && v.embedSrc && (
+                              {isVideoPlayableForUser(v, userData) && (
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
                                   <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-lg">
                                     {t("videoLibraryPlay")}
@@ -514,7 +512,7 @@ export default function VideoLibraryPage() {
                                 />
                               </div>
                               <div className="min-w-0 flex-1">
-                                {v.canPlay && v.embedSrc ? (
+                                {isVideoPlayableForUser(v, userData) ? (
                                   <button
                                     type="button"
                                     onClick={() => router.push(`/videouri/${v.id}`)}

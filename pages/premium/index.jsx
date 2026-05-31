@@ -10,7 +10,6 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { handleGetUserInfoJobs } from "../../utils/handleFirebaseQuery";
-import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import { hasPremiumAccess } from "../../lib/premiumAccess";
 
 function formatDuration(seconds, fallback = "") {
@@ -32,13 +31,11 @@ function PremiumZoneVideoSpotlight({ locale }) {
       setLoading(true);
       try {
         const lc = locale || "ro";
-        const headers = await getFirebaseBearerHeader({ required: Boolean(currentUser) });
         const res = await fetch(
           `/api/premium/video-library?locale=${encodeURIComponent(lc)}&scope=premium_zone&client=web`,
           {
             headers: {
               Accept: "application/json",
-              ...headers,
             },
           },
         );

@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", "private, max-age=30");
     }
 
-    const { user, source } = await loadMobileUserProfile(uid);
+    const { user, source } = await loadMobileUserProfile(uid, { fresh });
 
     if (!user) {
       return res.status(404).json({

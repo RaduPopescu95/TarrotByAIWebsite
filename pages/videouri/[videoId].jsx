@@ -10,6 +10,7 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { resolveUiLocale } from "../../lib/siteLocales";
 
@@ -60,7 +61,7 @@ function VideoDetailSkeleton() {
 export default function VideoDetailPage() {
   const router = useRouter();
   const { t } = useTranslation("common");
-  const { currentUser, isGuestUser } = useAuth();
+  const { currentUser, isGuestUser, userData } = useAuth();
   const playerWrapRef = useRef(null);
   const [video, setVideo] = useState(null);
   const [related, setRelated] = useState([]);
@@ -161,6 +162,7 @@ export default function VideoDetailPage() {
     typeof video?.description === "string" && video.description.trim()
       ? video.description.trim().slice(0, 160)
       : t("videoLibrarySeoDesc");
+  const videoIsPlayable = isVideoPlayableForUser(video, userData);
 
   return (
     <>
@@ -202,7 +204,7 @@ export default function VideoDetailPage() {
                     ref={playerWrapRef}
                     className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
                   >
-                    {video.canPlay && video.embedSrc ? (
+                    {videoIsPlayable ? (
                       <>
                         <iframe
                           key={video.embedSrc || video.id}

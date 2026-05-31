@@ -1,3 +1,4 @@
+import { buildPublicCacheControl } from "../../../lib/httpCache";
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import {
   extractVimeoId,
@@ -98,6 +99,14 @@ export default async function handler(req, res) {
     const coursesWithPreview = await attachPreviewFallbackFromMedia(db, filteredCourses);
     const courses = coursesWithPreview
       .map((course) => toSafeCourse(course.id, course, locale));
+
+    res.setHeader(
+      "Cache-Control",
+      buildPublicCacheControl({
+        sMaxageSeconds: 300,
+        staleWhileRevalidateSeconds: 600,
+      })
+    );
 
     return res.status(200).json({ courses });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { buildPublicCacheControl } from "../../../lib/httpCache";
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import {
   extractVimeoId,
@@ -162,6 +163,14 @@ export default async function handler(req, res) {
       latestCount: latestCourses.length,
       featuredCount: featuredCourses.length,
     });
+
+    res.setHeader(
+      "Cache-Control",
+      buildPublicCacheControl({
+        sMaxageSeconds: 300,
+        staleWhileRevalidateSeconds: 600,
+      })
+    );
 
     return res.status(200).json({ latestCourses, featuredCourses });
   } catch (error) {
