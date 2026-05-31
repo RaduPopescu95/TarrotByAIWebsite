@@ -23,6 +23,7 @@ import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
 import { loadPublicArticles } from "../../lib/publicArticles";
+import { fetchPublicArticlesClient } from "../../utils/fetchPublicArticlesClient";
 
 function buildArticlesPreview(articlesData = []) {
   if (!Array.isArray(articlesData) || articlesData.length === 0) {
@@ -186,9 +187,17 @@ function BlogHome(props) {
     if (filterItem === "All") {
       allArticlesData = articles.articlesData;
     } else {
-      allArticlesData = articles.articlesData.filter(
-        (article) => article.categorie === filterItem
-      );
+      try {
+        const payload = await fetchPublicArticlesClient({
+          locale: detectedLng,
+          category: filterItem,
+          limit: 50,
+        });
+        allArticlesData = payload.articles;
+      } catch (error) {
+        console.error("[news] category filter failed", error?.message || error);
+        allArticlesData = [];
+      }
     }
 
     // Sortarea articolelor filtrate după data și ora

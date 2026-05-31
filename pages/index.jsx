@@ -25,6 +25,7 @@ import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumb
 import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { loadContentHome } from "../lib/loadContentHome";
+import { fetchPublicArticlesClient } from "../utils/fetchPublicArticlesClient";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
 
@@ -251,16 +252,23 @@ function Landing(props) {
   };
 
   const handleFilter = async (filterItem) => {
-    setFilterItem(filterItem); // Presupunând că ai o stare `filterItem` pentru a stoca categoria selectată
+    setFilterItem(filterItem);
 
     let articlesData = [];
     if (filterItem === "All") {
-      articlesData = articles.articlesData; // Dacă filtrul este "All", folosește toate articolele
+      articlesData = articles.articlesData;
     } else {
-      // Filtrarea articolelor pe baza categoriei selectate
-      articlesData = articles.articlesData.filter(
-        (article) => article.categorie === filterItem
-      );
+      try {
+        const payload = await fetchPublicArticlesClient({
+          locale: router.locale || "ro",
+          category: filterItem,
+          limit: 50,
+        });
+        articlesData = payload.articles;
+      } catch (error) {
+        console.error("[home] category filter failed", error?.message || error);
+        articlesData = [];
+      }
     }
 
     // Sortarea articolelor filtrate după data și ora
