@@ -17,8 +17,8 @@ import CartiViitorFields from "../Dashboard/CartiViitorFields";
 import DeleteDialog from "../DialogBox/DeleteDialog";
 import AfirmatiiPozitiveFields from "../Dashboard/AfirmatiiPozitiveFields";
 import {
+  clearFirestorePaginatedCache,
   handleDeleteFirestoreData,
-  handleGetFirestore,
   handleUpdateFirestore,
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
@@ -136,22 +136,15 @@ export default function NotificariManuale({ articles }) {
   };
 
   const confirmDelete = async () => {
-    const authInstance = authentication;
-    const currentUser = authInstance.currentUser;
-    const database = getDatabase();
-    // console.log(dialogData);
-
-    //  O FUNCTIE PENTRU STERGERE DOC SI A INNOI ID URILE TUTUROR DOCUMENTELOR PENTRU CA ID URILE SA RAMANA IN ORDINE
-    const newData = await handleDeleteFirestoreData(
+    await handleDeleteFirestoreData(
       `NotificariManuale/${dialogData.documentId}`,
-      true,
+      false,
       "NotificariManuale"
     );
-
-    console.log("new data.....", newData);
-
-    // Actualizează starea db cu noua matrice filtrată
-    setDb(newData);
+    clearFirestorePaginatedCache("NotificariManuale", 50, "id", "asc");
+    setDb((prev) =>
+      prev.filter((item) => item.documentId !== dialogData.documentId)
+    );
     handleShowDialog();
     handleDelete();
   };
@@ -249,6 +242,7 @@ export default function NotificariManuale({ articles }) {
             `NotificariManuale/${data.documentId}`,
             data
           );
+          clearFirestorePaginatedCache("NotificariManuale", 50, "id", "asc");
           return data;
         } else {
           console.log("is not found");
@@ -284,6 +278,7 @@ export default function NotificariManuale({ articles }) {
         data,
         "NotificariManuale"
       );
+      clearFirestorePaginatedCache("NotificariManuale", 50, "id", "asc");
 
       let newData = db;
 

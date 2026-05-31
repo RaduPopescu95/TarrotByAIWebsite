@@ -298,6 +298,7 @@ export default function BlogArticole({ articles }) {
               timpProgramat,
               dataProgramata,
               scheduledAtTs: date,
+              notificationState: "pending",
             };
             console.log("if.....", data);
           } else {
@@ -333,6 +334,7 @@ export default function BlogArticole({ articles }) {
               timpProgramat,
               dataProgramata,
               scheduledAtTs: date,
+              notificationState: "pending",
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);

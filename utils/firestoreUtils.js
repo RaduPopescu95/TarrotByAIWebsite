@@ -44,6 +44,18 @@ const getCacheEntry = (key, cacheMs) => {
 const setCacheEntry = (key, payload) => {
   firestoreCache.set(key, { ...payload, timestamp: Date.now() });
 };
+
+/** Clears cached first page for a paginated Firestore list. */
+export const clearFirestorePaginatedCache = (
+  location,
+  limitCount = 50,
+  orderByField = "id",
+  orderDirection = "asc"
+) => {
+  const cacheKey = `page1:${location}:${limitCount}:${orderByField}:${orderDirection}`;
+  firestoreCache.delete(cacheKey);
+  firestoreInFlight.delete(cacheKey);
+};
 export const userLocation = `Users/${
   auth.currentUser ? auth.currentUser.uid : ""
 }`; // Calea către document
@@ -173,7 +185,12 @@ export const handleUploadFirestore = async (data, location) => {
       firstUploadDate:
         data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
       firstUploadTimestamp: date,
-      ...(location === "BlogArticole" ? { scheduledAtTs: date } : {}),
+      ...(location === "BlogArticole"
+        ? {
+            scheduledAtTs: date,
+            notificationState: "pending",
+          }
+        : {}),
     };
 
     // Face upload cu noul obiect de date care include ID-ul documentului
