@@ -25,7 +25,7 @@ import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumb
 import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { loadContentHome } from "../lib/loadContentHome";
-import { fetchPublicArticlesClient } from "../utils/fetchPublicArticlesClient";
+import { usePaginatedArticleGrid } from "../hooks/usePaginatedArticleGrid";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
 
@@ -114,7 +114,7 @@ export async function getServerSideProps({ locale }) {
   try {
     const payload = await loadContentHome({
       locale,
-      articlesLimit: 12,
+      articlesLimit: 4,
       videosLimit: HOME_VIDEO_PREVIEW_LIMIT,
       client: "web",
     });
@@ -168,7 +168,7 @@ function Landing(props) {
   } = useApiData();
   const { t, i18n } = useTranslation("common");
 
-  const { articles, homeVideosPreview = [] } = props;
+  const { articles, homeVideosPreview = [], lastVisibleId } = props;
 
   const router = useRouter();
 
@@ -195,36 +195,28 @@ function Landing(props) {
   // In your component
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const itemsPerPage = 4; // Setează numărul de articole pe pagină la 4
+  const itemsPerPage = 4;
 
-  // Calculează indexul de start și de sfârșit pentru articolele de pe pagina curentă
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  // Extrage articolele de pe pagina curentă
-  const [articlesToDisplay, setArticlesToDisplay] = useState(
-    articles.articlesData
-      ? articles.articlesData.slice(startIndex, endIndex)
-      : []
-  );
-  const [lastArticle, setLastArticle] = useState(
-    articles.lastArticle ? articles.lastArticle : []
-  );
-  const [latestArticles, setLatestArticles] = useState(
-    articles.latestArticles ? articles.latestArticles : []
-  );
-
-  const [latestFiveArticles, setLatestFiverArticles] = useState(
-    articles.latestFiveArticles ? articles.latestFiveArticles : []
-  );
-
-  const [filteredArticles, setFilteredArticles] = useState(
-    articles.articlesData
-  );
-
-  const [filterItem, setFilterItem] = useState("All");
+  const {
+    filterItem,
+    currentPage,
+    articlesToDisplay,
+    isGridLoading,
+    canGoNext,
+    canGoPrev,
+    totalLoadedCount,
+    loadedPageCount,
+    handleFilter,
+    handleNextPage,
+    handlePrevPage,
+  } = usePaginatedArticleGrid({
+    locale: router.locale || "ro",
+    pageSize: itemsPerPage,
+    featuredCount: 0,
+    initialArticles: articles.articlesData || [],
+    initialCursor: lastVisibleId,
+    getSortMs: getArticleSortMs,
+  });
   const [homeCoursesLoading, setHomeCoursesLoading] = useState(true);
   const [homeCoursesError, setHomeCoursesError] = useState("");
   const [homeCourses, setHomeCourses] = useState({
@@ -237,60 +229,6 @@ function Landing(props) {
     homeCoursesLoading || Boolean(homeCoursesError) || hasAnyHomeCourses;
   const latestCourseCardsGridClass = getCourseGridClass(homeCourses.latestCourses.length);
   const featuredCourseCardsGridClass = getCourseGridClass(homeCourses.featuredCourses.length);
-
-  const handleNextPage = () => {
-    const newStartIndex = currentPage * itemsPerPage;
-    if (newStartIndex < filteredArticles.length) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleFilter = async (filterItem) => {
-    setFilterItem(filterItem);
-
-    let articlesData = [];
-    if (filterItem === "All") {
-      articlesData = articles.articlesData;
-    } else {
-      try {
-        const payload = await fetchPublicArticlesClient({
-          locale: router.locale || "ro",
-          category: filterItem,
-          limit: 50,
-        });
-        articlesData = payload.articles;
-      } catch (error) {
-        console.error("[home] category filter failed", error?.message || error);
-        articlesData = [];
-      }
-    }
-
-    // Sortarea articolelor filtrate după data și ora
-    const sortedArticles = [...articlesData].sort(
-      (a, b) => getArticleSortMs(b) - getArticleSortMs(a)
-    );
-
-    setCurrentPage(1); // Resetarea paginii curente la 1 după filtrare
-    setFilteredArticles(sortedArticles); // Actualizează starea cu articolele filtrate și sortate
-  };
-
-  useEffect(() => {
-    console.log("asdad.....");
-    const newStartIndex = (currentPage - 1) * itemsPerPage;
-    const newEndIndex = newStartIndex + itemsPerPage;
-    const newArticlesToDisplay = filteredArticles.slice(
-      newStartIndex,
-      newEndIndex
-    );
-
-    setArticlesToDisplay(newArticlesToDisplay);
-  }, [currentPage, filteredArticles]); // Ascultă modificările la `currentPage` și `filteredArticles`
 
   useEffect(() => {
     let mounted = true;
@@ -497,12 +435,12 @@ function Landing(props) {
                           </h2>
                           <div className="flex items-center gap-6">
                             <div className="flex flex-col items-center">
-                              <span className="text-2xl font-bold text-indigo-600 leading-none">{filteredArticles.length}</span>
+                              <span className="text-2xl font-bold text-indigo-600 leading-none">{totalLoadedCount}</span>
                               <span className="text-sm text-gray-500 font-medium uppercase tracking-wide">{t("articles")}</span>
                   </div>
                             <div className="w-px h-10 bg-gray-200"></div>
                             <div className="flex flex-col items-center">
-                              <span className="text-2xl font-bold text-indigo-600 leading-none">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
+                              <span className="text-2xl font-bold text-indigo-600 leading-none">{loadedPageCount}{canGoNext ? "+" : ""}</span>
                               <span className="text-sm text-gray-500 font-medium uppercase tracking-wide">{t("pages")}</span>
                   </div>
                   </div>
@@ -592,14 +530,14 @@ function Landing(props) {
                       </div>
 
                       {/* Modern Pagination */}
-                      {filteredArticles.length > itemsPerPage && (
+                      {(canGoNext || canGoPrev) && (
                         <div className="mt-16 pt-12 border-t border-gray-200">
                           <div className="flex justify-center items-center max-w-2xl mx-auto gap-4">
                           <button
                             onClick={handlePrevPage}
-                            disabled={currentPage === 1}
+                            disabled={!canGoPrev || isGridLoading}
                               className={`flex items-center gap-3 px-3 md:px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
-                                currentPage === 1
+                                !canGoPrev || isGridLoading
                                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                   : 'bg-white text-indigo-600 border-2 border-indigo-600 hover:border-indigo-700 hover:text-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                               }`}
@@ -614,24 +552,21 @@ function Landing(props) {
                               <div className="flex items-center gap-2 text-lg font-semibold">
                                 <span className="text-indigo-600 text-xl">{currentPage}</span>
                                 <span className="text-gray-400 text-sm">{t("of")}</span>
-                                <span className="text-gray-600">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
+                                <span className="text-gray-600">{loadedPageCount}{canGoNext ? "+" : ""}</span>
                               </div>
                               <div className="w-32 h-1 bg-gray-200 rounded-full overflow-hidden">
                                 <div 
                                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-300"
-                                  style={{ width: `${(currentPage / Math.ceil(filteredArticles.length / itemsPerPage)) * 100}%` }}
+                                  style={{ width: `${canGoNext ? Math.min(100, (currentPage / (loadedPageCount + 1)) * 100) : 100}%` }}
                                 ></div>
                               </div>
                           </div>
                           
                           <button
                             onClick={handleNextPage}
-                            disabled={
-                              articlesToDisplay &&
-                                endIndex >= filteredArticles.length
-                              }
+                            disabled={!canGoNext || isGridLoading}
                               className={`flex items-center gap-3 px-3 md:px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
-                                articlesToDisplay && endIndex >= filteredArticles.length
+                                !canGoNext || isGridLoading
                                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                   : 'bg-white text-indigo-600 border-2 border-indigo-600 hover:border-indigo-700 hover:text-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                               }`}

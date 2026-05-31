@@ -1,7 +1,8 @@
 export async function fetchPublicArticlesClient({
   locale = "ro",
   category,
-  limit = 50,
+  limit = 12,
+  cursor = null,
 } = {}) {
   const params = new URLSearchParams({
     locale: locale || "ro",
@@ -9,6 +10,9 @@ export async function fetchPublicArticlesClient({
   });
   if (category && category !== "All") {
     params.set("category", category);
+  }
+  if (cursor) {
+    params.set("cursor", cursor);
   }
 
   const response = await fetch(`/api/articles?${params.toString()}`);

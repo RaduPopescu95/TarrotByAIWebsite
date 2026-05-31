@@ -5,7 +5,6 @@ import Headline from "../../components/Blog/Headline";
 import PostCard from "../../components/Cards/PostCard";
 import Sidebar from "../../components/Blog/Sidebar";
 import { useState } from "react";
-import { useEffect } from "react";
 import { Fragment } from "react";
 import { handleGetArticles } from "../../utils/realtimeUtils";
 import { useRouter } from "next/router";
@@ -23,7 +22,7 @@ import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
 import { loadPublicArticles } from "../../lib/publicArticles";
-import { fetchPublicArticlesClient } from "../../utils/fetchPublicArticlesClient";
+import { usePaginatedArticleGrid } from "../../hooks/usePaginatedArticleGrid";
 
 function buildArticlesPreview(articlesData = []) {
   if (!Array.isArray(articlesData) || articlesData.length === 0) {
@@ -101,7 +100,7 @@ export async function getServerSideProps({ locale }) {
   try {
     payload = await loadPublicArticles({
       locale,
-      limit: 12,
+      limit: 9,
     });
   } catch (error) {
     console.error("[news getServerSideProps] articles failed", error?.message || error);
@@ -124,7 +123,9 @@ function BlogHome(props) {
   const router = useRouter();
   const detectedLng = router?.locale || 'ro';
   const { currentUser, isGuestUser } = useAuth();
-  const { articles } = props;
+  const { articles, lastVisibleId } = props;
+  const featuredArticlesCount = 3;
+  const itemsPerPage = 6;
 
   // Helper function to generate article URL
   const getArticleUrl = (article) =>
@@ -137,20 +138,6 @@ function BlogHome(props) {
   // In your component
   const currentUrl = `${baseUrl}${router.asPath || ""}`;
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6; // Show 6 articles per page after featured articles
-
-  // Calculate pagination for articles after the featured ones
-  const featuredArticlesCount = 3; // Featured + next 2 articles
-  const paginatedArticles = articles.articlesData ? articles.articlesData.slice(featuredArticlesCount) : [];
-  
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  // Extrage articolele de pe pagina curentă
-  const [articlesToDisplay, setArticlesToDisplay] = useState(
-    paginatedArticles.slice(startIndex, endIndex)
-  );
   const [lastArticle, setLastArticle] = useState(
     articles.lastArticle ? articles.lastArticle : []
   );
@@ -161,75 +148,32 @@ function BlogHome(props) {
     articles.latestFiveArticles ? articles.latestFiveArticles : []
   );
 
-  const [filteredArticles, setFilteredArticles] = useState(
-    paginatedArticles
-  );
+  const {
+    filterItem,
+    currentPage,
+    articlesToDisplay,
+    isGridLoading,
+    canGoNext,
+    canGoPrev,
+    handleFilter: loadFilteredGrid,
+    handleNextPage,
+    handlePrevPage,
+  } = usePaginatedArticleGrid({
+    locale: detectedLng,
+    pageSize: itemsPerPage,
+    featuredCount: featuredArticlesCount,
+    initialArticles: articles.articlesData || [],
+    initialCursor: lastVisibleId,
+    getSortMs: getArticleSortMs,
+  });
 
-  const [filterItem, setFilterItem] = useState("All");
-
-  const handleNextPage = () => {
-    const newStartIndex = currentPage * itemsPerPage;
-    if (newStartIndex < filteredArticles.length) {
-      setCurrentPage(currentPage + 1);
-    }
+  const handleFilter = (nextFilter) => {
+    loadFilteredGrid(nextFilter, ({ lastArticle: nextLast, latestArticles: nextLatest, latestFiveArticles: nextFive }) => {
+      setLastArticle(nextLast);
+      setLatestArticles(nextLatest);
+      setLatestFiverArticles(nextFive);
+    });
   };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleFilter = async (filterItem) => {
-    setFilterItem(filterItem);
-
-    let allArticlesData = [];
-    if (filterItem === "All") {
-      allArticlesData = articles.articlesData;
-    } else {
-      try {
-        const payload = await fetchPublicArticlesClient({
-          locale: detectedLng,
-          category: filterItem,
-          limit: 50,
-        });
-        allArticlesData = payload.articles;
-      } catch (error) {
-        console.error("[news] category filter failed", error?.message || error);
-        allArticlesData = [];
-      }
-    }
-
-    // Sortarea articolelor filtrate după data și ora
-    const sortedArticles = [...allArticlesData].sort(
-      (a, b) => getArticleSortMs(b) - getArticleSortMs(a)
-    );
-
-    // Update the featured sections based on filtered articles
-    const newLastArticle = sortedArticles.length > 0 ? sortedArticles[0] : null;
-    const newLatestArticles = sortedArticles.length > 1 ? sortedArticles.slice(1, 3) : [];
-    const newLatestFiveArticles = sortedArticles.length > 0 ? sortedArticles.slice(0, 5) : [];
-    
-    setLastArticle(newLastArticle);
-    setLatestArticles(newLatestArticles);
-    setLatestFiverArticles(newLatestFiveArticles);
-
-    // Update paginated articles for the main grid (excluding featured ones)
-    const paginatedFiltered = sortedArticles.slice(featuredArticlesCount);
-    setCurrentPage(1);
-    setFilteredArticles(paginatedFiltered);
-  };
-
-  useEffect(() => {
-    const newStartIndex = (currentPage - 1) * itemsPerPage;
-    const newEndIndex = newStartIndex + itemsPerPage;
-    const newArticlesToDisplay = filteredArticles.slice(
-      newStartIndex,
-      newEndIndex
-    );
-
-    setArticlesToDisplay(newArticlesToDisplay);
-  }, [currentPage, filteredArticles]);
 
   // News page should be accessible to everyone - no authentication required
 
@@ -504,9 +448,9 @@ function BlogHome(props) {
                   <div className="flex justify-center items-center gap-4">
                     <button
                       onClick={handlePrevPage}
-                      disabled={currentPage === 1}
+                      disabled={!canGoPrev || isGridLoading}
                       className={`flex items-center gap-2 px-3 md:px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                        currentPage === 1
+                        !canGoPrev || isGridLoading
                           ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md hover:shadow-lg border border-gray-200'
                       }`}
@@ -523,9 +467,9 @@ function BlogHome(props) {
                     
                     <button
                       onClick={handleNextPage}
-                      disabled={endIndex >= filteredArticles.length}
+                      disabled={!canGoNext || isGridLoading}
                       className={`flex items-center gap-2 px-3 md:px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                        endIndex >= filteredArticles.length
+                        !canGoNext || isGridLoading
                           ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
                       }`}
