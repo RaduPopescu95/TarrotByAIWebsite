@@ -24,7 +24,7 @@ import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnai
 import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
 import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
-import { fetchServerApiJson } from "../lib/serverApiClient";
+import { loadContentHome } from "../lib/loadContentHome";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
 
@@ -106,12 +106,12 @@ function buildArticlesPreview(articlesData = []) {
   };
 }
 
-export async function getServerSideProps({ locale, req }) {
+export async function getServerSideProps({ locale }) {
   let articlesData = [];
   let lastVisibleId = null;
   let homeVideosPreview = [];
   try {
-    const payload = await fetchServerApiJson(req, "/api/content/home", {
+    const payload = await loadContentHome({
       locale,
       articlesLimit: 12,
       videosLimit: HOME_VIDEO_PREVIEW_LIMIT,

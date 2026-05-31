@@ -9,7 +9,11 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import languageDetector from "../../../lib/languageDetector";
 import { getYoutubeEmbedUrl } from "../../../utils/youtubeLinkUtils";
-import { fetchServerApiJson, resolveServerApiBaseUrl } from "../../../lib/serverApiClient";
+import { resolveServerApiBaseUrl } from "../../../lib/serverApiClient";
+import {
+  loadPublicArticleDetail,
+  loadPublicArticles,
+} from "../../../lib/publicArticles";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
 function buildArticlesPreview(articlesData = []) {
@@ -42,28 +46,23 @@ export async function getServerSideProps(context) {
     let relatedArticles = [];
     if (slugPrefixId) {
       try {
-        const detailPayload = await fetchServerApiJson(
-          req,
-          `/api/articles/${encodeURIComponent(slugPrefixId)}`,
-          {
-            locale: localeForApi,
-            relatedLimit: 2,
-          }
-        );
+        const detailPayload = await loadPublicArticleDetail({
+          id: slugPrefixId,
+          locale: localeForApi,
+          relatedLimit: 2,
+        });
         filteredArticle = detailPayload?.article || null;
         relatedArticles = Array.isArray(detailPayload?.related) ? detailPayload.related : [];
       } catch (error) {
-        if (error?.status !== 404) {
-          console.error("[news.detail] detail api failed", error?.message || error);
-        }
+        console.error("[news.detail] detail load failed", error?.message || error);
       }
     }
 
-    const sidebarPayload = await fetchServerApiJson(req, "/api/articles", {
+    const sidebarPayload = await loadPublicArticles({
       locale: localeForApi,
       limit: SIDEBAR_ARTICLES_LIMIT,
     }).catch((error) => {
-      console.error("[news.detail] sidebar api failed", error?.message || error);
+      console.error("[news.detail] sidebar load failed", error?.message || error);
       return null;
     });
     let articlesData = Array.isArray(sidebarPayload?.articles) ? sidebarPayload.articles : [];

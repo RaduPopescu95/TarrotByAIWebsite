@@ -22,7 +22,7 @@ import { filterArticlesBeforeCurrentTime } from "../../utils/commonUtils";
 import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
-import { fetchServerApiJson } from "../../lib/serverApiClient";
+import { loadPublicArticles } from "../../lib/publicArticles";
 
 function buildArticlesPreview(articlesData = []) {
   if (!Array.isArray(articlesData) || articlesData.length === 0) {
@@ -95,12 +95,12 @@ function getArticleSortMs(article) {
   );
 }
 
-export async function getServerSideProps({ locale, req }) {
+export async function getServerSideProps({ locale }) {
   let payload = null;
   try {
-    payload = await fetchServerApiJson(req, "/api/articles", {
+    payload = await loadPublicArticles({
       locale,
-      limit: 50,
+      limit: 12,
     });
   } catch (error) {
     console.error("[news getServerSideProps] articles failed", error?.message || error);
