@@ -2,7 +2,7 @@ import { normalizeLocale, parseQueryPositiveLimit, readSingleQueryValue } from "
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
-import { loadPublicArticles } from "../../../lib/publicArticlesSimple";
+import { loadPublicArticles } from "../../../lib/publicArticles";
 import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
 import { hasPremiumAccess } from "../../../lib/premiumAccess";
 import { getOptionalAuth } from "../../../lib/requireAuth";
@@ -97,8 +97,8 @@ export default async function handler(req, res) {
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
         nextPublishAtMs,
-        maxAgeSeconds: 60,
-        staleWhileRevalidateSeconds: 60,
+        maxAgeSeconds: 300,
+        staleWhileRevalidateSeconds: 600,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }

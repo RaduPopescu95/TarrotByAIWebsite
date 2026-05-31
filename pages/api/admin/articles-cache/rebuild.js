@@ -1,4 +1,7 @@
-import { clearArticlesCache } from "../../../../lib/publicArticlesSimple";
+import {
+  clearPublicArticlesMemoryCache,
+  rebuildPublicArticlesMaterializedCache,
+} from "../../../../lib/publicArticles";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
 
 export default async function handler(req, res) {
@@ -9,17 +12,18 @@ export default async function handler(req, res) {
 
   try {
     requireDashboardAccess(req);
-    clearArticlesCache();
+    clearPublicArticlesMemoryCache();
+    const rowCount = await rebuildPublicArticlesMaterializedCache();
     return res.status(200).json({
       ok: true,
-      message: "In-memory cache cleared, next request will fetch fresh data",
+      rowCount: Array.isArray(rowCount) ? rowCount.length : null,
+      message: "Public articles materialized cache rebuilt",
     });
   } catch (error) {
     const status = error?.statusCode || 500;
     console.error("[admin.articles-cache.rebuild] failed", error?.message || error);
     return res.status(status).json({
-      error: status === 500 ? "Failed to clear article cache" : error.message,
+      error: status === 500 ? "Failed to rebuild article cache" : error.message,
     });
   }
 }
-

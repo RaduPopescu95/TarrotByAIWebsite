@@ -3,7 +3,7 @@ import GoogleAdSenseScript from "./GoogleAdSenseScript";
 import { useRouter } from "next/router";
 import { isAdsenseRouteEligible } from "../../lib/ads/config";
 
-const MIN_ENGAGEMENT_MS = 9000;
+const MIN_ENGAGEMENT_MS = 5000;
 const MAX_ADS_PAGES_PER_SESSION = 5;
 const SESSION_ADS_PAGE_COUNT_KEY = "adsense:eligible-pages-count";
 

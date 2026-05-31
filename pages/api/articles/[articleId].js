@@ -1,6 +1,6 @@
 import { readSingleQueryValue } from "../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
-import { loadPublicArticleDetail, parseRelatedLimit } from "../../../lib/publicArticlesSimple";
+import { loadPublicArticleDetail, parseRelatedLimit } from "../../../lib/publicArticles";
 
 function buildRequestId() {
   return `article_detail_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -33,8 +33,8 @@ export default async function handler(req, res) {
     const cacheMeta = setDynamicPublicCacheHeaders(res, {
       nowMs,
       nextPublishAtMs: payload?.nextPublishAtMs ?? null,
-      maxAgeSeconds: 60,
-      staleWhileRevalidateSeconds: 60,
+      maxAgeSeconds: 300,
+      staleWhileRevalidateSeconds: 600,
     });
 
     if (!payload.article) {

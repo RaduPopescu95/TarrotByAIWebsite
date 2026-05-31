@@ -1,5 +1,5 @@
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
-import { loadPublicArticles, parseArticleLimit } from "../../../lib/publicArticlesSimple";
+import { loadPublicArticles, parseArticleLimit } from "../../../lib/publicArticles";
 import { readSingleQueryValue } from "../../../lib/courses";
 
 // Direct Firestore reads with in-memory cache - simpler and more reliable
@@ -42,8 +42,8 @@ export default async function handler(req, res) {
     const cacheMeta = setDynamicPublicCacheHeaders(res, {
       nowMs,
       nextPublishAtMs: payload?.nextPublishAtMs ?? null,
-      maxAgeSeconds: 60,
-      staleWhileRevalidateSeconds: 60,
+      maxAgeSeconds: 300,
+      staleWhileRevalidateSeconds: 600,
     });
 
     console.info("[articles.public] success", {

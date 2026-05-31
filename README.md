@@ -74,7 +74,7 @@ This project uses a minimal AdSense Auto Ads setup:
 - No CMP/Cookiebot gating is used in this temporary minimal setup.
 - Client-side anti-abuse guard:
   - requires visible tab,
-  - waits ~9s before loading ads script,
+  - waits ~5s before loading ads script,
   - requires at least one real interaction (scroll/click/touch/keydown),
   - caps ads loading to max 5 eligible pages per browser session,
   - skips likely automated browsers (`navigator.webdriver`, headless signatures).
