@@ -1,7 +1,4 @@
-import {
-  getMobileForceUpdateEnabled,
-  getMobileUpdatePromptEnabled,
-} from "../../../lib/mobileUpdatePromptSettings";
+import { loadMobileUpdateStatus } from "../../../lib/mobileUpdatePromptSettings";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -10,14 +7,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const showUpdatePrompt = await getMobileUpdatePromptEnabled();
-    const forceUpdate = await getMobileForceUpdateEnabled();
+    const status = await loadMobileUpdateStatus();
 
     // Safety normalization: force implies show.
-    const normalizedShow = Boolean(showUpdatePrompt || forceUpdate);
-    const normalizedForce = Boolean(forceUpdate);
+    const normalizedShow = Boolean(status.update || status.forceUpdate);
+    const normalizedForce = Boolean(status.forceUpdate);
 
-    res.setHeader("Cache-Control", "no-store, max-age=0");
+    if (normalizedForce) {
+      res.setHeader("Cache-Control", "public, max-age=60");
+    } else if (normalizedShow) {
+      res.setHeader("Cache-Control", "public, max-age=120");
+    } else {
+      res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    }
+
     return res.status(200).json({
       showUpdatePrompt: normalizedShow,
       forceUpdate: normalizedForce,

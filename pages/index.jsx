@@ -213,8 +213,9 @@ function Landing(props) {
     locale: router.locale || "ro",
     pageSize: itemsPerPage,
     featuredCount: 0,
-    initialArticles: articles.articlesData || [],
-    initialCursor: lastVisibleId,
+    initialFeaturedArticles: [],
+    initialGridArticles: articles.articlesData || [],
+    initialGridCursor: lastVisibleId,
     getSortMs: getArticleSortMs,
   });
   const [homeCoursesLoading, setHomeCoursesLoading] = useState(true);

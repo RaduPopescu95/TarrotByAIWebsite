@@ -1,9 +1,7 @@
-const getMobileUpdatePromptEnabled = jest.fn();
-const getMobileForceUpdateEnabled = jest.fn();
+const loadMobileUpdateStatus = jest.fn();
 
 jest.mock("../../../../lib/mobileUpdatePromptSettings", () => ({
-  getMobileUpdatePromptEnabled: (...args) => getMobileUpdatePromptEnabled(...args),
-  getMobileForceUpdateEnabled: (...args) => getMobileForceUpdateEnabled(...args),
+  loadMobileUpdateStatus: (...args) => loadMobileUpdateStatus(...args),
 }));
 
 import handler from "../update-status";
@@ -35,20 +33,20 @@ describe("/api/mobile/update-status", () => {
   });
 
   it("returns normalized flags (force implies show)", async () => {
-    getMobileUpdatePromptEnabled.mockResolvedValueOnce(false);
-    getMobileForceUpdateEnabled.mockResolvedValueOnce(true);
+    loadMobileUpdateStatus.mockResolvedValueOnce({ update: false, forceUpdate: true });
     const req = { method: "GET" };
     const res = makeRes();
 
     await handler(req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.headers["Cache-Control"]).toBe("no-store, max-age=0");
+    expect(res.headers["Cache-Control"]).toBe("public, max-age=60");
     expect(res.body).toEqual({
       showUpdatePrompt: true,
       forceUpdate: true,
       source: "firestore:ShouldUpdate/unicde",
     });
+    expect(loadMobileUpdateStatus).toHaveBeenCalledTimes(1);
   });
 
   it("rejects non-GET methods", async () => {
@@ -63,7 +61,7 @@ describe("/api/mobile/update-status", () => {
   });
 
   it("returns 500 when settings read fails", async () => {
-    getMobileUpdatePromptEnabled.mockRejectedValueOnce(new Error("boom"));
+    loadMobileUpdateStatus.mockRejectedValueOnce(new Error("boom"));
     const req = { method: "GET" };
     const res = makeRes();
 

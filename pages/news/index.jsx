@@ -36,7 +36,7 @@ function buildArticlesPreview(articlesData = []) {
   const sortedArticles = [...articlesData];
   return {
     articlesData,
-    latestArticles: sortedArticles.slice(0, 2),
+    latestArticles: sortedArticles.slice(1, 3),
     lastArticle: sortedArticles[0],
     latestFiveArticles: sortedArticles.slice(0, 5),
   };
@@ -96,23 +96,34 @@ function getArticleSortMs(article) {
 }
 
 export async function getServerSideProps({ locale }) {
-  let payload = null;
+  let featuredArticles = [];
+  let initialGridArticles = [];
+  let initialGridCursor = null;
+
   try {
-    payload = await loadPublicArticles({
+    const featuredPayload = await loadPublicArticles({
       locale,
-      limit: 9,
+      limit: 3,
     });
+    featuredArticles = Array.isArray(featuredPayload?.articles) ? featuredPayload.articles : [];
+
+    const gridPayload = await loadPublicArticles({
+      locale,
+      limit: 6,
+      cursor: featuredPayload?.nextCursor || undefined,
+    });
+    initialGridArticles = Array.isArray(gridPayload?.articles) ? gridPayload.articles : [];
+    initialGridCursor =
+      typeof gridPayload?.nextCursor === "string" ? gridPayload.nextCursor : null;
   } catch (error) {
     console.error("[news getServerSideProps] articles failed", error?.message || error);
   }
 
-  const articlesData = Array.isArray(payload?.articles) ? payload.articles : [];
-  const lastVisibleId = typeof payload?.nextCursor === "string" ? payload.nextCursor : null;
-
   return {
     props: {
-      articles: buildArticlesPreview(articlesData),
-      lastVisibleId,
+      articles: buildArticlesPreview(featuredArticles),
+      initialGridArticles,
+      initialGridCursor,
       ...(await serverSideTranslations(locale, ["common"])),
     },
   };
@@ -123,7 +134,7 @@ function BlogHome(props) {
   const router = useRouter();
   const detectedLng = router?.locale || 'ro';
   const { currentUser, isGuestUser } = useAuth();
-  const { articles, lastVisibleId } = props;
+  const { articles, initialGridArticles = [], initialGridCursor = null } = props;
   const featuredArticlesCount = 3;
   const itemsPerPage = 6;
 
@@ -162,8 +173,9 @@ function BlogHome(props) {
     locale: detectedLng,
     pageSize: itemsPerPage,
     featuredCount: featuredArticlesCount,
-    initialArticles: articles.articlesData || [],
-    initialCursor: lastVisibleId,
+    initialFeaturedArticles: articles.articlesData || [],
+    initialGridArticles,
+    initialGridCursor,
     getSortMs: getArticleSortMs,
   });
 
@@ -400,8 +412,13 @@ function BlogHome(props) {
                   </div>
                   {/* Articles Grid */}
                   <div className="grid gap-8 mb-12">
+                    {articlesToDisplay.length === 0 && !isGridLoading ? (
+                      <p className="text-center text-gray-500 py-8">
+                        {t("exploreAllArticles")}
+                      </p>
+                    ) : null}
                     {articlesToDisplay.map((article, index) => (
-                      <div key={index} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden group hover:shadow-xl transition-all duration-300">
+                      <div key={article.documentId || article.id || index} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden group hover:shadow-xl transition-all duration-300">
                         <div className="grid md:grid-cols-3 gap-0">
                           <div className="relative overflow-hidden">
                             <img
@@ -445,6 +462,7 @@ function BlogHome(props) {
                   </div>
 
                   {/* Pagination */}
+                  {(canGoNext || canGoPrev || articlesToDisplay.length > 0) && (
                   <div className="flex justify-center items-center gap-4">
                     <button
                       onClick={handlePrevPage}
@@ -480,9 +498,9 @@ function BlogHome(props) {
                       </svg>
                     </button>
                   </div>
+                  )}
                 </div>
 
-                {/* Sidebar - Only Popular Articles */}
                 <div className="lg:col-span-4">
                   <div className="sticky top-24 space-y-8">
                     <Sidebar lastFiveArticles={latestFiveArticles} />

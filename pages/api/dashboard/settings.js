@@ -1,7 +1,6 @@
 import { getGlobalSettings, updateGlobalSettings } from "../../../lib/globalSettings";
 import {
-  getMobileForceUpdateEnabled,
-  getMobileUpdatePromptEnabled,
+  loadMobileUpdateStatus,
   setMobileForceUpdateEnabled,
   setMobileUpdatePromptEnabled,
 } from "../../../lib/mobileUpdatePromptSettings";
@@ -9,13 +8,14 @@ import {
 const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
 
 async function mergeSettingsForResponse() {
-  const global = await getGlobalSettings();
-  const mobileUpdatePromptEnabled = await getMobileUpdatePromptEnabled();
-  const mobileForceUpdateEnabled = await getMobileForceUpdateEnabled();
+  const [global, mobileStatus] = await Promise.all([
+    getGlobalSettings(),
+    loadMobileUpdateStatus(),
+  ]);
   return {
     ...global,
-    mobileUpdatePromptEnabled,
-    mobileForceUpdateEnabled,
+    mobileUpdatePromptEnabled: mobileStatus.update,
+    mobileForceUpdateEnabled: mobileStatus.forceUpdate,
   };
 }
 

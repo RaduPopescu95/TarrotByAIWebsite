@@ -1,12 +1,13 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { fetchPublicArticlesClient } from "../utils/fetchPublicArticlesClient";
 
 export function usePaginatedArticleGrid({
   locale,
   pageSize,
   featuredCount = 0,
-  initialArticles = [],
-  initialCursor = null,
+  initialFeaturedArticles = [],
+  initialGridArticles = [],
+  initialGridCursor = null,
   getSortMs,
 }) {
   const sortArticles = useCallback(
@@ -15,16 +16,16 @@ export function usePaginatedArticleGrid({
   );
 
   const buildInitialGridPages = useCallback(() => {
-    const sorted = sortArticles(initialArticles);
-    const firstPage = sorted.slice(featuredCount, featuredCount + pageSize);
-    return firstPage.length ? [firstPage] : [[]];
-  }, [initialArticles, featuredCount, pageSize, sortArticles]);
+    const sorted = sortArticles(initialGridArticles);
+    return sorted.length ? [sorted] : [[]];
+  }, [initialGridArticles, sortArticles]);
 
   const [filterItem, setFilterItem] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [gridPages, setGridPages] = useState(buildInitialGridPages);
-  const [gridNextCursor, setGridNextCursor] = useState(initialCursor);
+  const [gridNextCursor, setGridNextCursor] = useState(initialGridCursor);
   const [isGridLoading, setIsGridLoading] = useState(false);
+  const bootstrapAttemptedRef = useRef(false);
 
   const articlesToDisplay = useMemo(
     () => gridPages[currentPage - 1] || [],
@@ -47,6 +48,24 @@ export function usePaginatedArticleGrid({
     });
   }, []);
 
+  const resetAllFilter = useCallback(
+    (onFeatured) => {
+      const sortedFeatured = sortArticles(initialFeaturedArticles);
+      applyFeaturedFromArticles(sortedFeatured, onFeatured);
+      const sortedGrid = sortArticles(initialGridArticles);
+      setGridPages(sortedGrid.length ? [sortedGrid] : [[]]);
+      setGridNextCursor(initialGridCursor);
+      setCurrentPage(1);
+    },
+    [
+      applyFeaturedFromArticles,
+      initialFeaturedArticles,
+      initialGridArticles,
+      initialGridCursor,
+      sortArticles,
+    ]
+  );
+
   const handleFilter = useCallback(
     async (nextFilter, onFeatured) => {
       setFilterItem(nextFilter);
@@ -54,40 +73,28 @@ export function usePaginatedArticleGrid({
       setIsGridLoading(true);
 
       try {
-        const canSeedFromSsr =
-          nextFilter === "All" && initialArticles.length > featuredCount;
-
-        if (canSeedFromSsr) {
-          const sorted = sortArticles(initialArticles);
-          applyFeaturedFromArticles(sorted, onFeatured);
-          const firstPage = sorted.slice(featuredCount, featuredCount + pageSize);
-          setGridPages(firstPage.length ? [firstPage] : [[]]);
-          setGridNextCursor(initialCursor);
+        if (nextFilter === "All") {
+          resetAllFilter(onFeatured);
           return;
         }
 
-        const requests = [
-          fetchPublicArticlesClient({
-            locale,
-            category: nextFilter,
-            limit: featuredCount > 0 && onFeatured ? featuredCount + pageSize : pageSize,
-          }),
-        ];
-
-        const results = await Promise.all(requests);
-        const combinedPayload = results[0];
+        const payload = await fetchPublicArticlesClient({
+          locale,
+          category: nextFilter,
+          limit: featuredCount > 0 && onFeatured ? featuredCount + pageSize : pageSize,
+        });
 
         if (featuredCount > 0 && onFeatured) {
-          const sortedCombined = sortArticles(combinedPayload.articles);
+          const sortedCombined = sortArticles(payload.articles);
           applyFeaturedFromArticles(sortedCombined, onFeatured);
           const gridArticles = sortedCombined.slice(featuredCount, featuredCount + pageSize);
           setGridPages([gridArticles]);
-          setGridNextCursor(combinedPayload.nextCursor);
+          setGridNextCursor(payload.nextCursor);
           return;
         }
 
-        setGridPages([combinedPayload.articles]);
-        setGridNextCursor(combinedPayload.nextCursor);
+        setGridPages([payload.articles]);
+        setGridNextCursor(payload.nextCursor);
       } catch (error) {
         console.error("[articles.grid] filter failed", error?.message || error);
         setGridPages([[]]);
@@ -100,8 +107,7 @@ export function usePaginatedArticleGrid({
       locale,
       pageSize,
       featuredCount,
-      initialArticles,
-      initialCursor,
+      resetAllFilter,
       sortArticles,
       applyFeaturedFromArticles,
     ]
@@ -145,6 +151,52 @@ export function usePaginatedArticleGrid({
       setCurrentPage((page) => page - 1);
     }
   }, [currentPage]);
+
+  useEffect(() => {
+    if (bootstrapAttemptedRef.current) return;
+    if ((gridPages[0] || []).length > 0) return;
+    if (!initialGridCursor && initialGridArticles.length === 0) return;
+
+    bootstrapAttemptedRef.current = true;
+    let cancelled = false;
+
+    const bootstrapGrid = async () => {
+      setIsGridLoading(true);
+      try {
+        const payload = await fetchPublicArticlesClient({
+          locale,
+          limit: pageSize,
+          cursor: initialGridCursor || undefined,
+        });
+        if (cancelled) return;
+        const sorted = sortArticles(payload.articles);
+        if (sorted.length > 0) {
+          setGridPages([sorted]);
+          setGridNextCursor(payload.nextCursor);
+          setCurrentPage(1);
+        }
+      } catch (error) {
+        console.error("[articles.grid] bootstrap failed", error?.message || error);
+      } finally {
+        if (!cancelled) {
+          setIsGridLoading(false);
+        }
+      }
+    };
+
+    void bootstrapGrid();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    gridPages,
+    initialGridArticles.length,
+    initialGridCursor,
+    locale,
+    pageSize,
+    sortArticles,
+  ]);
 
   return {
     filterItem,
