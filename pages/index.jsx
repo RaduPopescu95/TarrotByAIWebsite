@@ -26,6 +26,7 @@ import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { loadContentHome } from "../lib/loadContentHome";
 import { usePaginatedArticleGrid } from "../hooks/usePaginatedArticleGrid";
+import AdPlacementShell from "../components/Ads/AdPlacementShell";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
 
@@ -415,6 +416,7 @@ function Landing(props) {
 
 
         </section>
+        <AdPlacementShell placementId="home" />
         {/* Modern Blog Content Area */}
         <main style={styles.contentWrapper}>
             {articles.articlesData.length > 0 ? (

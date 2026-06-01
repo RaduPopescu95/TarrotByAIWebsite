@@ -19,6 +19,7 @@ import {
   Sparkles,
   Layers
 } from "lucide-react";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -113,6 +114,8 @@ const AboutPage = () => {
           </div>
         </div>
       </section>
+
+      <AdPlacementShell placementId="default" />
 
       {/* About Story Section */}
       <section className="py-24 bg-white">

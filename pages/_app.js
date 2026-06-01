@@ -15,6 +15,7 @@ import languageDetector from "../lib/languageDetector";
 import { resolveUiLocale } from "../lib/siteLocales";
 import LanguageSelectionDialog from "../components/LanguageSelectionDialog";
 import AdsProviderScripts from "../components/Ads/AdsProviderScripts";
+import { AdsEngagementProvider } from "../components/Ads/AdsEngagementContext";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { useFirstVisit } from "../hooks/useFirstVisit";
 import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
@@ -224,7 +225,9 @@ function MyApp({ Component, pageProps }) {
                   </div>
                 )}
                 
-                <Component {...pageProps} />
+                <AdsEngagementProvider>
+                  <Component {...pageProps} />
+                </AdsEngagementProvider>
                 
                 <style jsx global>{`
                   @keyframes spin {

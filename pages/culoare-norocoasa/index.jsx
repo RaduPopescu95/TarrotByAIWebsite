@@ -26,6 +26,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useApiData } from "../../context/ApiContext";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import languageDetector from "../../lib/languageDetector";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 import {
   handleQueryRandom,
   handleUploadFirestore,
@@ -219,6 +220,8 @@ export function NumarNorocos() {
                 {t("colorsEnergyDescription")}
               </p>
             </div>
+
+            <AdPlacementShell placementId="reading" />
 
             {/* Lucky Color Card */}
             <div style={{

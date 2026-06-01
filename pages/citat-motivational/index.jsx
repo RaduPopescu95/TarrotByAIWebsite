@@ -31,6 +31,7 @@ import {
 } from "../../utils/firestoreUtils";
 import { collection, getCountFromServer } from "firebase/firestore";
 import { db } from "../../firebase";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
 //   return {
@@ -197,6 +198,8 @@ export function NumarNorocos() {
                 {t("dailyOpportunityDescription")}
               </p>
             </div>
+
+            <AdPlacementShell placementId="reading" />
 
             {/* Quote Card */}
             <div style={{

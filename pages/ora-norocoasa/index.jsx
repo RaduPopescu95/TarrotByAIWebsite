@@ -31,6 +31,7 @@ import {
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
 import { db } from "../../firebase";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 // 🎨 NEW: Ultra-robust helper function to format description with line breaks
 const formatDescription = (text) => {
@@ -232,6 +233,8 @@ export function CitateMotivationale() {
                 {t("hoursEnergyDescription")}
               </p>
             </div>
+
+            <AdPlacementShell placementId="reading" />
 
             {/* Lucky Hour Card */}
             <div style={{

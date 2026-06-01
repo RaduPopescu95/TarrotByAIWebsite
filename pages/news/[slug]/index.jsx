@@ -14,6 +14,7 @@ import {
   loadPublicArticleDetail,
   loadPublicArticles,
 } from "../../../lib/publicArticles";
+import AdPlacementShell from "../../../components/Ads/AdPlacementShell";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
 function buildArticlesPreview(articlesData = []) {
@@ -422,6 +423,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                   </div>
                 )}
 
+                <AdPlacementShell placementId="article" />
+
                 {/* Main Article Content */}
                 <article className="bg-white rounded-3xl shadow-xl overflow-hidden">
                   <div className="p-8 md:p-12">
@@ -470,6 +473,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                     </div>
                   </div>
                 </article>
+
+                <AdPlacementShell placementId="default" />
 
                 {/* YouTube Videos - Enhanced Design */}
                 {filteredArticle?.youtubeLinks && filteredArticle.youtubeLinks.length > 0 && (

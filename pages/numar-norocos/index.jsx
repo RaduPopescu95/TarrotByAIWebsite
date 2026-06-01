@@ -31,6 +31,7 @@ import {
 } from "../../utils/firestoreUtils";
 import { collection, getCountFromServer } from "firebase/firestore";
 import { db } from "../../firebase";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 // 🎨 NEW: Ultra-robust helper function to format description with line breaks
 const formatDescription = (text) => {
@@ -241,6 +242,8 @@ export function NumarNorocos() {
                 {t("numbersEnergyDescription")}
               </p>
             </div>
+
+            <AdPlacementShell placementId="reading" />
 
             {/* Lucky Number Card */}
             <div style={{

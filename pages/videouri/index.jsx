@@ -11,6 +11,7 @@ import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumTh
 import { useAuth } from "../../context/AuthContext";
 import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { resolveUiLocale } from "../../lib/siteLocales";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -410,6 +411,7 @@ export default function VideoLibraryPage() {
                       {accessFilterControls}
                     </div>
                   </div>
+                  <AdPlacementShell placementId="video" />
                   {filteredVideos.length === 0 ? (
                     <p className="py-12 text-center text-slate-600">
                       {normalizedSearch ? t("videoLibrarySearchNoResults") : t("videoLibraryFilteredEmpty")}

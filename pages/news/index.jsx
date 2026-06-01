@@ -23,6 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import { buildArticleHref } from "../../utils/commonUtils";
 import { loadPublicArticles } from "../../lib/publicArticles";
 import { usePaginatedArticleGrid } from "../../hooks/usePaginatedArticleGrid";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 function buildArticlesPreview(articlesData = []) {
   if (!Array.isArray(articlesData) || articlesData.length === 0) {
@@ -349,6 +350,8 @@ function BlogHome(props) {
                   </div>
                 </div>
               )}
+
+              <AdPlacementShell placementId="article" />
 
               {/* Next 2 Articles Section */}
               {latestArticles && latestArticles.length > 0 && (

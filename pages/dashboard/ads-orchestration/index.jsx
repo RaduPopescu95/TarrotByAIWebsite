@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
-import { isAdsenseRouteEligible } from "../../../lib/ads/config";
+import {
+  getAdsterraPlacementKey,
+  getAdsterraScriptHost,
+  isAdsterraEnabled,
+  isAdsterraRouteEligible,
+} from "../../../lib/ads/config";
 
 function formatValue(value) {
   if (value === null || typeof value === "undefined" || value === "") return "not set";
@@ -10,11 +15,11 @@ function formatValue(value) {
   return String(value);
 }
 
-function maskClientId(value) {
+function maskKey(value) {
   const raw = String(value || "").trim();
   if (!raw) return "not set";
-  if (raw.length <= 8) return raw;
-  return `${raw.slice(0, 8)}...${raw.slice(-4)}`;
+  if (raw.length <= 6) return raw;
+  return `${raw.slice(0, 4)}...${raw.slice(-3)}`;
 }
 
 function statusClass(value) {
@@ -24,26 +29,33 @@ function statusClass(value) {
 }
 
 export default function AdsOrchestrationDashboardPage() {
-  const adSenseClientId = useMemo(
-    () => process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "",
-    []
-  );
+  const adsterraEnabled = isAdsterraEnabled();
+  const scriptHost = useMemo(() => getAdsterraScriptHost(), []);
+  const defaultKey = useMemo(() => getAdsterraPlacementKey("default"), []);
   const isProduction = process.env.NODE_ENV === "production";
   const [previewPath, setPreviewPath] = useState("/");
-  const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  const previewEligible = isAdsenseRouteEligible(previewPath);
-  const shouldLoad = isProduction && Boolean(adSenseClientId) && previewEligible;
+  const previewEligible = isAdsterraRouteEligible(previewPath);
+  const shouldShowSlots =
+    adsterraEnabled && previewEligible && Boolean(scriptHost) && Boolean(defaultKey);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    const script = document.getElementById("google-adsense");
-    setScriptLoaded(Boolean(script));
-  }, [previewPath]);
+    if (process.env.NODE_ENV === "development") {
+      console.info("[ADS_DASHBOARD] preview", {
+        previewPath,
+        adsterraEnabled,
+        previewEligible,
+        shouldShowSlots,
+      });
+    }
+  }, [previewPath, adsterraEnabled, previewEligible, shouldShowSlots]);
 
   const envRows = [
     ["NODE_ENV", process.env.NODE_ENV],
-    ["NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID", maskClientId(adSenseClientId)],
+    ["NEXT_PUBLIC_ENABLE_ADSTERRA", process.env.NEXT_PUBLIC_ENABLE_ADSTERRA],
+    ["NEXT_PUBLIC_ADSTERRA_SCRIPT_HOST", scriptHost || "not set"],
+    ["NEXT_PUBLIC_ADSTERRA_KEY_DEFAULT", maskKey(defaultKey)],
+    ["NEXT_PUBLIC_ADS_CONSENT_REQUIRED", process.env.NEXT_PUBLIC_ADS_CONSENT_REQUIRED],
   ];
 
   return (
@@ -58,7 +70,7 @@ export default function AdsOrchestrationDashboardPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h1 className="text-xl font-bold text-slate-900">Dashboard Ads Orchestration</h1>
                 <p className="mt-2 text-sm text-slate-600">
-                  Status runtime minim pentru AdSense Auto Ads (blog + videouri).
+                  Status runtime pentru Adsterra Native Banner pe paginile publice allowlist.
                 </p>
               </div>
 
@@ -67,27 +79,25 @@ export default function AdsOrchestrationDashboardPage() {
                   <p className="font-semibold">Environment</p>
                   <p className="mt-1">{isProduction ? "Production" : "Not production"}</p>
                 </div>
-                <div
-                  className={`rounded-xl border p-4 text-sm ${statusClass(Boolean(adSenseClientId))}`}
-                >
-                  <p className="font-semibold">Client ID</p>
-                  <p className="mt-1">{Boolean(adSenseClientId) ? "Present" : "Missing"}</p>
+                <div className={`rounded-xl border p-4 text-sm ${statusClass(adsterraEnabled)}`}>
+                  <p className="font-semibold">Adsterra Enabled</p>
+                  <p className="mt-1">{adsterraEnabled ? "Yes" : "No"}</p>
                 </div>
                 <div className={`rounded-xl border p-4 text-sm ${statusClass(previewEligible)}`}>
                   <p className="font-semibold">Route Eligible</p>
                   <p className="mt-1">{previewEligible ? "Yes" : "No"}</p>
                 </div>
-                <div className={`rounded-xl border p-4 text-sm ${statusClass(scriptLoaded)}`}>
-                  <p className="font-semibold">Script Loaded</p>
-                  <p className="mt-1">{scriptLoaded ? "Yes" : "No"}</p>
+                <div className={`rounded-xl border p-4 text-sm ${statusClass(shouldShowSlots)}`}>
+                  <p className="font-semibold">Would Show Slots</p>
+                  <p className="mt-1">{shouldShowSlots ? "Yes" : "No"}</p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Route Simulator</h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Introdu o rută (ex: <code>/news</code>, <code>/videouri</code>, <code>/checkout</code>) și vezi
-                  dacă runtime-ul ar încărca scriptul.
+                  Introdu o rută (ex: <code>/</code>, <code>/news</code>, <code>/citire-personalizata</code>,
+                  <code>/abonament</code>) și vezi dacă sloturile ar fi eligibile.
                 </p>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
@@ -103,14 +113,14 @@ export default function AdsOrchestrationDashboardPage() {
                     <p>{previewEligible ? "Yes" : "No"}</p>
                   </div>
                   <div
-                    className={`rounded-lg border p-3 text-sm ${statusClass(Boolean(adSenseClientId))}`}
+                    className={`rounded-lg border p-3 text-sm ${statusClass(Boolean(scriptHost && defaultKey))}`}
                   >
-                    <p className="font-semibold">Client ID Present</p>
-                    <p>{Boolean(adSenseClientId) ? "Yes" : "No"}</p>
+                    <p className="font-semibold">Host + Default Key</p>
+                    <p>{Boolean(scriptHost && defaultKey) ? "Yes" : "No"}</p>
                   </div>
-                  <div className={`rounded-lg border p-3 text-sm ${statusClass(shouldLoad)}`}>
-                    <p className="font-semibold">Should Load Script</p>
-                    <p>{shouldLoad ? "Yes" : "No"}</p>
+                  <div className={`rounded-lg border p-3 text-sm ${statusClass(shouldShowSlots)}`}>
+                    <p className="font-semibold">Would Show (prod gates)</p>
+                    <p>{shouldShowSlots ? "Yes" : "No"}</p>
                   </div>
                 </div>
               </div>
@@ -138,12 +148,13 @@ export default function AdsOrchestrationDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
-                <h2 className="text-base font-semibold">AdSense minimal mode</h2>
+                <h2 className="text-base font-semibold">Adsterra subtle mode</h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>Se folosește doar Auto Ads (fără sloturi manuale).</li>
-                  <li>Scriptul rulează doar pe rutele <code>/news*</code> și <code>/videouri*</code>.</li>
-                  <li>Scriptul rulează doar în production.</li>
-                  <li>Cookiebot/CMP este dezactivat temporar în această variantă.</li>
+                  <li>Doar Native Banner (fără popunder / interstitial).</li>
+                  <li>Max ~1 slot pe pagină simplă; articol: slot article + default.</li>
+                  <li>Script invoke.js doar în production, după engagement + consimțământ Cookiebot.</li>
+                  <li>AdSense este dezactivat când NEXT_PUBLIC_ENABLE_ADSTERRA=true.</li>
+                  <li>Excluderi: abonament, meeting, settings, checkout cursuri.</li>
                 </ul>
               </div>
             </div>

@@ -18,6 +18,7 @@ import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";
 import { Sparkles } from "lucide-react";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 import { logI18nStatus, testTranslations } from "../../utils/i18nLogger";
 
 export async function getServerSideProps({ locale }) {
@@ -583,6 +584,7 @@ export function CitirePersonalizata({ services }) {
               ...styles.contentContainer,
               paddingTop: isMobile ? "30%" : "8%",
             }}>
+              <AdPlacementShell placementId="reading" />
               <div style={{
                 ...styles.cardsGrid,
                 width: isMobile ? "100%" : "90%",

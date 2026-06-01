@@ -91,6 +91,29 @@ export function middleware(req) {
 }
 
 export const config = {
-  matcher: ["/news/:path*", "/videouri/:path*"],
+  matcher: [
+    "/",
+    "/about",
+    "/about/:path*",
+    "/news/:path*",
+    "/videouri/:path*",
+    "/citire-personalizata",
+    "/citire-personalizata/:path*",
+    "/citire-viitor",
+    "/citire-viitor/:path*",
+    "/numar-norocos",
+    "/numar-norocos/:path*",
+    "/culoare-norocoasa",
+    "/culoare-norocoasa/:path*",
+    "/ora-norocoasa",
+    "/ora-norocoasa/:path*",
+    "/citat-motivational",
+    "/citat-motivational/:path*",
+    "/ce-gandeste",
+    "/ce-gandeste/:path*",
+    "/ce-simte",
+    "/ce-simte/:path*",
+    "/cartea-ta",
+    "/cartea-ta/:path*",
+  ],
 };
-

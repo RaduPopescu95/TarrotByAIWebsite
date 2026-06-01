@@ -14,6 +14,7 @@ import { toUrlSlug } from "../../utils/commonUtils";
 import CitireViitorDialog from "../../components/DialogBox/CitireViitorDialog";
 import languageDetector from "../../lib/languageDetector";
 import { Star } from "lucide-react";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -363,6 +364,7 @@ export function CitirePersonalizata({ services }) {
               ...styles.contentContainer,
               paddingTop: isMobile ? "30%" : "8%",
             }}>
+              <AdPlacementShell placementId="reading" />
               <div style={{
                 ...styles.cardsGrid,
                 width: isMobile ? "100%" : "90%",

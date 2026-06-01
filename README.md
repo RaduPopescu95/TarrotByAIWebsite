@@ -54,39 +54,28 @@ You can temporarily disable Stripe checkout session creation (both individual co
 
 Users without the key will see a maintenance message and will be prevented from starting payment.
 
-## Ads orchestration (AdSense minimal auto)
+## Ads orchestration (Adsterra Native Banner)
 
-This project uses a minimal AdSense Auto Ads setup:
+Primary monetization uses discrete Adsterra Native Banner slots on public pages (see `lib/ads/config.js` allowlist). AdSense Auto Ads is disabled when `NEXT_PUBLIC_ENABLE_ADSTERRA=true`.
 
-- Single loader: `components/Ads/AdsProviderScripts.jsx`
-- Route policy helper: `lib/ads/config.js`
-- Script loader: `components/Ads/GoogleAdSenseScript.jsx`
+- Route policy: `lib/ads/config.js`
+- Slots: `components/Ads/AdPlacementShell.jsx` + `AdsterraSlot.jsx`
+- Engagement gate: `components/Ads/useAdsEngagement.js` (5s delay, interaction, 5 pages/session)
+- Consent: `useAdsConsent.js` when `NEXT_PUBLIC_ADS_CONSENT_REQUIRED=true` (Cookiebot marketing)
 
 ### Environment variables
 
-- `NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID`: your `ca-pub-...` client id
+- `NEXT_PUBLIC_ENABLE_ADSTERRA=true`
+- `NEXT_PUBLIC_ADSTERRA_SCRIPT_HOST=//plXXXX.effectivegatecpm.com`
+- `NEXT_PUBLIC_ADSTERRA_KEY_DEFAULT` (required)
+- Optional per placement: `NEXT_PUBLIC_ADSTERRA_KEY_HOME`, `_ARTICLE`, `_VIDEO`, `_READING`
 
 ### Runtime behavior
 
-- AdSense script is injected only in `production`.
-- AdSense script is injected only on `/news*` and `/videouri*`.
-- No manual ad slots are used.
-- No CMP/Cookiebot gating is used in this temporary minimal setup.
-- Client-side anti-abuse guard:
-  - requires visible tab,
-  - waits ~5s before loading ads script,
-  - requires at least one real interaction (scroll/click/touch/keydown),
-  - caps ads loading to max 5 eligible pages per browser session,
-  - skips likely automated browsers (`navigator.webdriver`, headless signatures).
-- Server-side anti-abuse guard (`middleware.js`) on `/news*` + `/videouri*`:
-  - blocks common automation user agents,
-  - applies burst rate limiting per IP window.
-
-### Operational notes
-
-- Auto Ads must be enabled in AdSense UI for your site.
-- After code/config changes, ads can take up to ~1 hour to appear.
-- Use AdSense page exclusions for URLs where ads must never render.
+- Banners load only in `production`, only on allowlisted routes, after engagement + consent.
+- No popunder/interstitial formats in code.
+- Middleware rate-limits automation UA on the same public routes.
+- Dashboard preview: `/dashboard/ads-orchestration`
 
 ### Cloudflare hardening (recommended)
 

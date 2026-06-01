@@ -13,6 +13,7 @@ import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { resolveUiLocale } from "../../lib/siteLocales";
+import AdPlacementShell from "../../components/Ads/AdPlacementShell";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -297,6 +298,8 @@ export default function VideoDetailPage() {
                       </select>
                     </div>
                   ) : null}
+
+                  <AdPlacementShell placementId="video" className="!my-6" />
 
                   <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                     {video.title}
