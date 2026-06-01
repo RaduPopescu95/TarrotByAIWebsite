@@ -154,10 +154,22 @@ export const handleUploadFirestoreGeneral = async (
   }
 };
 export const handleUploadFirestore = async (data, location) => {
+  const isBlogArticole = location === "BlogArticole";
+  const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+
   try {
-    console.log("test.infor in handle upload firestore...", data);
-    console.log(location);
-    console.log(data);
+    if (isBlogArticole) {
+      console.info("[BlogArticoleUpload] firestore:create:start", {
+        categorie: data?.categorie || null,
+        hasImage: Boolean(data?.image?.finalUri),
+        dataProgramata: data?.dataProgramata || "",
+        timpProgramat: data?.timpProgramat || "",
+      });
+    } else {
+      console.log("test.infor in handle upload firestore...", data);
+      console.log(location);
+      console.log(data);
+    }
 
     // Crează un nou document în colecție cu un ID generat automat
     const docRef = doc(collection(db, location));
@@ -166,6 +178,13 @@ export const handleUploadFirestore = async (data, location) => {
 
     const collectionLength = await getFirestoreCollectionLength(location);
     let id = collectionLength + 1;
+
+    if (isBlogArticole) {
+      console.info("[BlogArticoleUpload] firestore:collection-count", {
+        collectionLength,
+        nextId: id,
+      });
+    }
 
     //current date
     const dateTime = getCurrentDateTime();
@@ -181,9 +200,9 @@ export const handleUploadFirestore = async (data, location) => {
       documentId: docRef.id,
       id,
       firstUploadtime:
-        data.timpProgramat.length > 0 ? data.timpProgramat : dateTime.time,
+        (data?.timpProgramat || "").length > 0 ? data.timpProgramat : dateTime.time,
       firstUploadDate:
-        data.dataProgramata.length > 0 ? data.dataProgramata : dateTime.date,
+        (data?.dataProgramata || "").length > 0 ? data.dataProgramata : dateTime.date,
       firstUploadTimestamp: date,
       ...(location === "BlogArticole"
         ? {
@@ -193,13 +212,43 @@ export const handleUploadFirestore = async (data, location) => {
         : {}),
     };
 
+    if (isBlogArticole) {
+      console.info("[BlogArticoleUpload] firestore:setDoc:start", {
+        documentId: docRef.id,
+        id,
+        firstUploadDate: newData.firstUploadDate,
+        firstUploadtime: newData.firstUploadtime,
+        scheduledAtTs: date,
+      });
+    }
+
     // Face upload cu noul obiect de date care include ID-ul documentului
     await setDoc(docRef, newData);
 
-    console.log(`Documentul cu ID-ul ${docRef.id} a fost adăugat cu succes în ${location}.`);
+    if (isBlogArticole) {
+      console.info("[BlogArticoleUpload] firestore:setDoc:success", {
+        documentId: docRef.id,
+        id,
+        elapsedMs: Math.round(
+          (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt
+        ),
+      });
+    } else {
+      console.log(`Documentul cu ID-ul ${docRef.id} a fost adăugat cu succes în ${location}.`);
+    }
     return newData;
   } catch (err) {
-    console.log("Eroare la handleUploadFirestore...", err);
+    if (isBlogArticole) {
+      console.error("[BlogArticoleUpload] firestore:setDoc:failed", {
+        message: err?.message || String(err),
+        code: err?.code,
+        elapsedMs: Math.round(
+          (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt
+        ),
+      });
+    } else {
+      console.log("Eroare la handleUploadFirestore...", err);
+    }
   }
 };
 

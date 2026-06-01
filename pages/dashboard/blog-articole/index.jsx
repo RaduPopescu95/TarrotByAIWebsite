@@ -7,6 +7,7 @@ import {
   handleGetFirestorePaginated,
   handleGetFirestorePaginatedCached,
 } from "../../../utils/firestoreUtils";
+import { mergeBlogArticlesDesc, sortBlogArticlesDesc } from "../../../lib/blogArticleSort";
 import { Box, Button, CircularProgress } from "@mui/material";
 
 export default function index() {
@@ -18,42 +19,21 @@ export default function index() {
   const [loadingMore, setLoadingMore] = useState(false);
   const PAGE_SIZE = 50;
 
-  const toMs = (x) => {
-    try {
-      if (
-        x?.dataProgramata &&
-        x?.dataProgramata.length > 0 &&
-        x?.timpProgramat &&
-        x?.timpProgramat.length > 0
-      ) {
-        const [dd, mm, yyyy] = x.dataProgramata.split("-").map(Number);
-        const [hh, min] = x.timpProgramat.split(":").map(Number);
-        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
-      }
-      if (x?.firstUploadDate && x?.firstUploadtime) {
-        const [dd, mm, yyyy] = x.firstUploadDate.split("-").map(Number);
-        const [hh, min] = x.firstUploadtime.split(":").map(Number);
-        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
-      }
-      if (x?.firstUploadTimestamp) {
-        if (typeof x.firstUploadTimestamp === "string") {
-          const ms = Date.parse(x.firstUploadTimestamp);
-          if (!Number.isNaN(ms)) return ms;
-        }
-        if (x.firstUploadTimestamp.seconds) {
-          return x.firstUploadTimestamp.seconds * 1000;
-        }
-        if (typeof x.firstUploadTimestamp.toDate === "function") {
-          return x.firstUploadTimestamp.toDate().getTime();
-        }
-      }
-    } catch (e) {}
-    return 0;
+  const normalizeArticles = (data) => sortBlogArticlesDesc(Array.isArray(data) ? data : []);
+
+  const handleArticleCreated = (article) => {
+    if (!article) return;
+    setArticles((prev) => mergeBlogArticlesDesc(prev, [article]));
   };
 
-  const normalizeArticles = (data) => {
-    const rawData = Array.isArray(data) ? [...data] : [];
-    return rawData.sort((a, b) => toMs(b) - toMs(a));
+  const handleArticleUpdated = (article) => {
+    if (!article) return;
+    setArticles((prev) => mergeBlogArticlesDesc(prev, [article]));
+  };
+
+  const handleArticleDeleted = (documentId) => {
+    if (!documentId) return;
+    setArticles((prev) => prev.filter((item) => item.documentId !== documentId));
   };
 
   useEffect(() => {
@@ -137,7 +117,12 @@ export default function index() {
             <Box sx={{ color: "#ff6b6b", p: 2 }}>Eroare la încărcare: {error}</Box>
           ) : (
             <>
-              <BlogArticole articles={articles} />
+              <BlogArticole
+                articles={articles}
+                onArticleCreated={handleArticleCreated}
+                onArticleUpdated={handleArticleUpdated}
+                onArticleDeleted={handleArticleDeleted}
+              />
               {hasMore && (
                 <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
                   <Button onClick={handleLoadMore} disabled={loadingMore} variant="outlined">

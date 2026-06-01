@@ -21,11 +21,27 @@ export const uploadImage = async (
   const imageUpload = images[0];
   const authInstance = authentication;
   const currentUser = authInstance.currentUser;
+  const isBlogUpload = firstLocation === "Blog";
+  const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
   let finalUri;
   const fileName = new Date().getTime();
+
+  const blogLog = (step, details = {}) => {
+    if (!isBlogUpload) return;
+    console.info("[BlogArticoleUpload]", step, details);
+  };
+
+  blogLog("storage:start", {
+    uid: currentUser?.uid || null,
+    imageCount: images?.length || 0,
+    fileName: imageUpload?.name || null,
+    fileSize: imageUpload?.size || null,
+    fileType: imageUpload?.type || null,
+  });
+
   try {
     if (newImage) {
-      console.log("is new image...started delete");
+      blogLog("storage:delete-old:start", { oldFileName });
       // Create a reference to the file to delete
       const deletedRef = ref(
         storage,
@@ -35,27 +51,34 @@ export const uploadImage = async (
       // Delete the file
       deleteObject(deletedRef)
         .then(() => {
-          // File deleted successfully
-          console.log("File deleted successfully");
+          blogLog("storage:delete-old:success", { oldFileName });
         })
         .catch((error) => {
-          console.log(
-            "Uh-oh, an error occurred! AT uploadImage DELETE...",
-            error
-          );
-          // Uh-oh, an error occurred!
+          console.warn("[BlogArticoleUpload] storage:delete-old:failed", {
+            oldFileName,
+            message: error?.message || String(error),
+            code: error?.code,
+          });
         });
     }
 
     if (!imageUpload) {
-      console.log("Please select an image");
+      blogLog("storage:skipped-no-file", {
+        hint: "Nu exista fisier selectat pentru upload.",
+      });
       return;
     }
 
-    const imageRef = ref(
-      storage,
-      `images/${firstLocation}/${currentUser?.uid}/${fileName}`
-    );
+    if (!currentUser?.uid) {
+      console.warn("[BlogArticoleUpload] storage:no-auth-user", {
+        hint: "Firebase Storage path necesita currentUser.uid.",
+      });
+    }
+
+    const storagePath = `images/${firstLocation}/${currentUser?.uid}/${fileName}`;
+    blogLog("storage:path", { storagePath });
+
+    const imageRef = ref(storage, storagePath);
 
     // Set the content type to image/jpeg
     const metadata = {
@@ -70,23 +93,37 @@ export const uploadImage = async (
     };
 
     // Compress the image file
-    console.log("Start image compression.....");
+    blogLog("storage:compress:start");
     const compressedFile = await imageCompression(imageUpload, options);
-    console.log("end image compression.....");
-    
-    // Upload the image with metadata
-    console.log("start image upload.....");
-    const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
-    console.log("end image upload.....");
-    
-    // Get the download URL for the uploaded image
-    console.log("start image link download.....");
-    finalUri = await getDownloadURL(snapshot.ref);
-    console.log("end image link download.....");
+    blogLog("storage:compress:done", {
+      compressedSize: compressedFile?.size || null,
+    });
 
-    console.log("Image uploaded successfully. Download URL:", finalUri);
+    // Upload the image with metadata
+    blogLog("storage:upload:start");
+    const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
+    blogLog("storage:upload:done", {
+      fullPath: snapshot?.ref?.fullPath || storagePath,
+    });
+
+    // Get the download URL for the uploaded image
+    blogLog("storage:url:start");
+    finalUri = await getDownloadURL(snapshot.ref);
+    blogLog("storage:url:done", {
+      finalUri,
+      fileName,
+      elapsedMs: Math.round(
+        (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt
+      ),
+    });
   } catch (error) {
-    console.log("Error uploading image to storage:", error.message);
+    console.error("[BlogArticoleUpload] storage:failed", {
+      message: error?.message || String(error),
+      code: error?.code,
+      elapsedMs: Math.round(
+        (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt
+      ),
+    });
   }
   return { finalUri, fileName };
 };

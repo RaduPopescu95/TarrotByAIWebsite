@@ -36,6 +36,12 @@ import { gTranslateFetch } from "../../utils/apiUtils";
 import DropdownFieldRow from "./DropdownFieldRow";
 import DropdownFieldCategorii from "./DropdownFieldCategorii";
 import DateTimePicker from "./DateTimePicker";
+import {
+  logBlogArticoleUpload,
+  logBlogArticoleUploadError,
+  summarizeArticleInfo,
+} from "../../utils/blogArticoleUploadLogger";
+import { authentication } from "../../firebase";
 
 export default function BlogArticoleFields({
   handleUpload,
@@ -680,13 +686,35 @@ export default function BlogArticoleFields({
 
   const handleImageChange = (event) => {
     const files = event.target.files;
-    setSelectedImages([...selectedImages, ...Array.from(files)]);
+    const nextFiles = [...selectedImages, ...Array.from(files)];
+    logBlogArticoleUpload("form:image-selected", {
+      addedCount: files?.length || 0,
+      totalCount: nextFiles.length,
+      names: nextFiles.map((file) => file?.name).filter(Boolean),
+    });
+    setSelectedImages(nextFiles);
     setFileInputKey(Date.now()); // Reset the input to allow selecting more images
   };
 
   const handleUploadData = () => {
-    console.log("timpProgramat...", timpProgramat);
-    console.log("dataProgramata...", dataProgramata);
+    const authUser = authentication.currentUser;
+    const startedAt = performance.now();
+
+    logBlogArticoleUpload("form:save-clicked", {
+      mode: isEdit ? "edit" : "create",
+      uid: authUser?.uid || null,
+      email: authUser?.email || null,
+      imageCount: selectedImages.length,
+      hasExistingImage: Boolean(image?.finalUri),
+      categorie,
+      dataProgramata,
+      timpProgramat,
+      youtubeLinkLength: youtubeLink?.length || 0,
+      article: summarizeArticleInfo({
+        ro: { nume: numeRo, descriere: descriereRo, content: contentRo },
+      }),
+    });
+
     setLoading(true);
     const data = {
       ro: { nume: numeRo, descriere: descriereRo, content: contentRo },
@@ -709,11 +737,15 @@ export default function BlogArticoleFields({
       sq: { nume: numeSq, descriere: descriereSq, content: contentSq },
     };
 
-    console.log(data);
-    console.log("youtube...", youtubeLink);
+    logBlogArticoleUpload("form:payload-ready", {
+      mode: isEdit ? "edit" : "create",
+      article: summarizeArticleInfo(data),
+      localeCount: Object.keys(data).length,
+    });
 
     const oldFileName = dialogData.image ? dialogData.image.fileName : "";
     if (isEdit) {
+      logBlogArticoleUpload("form:dispatch-edit");
       handleEdit(
         data,
         selectedImages,
@@ -724,12 +756,13 @@ export default function BlogArticoleFields({
         timpProgramat,
         dataProgramata
       ).then(() => {
+        logBlogArticoleUpload("form:edit-finished", {
+          elapsedMs: Math.round(performance.now() - startedAt),
+        });
         setLoading(false);
       });
     } else {
-      console.log("else.....");
-      console.log(selectedImages);
-      console.log(data);
+      logBlogArticoleUpload("form:dispatch-create");
       handleUpload(
         data,
         selectedImages,
@@ -737,9 +770,23 @@ export default function BlogArticoleFields({
         youtubeLink,
         timpProgramat,
         dataProgramata
-      ).then(() => {
-        setLoading(false);
-      });
+      )
+        .then(() => {
+          logBlogArticoleUpload("form:create-finished", {
+            elapsedMs: Math.round(performance.now() - startedAt),
+          });
+          setLoading(false);
+        })
+        .catch((error) => {
+          logBlogArticoleUploadError("form:create-failed", error, {
+            elapsedMs: Math.round(performance.now() - startedAt),
+          });
+          setLoading(false);
+          window.alert(
+            error?.message ||
+              "Nu am putut salva articolul. Verifica imaginea, autentificarea Firebase si consola browserului."
+          );
+        });
     }
   };
 

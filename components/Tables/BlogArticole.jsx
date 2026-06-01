@@ -9,7 +9,8 @@ import { useStyles } from "../../styles/ProcessTableStyles";
 import { editData, getData, writeData } from "../../utils/realtimeUtils";
 import { getCurrentDateTime } from "../../utils/timeUtils";
 import { uploadImage } from "../../utils/storageUtils";
-import { authentication, storage } from "../../firebase";
+import { authentication, db, storage } from "../../firebase";
+import { deleteDoc, doc } from "firebase/firestore";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 import { deleteObject, ref as storageRef } from "firebase/storage";
 
@@ -17,21 +18,36 @@ import CartiViitorFields from "../Dashboard/CartiViitorFields";
 import DeleteDialog from "../DialogBox/DeleteDialog";
 import BlogArticoleFields from "../Dashboard/BlogArticoleFields";
 import {
-  handleDeleteFirestoreData,
-  handleGetFirestore,
+  clearFirestorePaginatedCache,
   handleUpdateFirestore,
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
 import { buildScheduledDate } from "../../lib/articleSchedule";
+import { sortBlogArticlesDesc } from "../../lib/blogArticleSort";
+import {
+  logBlogArticoleUpload,
+  logBlogArticoleUploadError,
+  logBlogArticoleUploadWarn,
+  summarizeArticleInfo,
+} from "../../utils/blogArticoleUploadLogger";
 
-export default function BlogArticole({ articles }) {
+export default function BlogArticole({
+  articles,
+  onArticleCreated,
+  onArticleUpdated,
+  onArticleDeleted,
+}) {
   // const { db } = useMockup();
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isEdit, setIsEdit] = useState(false);
 
   const [db, setDb] = useState([...articles]);
+
+  useEffect(() => {
+    setDb(sortBlogArticlesDesc(articles));
+  }, [articles]);
 
   const [dialogData, setDialogData] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
@@ -45,66 +61,24 @@ export default function BlogArticole({ articles }) {
   const [searchValue, setSearchValue] = useState("");
 
   const rebuildPublicArticlesCacheBestEffort = async (reason) => {
+    logBlogArticoleUpload("cache-rebuild:start", { reason });
     try {
-      await fetch("/api/admin/articles-cache/rebuild", {
+      const response = await fetch("/api/admin/articles-cache/rebuild", {
         method: "POST",
         headers: {
           Accept: "application/json",
         },
       });
-      console.log("[BlogArticole] public article cache rebuild triggered", { reason });
-    } catch (error) {
-      console.warn("[BlogArticole] public article cache rebuild failed", {
+      const payload = await response.json().catch(() => ({}));
+      logBlogArticoleUpload("cache-rebuild:done", {
         reason,
-        message: error?.message || String(error),
+        ok: response.ok,
+        status: response.status,
+        rowCount: payload?.rowCount ?? null,
       });
+    } catch (error) {
+      logBlogArticoleUploadError("cache-rebuild:failed", error, { reason });
     }
-  };
-
-  // Helper pt. sortare desc după dataProgramata+timpProgramat cu fallback pe firstUploadDate/time sau firstUploadTimestamp
-  const toMs = (x) => {
-    try {
-      if (x?.scheduledAtTs) {
-        if (typeof x.scheduledAtTs === "string") {
-          const ms = Date.parse(x.scheduledAtTs);
-          if (!Number.isNaN(ms)) return ms;
-        }
-        if (x.scheduledAtTs.seconds) {
-          return x.scheduledAtTs.seconds * 1000;
-        }
-        if (typeof x.scheduledAtTs.toDate === "function") {
-          return x.scheduledAtTs.toDate().getTime();
-        }
-      }
-      if (
-        x?.dataProgramata &&
-        x?.dataProgramata.length > 0 &&
-        x?.timpProgramat &&
-        x?.timpProgramat.length > 0
-      ) {
-        const [dd, mm, yyyy] = x.dataProgramata.split("-").map(Number);
-        const [hh, min] = x.timpProgramat.split(":").map(Number);
-        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
-      }
-      if (x?.firstUploadDate && x?.firstUploadtime) {
-        const [dd, mm, yyyy] = x.firstUploadDate.split("-").map(Number);
-        const [hh, min] = x.firstUploadtime.split(":").map(Number);
-        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
-      }
-      if (x?.firstUploadTimestamp) {
-        if (typeof x.firstUploadTimestamp === "string") {
-          const ms = Date.parse(x.firstUploadTimestamp);
-          if (!Number.isNaN(ms)) return ms;
-        }
-        if (x.firstUploadTimestamp.seconds) {
-          return x.firstUploadTimestamp.seconds * 1000;
-        }
-        if (typeof x.firstUploadTimestamp.toDate === "function") {
-          return x.firstUploadTimestamp.toDate().getTime();
-        }
-      }
-    } catch (e) {}
-    return 0;
   };
 
   const handleSearchFilter = (value) => {
@@ -215,43 +189,87 @@ export default function BlogArticole({ articles }) {
   };
 
   const confirmDelete = async () => {
-    const authInstance = authentication;
-    const currentUser = authInstance.currentUser;
-    const database = getDatabase();
-    // console.log(dialogData);
+    const startedAt = performance.now();
+    const documentId = dialogData?.documentId;
+    const legacyId = dialogData?.id;
 
-    //  O FUNCTIE PENTRU STERGERE DOC SI A INNOI ID URILE TUTUROR DOCUMENTELOR PENTRU CA ID URILE SA RAMANA IN ORDINE
-    const newData = await handleDeleteFirestoreData(
-      `BlogArticole/${dialogData.documentId}`,
-      true,
-      "BlogArticole"
-    );
+    logBlogArticoleUpload("delete:start", {
+      documentId: documentId || null,
+      legacyId: legacyId ?? null,
+      dbCountBefore: db.length,
+      hasImage: Boolean(dialogData?.image?.fileName),
+    });
 
-    console.log("new data.....", newData);
+    if (!documentId) {
+      logBlogArticoleUploadError(
+        "delete:failed",
+        new Error("Lipseste documentId pentru articolul selectat."),
+        { legacyId }
+      );
+      window.alert("Nu pot sterge articolul: lipseste ID-ul documentului.");
+      return;
+    }
 
-    // Create a reference to the file to delete
-    const deletedRef = storageRef(
-      storage,
-      `images/Blog/${currentUser?.uid}/${dialogData.image.fileName}`
-    );
+    try {
+      await deleteDoc(doc(db, "BlogArticole", documentId));
+      logBlogArticoleUpload("delete:firestore:success", { documentId });
 
-    // Delete the file
-    deleteObject(deletedRef)
-      .then(() => {
-        console.log("File deleted successfully");
-      })
-      .catch((error) => {
-        console.log(
-          "Uh-oh, an error occurred! AT uploadImage DELETE...",
-          error
-        );
+      const currentUser = authentication.currentUser;
+      const imageFileName = dialogData?.image?.fileName;
+
+      if (imageFileName && currentUser?.uid) {
+        try {
+          await deleteObject(
+            storageRef(storage, `images/Blog/${currentUser.uid}/${imageFileName}`)
+          );
+          logBlogArticoleUpload("delete:storage:success", { imageFileName });
+        } catch (error) {
+          logBlogArticoleUploadWarn("delete:storage:failed", {
+            imageFileName,
+            message: error?.message || String(error),
+          });
+        }
+      }
+
+      clearFirestorePaginatedCache("BlogArticole", 50, "firstUploadTimestamp", "desc");
+
+      const nextDb = sortBlogArticlesDesc(
+        db.filter(
+          (item) => item.documentId !== documentId && item.id !== legacyId
+        )
+      );
+
+      logBlogArticoleUpload("delete:ui-update", {
+        documentId,
+        dbCountAfter: nextDb.length,
+        elapsedMs: Math.round(performance.now() - startedAt),
       });
 
-    // Actualizează starea db cu noua matrice filtrată
-    setDb(newData);
-    handleShowDialog();
-    handleDelete();
-    void rebuildPublicArticlesCacheBestEffort("delete");
+      setDb(nextDb);
+      setCurrentPage(1);
+      setSearchValue("");
+      setSearchedDb([]);
+      onArticleDeleted?.(documentId);
+      setShowSettings(false);
+      setDialogData({});
+      setIsEdit(false);
+      setOpenDeleteDialog(false);
+      void rebuildPublicArticlesCacheBestEffort("delete");
+
+      logBlogArticoleUpload("delete:success", {
+        documentId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+    } catch (error) {
+      logBlogArticoleUploadError("delete:failed", error, {
+        documentId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+      window.alert(
+        error?.message ||
+          "Nu am putut sterge articolul. Verifica autentificarea Firebase si consola browserului."
+      );
+    }
   };
 
   const handleEdit = async (
@@ -347,8 +365,17 @@ export default function BlogArticole({ articles }) {
       // Use Promise.all to wait for all promises in the map to resolve
       const updatedData = await Promise.all(updateData);
       console.log("[BlogArticole] handleEdit updatedData length:", updatedData.length);
-      const sorted = [...updatedData].sort((a, b) => toMs(b) - toMs(a));
+      const sorted = sortBlogArticlesDesc(updatedData);
       setDb(sorted);
+      setCurrentPage(1);
+      setSearchValue("");
+      setSearchedDb([]);
+      onArticleUpdated?.(
+        sorted.find(
+          (item) =>
+            item.documentId === dialogData.documentId || item.id === dialogData.id
+        )
+      );
       handleShowDialog();
       void rebuildPublicArticlesCacheBestEffort("edit");
     } catch (err) {
@@ -364,8 +391,34 @@ export default function BlogArticole({ articles }) {
     timpProgramat,
     dataProgramata
   ) => {
-    console.log("[BlogArticole] handleUpload start");
+    const startedAt = performance.now();
+    const authUser = authentication.currentUser;
+
+    logBlogArticoleUpload("handleUpload:start", {
+      uid: authUser?.uid || null,
+      email: authUser?.email || null,
+      imageCount: selectedImages?.length || 0,
+      categorie,
+      dataProgramata,
+      timpProgramat,
+      article: summarizeArticleInfo(info),
+      dbCountBefore: db.length,
+    });
+
+    if (!authUser?.uid) {
+      logBlogArticoleUploadWarn("handleUpload:no-auth-user", {
+        hint: "Firebase Storage foloseste currentUser.uid pentru calea imaginii.",
+      });
+    }
+
+    if (!selectedImages?.length) {
+      logBlogArticoleUploadWarn("handleUpload:no-image-selected", {
+        hint: "Selectati cel putin o imagine inainte de salvare.",
+      });
+    }
+
     try {
+      logBlogArticoleUpload("handleUpload:image-upload:start");
       const image = await uploadImage(
         selectedImages,
         [],
@@ -373,6 +426,16 @@ export default function BlogArticole({ articles }) {
         "Blog",
         "Articole"
       );
+      logBlogArticoleUpload("handleUpload:image-upload:done", {
+        hasImage: Boolean(image?.finalUri),
+        fileName: image?.fileName || null,
+      });
+
+      if (!image?.finalUri) {
+        throw new Error(
+          "Imaginea nu a putut fi incarcata. Selectati o imagine si verificati autentificarea Firebase."
+        );
+      }
 
       let youtubeLinks = handleYotubeLinksToArray(youtubeLink);
 
@@ -385,22 +448,49 @@ export default function BlogArticole({ articles }) {
         dataProgramata,
       };
 
-      console.log("[BlogArticole] handleUpload payload:", data);
+      logBlogArticoleUpload("handleUpload:firestore:start", {
+        categorie,
+        youtubeLinksCount: youtubeLinks?.length || 0,
+        article: summarizeArticleInfo(info),
+      });
+
       const dataReturned = await handleUploadFirestore(data, "BlogArticole");
-      console.log("[BlogArticole] handleUpload dataReturned:", dataReturned);
 
-      let newData = db;
+      logBlogArticoleUpload("handleUpload:firestore:done", {
+        documentId: dataReturned?.documentId || null,
+        id: dataReturned?.id ?? null,
+        scheduledAtTs: dataReturned?.scheduledAtTs || null,
+      });
 
-      newData.push(dataReturned);
+      if (!dataReturned) {
+        throw new Error("Articolul nu a putut fi salvat in Firestore.");
+      }
 
-      const sorted = [...newData].sort((a, b) => toMs(b) - toMs(a));
-      console.log("[BlogArticole] handleUpload new length:", sorted.length);
+      const sorted = sortBlogArticlesDesc([...db, dataReturned]);
+
+      logBlogArticoleUpload("handleUpload:ui-update", {
+        dbCountAfter: sorted.length,
+        topDocumentId: sorted[0]?.documentId || null,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+
       setDb(sorted);
-
+      setCurrentPage(1);
+      setSearchValue("");
+      setSearchedDb([]);
+      onArticleCreated?.(dataReturned);
       setShowSettings(!showSettings);
       void rebuildPublicArticlesCacheBestEffort("upload");
+
+      logBlogArticoleUpload("handleUpload:success", {
+        documentId: dataReturned.documentId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
     } catch (err) {
-      console.log("[BlogArticole] Error handleUpload......", err);
+      logBlogArticoleUploadError("handleUpload:failed", err, {
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+      throw err;
     }
   };
 
@@ -441,7 +531,7 @@ export default function BlogArticole({ articles }) {
               <Stack direction="column" alignItems="center">
                 {isLoading ? (
                   <CircularProgress />
-                ) : articles.length === 0 ? (
+                ) : db.length === 0 ? (
                   <Typography
                     sx={{
                       fontSize: 20,

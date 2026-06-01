@@ -6,7 +6,10 @@ import {
   isVideoPublishScheduled,
   rowHasValidEmbedForLocale,
 } from "../../../../lib/videoLibraryPublic";
-import { loadPremiumVideoLibraryRows } from "../../../../lib/loadPremiumVideoLibrary";
+import {
+  loadPremiumVideoLibraryRowById,
+  loadPremiumVideoRelatedRows,
+} from "../../../../lib/loadPremiumVideoLibrary";
 import { mapVideoRowToPublicDto } from "../../../../lib/videoLibraryPublicMapper";
 import {
   resolvePublicVideoLibraryPremiumActive,
@@ -51,8 +54,7 @@ export default async function handler(req, res) {
         : await resolvePublicVideoLibraryPremiumActive();
 
     const nowMs = Date.now();
-    const sortedRows = await loadPremiumVideoLibraryRows();
-    const targetRow = sortedRows.find((r) => r.id === rawId);
+    const targetRow = await loadPremiumVideoLibraryRowById(rawId);
     if (!targetRow || isVideoPublishScheduled(targetRow.publishAt, nowMs)) {
       return res.status(404).json({ error: "Not found" });
     }
@@ -66,34 +68,25 @@ export default async function handler(req, res) {
     const ctx = { locale, premiumActive };
     const video = mapVideoRowToPublicDto(targetRow, ctx);
 
-    /** Same trim(category) match only; empty category yields no related (plan). */
     const catTrim = typeof video.category === "string" ? video.category.trim() : "";
-    let relatedRows;
-    if (!catTrim) {
-      relatedRows = [];
-    } else {
-      relatedRows = sortedRows.filter((r) => {
-        if (r.id === rawId) return false;
-        if (isVideoPublishScheduled(r.publishAt, nowMs)) return false;
-        const c = typeof r.category === "string" ? r.category.trim() : "";
-        return c === catTrim && rowHasValidEmbedForLocale(r, locale);
-      });
-    }
-
-    const related = relatedRows.slice(0, RELATED_LIMIT).map((row) => mapVideoRowToPublicDto(row, ctx));
+    const relatedRows = catTrim
+      ? await loadPremiumVideoRelatedRows({
+          category: catTrim,
+          excludeId: rawId,
+          locale,
+          limit: RELATED_LIMIT,
+          nowMs,
+        })
+      : [];
+    const related = relatedRows.map((row) => mapVideoRowToPublicDto(row, ctx));
 
     let cacheTtlSec = 0;
     if (uid || hasAuthHeader) {
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
     } else {
-      let nextPublishAtMs = null;
-      for (const row of sortedRows) {
-        const publishMs = firestoreTsToMillis(row?.publishAt);
-        if (!Number.isFinite(publishMs) || publishMs <= nowMs) continue;
-        if (nextPublishAtMs == null || publishMs < nextPublishAtMs) {
-          nextPublishAtMs = publishMs;
-        }
-      }
+      const targetPublishMs = firestoreTsToMillis(targetRow?.publishAt);
+      const nextPublishAtMs =
+        Number.isFinite(targetPublishMs) && targetPublishMs > nowMs ? targetPublishMs : null;
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
         nextPublishAtMs,
