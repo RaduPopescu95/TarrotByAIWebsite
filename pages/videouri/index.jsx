@@ -411,7 +411,7 @@ export default function VideoLibraryPage() {
                       {accessFilterControls}
                     </div>
                   </div>
-                  <AdPlacementShell placementId="video" />
+                  <AdPlacementShell placementId="banner1" />
                   {filteredVideos.length === 0 ? (
                     <p className="py-12 text-center text-slate-600">
                       {normalizedSearch ? t("videoLibrarySearchNoResults") : t("videoLibraryFilteredEmpty")}
@@ -544,6 +544,7 @@ export default function VideoLibraryPage() {
                         );
                       })}
                       </div>
+                      <AdPlacementShell placementId="banner2" />
                       {showPagination ? (
                         <nav
                           aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
@@ -578,6 +579,7 @@ export default function VideoLibraryPage() {
                           </div>
                         </nav>
                       ) : null}
+                      <AdPlacementShell placementId="banner3" />
                     </>
                   )}
                 </>

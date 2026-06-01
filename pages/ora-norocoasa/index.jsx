@@ -234,7 +234,7 @@ export function CitateMotivationale() {
               </p>
             </div>
 
-            <AdPlacementShell placementId="reading" />
+            <AdPlacementShell placementId="banner1" />
 
             {/* Lucky Hour Card */}
             <div style={{
@@ -388,6 +388,8 @@ export function CitateMotivationale() {
 
               </div>
             </div>
+
+            <AdPlacementShell placementId="banner2" />
 
             {/* Bottom Info */}
             <div style={{

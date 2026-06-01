@@ -150,9 +150,10 @@ export default function AdsOrchestrationDashboardPage() {
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
                 <h2 className="text-base font-semibold">Adsterra subtle mode</h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>Doar Native Banner (fără popunder / interstitial).</li>
-                  <li>Max 1 slot/pagină (același cod nu se repetă); banner în iframe izolat.</li>
-                  <li>În panou Adsterra: doar Native Banner — fără Popunder / Social Bar pe site.</li>
+                  <li>Native Banner: KEY_NATIVE + host effectivecpmnetwork (container-*).</li>
+                  <li>Banner iframe: KEY_BANNER_1/2/3 + FORMAT=iframe + host highperformanceformat.com.</li>
+                  <li>Max 3 sloturi/pagină; chei distincte; placementId=&quot;native&quot; pentru doar native.</li>
+                  <li>Fără Popunder / Social Bar în panou Adsterra.</li>
                   <li>Production: reclama după 4 secunde pe pagină (fără scroll/cookies/limită sesiune).</li>
                   <li>AdSense este dezactivat când NEXT_PUBLIC_ENABLE_ADSTERRA=true.</li>
                   <li>Excluderi: abonament, meeting, settings, checkout cursuri.</li>

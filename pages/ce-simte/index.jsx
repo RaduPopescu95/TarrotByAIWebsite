@@ -554,7 +554,7 @@ export function CitirePersonalizata({ services }) {
           <section style={{ padding: isDesktop ? "120px 0 40px 0" : "100px 0 60px 0" }}>
             <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
 
-              <AdPlacementShell placementId="reading" />
+              <AdPlacementShell placementId="banner1" />
               
               {/* Two Column Layout for Desktop */}
               <div style={{
@@ -719,6 +719,8 @@ export function CitirePersonalizata({ services }) {
                   </p>
                 </div>
               )}
+
+              <AdPlacementShell placementId="banner2" />
             </div>
           </section>
         )}

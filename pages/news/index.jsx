@@ -351,9 +351,11 @@ function BlogHome(props) {
                 </div>
               )}
 
-              <AdPlacementShell placementId="article" />
+              <AdPlacementShell placementId="banner1" />
 
               {/* Next 2 Articles Section */}
+              <AdPlacementShell placementId="banner2" />
+
               {latestArticles && latestArticles.length > 0 && (
                 <div className="mb-16">
                   <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
@@ -400,6 +402,8 @@ function BlogHome(props) {
                   </div>
                 </div>
               )}
+
+              <AdPlacementShell placementId="banner3" />
 
               {/* All Articles Grid with Sidebar for Popular Articles */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

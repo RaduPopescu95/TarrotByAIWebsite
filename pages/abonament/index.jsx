@@ -12,8 +12,10 @@ import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import {
   buildBillingAuditInput,
   buildCourseBillingDetails,
+  billingValuesIndividualFrom,
   createInitialBillingFormValues,
   hydrateBillingUiFromPremiumProfile,
+  INDIVIDUAL_BILLING_AUDIT_OPTS,
   mapBillingAuditErrorsToForm,
 } from "../../utils/billingAddressData.mjs";
 import {
@@ -32,11 +34,6 @@ export async function getServerSideProps({ locale }) {
 
 const WIZARD_TOTAL_STEPS = 3;
 
-const PREMIUM_BILLING_AUDIT_OPTS = Object.freeze({
-  defaultCountry: "Romania",
-  individualCnpOptional: true,
-});
-
 function splitDisplayName(displayName = "") {
   const normalized = typeof displayName === "string" ? displayName.trim() : "";
   if (!normalized) {
@@ -49,19 +46,6 @@ function splitDisplayName(displayName = "") {
   return {
     firstName: parts.slice(0, -1).join(" "),
     lastName: parts.slice(-1).join(" "),
-  };
-}
-
-function billingValuesIndividualFrom(billingForm) {
-  return {
-    ...billingForm,
-    billingType: "individual",
-    /** Premium checkout does not collect CNP in-app; Oblio invoices without it (eFactura stays off until CNP exists). */
-    personalCnp: "",
-    companyName: "",
-    companyVAT: "",
-    companyReg: "",
-    companyAddress: "",
   };
 }
 
@@ -108,7 +92,7 @@ function collectFullBillingErrors(billingContact, billingForm, t) {
     individualAddress: billingValuesIndividual.billingAddress,
   });
 
-  const billingAudit = normalizeBillingContext(rawBillingInput, PREMIUM_BILLING_AUDIT_OPTS);
+  const billingAudit = normalizeBillingContext(rawBillingInput, INDIVIDUAL_BILLING_AUDIT_OPTS);
 
   if (!billingAudit.validation.ok) {
     Object.assign(
@@ -348,7 +332,7 @@ export default function AbonamentPage() {
         phone: billingContact.phone,
         individualAddress: billingValuesIndividual.billingAddress,
       });
-      const billingAudit = normalizeBillingContext(billingAuditInput, PREMIUM_BILLING_AUDIT_OPTS);
+      const billingAudit = normalizeBillingContext(billingAuditInput, INDIVIDUAL_BILLING_AUDIT_OPTS);
       const invoiceDecision = buildInvoiceDecision(billingAudit);
 
       logBillingAudit({

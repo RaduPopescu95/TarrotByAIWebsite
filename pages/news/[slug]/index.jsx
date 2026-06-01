@@ -423,7 +423,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                   </div>
                 )}
 
-                <AdPlacementShell placementId="article" />
+                <AdPlacementShell placementId="banner1" />
 
                 {/* Main Article Content */}
                 <article className="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -473,6 +473,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                     </div>
                   </div>
                 </article>
+
+                <AdPlacementShell placementId="banner2" />
 
                 {/* YouTube Videos - Enhanced Design */}
                 {filteredArticle?.youtubeLinks && filteredArticle.youtubeLinks.length > 0 && (
@@ -531,6 +533,8 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
 
 
               </div>
+
+              <AdPlacementShell placementId="banner3" />
 
               {/* Related Articles */}
               {relatedArticles.length > 0 && (

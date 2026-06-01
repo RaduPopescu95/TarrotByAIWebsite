@@ -115,7 +115,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <AdPlacementShell placementId="default" />
+      <AdPlacementShell placementId="banner1" />
 
       {/* About Story Section */}
       <section className="py-24 bg-white">
@@ -166,6 +166,8 @@ const AboutPage = () => {
         </div>
       </section>
 
+      <AdPlacementShell placementId="banner2" />
+
       {/* Statistics Section */}
       <section className="py-24 bg-gradient-to-br from-indigo-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-6">
@@ -200,6 +202,8 @@ const AboutPage = () => {
            </div>
         </div>
       </section>
+
+      <AdPlacementShell placementId="banner3" />
 
       {/* Services Section */}
       <section className="py-24 bg-white">

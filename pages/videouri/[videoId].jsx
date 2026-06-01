@@ -299,7 +299,7 @@ export default function VideoDetailPage() {
                     </div>
                   ) : null}
 
-                  <AdPlacementShell placementId="video" className="!my-6" />
+                  <AdPlacementShell placementId="banner1" className="!my-6" />
 
                   <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                     {video.title}
@@ -321,6 +321,8 @@ export default function VideoDetailPage() {
                       {video.description}
                     </p>
                   ) : null}
+
+                  <AdPlacementShell placementId="banner2" className="!my-4" />
                 </div>
 
                 <aside className="mt-10 min-w-0 xl:mt-0 xl:border-l xl:border-slate-200 xl:pl-8">
@@ -374,6 +376,7 @@ export default function VideoDetailPage() {
                       })}
                     </ul>
                   )}
+                  <AdPlacementShell placementId="banner3" className="!my-6" />
                 </aside>
               </div>
             ) : null}

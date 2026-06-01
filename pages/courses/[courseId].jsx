@@ -17,7 +17,9 @@ import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import {
   buildBillingAuditInput,
   buildCourseBillingDetails,
+  billingValuesIndividualFrom,
   createInitialBillingFormValues,
+  INDIVIDUAL_BILLING_AUDIT_OPTS,
   mapBillingAuditErrorsToForm,
 } from "../../utils/billingAddressData.mjs";
 import {
@@ -58,7 +60,7 @@ function mapPlaybackError(status, t) {
 
 function mapCheckoutError(status, t) {
   if (status === 401) return t("coursesErrorsAuthRequired");
-  if (status === 403) return t("coursesErrorsPurchasePasswordInvalid");
+  if (status === 403) return t("coursesErrorsNoPlaybackAccess");
   if (status === 404) return t("coursesErrorsNotFound");
   if (status === 409) return t("coursesErrorsAlreadyPurchased");
   if (status === 400) return t("coursesErrorsCourseUnavailableForPurchase");
@@ -118,7 +120,6 @@ export default function CourseDetailPage() {
   const [pageError, setPageError] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [purchasePassword, setPurchasePassword] = useState("");
   const [checkoutFormErrors, setCheckoutFormErrors] = useState({});
   const [billingContact, setBillingContact] = useState({
     firstName: "",
@@ -517,14 +518,8 @@ export default function CourseDetailPage() {
       handleLogin();
       return;
     }
-    const isPurchasePasswordRequired =
-      process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !== "false";
-    const normalizedPurchasePassword = purchasePassword.trim();
-    if (isPurchasePasswordRequired && !normalizedPurchasePassword) {
-      setCheckoutError(t("coursesErrorsPurchasePasswordMissing"));
-      return;
-    }
 
+    const billingValuesIndividual = billingValuesIndividualFrom(billingForm);
     const nextErrors = {};
     if (!billingContact.firstName.trim()) {
       nextErrors.firstName = t("coursesBillingFirstNameRequired", {
@@ -552,15 +547,15 @@ export default function CourseDetailPage() {
     }
 
     const rawBillingInput = buildBillingAuditInput({
-      billingValues: billingForm,
+      billingValues: billingValuesIndividual,
       firstName: billingContact.firstName,
       lastName: billingContact.lastName,
       fullName: `${billingContact.firstName} ${billingContact.lastName}`.trim(),
       email: billingContact.email,
       phone: billingContact.phone,
-      individualAddress: billingForm.billingAddress,
+      individualAddress: billingValuesIndividual.billingAddress,
     });
-    const billingAudit = normalizeBillingContext(rawBillingInput, { defaultCountry: "Romania" });
+    const billingAudit = normalizeBillingContext(rawBillingInput, INDIVIDUAL_BILLING_AUDIT_OPTS);
     const invoiceDecision = buildInvoiceDecision(billingAudit);
 
     logBillingAudit({
@@ -575,7 +570,7 @@ export default function CourseDetailPage() {
       Object.assign(
         nextErrors,
         mapBillingAuditErrorsToForm(billingAudit.validation.errorsByField, {
-          billingType: billingForm.billingType,
+          billingType: "individual",
         })
       );
     }
@@ -597,12 +592,12 @@ export default function CourseDetailPage() {
     try {
       const authHeaders = await getAuthHeaders({ required: true });
       const billingDetails = buildCourseBillingDetails({
-        billingValues: billingForm,
+        billingValues: billingValuesIndividual,
         firstName: billingContact.firstName,
         lastName: billingContact.lastName,
         email: billingContact.email,
         phone: billingContact.phone,
-        individualAddress: billingForm.billingAddress,
+        individualAddress: billingValuesIndividual.billingAddress,
       });
       const response = await fetch("/api/stripe/courses/create-checkout-session", {
         method: "POST",
@@ -612,7 +607,6 @@ export default function CourseDetailPage() {
         },
         body: JSON.stringify({
           courseId: normalizedCourseId,
-          purchasePassword: normalizedPurchasePassword,
           billingDetails,
         }),
       });
@@ -1041,32 +1035,11 @@ export default function CourseDetailPage() {
                                 </div>
                               </div>
 
-                              {process.env.NEXT_PUBLIC_COURSES_PURCHASE_PASSWORD_REQUIRED !==
-                              "false" ? (
-                                <div className="space-y-1.5">
-                                  <label className="block text-sm font-semibold text-slate-700">
-                                    {t("coursesPurchasePasswordLabel")}
-                                  </label>
-                                  <input
-                                    type="password"
-                                    value={purchasePassword}
-                                    onChange={(event) => {
-                                      setPurchasePassword(event.target.value);
-                                      setCheckoutError("");
-                                    }}
-                                    placeholder={t("coursesPurchasePasswordPlaceholder")}
-                                    autoComplete="off"
-                                    className={getCheckoutInputClass(false)}
-                                  />
-                                  <p className="text-xs text-slate-500">
-                                    {t("coursesPurchasePasswordHint")}
-                                  </p>
-                                </div>
-                              ) : null}
-
                               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <BillingDetailsForm
                                   variant="tailwind"
+                                  individualBillingOnly
+                                  hidePersonalCnp
                                   title={t("coursesBillingCardTitle", {
                                     defaultValue: "Date pentru factura",
                                   })}
@@ -1155,12 +1128,6 @@ export default function CourseDetailPage() {
                 label={t("coursesFloatingPurchaseCta")}
                 loadingLabel={t("coursesFloatingPurchaseLoading")}
                 isLoading={checkoutLoading}
-                passwordEnabled={false}
-                passwordValue={purchasePassword}
-                onPasswordChange={setPurchasePassword}
-                passwordLabel={t("coursesPurchasePasswordLabel")}
-                passwordPlaceholder={t("coursesPurchasePasswordPlaceholder")}
-                passwordHint={t("coursesPurchasePasswordHint")}
                 onClick={handleCheckout}
               />
             </div>

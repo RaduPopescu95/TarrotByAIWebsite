@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
-  getAdsterraPlacementKey,
-  getAdsterraScriptHost,
+  getAdsterraPlacementConfig,
   isAdsterraEnabled,
   isAdsterraRouteEligible,
 } from "../../lib/ads/config";
@@ -20,16 +19,24 @@ export default function AdPlacementShell({
   const router = useRouter();
   const pathname = router?.pathname || "/";
   const enabled = isAdsterraEnabled();
-  const host = getAdsterraScriptHost();
-  const key = getAdsterraPlacementKey(placementId);
+  const placement = useMemo(
+    () => getAdsterraPlacementConfig(placementId),
+    [placementId]
+  );
+  const { key, format, width, height } = placement;
   const { canShowAdsterra, routeEligible } = useAdsEngagementContext();
 
   const [slotClaimed, setSlotClaimed] = useState(false);
 
   const iframeSrcDoc = useMemo(
-    () => (host && key ? buildAdsterraIframeSrcDoc(host, key) : ""),
-    [host, key]
+    () => (placement.host && key ? buildAdsterraIframeSrcDoc(placement) : ""),
+    [placement, key]
   );
+
+  const iframeMinHeight =
+    format === "iframe" ? Math.max(60, Number(height) || 90) : 90;
+  const iframeMaxHeight =
+    format === "iframe" ? Math.max(iframeMinHeight, Number(height) || 320) : 320;
 
   useEffect(() => {
     resetAdsterraPageRegistry();
@@ -69,16 +76,21 @@ export default function AdPlacementShell({
       className={`my-8 flex w-full justify-center px-4 ${className}`.trim()}
       aria-label="Publicitate"
       data-adsterra-placement={placementId}
+      data-adsterra-format={format}
     >
-      <div className="w-full max-w-3xl overflow-hidden rounded-xl border border-gray-100/80 bg-gray-50/60 px-4 py-3">
+      <div
+        className={`w-full overflow-hidden rounded-xl border border-gray-100/80 bg-gray-50/60 px-4 py-3 ${
+          format === "iframe" && width >= 600 ? "max-w-4xl" : "max-w-3xl"
+        }`}
+      >
         <p className="sr-only">Publicitate</p>
         {showIframe ? (
           <iframe
             title="Publicitate"
             srcDoc={iframeSrcDoc}
             sandbox="allow-scripts allow-same-origin"
-            className="adsterra-native-banner mx-auto block w-full border-0 bg-transparent"
-            style={{ minHeight: 90, maxHeight: 320 }}
+            className="adsterra-slot mx-auto block w-full border-0 bg-transparent"
+            style={{ minHeight: iframeMinHeight, maxHeight: iframeMaxHeight }}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
           />

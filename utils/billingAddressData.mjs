@@ -194,6 +194,24 @@ export async function loadBillingAddressDataset() {
   return billingAddressDatasetPromise;
 }
 
+/** Shared audit options: individual billing without mandatory CNP (Oblio invoice, eFactura off until CNP exists). */
+export const INDIVIDUAL_BILLING_AUDIT_OPTS = Object.freeze({
+  defaultCountry: "Romania",
+  individualCnpOptional: true,
+});
+
+export function billingValuesIndividualFrom(billingForm) {
+  return {
+    ...billingForm,
+    billingType: "individual",
+    personalCnp: "",
+    companyName: "",
+    companyVAT: "",
+    companyReg: "",
+    companyAddress: "",
+  };
+}
+
 export function createInitialBillingFormValues(overrides = {}) {
   return {
     billingType: "individual",

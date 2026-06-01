@@ -6,8 +6,10 @@ import { handleUpdateFirestore } from "../../utils/firestoreUtils";
 import {
   buildBillingAuditInput,
   buildCourseBillingDetails,
+  billingValuesIndividualFrom,
   createInitialBillingFormValues,
   hydrateBillingUiFromPremiumProfile,
+  INDIVIDUAL_BILLING_AUDIT_OPTS,
   mapBillingAuditErrorsToForm,
 } from "../../utils/billingAddressData.mjs";
 import { normalizeBillingContext } from "../../utils/billingAudit.mjs";
@@ -118,21 +120,23 @@ export default function PremiumSubscriptionBillingCard({
         });
       }
 
+      const billingValuesIndividual = billingValuesIndividualFrom(premiumBillForm);
+
       const rawBillingInput = buildBillingAuditInput({
-        billingValues: premiumBillForm,
+        billingValues: billingValuesIndividual,
         firstName: premiumBillContact.firstName,
         lastName: premiumBillContact.lastName,
         fullName: `${premiumBillContact.firstName} ${premiumBillContact.lastName}`.trim(),
         email: premiumBillContact.email,
         phone: premiumBillContact.phone,
-        individualAddress: premiumBillForm.billingAddress,
+        individualAddress: billingValuesIndividual.billingAddress,
       });
-      const billingAudit = normalizeBillingContext(rawBillingInput, { defaultCountry: "Romania" });
+      const billingAudit = normalizeBillingContext(rawBillingInput, INDIVIDUAL_BILLING_AUDIT_OPTS);
       if (!billingAudit.validation.ok) {
         Object.assign(
           nextErrors,
           mapBillingAuditErrorsToForm(billingAudit.validation.errorsByField, {
-            billingType: premiumBillForm.billingType,
+            billingType: "individual",
           }),
         );
       }
@@ -147,12 +151,12 @@ export default function PremiumSubscriptionBillingCard({
       }
 
       const billingDetails = buildCourseBillingDetails({
-        billingValues: premiumBillForm,
+        billingValues: billingValuesIndividual,
         firstName: premiumBillContact.firstName,
         lastName: premiumBillContact.lastName,
         email: premiumBillContact.email,
         phone: premiumBillContact.phone,
-        individualAddress: premiumBillForm.billingAddress,
+        individualAddress: billingValuesIndividual.billingAddress,
       });
 
       const prior =
@@ -258,6 +262,8 @@ export default function PremiumSubscriptionBillingCard({
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <BillingDetailsForm
           variant="tailwind"
+          individualBillingOnly
+          hidePersonalCnp
           title={t("coursesBillingCardTitle", { defaultValue: "Date pentru factura" })}
           description={t("coursesBillingCardDescription", {
             defaultValue:

@@ -221,7 +221,7 @@ export function NumarNorocos() {
               </p>
             </div>
 
-            <AdPlacementShell placementId="reading" />
+            <AdPlacementShell placementId="banner1" />
 
             {/* Lucky Color Card */}
             <div style={{
@@ -368,6 +368,8 @@ export function NumarNorocos() {
 
               </div>
             </div>
+
+            <AdPlacementShell placementId="banner2" />
 
             {/* Bottom Info */}
             <div style={{

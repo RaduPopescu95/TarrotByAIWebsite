@@ -584,7 +584,7 @@ export function CitirePersonalizata({ services }) {
               ...styles.contentContainer,
               paddingTop: isMobile ? "30%" : "8%",
             }}>
-              <AdPlacementShell placementId="reading" />
+              <AdPlacementShell placementId="banner1" />
               <div style={{
                 ...styles.cardsGrid,
                 width: isMobile ? "100%" : "90%",
@@ -623,6 +623,7 @@ export function CitirePersonalizata({ services }) {
                     })}
                 </AnimatePresence>
               </div>
+              <AdPlacementShell placementId="banner2" />
             </div>
           </section>
         )}

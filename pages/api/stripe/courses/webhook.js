@@ -454,7 +454,10 @@ async function createCourseOblioInvoice(db, event, session) {
       email: billing?.email,
       phone: billing?.phone,
     },
-    { defaultCountry: "Romania" }
+    {
+      defaultCountry: "Romania",
+      individualCnpOptional: true,
+    }
   );
   const invoiceDecision = buildInvoiceDecision(billingAudit);
   logBillingAudit({

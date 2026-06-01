@@ -416,7 +416,7 @@ function Landing(props) {
 
 
         </section>
-        <AdPlacementShell placementId="home" />
+        <AdPlacementShell placementId="banner1" />
         {/* Modern Blog Content Area */}
         <main style={styles.contentWrapper}>
             {articles.articlesData.length > 0 ? (
@@ -531,6 +531,8 @@ function Landing(props) {
                           </div>
                         )}
                       </div>
+
+                      <AdPlacementShell placementId="banner2" />
 
                       {/* Modern Pagination */}
                       {(canGoNext || canGoPrev) && (
@@ -673,6 +675,8 @@ function Landing(props) {
             )}
 
             {homeVideosPreview.length > 0 ? (
+              <>
+              <AdPlacementShell placementId="banner3" />
               <section className="border-t border-gray-200 bg-white py-14">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                   <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -779,6 +783,7 @@ function Landing(props) {
                   </div>
                 </div>
               </section>
+              </>
             ) : null}
 
             {shouldRenderHomeCoursesSection && (
