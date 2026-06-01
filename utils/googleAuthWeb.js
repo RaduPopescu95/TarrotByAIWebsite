@@ -5,6 +5,7 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { authentication } from "../firebase";
+import { persistAuthReturnUrl } from "../lib/navigation";
 
 const POPUP_FALLBACK_CODES = new Set([
   "auth/popup-blocked",
@@ -27,7 +28,10 @@ function shouldFallbackToRedirect(error) {
   return message.includes("popup blocked") || message.includes("operation-not-supported");
 }
 
-export async function signInWithGooglePopupOrRedirect(auth = authentication) {
+export async function signInWithGooglePopupOrRedirect(
+  auth = authentication,
+  { returnUrl = "/" } = {}
+) {
   const provider = buildProvider();
 
   try {
@@ -40,6 +44,9 @@ export async function signInWithGooglePopupOrRedirect(auth = authentication) {
     };
   } catch (error) {
     if (shouldFallbackToRedirect(error)) {
+      if (typeof window !== "undefined" && returnUrl) {
+        persistAuthReturnUrl(returnUrl);
+      }
       await signInWithRedirect(auth, provider);
       return {
         status: "redirecting",

@@ -11,7 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { emailWithoutSpace } from "../../utils/strintText";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { authentication } from "../../firebase";
-import { sanitizeInternalReturnUrl } from "../../lib/navigation";
+import { sanitizeInternalReturnUrl, consumeAuthReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
 import { resolveGoogleRedirectResult } from "../../utils/googleAuthWeb";
 
 export async function getServerSideProps({ locale }) {
@@ -25,7 +25,7 @@ export async function getServerSideProps({ locale }) {
 export default function VideotecaLoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
-  const { setCurrentUser, loginWithGoogle } = useAuth();
+  const { setCurrentUser, loginWithGoogle, finalizeGoogleUserSession } = useAuth();
 
   const [message, setMessage] = React.useState("");
   const [showSnackback, setShowSnackback] = React.useState(false);
@@ -43,6 +43,8 @@ export default function VideotecaLoginPage() {
   );
 
   React.useEffect(() => {
+    if (!router.isReady) return;
+
     let mounted = true;
 
     const resolveGoogleRedirect = async () => {
@@ -51,7 +53,9 @@ export default function VideotecaLoginPage() {
         const redirectResult = await resolveGoogleRedirectResult(authentication);
         if (!mounted) return;
         if (redirectResult?.status === "signed_in" && redirectResult?.user) {
-          await router.push(safeReturnUrl);
+          await finalizeGoogleUserSession(redirectResult.user);
+          const targetUrl = consumeAuthReturnUrl(safeReturnUrl);
+          await router.replace(targetUrl);
         }
       } catch (error) {
         if (!mounted) return;
@@ -68,7 +72,7 @@ export default function VideotecaLoginPage() {
     return () => {
       mounted = false;
     };
-  }, [router, safeReturnUrl, t]);
+  }, [router.isReady, safeReturnUrl, t, finalizeGoogleUserSession]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -95,9 +99,10 @@ export default function VideotecaLoginPage() {
     setIsGoogleLoading(true);
     setShowSnackback(false);
     try {
+      persistAuthReturnUrl(safeReturnUrl);
       const result = await loginWithGoogle({ returnUrl: safeReturnUrl });
       if (result?.status === "signed_in") {
-        await router.push(safeReturnUrl);
+        await router.replace(safeReturnUrl);
       }
     } catch (error) {
       console.error("[login/videoteca] google_sign_in_fail", error?.message || error);

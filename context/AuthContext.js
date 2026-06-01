@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authentication } from "../firebase";
 import { handleGetUserInfoJobs } from "../utils/handleFirebaseQuery";
 import { signInWithGooglePopupOrRedirect } from "../utils/googleAuthWeb";
@@ -99,30 +99,72 @@ export const AuthProvider = ({ children }) => {
 
   // 🚀 NEW: Function to detect account switches and handle them
   const handleAccountSwitch = async (newUser) => {
+    if (!newUser?.uid) return false;
+
     const storedUser = localStorage.getItem("currentUser");
-    
-    if (storedUser) {
+    if (!storedUser) return false;
+
+    try {
       const parsedStoredUser = JSON.parse(storedUser);
-      
-      // Check if user has switched accounts
-      if (newUser && parsedStoredUser.uid !== newUser.uid) {
-        console.log("🔄 [AUTH] Account switch detected!", {
-          previous: parsedStoredUser.uid,
-          current: newUser.uid
-        });
-        
-        await clearAuthCache();
-        return true; // Indicates an account switch occurred
+      if (!parsedStoredUser?.uid || parsedStoredUser.uid === newUser.uid) {
+        return false;
       }
+
+      console.log("🔄 [AUTH] Account switch detected – clearing stale cached profile", {
+        previous: parsedStoredUser.uid,
+        current: newUser.uid,
+      });
+
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("isGuestUser");
+      setUserData(null);
+      setIsGuestUser(false);
+      return false;
+    } catch (error) {
+      console.error("❌ [AUTH] Failed to parse stored user during account switch check:", error);
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("isGuestUser");
+      return false;
     }
-    
-    return false;
   };
+
+  const finalizeGoogleUserSession = useCallback(async (signedUser) => {
+    if (!signedUser) return null;
+
+    await upsertGoogleUserProfile(signedUser);
+    const profile = await handleGetUserInfoJobs();
+    if (profile) {
+      persistAuthSnapshot(signedUser, profile);
+    } else {
+      const { firstName, lastName } = deriveNameParts({
+        displayName: signedUser.displayName,
+        email: signedUser.email,
+      });
+      const fallbackProfile = {
+        owner_uid: signedUser.uid,
+        auth_provider: "Google",
+        first_name: firstName,
+        last_name: lastName,
+        email: signedUser.email || "",
+        photoURL: signedUser.photoURL || "",
+      };
+      persistAuthSnapshot(signedUser, fallbackProfile);
+    }
+
+    setCurrentUser(signedUser);
+    setIsGuestUser(false);
+    localStorage.setItem("isGuestUser", "false");
+    return signedUser;
+  }, []);
 
   const loginWithGoogle = async ({ returnUrl = "/" } = {}) => {
     setLoading(true);
     try {
-      const authResult = await signInWithGooglePopupOrRedirect(authentication);
+      const authResult = await signInWithGooglePopupOrRedirect(authentication, {
+        returnUrl,
+      });
 
       if (authResult?.status === "redirecting") {
         return { status: "redirecting" };
@@ -130,25 +172,7 @@ export const AuthProvider = ({ children }) => {
 
       const signedUser = authResult?.user || authentication.currentUser;
       if (signedUser) {
-        await upsertGoogleUserProfile(signedUser);
-        const profile = await handleGetUserInfoJobs();
-        if (profile) {
-          persistAuthSnapshot(signedUser, profile);
-        } else {
-          const { firstName, lastName } = deriveNameParts({
-            displayName: signedUser.displayName,
-            email: signedUser.email,
-          });
-          const fallbackProfile = {
-            owner_uid: signedUser.uid,
-            auth_provider: "Google",
-            first_name: firstName,
-            last_name: lastName,
-            email: signedUser.email || "",
-            photoURL: signedUser.photoURL || "",
-          };
-          persistAuthSnapshot(signedUser, fallbackProfile);
-        }
+        await finalizeGoogleUserSession(signedUser);
       }
 
       return { status: "signed_in", returnUrl, user: signedUser || null };
@@ -175,12 +199,7 @@ export const AuthProvider = ({ children }) => {
       
       // 🚀 NEW: Check for account switch first
       if (user && !user.isAnonymous) {
-        const accountSwitched = await handleAccountSwitch(user);
-        if (accountSwitched) {
-          console.log("🔄 [AUTH] Account switch handled, returning early");
-          setLoading(false);
-          return; // onAuthStateChanged will be called again
-        }
+        await handleAccountSwitch(user);
       }
       
       // 🚀 FIXED: Handle no user properly - set state and complete loading
@@ -354,6 +373,7 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser,
     setLoading,
     loginWithGoogle,
+    finalizeGoogleUserSession,
     selectedSlot,
     setSelectedSlot,
     clearAuthCache, // 🚀 NEW: Export function to clear auth cache

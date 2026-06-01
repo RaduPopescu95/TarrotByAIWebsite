@@ -167,16 +167,7 @@ export const initAccountSwitchMonitor = () => {
       handleAccountSwitchRecovery();
     }
   });
-  
-  // Monitor visibility change (when user switches back to tab after account change)
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      if (authentication.currentUser && detectAccountSwitch(authentication.currentUser)) {
-        handleAccountSwitchRecovery();
-      }
-    }
-  });
-  
+
   console.log("✅ [AUTH UTILS] Account switch monitor initialized");
 };
 

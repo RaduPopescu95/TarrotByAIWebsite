@@ -153,15 +153,15 @@ export default function CourseDetailPage() {
 
   const toCourseReturnUrl = useCallback(() => {
     const fallbackPath = normalizedCourseId ? `/courses/${normalizedCourseId}` : "/courses";
-    return encodeURIComponent(router.asPath || fallbackPath);
+    return router.asPath || fallbackPath;
   }, [normalizedCourseId, router.asPath]);
 
   const handleLogin = useCallback(() => {
-    router.push(`/login?returnUrl=${toCourseReturnUrl()}`);
+    router.push(`/login?returnUrl=${encodeURIComponent(toCourseReturnUrl())}`);
   }, [router, toCourseReturnUrl]);
 
   const handleRegister = useCallback(() => {
-    router.push(`/register?returnUrl=${toCourseReturnUrl()}`);
+    router.push(`/register?returnUrl=${encodeURIComponent(toCourseReturnUrl())}`);
   }, [router, toCourseReturnUrl]);
 
   const loadCourseState = useCallback(

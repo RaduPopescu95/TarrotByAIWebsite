@@ -11,7 +11,7 @@ import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
-import { sanitizeInternalReturnUrl } from "../../lib/navigation";
+import { sanitizeInternalReturnUrl, consumeAuthReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
 import { resolveGoogleRedirectResult } from "../../utils/googleAuthWeb";
 
 function Copyright(props) {
@@ -42,7 +42,7 @@ export async function getServerSideProps({ locale }) {
 }
 
 export default function SignInSide() {
-  const { setAsGuestUser, setCurrentUser, loginWithGoogle } =
+  const { setAsGuestUser, setCurrentUser, loginWithGoogle, finalizeGoogleUserSession } =
     useAuth();
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
@@ -72,6 +72,8 @@ export default function SignInSide() {
   }, []);
 
   React.useEffect(() => {
+    if (!router.isReady) return;
+
     let mounted = true;
     const resolveGoogleRedirect = async () => {
       setIsResolvingGoogleRedirect(true);
@@ -79,7 +81,9 @@ export default function SignInSide() {
         const redirectResult = await resolveGoogleRedirectResult(authentication);
         if (!mounted) return;
         if (redirectResult?.status === "signed_in" && redirectResult?.user) {
-          await router.push(safeReturnUrl);
+          await finalizeGoogleUserSession(redirectResult.user);
+          const targetUrl = consumeAuthReturnUrl(safeReturnUrl);
+          await router.replace(targetUrl);
         }
       } catch (error) {
         if (!mounted) return;
@@ -98,7 +102,7 @@ export default function SignInSide() {
     return () => {
       mounted = false;
     };
-  }, [router, safeReturnUrl, t]);
+  }, [router.isReady, safeReturnUrl, t, finalizeGoogleUserSession]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -135,9 +139,10 @@ export default function SignInSide() {
     setIsGoogleLoading(true);
     setShowSnackback(false);
     try {
+      persistAuthReturnUrl(safeReturnUrl);
       const result = await loginWithGoogle({ returnUrl: safeReturnUrl });
       if (result?.status === "signed_in") {
-        await router.push(safeReturnUrl);
+        await router.replace(safeReturnUrl);
       }
     } catch (error) {
       console.error("[login] google_sign_in_fail", {
