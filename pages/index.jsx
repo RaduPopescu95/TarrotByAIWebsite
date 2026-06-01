@@ -605,7 +605,7 @@ function Landing(props) {
                         </div>
                             <div className="p-6">
                               <div className="space-y-4">
-                                {latestFiveArticles && latestFiveArticles.slice(0, 5).map((article, index) => {
+                                {articles.latestFiveArticles && articles.latestFiveArticles.slice(0, 5).map((article, index) => {
                                   const articleTitle = currentLanguage === "hi"
                                     ? article?.info?.hu?.nume
                                     : currentLanguage === "id"
