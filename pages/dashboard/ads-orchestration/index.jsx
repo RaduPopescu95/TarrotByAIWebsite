@@ -151,8 +151,9 @@ export default function AdsOrchestrationDashboardPage() {
                 <h2 className="text-base font-semibold">Adsterra subtle mode</h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   <li>Doar Native Banner (fără popunder / interstitial).</li>
-                  <li>Max ~1 slot pe pagină simplă; articol: slot article + default.</li>
-                  <li>Script invoke.js doar în production, după engagement + consimțământ Cookiebot.</li>
+                  <li>Max 1 slot/pagină (același cod nu se repetă); banner în iframe izolat.</li>
+                  <li>În panou Adsterra: doar Native Banner — fără Popunder / Social Bar pe site.</li>
+                  <li>Production + engagement + Cookiebot marketing consent.</li>
                   <li>AdSense este dezactivat când NEXT_PUBLIC_ENABLE_ADSTERRA=true.</li>
                   <li>Excluderi: abonament, meeting, settings, checkout cursuri.</li>
                 </ul>

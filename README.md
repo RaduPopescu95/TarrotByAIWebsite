@@ -76,6 +76,17 @@ Primary monetization uses discrete Adsterra Native Banner slots on public pages 
 - No popunder/interstitial formats in code.
 - Middleware rate-limits automation UA on the same public routes.
 - Dashboard preview: `/dashboard/ads-orchestration`
+- Banner loads inside an **iframe** (isolates `invoke.js` from the main page — helps avoid popunder/fullscreen leaking to the site chrome).
+- Default `NEXT_PUBLIC_ADSTERRA_MAX_SLOTS_PER_PAGE=1` — never reuse the same Adsterra code twice on one page.
+
+### Adsterra dashboard (required for banner-only)
+
+In [Adsterra Publishers](https://publishers.adsterra.com/) → **Websites** → your domain → **All codes**:
+
+1. Use only **Native Banner** unit codes (the `invoke.js` + `container-…` snippet).
+2. **Remove / do not install** separate codes for Popunder, Social Bar, Interstitial, or Direct Link on the site.
+3. When adding the website, exclude Popunder and Social Bar in ad unit preferences if offered.
+4. For a second on-page banner later, create a **second Native Banner** in Adsterra and set `NEXT_PUBLIC_ADSTERRA_KEY_ARTICLE` (etc.) — do not reuse `KEY_DEFAULT` twice.
 
 ### Cloudflare hardening (recommended)
 

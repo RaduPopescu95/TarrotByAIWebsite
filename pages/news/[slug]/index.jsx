@@ -474,8 +474,6 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                   </div>
                 </article>
 
-                <AdPlacementShell placementId="default" />
-
                 {/* YouTube Videos - Enhanced Design */}
                 {filteredArticle?.youtubeLinks && filteredArticle.youtubeLinks.length > 0 && (
                   console.log('YouTube Links Found:', filteredArticle.youtubeLinks) || true
