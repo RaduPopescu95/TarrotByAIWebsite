@@ -60,8 +60,7 @@ Primary monetization uses discrete Adsterra Native Banner slots on public pages 
 
 - Route policy: `lib/ads/config.js`
 - Slots: `components/Ads/AdPlacementShell.jsx` + `AdsterraSlot.jsx`
-- Engagement gate: `components/Ads/useAdsEngagement.js` (5s delay, interaction, 5 pages/session)
-- Consent: `useAdsConsent.js` when `NEXT_PUBLIC_ADS_CONSENT_REQUIRED=true` (Cookiebot marketing)
+- Timing gate: `components/Ads/useAdsEngagement.js` (4s on page, production only, allowlisted routes)
 
 ### Environment variables
 
@@ -72,7 +71,7 @@ Primary monetization uses discrete Adsterra Native Banner slots on public pages 
 
 ### Runtime behavior
 
-- Banners load only in `production`, only on allowlisted routes, after engagement + consent.
+- Banners load only in `production`, on allowlisted routes, after 4 seconds on the page.
 - No popunder/interstitial formats in code.
 - Middleware rate-limits automation UA on the same public routes.
 - Dashboard preview: `/dashboard/ads-orchestration`

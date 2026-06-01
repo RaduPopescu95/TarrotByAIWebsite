@@ -153,7 +153,7 @@ export default function AdsOrchestrationDashboardPage() {
                   <li>Doar Native Banner (fără popunder / interstitial).</li>
                   <li>Max 1 slot/pagină (același cod nu se repetă); banner în iframe izolat.</li>
                   <li>În panou Adsterra: doar Native Banner — fără Popunder / Social Bar pe site.</li>
-                  <li>Production + engagement + Cookiebot marketing consent.</li>
+                  <li>Production: reclama după 4 secunde pe pagină (fără scroll/cookies/limită sesiune).</li>
                   <li>AdSense este dezactivat când NEXT_PUBLIC_ENABLE_ADSTERRA=true.</li>
                   <li>Excluderi: abonament, meeting, settings, checkout cursuri.</li>
                 </ul>
