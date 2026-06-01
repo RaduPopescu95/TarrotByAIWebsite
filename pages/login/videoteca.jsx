@@ -11,8 +11,9 @@ import { useAuth } from "../../context/AuthContext";
 import { emailWithoutSpace } from "../../utils/strintText";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { authentication } from "../../firebase";
-import { sanitizeInternalReturnUrl, consumeAuthReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
-import { resolveGoogleRedirectResult } from "../../utils/googleAuthWeb";
+import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
+import { startGoogleRedirectSignIn } from "../../utils/googleAuthWeb";
+import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -25,13 +26,12 @@ export async function getServerSideProps({ locale }) {
 export default function VideotecaLoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
-  const { setCurrentUser, loginWithGoogle, finalizeGoogleUserSession } = useAuth();
+  const { finalizeEmailPasswordSession } = useAuth();
 
   const [message, setMessage] = React.useState("");
   const [showSnackback, setShowSnackback] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  const [isResolvingGoogleRedirect, setIsResolvingGoogleRedirect] = React.useState(false);
 
   const rawReturnUrl = Array.isArray(router.query?.returnUrl)
     ? router.query.returnUrl[0]
@@ -41,58 +41,31 @@ export default function VideotecaLoginPage() {
     () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
     [rawReturnUrl],
   );
+  const { authBootstrapReady } = useAuthFunnelRedirect(safeReturnUrl);
 
-  React.useEffect(() => {
-    if (!router.isReady) return;
-
-    let mounted = true;
-
-    const resolveGoogleRedirect = async () => {
-      setIsResolvingGoogleRedirect(true);
-      try {
-        const redirectResult = await resolveGoogleRedirectResult(authentication);
-        if (!mounted) return;
-        if (redirectResult?.status === "signed_in" && redirectResult?.user) {
-          await finalizeGoogleUserSession(redirectResult.user);
-          const targetUrl = consumeAuthReturnUrl(safeReturnUrl);
-          await router.replace(targetUrl);
-        }
-      } catch (error) {
-        if (!mounted) return;
-        console.error("[login/videoteca] google_redirect_fail", error?.message || error);
-        setShowSnackback(true);
-        setMessage(t("loginGoogleError", { defaultValue: "Google sign-in failed. Please try again." }));
-      } finally {
-        if (mounted) setIsResolvingGoogleRedirect(false);
-      }
-    };
-
-    resolveGoogleRedirect();
-
-    return () => {
-      mounted = false;
-    };
-  }, [router.isReady, safeReturnUrl, t, finalizeGoogleUserSession]);
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
+    setShowSnackback(false);
     const data = new FormData(event.currentTarget);
     const email = emailWithoutSpace(data.get("email"));
     const password = data.get("password");
 
-    signInWithEmailAndPassword(authentication, email, password)
-      .then(async (userCredentials) => {
-        setCurrentUser(userCredentials.user);
-        await router.push(safeReturnUrl);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        const errorMessage = handleFirebaseAuthError(error);
-        setShowSnackback(true);
-        setMessage(errorMessage);
-        setIsLoading(false);
-      });
+    try {
+      persistAuthReturnUrl(safeReturnUrl);
+      const userCredentials = await signInWithEmailAndPassword(
+        authentication,
+        email,
+        password
+      );
+      await finalizeEmailPasswordSession(userCredentials.user);
+    } catch (error) {
+      const errorMessage = handleFirebaseAuthError(error);
+      setShowSnackback(true);
+      setMessage(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -100,20 +73,16 @@ export default function VideotecaLoginPage() {
     setShowSnackback(false);
     try {
       persistAuthReturnUrl(safeReturnUrl);
-      const result = await loginWithGoogle({ returnUrl: safeReturnUrl });
-      if (result?.status === "signed_in") {
-        await router.replace(safeReturnUrl);
-      }
+      await startGoogleRedirectSignIn(authentication, { returnUrl: safeReturnUrl });
     } catch (error) {
       console.error("[login/videoteca] google_sign_in_fail", error?.message || error);
       setShowSnackback(true);
       setMessage(t("loginGoogleError", { defaultValue: "Google sign-in failed. Please try again." }));
-    } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  const isActionBusy = isLoading || isGoogleLoading || isResolvingGoogleRedirect;
+  const isActionBusy = isLoading || isGoogleLoading || !authBootstrapReady;
 
   const googleBtn = t("loginGoogleButton", { defaultValue: "Continue with Google" });
   const googleLoading = t("loginGoogleLoading", { defaultValue: "Starting Google sign-in…" });
@@ -183,7 +152,7 @@ export default function VideotecaLoginPage() {
                   disabled={isActionBusy}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isGoogleLoading || isResolvingGoogleRedirect ? (
+                  {isGoogleLoading ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                       {googleLoading}

@@ -11,8 +11,9 @@ import Header from "../../components/Header";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
-import { sanitizeInternalReturnUrl, consumeAuthReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
-import { resolveGoogleRedirectResult } from "../../utils/googleAuthWeb";
+import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
+import { startGoogleRedirectSignIn } from "../../utils/googleAuthWeb";
+import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
 function Copyright(props) {
   return (
@@ -42,13 +43,11 @@ export async function getServerSideProps({ locale }) {
 }
 
 export default function SignInSide() {
-  const { setAsGuestUser, setCurrentUser, loginWithGoogle, finalizeGoogleUserSession } =
-    useAuth();
+  const { setAsGuestUser, finalizeEmailPasswordSession } = useAuth();
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  const [isResolvingGoogleRedirect, setIsResolvingGoogleRedirect] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
   const { t } = useTranslation("common");
@@ -60,6 +59,7 @@ export default function SignInSide() {
     () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
     [rawReturnUrl]
   );
+  const { authBootstrapReady } = useAuthFunnelRedirect(safeReturnUrl);
 
   // Check if mobile
   React.useEffect(() => {
@@ -71,68 +71,35 @@ export default function SignInSide() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  React.useEffect(() => {
-    if (!router.isReady) return;
-
-    let mounted = true;
-    const resolveGoogleRedirect = async () => {
-      setIsResolvingGoogleRedirect(true);
-      try {
-        const redirectResult = await resolveGoogleRedirectResult(authentication);
-        if (!mounted) return;
-        if (redirectResult?.status === "signed_in" && redirectResult?.user) {
-          await finalizeGoogleUserSession(redirectResult.user);
-          const targetUrl = consumeAuthReturnUrl(safeReturnUrl);
-          await router.replace(targetUrl);
-        }
-      } catch (error) {
-        if (!mounted) return;
-        console.error("[login] google_redirect_fail", {
-          message: error?.message || "unknown_error",
-          code: error?.code || "unknown_code",
-        });
-        setShowSnackback(true);
-        setMessage(t("loginGoogleError"));
-      } finally {
-        if (mounted) setIsResolvingGoogleRedirect(false);
-      }
-    };
-
-    resolveGoogleRedirect();
-    return () => {
-      mounted = false;
-    };
-  }, [router.isReady, safeReturnUrl, t, finalizeGoogleUserSession]);
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
+    setShowSnackback(false);
     const data = new FormData(event.currentTarget);
     const email = data.get("email");
     const password = data.get("password");
 
     const emailNew = emailWithoutSpace(email);
-    console.log("login with.........", {
-      email: emailNew,
-      password: data.get("password"),
-    });
 
-    signInWithEmailAndPassword(authentication, emailNew, password)
-      .then(async (userCredentials) => {
-        setCurrentUser(userCredentials.user);
-        console.log("userCredentials...", userCredentials.user.uid);
-        router.push(safeReturnUrl);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        const errorMessage = handleFirebaseAuthError(error);
-        setShowSnackback(true);
-        setMessage(errorMessage);
-        setIsLoading(false);
-
-        console.log("error on sign in user...", error.message);
-        console.log("error on sign in user...", error.code);
+    try {
+      persistAuthReturnUrl(safeReturnUrl);
+      const userCredentials = await signInWithEmailAndPassword(
+        authentication,
+        emailNew,
+        password
+      );
+      await finalizeEmailPasswordSession(userCredentials.user);
+    } catch (error) {
+      const errorMessage = handleFirebaseAuthError(error);
+      setShowSnackback(true);
+      setMessage(errorMessage);
+      console.error("[login] email_sign_in_fail", {
+        message: error?.message || "unknown_error",
+        code: error?.code || "unknown_code",
       });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -140,10 +107,7 @@ export default function SignInSide() {
     setShowSnackback(false);
     try {
       persistAuthReturnUrl(safeReturnUrl);
-      const result = await loginWithGoogle({ returnUrl: safeReturnUrl });
-      if (result?.status === "signed_in") {
-        await router.replace(safeReturnUrl);
-      }
+      await startGoogleRedirectSignIn(authentication, { returnUrl: safeReturnUrl });
     } catch (error) {
       console.error("[login] google_sign_in_fail", {
         message: error?.message || "unknown_error",
@@ -151,7 +115,6 @@ export default function SignInSide() {
       });
       setShowSnackback(true);
       setMessage(t("loginGoogleError"));
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -169,7 +132,7 @@ export default function SignInSide() {
     }
   };
 
-  const isActionLoading = isLoading || isGoogleLoading || isResolvingGoogleRedirect;
+  const isActionLoading = isLoading || isGoogleLoading || !authBootstrapReady;
 
   return (
     <>
@@ -279,7 +242,7 @@ export default function SignInSide() {
                   style={styles.googleButton}
                   disabled={isActionLoading}
                 >
-                  {isGoogleLoading || isResolvingGoogleRedirect ? (
+                  {isGoogleLoading ? (
                     <span style={styles.googleLoadingWrap}>
                       <div style={styles.spinner}></div>
                       {t("loginGoogleLoading")}

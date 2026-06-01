@@ -12,7 +12,8 @@ import { useRouter } from "next/router";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import AuthFunnelShell from "../../components/auth/AuthFunnelShell";
-import { sanitizeInternalReturnUrl } from "../../lib/navigation";
+import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
+import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -33,7 +34,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const { t } = useTranslation("common");
-  const { setUserData } = useAuth();
+  const { finalizeEmailPasswordSession } = useAuth();
   const router = useRouter();
   const rawReturnUrl = Array.isArray(router.query?.returnUrl)
     ? router.query.returnUrl[0]
@@ -42,6 +43,7 @@ export default function RegisterPage() {
     () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
     [rawReturnUrl],
   );
+  const { authBootstrapReady } = useAuthFunnelRedirect(safeReturnUrl);
 
   const [formData, setFormData] = React.useState({
     email: "",
@@ -102,17 +104,17 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
+      persistAuthReturnUrl(safeReturnUrl);
       const userCredentials = await createUserWithEmailAndPassword(authentication, email, password);
       const user = userCredentials.user;
-      const value = {
+      const profile = {
         owner_uid: user.uid,
         first_name: first_name,
         last_name: last_name,
         email,
       };
-      setUserData({ ...value });
-      await setDoc(doc(db, "Users", user.uid), value);
-      await router.push(safeReturnUrl);
+      await setDoc(doc(db, "Users", user.uid), profile);
+      await finalizeEmailPasswordSession(user, profile);
     } catch (error) {
       setShowErrorBanner(true);
       setMessage(handleFirebaseAuthError(error));
@@ -273,7 +275,7 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={isButtonDisabled || isLoading}
+                disabled={isButtonDisabled || isLoading || !authBootstrapReady}
                 className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (

@@ -2,7 +2,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authentication } from "../firebase";
 import { handleGetUserInfoJobs } from "../utils/handleFirebaseQuery";
-import { signInWithGooglePopupOrRedirect } from "../utils/googleAuthWeb";
+import { signInWithGooglePopupOrRedirect, resolvePendingGoogleRedirectResult } from "../utils/googleAuthWeb";
 import { deriveNameParts, upsertGoogleUserProfile } from "../utils/googleUserProfileSync";
 
 const AuthContext = createContext();
@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null); // Inițializare cu null
   const [userData, setUserData] = useState(null); // Inițializare cu null
   const [loading, setLoading] = useState(true);
+  const [googleRedirectHandled, setGoogleRedirectHandled] = useState(false);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState({ day: null, slot: null }); // ziua și slotul curent pentru ștergerea unui slot
 
@@ -159,6 +160,52 @@ export const AuthProvider = ({ children }) => {
     return signedUser;
   }, []);
 
+  const finalizeEmailPasswordSession = useCallback(async (signedUser, profileOverride = null) => {
+    if (!signedUser) return null;
+
+    if (profileOverride && typeof profileOverride === "object") {
+      persistAuthSnapshot(signedUser, profileOverride);
+    } else {
+      try {
+        const profile = await handleGetUserInfoJobs();
+        if (profile) {
+          persistAuthSnapshot(signedUser, profile);
+        } else {
+          const { firstName, lastName } = deriveNameParts({
+            displayName: signedUser.displayName,
+            email: signedUser.email,
+          });
+          persistAuthSnapshot(signedUser, {
+            owner_uid: signedUser.uid,
+            first_name: firstName,
+            last_name: lastName,
+            email: signedUser.email || "",
+          });
+        }
+      } catch (error) {
+        console.error("❌ [AUTH] Email/password profile fetch failed", {
+          uid: signedUser.uid,
+          message: error?.message || "unknown_error",
+        });
+        const { firstName, lastName } = deriveNameParts({
+          displayName: signedUser.displayName,
+          email: signedUser.email,
+        });
+        persistAuthSnapshot(signedUser, {
+          owner_uid: signedUser.uid,
+          first_name: firstName,
+          last_name: lastName,
+          email: signedUser.email || "",
+        });
+      }
+    }
+
+    setCurrentUser(signedUser);
+    setIsGuestUser(false);
+    localStorage.setItem("isGuestUser", "false");
+    return signedUser;
+  }, []);
+
   const loginWithGoogle = async ({ returnUrl = "/" } = {}) => {
     setLoading(true);
     try {
@@ -188,6 +235,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    let active = true;
+
+    const bootstrapGoogleRedirect = async () => {
+      try {
+        const redirectResult = await resolvePendingGoogleRedirectResult(authentication);
+        if (!active) return;
+        if (redirectResult?.status === "signed_in" && redirectResult.user) {
+          await finalizeGoogleUserSession(redirectResult.user);
+        }
+      } catch (error) {
+        console.error("❌ [AUTH] Google redirect bootstrap failed", {
+          message: error?.message || "unknown_error",
+          code: error?.code || "unknown_code",
+        });
+      } finally {
+        if (active) {
+          setGoogleRedirectHandled(true);
+        }
+      }
+    };
+
+    bootstrapGoogleRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, [finalizeGoogleUserSession]);
+
+  useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
       console.log("🔥 [AUTH CONTEXT] onAuthStateChanged triggered:", user ? {
         uid: user.uid,
@@ -204,6 +280,11 @@ export const AuthProvider = ({ children }) => {
       
       // 🚀 FIXED: Handle no user properly - set state and complete loading
       if (!user) {
+        await authentication.authStateReady();
+        if (authentication.currentUser) {
+          return;
+        }
+
         console.log("🔑 [AUTH CONTEXT] No user found, clearing state");
         console.log("🔑 [AUTH CONTEXT] Setting loading to false");
         setCurrentUser(null);
@@ -367,6 +448,7 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     userData,
     loading,
+    googleRedirectHandled,
     isGuestUser,
     setAsGuestUser,
     setUserData,
@@ -374,6 +456,7 @@ export const AuthProvider = ({ children }) => {
     setLoading,
     loginWithGoogle,
     finalizeGoogleUserSession,
+    finalizeEmailPasswordSession,
     selectedSlot,
     setSelectedSlot,
     clearAuthCache, // 🚀 NEW: Export function to clear auth cache

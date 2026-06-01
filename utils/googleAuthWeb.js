@@ -12,10 +12,17 @@ const POPUP_FALLBACK_CODES = new Set([
   "auth/operation-not-supported-in-this-environment",
 ]);
 
+let googleRedirectResultPromise = null;
+
 function buildProvider() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
   return provider;
+}
+
+function isGoogleSignedInUser(user) {
+  if (!user || user.isAnonymous || !Array.isArray(user.providerData)) return false;
+  return user.providerData.some((provider) => provider?.providerId === "google.com");
 }
 
 function shouldFallbackToRedirect(error) {
@@ -26,6 +33,13 @@ function shouldFallbackToRedirect(error) {
   if (POPUP_FALLBACK_CODES.has(code)) return true;
   const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
   return message.includes("popup blocked") || message.includes("operation-not-supported");
+}
+
+export async function startGoogleRedirectSignIn(auth = authentication, { returnUrl = "/" } = {}) {
+  if (typeof window !== "undefined" && returnUrl) {
+    persistAuthReturnUrl(returnUrl);
+  }
+  await signInWithRedirect(auth, buildProvider());
 }
 
 export async function signInWithGooglePopupOrRedirect(
@@ -44,10 +58,7 @@ export async function signInWithGooglePopupOrRedirect(
     };
   } catch (error) {
     if (shouldFallbackToRedirect(error)) {
-      if (typeof window !== "undefined" && returnUrl) {
-        persistAuthReturnUrl(returnUrl);
-      }
-      await signInWithRedirect(auth, provider);
+      await startGoogleRedirectSignIn(auth, { returnUrl });
       return {
         status: "redirecting",
         method: "redirect",
@@ -59,21 +70,49 @@ export async function signInWithGooglePopupOrRedirect(
   }
 }
 
-export async function resolveGoogleRedirectResult(auth = authentication) {
-  const result = await getRedirectResult(auth);
-  if (!result) {
-    return {
+/**
+ * Must run exactly once per full page load (Firebase allows a single getRedirectResult).
+ */
+export function resolvePendingGoogleRedirectResult(auth = authentication) {
+  if (typeof window === "undefined") {
+    return Promise.resolve({
       status: "empty",
       method: "redirect",
       result: null,
       user: null,
-    };
+    });
   }
 
-  return {
-    status: "signed_in",
-    method: "redirect",
-    result,
-    user: result?.user || null,
-  };
+  if (!googleRedirectResultPromise) {
+    googleRedirectResultPromise = (async () => {
+      await auth.authStateReady();
+      const result = await getRedirectResult(auth);
+      const user =
+        result?.user ||
+        (isGoogleSignedInUser(auth.currentUser) ? auth.currentUser : null);
+
+      if (!user) {
+        return {
+          status: "empty",
+          method: "redirect",
+          result: null,
+          user: null,
+        };
+      }
+
+      return {
+        status: "signed_in",
+        method: "redirect",
+        result,
+        user,
+      };
+    })();
+  }
+
+  return googleRedirectResultPromise;
+}
+
+/** @deprecated Use resolvePendingGoogleRedirectResult */
+export async function resolveGoogleRedirectResult(auth = authentication) {
+  return resolvePendingGoogleRedirectResult(auth);
 }
