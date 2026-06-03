@@ -14,6 +14,11 @@ import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import VideoPlaybackConsentModal from "../../components/VideoPlayback/VideoPlaybackConsentModal";
+import {
+  resolveLibraryPlatform,
+  useVideoPlaybackConsentGate,
+} from "../../lib/videoPlaybackConsent";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -71,6 +76,17 @@ export default function VideoDetailPage() {
   const [loadError, setLoadError] = useState("");
   const [fullscreenActive, setFullscreenActive] = useState(false);
   const [availableLocales, setAvailableLocales] = useState([]);
+  const {
+    consentGranted,
+    modalVisible,
+    recording,
+    requestPlayback,
+    handleAccept,
+    handleDecline,
+  } = useVideoPlaybackConsentGate({
+    userData,
+    onDecline: () => router.back(),
+  });
 
   const videoIdRaw = router.query.videoId;
   const videoId = useMemo(
@@ -122,6 +138,26 @@ export default function VideoDetailPage() {
     load();
   }, [load, router.isReady, videoId, currentUser?.uid]);
 
+  const videoIsPlayable = isVideoPlayableForUser(video, userData);
+
+  useEffect(() => {
+    if (!video?.id || !videoIsPlayable) return;
+    void requestPlayback({
+      contentType: "library",
+      contentId: video.id,
+      platform: resolveLibraryPlatform(video),
+      title: video.title || "",
+      locale: router.locale || "ro",
+    });
+  }, [
+    requestPlayback,
+    router.locale,
+    video?.id,
+    video?.platform,
+    video?.title,
+    videoIsPlayable,
+  ]);
+
   useEffect(() => {
     const el = playerWrapRef.current;
     const sync = () => {
@@ -163,8 +199,6 @@ export default function VideoDetailPage() {
     typeof video?.description === "string" && video.description.trim()
       ? video.description.trim().slice(0, 160)
       : t("videoLibrarySeoDesc");
-  const videoIsPlayable = isVideoPlayableForUser(video, userData);
-
   return (
     <>
       <Head>
@@ -206,6 +240,7 @@ export default function VideoDetailPage() {
                     className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
                   >
                     {videoIsPlayable ? (
+                      consentGranted ? (
                       <>
                         <iframe
                           key={video.embedSrc || video.id}
@@ -228,6 +263,11 @@ export default function VideoDetailPage() {
                             : t("videoLibraryFullscreen")}
                         </button>
                       </>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-slate-950 text-sm text-slate-300">
+                          {t("videoLibraryLoading")}
+                        </div>
+                      )
                     ) : (
                       <div className="relative flex h-full flex-col items-center justify-center gap-4 bg-slate-900 px-6 text-center text-white">
                         {video.isPremium ? (
@@ -384,6 +424,12 @@ export default function VideoDetailPage() {
         </div>
         <Footer />
       </div>
+      <VideoPlaybackConsentModal
+        open={modalVisible}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+        recording={recording}
+      />
     </>
   );
 }

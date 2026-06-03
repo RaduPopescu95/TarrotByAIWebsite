@@ -23,7 +23,7 @@ import {
   handleUploadFirestore,
 } from "../../utils/firestoreUtils";
 import { handleYotubeLinksToArray } from "../../utils/youtubeLinkUtils";
-import { buildScheduledDate } from "../../lib/articleSchedule";
+import { buildScheduledDate, shouldQueueArticlePushNotification } from "../../lib/articleSchedule";
 import { sortBlogArticlesDesc } from "../../lib/blogArticleSort";
 import {
   logBlogArticoleUpload,
@@ -299,6 +299,7 @@ export default function BlogArticole({
               timpProgramat,
               fallbackDate,
             });
+            const queueNotification = shouldQueueArticlePushNotification(item, date);
             data = {
               ...item,
               firstUploadtime:
@@ -316,7 +317,7 @@ export default function BlogArticole({
               timpProgramat,
               dataProgramata,
               scheduledAtTs: date,
-              notificationState: "pending",
+              notificationState: queueNotification ? "pending" : "sent",
             };
             console.log("if.....", data);
           } else {
@@ -335,6 +336,7 @@ export default function BlogArticole({
               timpProgramat,
               fallbackDate,
             });
+            const queueNotification = shouldQueueArticlePushNotification(item, date);
 
             data = {
               ...item,
@@ -352,7 +354,7 @@ export default function BlogArticole({
               timpProgramat,
               dataProgramata,
               scheduledAtTs: date,
-              notificationState: "pending",
+              notificationState: queueNotification ? "pending" : "sent",
             };
           }
           await handleUpdateFirestore(`BlogArticole/${data.documentId}`, data);

@@ -27,6 +27,8 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../utils/billingAudit.mjs";
+import VideoPlaybackConsentModal from "../../components/VideoPlayback/VideoPlaybackConsentModal";
+import { useVideoPlaybackConsentGate } from "../../lib/videoPlaybackConsent";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -110,6 +112,17 @@ export default function CourseDetailPage() {
   const { courseId, success, canceled } = router.query;
   const normalizedCourseId = Array.isArray(courseId) ? courseId[0] : courseId;
   const { currentUser, userData } = useAuth();
+  const {
+    consentGranted,
+    modalVisible,
+    recording,
+    requestPlayback,
+    handleAccept,
+    handleDecline,
+  } = useVideoPlaybackConsentGate({
+    userData,
+    onDecline: () => router.back(),
+  });
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -336,6 +349,17 @@ export default function CourseDetailPage() {
   useEffect(() => {
     loadPlayback();
   }, [loadPlayback]);
+
+  useEffect(() => {
+    if (!course?.id) return;
+    void requestPlayback({
+      contentType: "course",
+      contentId: course.id,
+      platform: "vimeo",
+      title: course.title || "",
+      locale: router.locale || "ro",
+    });
+  }, [course?.id, course?.title, requestPlayback, router.locale]);
 
   useEffect(() => {
     if (loading || pageError || !course) return;
@@ -830,20 +854,28 @@ export default function CourseDetailPage() {
 
               <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
                 <section className="space-y-5">
-                  <VideoCard
-                    hasAccess={hasAccess}
-                    playbackLoading={playbackLoading}
-                    playbackError={playbackError}
-                    playbackVimeoId={playbackVimeoId}
-                    previewThumbnailUrl={course.thumbnailUrl}
-                    shouldRenderPreviewVideo={shouldRenderPreviewVideo}
-                    previewVimeoId={course.previewVimeoId}
-                    title={course.title}
-                    preparingLabel={t("coursesPlaybackPreparing")}
-                    noPreviewLabel={t("coursesDetailNoPreview")}
-                    playbackUnavailableLabel={t("coursesPlaybackUnavailable")}
-                    fallbackPlayerTitle={t("coursesPlayerTitleFallback")}
-                  />
+                  {consentGranted ? (
+                    <VideoCard
+                      hasAccess={hasAccess}
+                      playbackLoading={playbackLoading}
+                      playbackError={playbackError}
+                      playbackVimeoId={playbackVimeoId}
+                      previewThumbnailUrl={course.thumbnailUrl}
+                      shouldRenderPreviewVideo={shouldRenderPreviewVideo}
+                      previewVimeoId={course.previewVimeoId}
+                      title={course.title}
+                      preparingLabel={t("coursesPlaybackPreparing")}
+                      noPreviewLabel={t("coursesDetailNoPreview")}
+                      playbackUnavailableLabel={t("coursesPlaybackUnavailable")}
+                      fallbackPlayerTitle={t("coursesPlayerTitleFallback")}
+                    />
+                  ) : (
+                    <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_14px_34px_-26px_rgba(15,23,42,0.75)]">
+                      <div className="flex aspect-video w-full items-center justify-center bg-slate-900 text-sm text-slate-300">
+                        {t("coursesPlaybackPreparing")}
+                      </div>
+                    </section>
+                  )}
 
                   <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.75)] md:p-7">
                     <header className="mb-5 space-y-2">
@@ -1134,6 +1166,12 @@ export default function CourseDetailPage() {
           )}
         </div>
       </div>
+      <VideoPlaybackConsentModal
+        open={modalVisible}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+        recording={recording}
+      />
       <Footer />
     </>
   );
