@@ -8,6 +8,7 @@ import { gTranslateFetch } from "../../../../utils/apiUtils";
 import { deriveRootVideoUrlFromLocales, hasAnyLocalizedVideoUrl } from "../../../../lib/videoLibraryPublic";
 import { SITE_LOCALES } from "../utils/siteLocales";
 import { mergeLocalesWithVideoUrls, siteLocalesRootPreferredOrder } from "../utils/localeVideoMerge";
+import { sortLocalesForVideoAdmin } from "../utils/videoAdminLocaleOrder";
 
 type Props = {
   initialValue?: VideoDoc | null;
@@ -62,6 +63,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const uiLocked = submitting || isTranslating;
   const [publishAtInput, setPublishAtInput] = useState("");
+  const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
 
   const formatDateTimeLocal = (date: Date) => {
     const pad = (value: number) => String(value).padStart(2, "0");
@@ -313,9 +315,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   };
 
 
-  /** Caps locale URL list (~2–3 rows); inline avoids layout ignoring Tailwind max-h in nested flex/grid. */
-  const localeListMaxPx = 288;
-
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-4">
@@ -339,13 +338,14 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         {/* Coloana stânga — câmpuri generale */}
         <div className="min-h-0 space-y-5 overflow-y-auto lg:h-full lg:pr-8 lg:border-r lg:border-gray-200">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
-            <div className="min-w-0">
+            <div className="min-w-0 sm:col-span-2">
               <label className="text-sm font-medium text-gray-700">Titlu *</label>
-              <input
+              <textarea
+                rows={3}
                 value={form.title}
                 onChange={(e) => handleChange("title", e.target.value)}
                 disabled={uiLocked}
-                className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                className={`mt-1.5 min-h-[88px] w-full resize-y rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
                   errors.title
                     ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
                     : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
@@ -444,7 +444,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               value={form.description}
               onChange={(e) => handleChange("description", e.target.value)}
               disabled={uiLocked}
-              className="mt-1.5 min-h-[200px] max-h-[280px] w-full resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+              className="mt-1.5 min-h-[320px] max-h-[420px] w-full resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
               placeholder="Scurtă descriere..."
             />
           </div>
@@ -518,59 +518,56 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
           </div>
         </div>
 
-        {/* Coloana dreapta — linkuri video pe limbă (doar această zonă scroll pe verticală, înălțime fixă) */}
-        <div className="flex min-h-0 flex-col lg:pl-8">
+        {/* Coloana dreapta — linkuri video pe limbă (scroll în înălțimea modalului) */}
+        <div className="flex min-h-0 flex-1 flex-col lg:min-h-[320px] lg:pl-8">
           <div className="shrink-0">
             <label className="text-sm font-medium text-gray-700">Link video pe limbă (site) *</label>
             {errors.localizedVideo && (
               <p className="mt-2 text-xs font-medium text-red-600">{errors.localizedVideo}</p>
             )}
           </div>
-          <div
-            className="mt-3 space-y-3 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3 lg:mt-2"
-            style={{ maxHeight: localeListMaxPx }}
-          >
-            {SITE_LOCALES.map((lc) => {
-              const lbl =
-                (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??
-                lc.toUpperCase();
-              const rowErr = errors.localeVideos?.[lc];
-              return (
-                <div key={lc} className="rounded-md border border-gray-200 bg-white p-3 shadow-sm">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-700">
-                      {lbl}{" "}
-                      <span className="font-mono text-[10px] font-normal normal-case text-gray-500">
-                        ({lc})
+          <div className="mt-3 flex min-h-0 flex-1 flex-col lg:mt-2">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+              {videoFormLocales.map((lc) => {
+                const lbl =
+                  (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??
+                  lc.toUpperCase();
+                const rowErr = errors.localeVideos?.[lc];
+                return (
+                  <div key={lc} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {lbl}{" "}
+                        <span className="font-mono text-xs font-normal text-gray-500">({lc})</span>
+                      </label>
+                      <span
+                        className={`text-xs font-medium ${localeVideoUrls[lc]?.trim() ? "text-emerald-600" : "text-gray-400"}`}
+                      >
+                        {localeVideoUrls[lc]?.trim() ? "link setat" : "opțional · lipsește"}
                       </span>
-                    </label>
-                    <span
-                      className={`text-[10px] font-medium ${localeVideoUrls[lc]?.trim() ? "text-emerald-600" : "text-gray-400"}`}
-                    >
-                      {localeVideoUrls[lc]?.trim() ? "link setat" : "opțional · lipsește"}
-                    </span>
+                    </div>
+                    <input
+                      value={localeVideoUrls[lc] ?? ""}
+                      onChange={(e) =>
+                        setLocaleVideoUrls((prev) => ({
+                          ...prev,
+                          [lc]: e.target.value,
+                        }))
+                      }
+                      disabled={uiLocked}
+                      className={`mt-2.5 w-full rounded-md border px-3 py-3 text-sm text-gray-900 shadow-inner focus:outline-none focus:ring-2 ${
+                        rowErr
+                          ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
+                      } disabled:bg-gray-50 disabled:text-gray-500`}
+                      placeholder={`URL sau id clip — ${lc}`}
+                      autoComplete="off"
+                    />
+                    {rowErr ? <p className="mt-1.5 text-xs text-red-600">{rowErr}</p> : null}
                   </div>
-                  <input
-                    value={localeVideoUrls[lc] ?? ""}
-                    onChange={(e) =>
-                      setLocaleVideoUrls((prev) => ({
-                        ...prev,
-                        [lc]: e.target.value,
-                      }))
-                    }
-                    disabled={uiLocked}
-                    className={`mt-2 w-full rounded-md border px-3 py-2 text-xs text-gray-900 shadow-inner focus:outline-none focus:ring-2 ${
-                      rowErr
-                        ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
-                    } disabled:bg-gray-50 disabled:text-gray-500`}
-                    placeholder={`URL sau id clip — ${lc}`}
-                    autoComplete="off"
-                  />
-                  {rowErr ? <p className="mt-1.5 text-[11px] text-red-600">{rowErr}</p> : null}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
