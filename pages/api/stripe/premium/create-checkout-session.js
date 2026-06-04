@@ -17,6 +17,7 @@ import {
   isStripePremiumUsingLocalOverrides,
   resolvePremiumStripePriceId,
 } from "../../../../lib/stripePremiumEnv";
+import { assertCanStartPremiumSubscription } from "../../../../lib/premiumSubscriptionGuard";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PREMIUM_CHECKOUT_SESSION_COLLECTION = "premiumCheckoutSessions";
@@ -85,6 +86,23 @@ export default async function handler(req, res) {
 
   const uid = authUser.uid;
   const db = getAdminDb();
+
+  const guard = await assertCanStartPremiumSubscription({
+    db,
+    stripe,
+    uid,
+    returnUrl: `${baseUrl}/settings`,
+    defaultMessage: "Ai deja un abonament premium activ. Gestionează-l din setări sau portalul de facturare.",
+  });
+  if (!guard.allowed) {
+    return res.status(409).json({
+      error: guard.code,
+      reason: guard.reason,
+      message: guard.message,
+      portalUrl: guard.portalUrl || undefined,
+    });
+  }
+
   let stripeCustomerId = null;
   try {
     const snap = await db.collection("Users").doc(uid).get();

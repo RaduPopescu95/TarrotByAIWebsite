@@ -23,6 +23,8 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../utils/billingAudit.mjs";
+import { hasPremiumAccess } from "../../lib/premiumAccess";
+import { PREMIUM_ALREADY_ACTIVE_ERROR } from "../../lib/premiumSubscriptionGuard";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -133,6 +135,7 @@ export default function AbonamentPage() {
   const router = useRouter();
   const { currentUser, loading, isGuestUser, userData } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+  const [portalLoading, setPortalLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [formErrors, setFormErrors] = React.useState({});
   const [wizardStep, setWizardStep] = React.useState(1);
@@ -146,6 +149,37 @@ export default function AbonamentPage() {
   const [billingForm, setBillingForm] = React.useState(createInitialBillingFormValues());
   const [premiumLegalConsentAccepted, setPremiumLegalConsentAccepted] = React.useState(false);
   const profileHydratedRef = React.useRef(false);
+  const alreadyPremium = hasPremiumAccess(userData);
+
+  const openBillingPortal = React.useCallback(async () => {
+    setPortalLoading(true);
+    setError("");
+    try {
+      const headers = await getFirebaseBearerHeader({ required: true });
+      const res = await fetch("/api/stripe/premium/create-portal-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body: JSON.stringify({ flow: "default" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || t("premiumManageError"));
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(t("premiumManageError"));
+      }
+    } catch (err) {
+      console.error("[abonament] billing_portal", err);
+      setError(err.message || t("premiumManageError"));
+    } finally {
+      setPortalLoading(false);
+    }
+  }, [t]);
 
   React.useEffect(() => {
     profileHydratedRef.current = false;
@@ -363,6 +397,21 @@ export default function AbonamentPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 409 && data?.error === PREMIUM_ALREADY_ACTIVE_ERROR) {
+          const msg =
+            typeof data?.message === "string" && data.message.trim()
+              ? data.message
+              : t("premiumAlreadyActiveMessage", {
+                  defaultValue:
+                    "Ai deja un abonament premium activ. Nu este nevoie de o nouă plată.",
+                });
+          setError(msg);
+          if (typeof data?.portalUrl === "string" && data.portalUrl.trim()) {
+            window.location.href = data.portalUrl.trim();
+            return;
+          }
+          return;
+        }
         if (Array.isArray(data?.details) && data.details.length) {
           throw new Error(data.details[0].message || data?.error || t("premiumSubscribeError"));
         }
@@ -470,6 +519,42 @@ export default function AbonamentPage() {
                   className="mt-6 inline-flex w-full max-w-xs justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 >
                   {t("premiumLoginCta")}
+                </Link>
+              </div>
+            ) : alreadyPremium ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-5 py-8 text-center lg:text-left">
+                <p className="text-sm font-medium text-emerald-900">
+                  {t("premiumAlreadyActiveTitle", {
+                    defaultValue: "Abonamentul tău premium este deja activ",
+                  })}
+                </p>
+                <p className="mt-2 text-sm text-emerald-800/90">
+                  {t("premiumAlreadyActiveMessage", {
+                    defaultValue:
+                      "Nu este nevoie de o nouă plată. Poți gestiona abonamentul din setări sau din portalul Stripe.",
+                  })}
+                </p>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                  <Link
+                    href="/settings"
+                    className="inline-flex justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                  >
+                    {t("premiumManageSubscription")}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={openBillingPortal}
+                    disabled={portalLoading}
+                    className="inline-flex justify-center rounded-xl border border-emerald-300 bg-white px-6 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {portalLoading ? t("premiumManageLoading") : t("settingsPremiumOpenBillingPortal")}
+                  </button>
+                </div>
+                <Link
+                  href="/videouri"
+                  className="mt-4 inline-block text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  {t("premiumSubscribeBackLink", { defaultValue: "Înapoi la videoclipuri" })}
                 </Link>
               </div>
             ) : (

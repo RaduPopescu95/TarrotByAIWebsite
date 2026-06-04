@@ -65,6 +65,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [publishAtInput, setPublishAtInput] = useState("");
   const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
 
+  const hasLocalePreview = Boolean(locales && Object.keys(locales).length > 0);
+
   const formatDateTimeLocal = (date: Date) => {
     const pad = (value: number) => String(value).padStart(2, "0");
     const yyyy = date.getFullYear();
@@ -182,7 +184,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       const result: VideoLocales = {};
       const baseTitle = form.title.trim();
       const baseDescription = form.description?.trim() || "";
-      for (const lang of SITE_LOCALES) {
+      for (const lang of videoFormLocales) {
         const keepVideo = localeVideoUrls[lang]?.trim() || locales?.[lang]?.videoUrl?.trim();
         if (lang === "ro") {
           result[lang] = {
@@ -336,7 +338,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
 
       <div className="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)] lg:gap-0 lg:overflow-hidden">
         {/* Coloana stânga — câmpuri generale */}
-        <div className="min-h-0 space-y-5 overflow-y-auto lg:h-full lg:pr-8 lg:border-r lg:border-gray-200">
+        <div className="flex min-h-0 flex-col space-y-5 overflow-y-auto lg:h-full lg:pr-8 lg:border-r lg:border-gray-200">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
             <div className="min-w-0 sm:col-span-2">
               <label className="text-sm font-medium text-gray-700">Titlu *</label>
@@ -438,13 +440,13 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
             </div>
           ) : null}
 
-          <div>
+          <div className="flex min-h-0 flex-1 flex-col lg:min-h-[280px]">
             <label className="text-sm font-medium text-gray-700">Descriere</label>
             <textarea
               value={form.description}
               onChange={(e) => handleChange("description", e.target.value)}
               disabled={uiLocked}
-              className="mt-1.5 min-h-[320px] max-h-[420px] w-full resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+              className="mt-1.5 min-h-[480px] max-h-[680px] w-full flex-1 resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70 lg:min-h-[min(42vh,520px)] lg:max-h-[min(65vh,720px)]"
               placeholder="Scurtă descriere..."
             />
           </div>
@@ -515,11 +517,72 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               Traducerea folosește titlul și descrierea curente; localizările vor fi salvate la salvarea
               videoclipului.
             </p>
+            {hasLocalePreview ? (
+              <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
+                <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                  Localizări generate (titlu / descriere)
+                </div>
+                <div className="max-h-[min(30vh,280px)] overflow-y-auto overscroll-contain">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="sticky top-0 z-[1] bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-700">
+                      <tr>
+                        <th className="px-4 py-2.5">Limbă</th>
+                        <th className="px-4 py-2.5">Titlu</th>
+                        <th className="px-4 py-2.5">Descriere</th>
+                        <th className="px-4 py-2.5">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {videoFormLocales.map((lc) => {
+                        const langInfo = (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc];
+                        const langLabel =
+                          typeof langInfo?.denumire === "string" && langInfo.denumire.trim()
+                            ? langInfo.denumire
+                            : lc;
+                        const entry = locales?.[lc];
+                        const titleVal = typeof entry?.title === "string" ? entry.title.trim() : "";
+                        const descVal =
+                          typeof entry?.description === "string" ? entry.description.trim() : "";
+                        const isMissing = !titleVal;
+                        return (
+                          <tr key={lc}>
+                            <td className="px-4 py-2.5 font-medium text-gray-900">
+                              {langLabel}{" "}
+                              <span className="text-xs font-normal text-gray-500">({lc})</span>
+                            </td>
+                            <td className="max-w-[12rem] truncate px-4 py-2.5 text-gray-700" title={titleVal}>
+                              {isMissing ? <span className="text-gray-400">—</span> : titleVal}
+                            </td>
+                            <td
+                              className="max-w-[14rem] truncate px-4 py-2.5 text-gray-700"
+                              title={descVal}
+                            >
+                              {!descVal ? <span className="text-gray-400">—</span> : descVal}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                                  isMissing
+                                    ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                                    : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                                }`}
+                              >
+                                {isMissing ? "Lipsește" : "OK"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
         {/* Coloana dreapta — linkuri video pe limbă (scroll în înălțimea modalului) */}
-        <div className="flex min-h-0 flex-1 flex-col lg:min-h-[320px] lg:pl-8">
+        <div className="flex min-h-0 flex-1 flex-col lg:min-h-[50vh] lg:pl-8">
           <div className="shrink-0">
             <label className="text-sm font-medium text-gray-700">Link video pe limbă (site) *</label>
             {errors.localizedVideo && (
@@ -527,7 +590,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
             )}
           </div>
           <div className="mt-3 flex min-h-0 flex-1 flex-col lg:mt-2">
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
               {videoFormLocales.map((lc) => {
                 const lbl =
                   (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??

@@ -16,6 +16,8 @@ import {
   isStripePremiumUsingLocalOverrides,
   resolvePremiumStripePriceId,
 } from "../../../../../lib/stripePremiumEnv";
+import { assertCanStartPremiumSubscription } from "../../../../../lib/premiumSubscriptionGuard";
+import { resolvePremiumPublicBaseUrl } from "../../../../../lib/premiumServerUtils";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -106,8 +108,26 @@ export default async function handler(req, res) {
 
   const uid = authUser.uid;
   const db = getAdminDb();
+  const baseUrl = resolvePremiumPublicBaseUrl(req);
 
   try {
+    const guard = await assertCanStartPremiumSubscription({
+      db,
+      stripe,
+      uid,
+      returnUrl: baseUrl ? `${baseUrl}/settings` : "https://www.cristinazurba.com/settings",
+      defaultMessage: "Ai deja un abonament premium activ.",
+    });
+    if (!guard.allowed) {
+      return res.status(409).json({
+        error: guard.code,
+        reason: guard.reason,
+        message: guard.message,
+        portalUrl: guard.portalUrl || undefined,
+        premiumActive: true,
+      });
+    }
+
     const customerId = await resolveOrCreateCustomer({
       db,
       uid,

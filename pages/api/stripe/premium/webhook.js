@@ -6,9 +6,8 @@ import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
 import { emitPremiumSubscriptionOblioInvoice } from "../../../../lib/premiumSubscriptionOblio";
 import { resolvePremiumAbonamentWebhookSecret } from "../../../../lib/stripePremiumEnv";
 import {
-  buildUserPremiumPayload,
+  syncPremiumSubscription,
   syncPremiumSubscriptionById,
-  writePremiumToUser,
 } from "../../../../lib/stripePremiumSubscriptionSync";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -127,11 +126,7 @@ export default async function handler(req, res) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        if (sub.metadata?.flow !== PREMIUM_FLOW_METADATA) break;
-        const uid = sub.metadata?.uid;
-        if (!uid) break;
-        const payload = buildUserPremiumPayload(sub);
-        await writePremiumToUser(uid, payload);
+        await syncPremiumSubscription(sub);
         break;
       }
       case "invoice.payment_succeeded":

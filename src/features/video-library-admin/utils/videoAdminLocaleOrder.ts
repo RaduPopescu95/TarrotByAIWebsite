@@ -1,6 +1,5 @@
-/** Display order for video admin locale URL fields (ro first, then client list, then hi/id). */
+/** Display order for video admin (Cristina 04.06.2026) — not next-i18next.config order. */
 export const VIDEO_ADMIN_LOCALE_DISPLAY_ORDER = [
-  "ro",
   "sq",
   "ar",
   "bs",
@@ -14,19 +13,20 @@ export const VIDEO_ADMIN_LOCALE_DISPLAY_ORDER = [
   "fr",
   "de",
   "el",
+  "hi",
+  "id",
   "it",
   "ja",
   "hu",
   "mn",
   "pl",
   "pt",
+  "ro",
   "ru",
+  "sr",
   "sk",
   "es",
-  "sr",
   "tr",
-  "hi",
-  "id",
 ] as const;
 
 export function sortLocalesForVideoAdmin(siteLocales: readonly string[]): string[] {
