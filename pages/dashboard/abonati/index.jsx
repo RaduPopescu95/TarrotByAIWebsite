@@ -465,7 +465,7 @@ function SubscribersScreen() {
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((s) =>
-        `${s.firstName} ${s.lastName} ${s.email} ${s.stripeSubscriptionId} ${s.stripeCustomerId} ${s.billingName}`
+        `${s.uid} ${s.firstName} ${s.lastName} ${s.email} ${s.stripeSubscriptionId} ${s.stripeCustomerId} ${s.billingName}`
           .toLowerCase()
           .includes(q)
       );
@@ -710,7 +710,7 @@ function SubscribersScreen() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Caută după nume, email, ID..."
+              placeholder="Caută după UID, nume, email, Stripe ID..."
               className="w-64 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 shadow-sm outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
@@ -827,11 +827,16 @@ function SubscribersScreen() {
                       </td>
                       <td className={tdCls}>
                         <div className="font-medium text-slate-900">
-                          {[s.firstName, s.lastName].filter(Boolean).join(" ") || "—"}
+                          {[s.firstName, s.lastName].filter(Boolean).join(" ") || s.billingName || "—"}
                         </div>
-                        {s.billingName && s.billingName !== [s.firstName, s.lastName].filter(Boolean).join(" ") && (
+                        {s.billingName &&
+                          s.billingName !== [s.firstName, s.lastName].filter(Boolean).join(" ") &&
+                          [s.firstName, s.lastName].filter(Boolean).join(" ") && (
                           <div className="text-xs text-slate-400">{s.billingName}</div>
                         )}
+                        <div className="mt-0.5 font-mono text-[10px] text-slate-400" title="Firebase UID / document Users">
+                          {s.uid}
+                        </div>
                       </td>
                       <td className={tdCls}>
                         <a

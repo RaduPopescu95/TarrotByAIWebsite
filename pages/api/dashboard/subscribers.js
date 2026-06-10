@@ -2,6 +2,10 @@ import Stripe from "stripe";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { hasPremiumAccess, currentPeriodEndToMillis } from "../../../lib/premiumAccess";
+import {
+  buildUserIdentityPatch,
+  resolveAuthIdentitySources,
+} from "../../../lib/userIdentitySync";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
@@ -68,7 +72,11 @@ function mapDocToSubscriber(docSnap) {
     invoiceSendEmail: d.premiumBillingProfile?.billing?.invoicePreferences?.sendEmail !== false,
     billingName: safeStr(
       d.premiumBillingProfile?.billing?.individual?.fullName ||
-        d.premiumBillingProfile?.billing?.company?.companyName,
+        d.premiumBillingProfile?.billing?.company?.companyName ||
+        d.premiumBillingProfile?.billing?.company?.name ||
+        [d.premiumBillingProfile?.billing?.firstName, d.premiumBillingProfile?.billing?.lastName]
+          .filter(Boolean)
+          .join(" "),
     ),
     billingCountry: safeStr(d.premiumBillingProfile?.normalizedBeforeCheckout?.country),
     updatedAt: tsToIso(d.updatedAt),
@@ -367,7 +375,19 @@ export default async function handler(req, res) {
           noteField = FieldValue.delete();
         }
 
+        const authIdentity = await resolveAuthIdentitySources(id);
+        const { patch: identityPatch, updatedFields: identityUpdatedFields } = buildUserIdentityPatch(
+          data,
+          {
+            uid: id,
+            email: input.email,
+            authEmail: authIdentity.email,
+            displayName: authIdentity.displayName,
+          },
+        );
+
         const writePayload = {
+          ...identityPatch,
           premium: true,
           subscriptionProvider: "manual",
           subscriptionStatus: "active",
@@ -387,6 +407,9 @@ export default async function handler(req, res) {
           unlimited,
           months: unlimited ? 0 : m,
           before,
+          identityPatch,
+          identityUpdatedFields,
+          authIdentity,
         });
 
         await ref.set(writePayload, { merge: true });
@@ -406,6 +429,9 @@ export default async function handler(req, res) {
           after,
           unlimited,
           months: unlimited ? 0 : m,
+          identityPatch,
+          identityUpdatedFields,
+          authIdentity,
           appearsInTable: mappedRow !== null,
           inSubscriberList,
           tableRow: mappedRow,

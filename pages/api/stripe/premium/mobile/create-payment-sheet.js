@@ -18,6 +18,7 @@ import {
 } from "../../../../../lib/stripePremiumEnv";
 import { assertCanStartPremiumSubscription } from "../../../../../lib/premiumSubscriptionGuard";
 import { resolvePremiumPublicBaseUrl } from "../../../../../lib/premiumServerUtils";
+import { buildUserIdentityPatch } from "../../../../../lib/userIdentitySync";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -39,8 +40,16 @@ async function resolveOrCreateCustomer({ db, uid, email }) {
     metadata: { uid, flow: PREMIUM_FLOW_METADATA },
   });
 
+  const existingData = snap.exists ? snap.data() || {} : {};
+  const { patch: identityPatch } = buildUserIdentityPatch(existingData, {
+    uid,
+    email: email || undefined,
+    authEmail: email || undefined,
+  });
+
   await userRef.set(
     {
+      ...identityPatch,
       stripeCustomerId: customer.id,
       updatedAt: FieldValue.serverTimestamp(),
     },
@@ -302,8 +311,19 @@ export default async function handler(req, res) {
         );
     }
 
+    const userSnap = await db.collection("Users").doc(uid).get();
+    const existingUser = userSnap.exists ? userSnap.data() || {} : {};
+    const { patch: identityPatch } = buildUserIdentityPatch(existingUser, {
+      uid,
+      email: billingDetails?.email || authUser.email || undefined,
+      authEmail: authUser.email || undefined,
+      firstName: billingDetails?.firstName,
+      lastName: billingDetails?.lastName,
+    });
+
     await db.collection("Users").doc(uid).set(
       {
+        ...identityPatch,
         premiumBillingProfile: {
           billing: billingDetails,
           rawFormValues: rawBillingDetails ?? null,

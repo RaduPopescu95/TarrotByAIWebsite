@@ -18,6 +18,7 @@ import {
   resolvePremiumStripePriceId,
 } from "../../../../lib/stripePremiumEnv";
 import { assertCanStartPremiumSubscription } from "../../../../lib/premiumSubscriptionGuard";
+import { buildUserIdentityPatch } from "../../../../lib/userIdentitySync";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PREMIUM_CHECKOUT_SESSION_COLLECTION = "premiumCheckoutSessions";
@@ -185,8 +186,19 @@ export default async function handler(req, res) {
         .doc(session.id)
         .set(checkoutSessionPayload, { merge: true });
 
+      const userSnap = await db.collection("Users").doc(uid).get();
+      const existingUser = userSnap.exists ? userSnap.data() || {} : {};
+      const { patch: identityPatch } = buildUserIdentityPatch(existingUser, {
+        uid,
+        email: billingDetails?.email || authUser.email || undefined,
+        authEmail: authUser.email || undefined,
+        firstName: billingDetails?.firstName,
+        lastName: billingDetails?.lastName,
+      });
+
       await db.collection("Users").doc(uid).set(
         {
+          ...identityPatch,
           premiumBillingProfile: {
             billing: billingDetails,
             rawFormValues: rawBillingDetails ?? null,
