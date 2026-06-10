@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { authentication } from "../firebase";
 import { handleGetUserInfoJobs } from "../utils/handleFirebaseQuery";
 import { signInWithGooglePopupOrRedirect, resolvePendingGoogleRedirectResult } from "../utils/googleAuthWeb";
@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
   const [googleRedirectHandled, setGoogleRedirectHandled] = useState(false);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState({ day: null, slot: null }); // ziua și slotul curent pentru ștergerea unui slot
+  const googleRedirectPendingRef = useRef(typeof window !== "undefined");
 
   const persistAuthSnapshot = (user, profile) => {
     if (user) {
@@ -131,10 +132,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const clearLoggedOutSession = useCallback((reason = "unknown") => {
+    console.log("🔑 [AUTH] Clearing logged-out session", { reason });
+    setCurrentUser(null);
+    setUserData(null);
+    setIsGuestUser(false);
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("isGuestUser");
+    setLoading(false);
+  }, []);
+
   const finalizeGoogleUserSession = useCallback(async (signedUser) => {
     if (!signedUser) return null;
 
-    await upsertGoogleUserProfile(signedUser);
+    console.log("✅ [GOOGLE_AUTH] Finalizing Google session", {
+      uid: signedUser.uid,
+      email: signedUser.email,
+      displayName: signedUser.displayName,
+    });
+
+    const syncResult = await upsertGoogleUserProfile(signedUser);
+    console.log("✅ [GOOGLE_AUTH] Firestore profile upsert", {
+      uid: signedUser.uid,
+      created: syncResult.created,
+      updatedFields: syncResult.updatedFields,
+      role: syncResult.role,
+    });
     const profile = await handleGetUserInfoJobs();
     if (profile) {
       persistAuthSnapshot(signedUser, profile);
@@ -238,18 +262,33 @@ export const AuthProvider = ({ children }) => {
     let active = true;
 
     const bootstrapGoogleRedirect = async () => {
+      console.log("🔄 [GOOGLE_AUTH] Bootstrap: resolving pending redirect result");
       try {
         const redirectResult = await resolvePendingGoogleRedirectResult(authentication);
         if (!active) return;
+
+        console.log("🔄 [GOOGLE_AUTH] Bootstrap: redirect resolution finished", {
+          status: redirectResult?.status,
+          method: redirectResult?.method,
+          uid: redirectResult?.user?.uid || null,
+          email: redirectResult?.user?.email || null,
+        });
+
         if (redirectResult?.status === "signed_in" && redirectResult.user) {
           await finalizeGoogleUserSession(redirectResult.user);
+        } else if (!authentication.currentUser) {
+          clearLoggedOutSession("google_redirect_empty");
         }
       } catch (error) {
-        console.error("❌ [AUTH] Google redirect bootstrap failed", {
+        console.error("❌ [GOOGLE_AUTH] Redirect bootstrap failed", {
           message: error?.message || "unknown_error",
           code: error?.code || "unknown_code",
         });
+        if (active && !authentication.currentUser) {
+          clearLoggedOutSession("google_redirect_error");
+        }
       } finally {
+        googleRedirectPendingRef.current = false;
         if (active) {
           setGoogleRedirectHandled(true);
         }
@@ -261,7 +300,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       active = false;
     };
-  }, [finalizeGoogleUserSession]);
+  }, [finalizeGoogleUserSession, clearLoggedOutSession]);
 
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged(async (user) => {
@@ -278,23 +317,19 @@ export const AuthProvider = ({ children }) => {
         await handleAccountSwitch(user);
       }
       
-      // 🚀 FIXED: Handle no user properly - set state and complete loading
+      // Wait for getRedirectResult() before treating null as logged out (redirect race).
       if (!user) {
         await authentication.authStateReady();
         if (authentication.currentUser) {
           return;
         }
 
-        console.log("🔑 [AUTH CONTEXT] No user found, clearing state");
-        console.log("🔑 [AUTH CONTEXT] Setting loading to false");
-        setCurrentUser(null);
-        setUserData(null);
-        setIsGuestUser(false);
-        localStorage.removeItem("currentUser");
-        localStorage.removeItem("userData");
-        localStorage.removeItem("isGuestUser");
-        setLoading(false);
-        console.log("🔑 [AUTH CONTEXT] State cleared completely");
+        if (googleRedirectPendingRef.current) {
+          console.log("🔑 [GOOGLE_AUTH] No user yet — waiting for redirect bootstrap");
+          return;
+        }
+
+        clearLoggedOutSession("onAuthStateChanged_null");
         return;
       }
       

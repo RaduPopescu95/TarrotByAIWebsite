@@ -12,7 +12,6 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
 import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
-import { startGoogleRedirectSignIn } from "../../utils/googleAuthWeb";
 import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
 function Copyright(props) {
@@ -43,7 +42,7 @@ export async function getServerSideProps({ locale }) {
 }
 
 export default function SignInSide() {
-  const { setAsGuestUser, finalizeEmailPasswordSession } = useAuth();
+  const { setAsGuestUser, finalizeEmailPasswordSession, loginWithGoogle } = useAuth();
   const [message, setMessage] = React.useState("email");
   const [showSnackback, setShowSnackback] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -107,7 +106,14 @@ export default function SignInSide() {
     setShowSnackback(false);
     try {
       persistAuthReturnUrl(safeReturnUrl);
-      await startGoogleRedirectSignIn(authentication, { returnUrl: safeReturnUrl });
+      const authResult = await loginWithGoogle({ returnUrl: safeReturnUrl });
+      console.log("[login] google_sign_in_result", {
+        status: authResult?.status,
+        uid: authResult?.user?.uid || null,
+      });
+      if (authResult?.status !== "redirecting") {
+        setIsGoogleLoading(false);
+      }
     } catch (error) {
       console.error("[login] google_sign_in_fail", {
         message: error?.message || "unknown_error",

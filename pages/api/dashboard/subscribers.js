@@ -22,6 +22,22 @@ function safeStr(v) {
   return typeof v === "string" ? v : "";
 }
 
+function userGrantSnapshot(data, docId) {
+  const d = data || {};
+  return {
+    uid: docId || null,
+    email: safeStr(d.email) || null,
+    owner_uid: safeStr(d.owner_uid) || null,
+    premium: d.premium === true,
+    subscriptionProvider: safeStr(d.subscriptionProvider) || null,
+    subscriptionStatus: safeStr(d.subscriptionStatus) || null,
+    hasPremiumAccess: hasPremiumAccess(d),
+    stripeSubscriptionId: safeStr(d.stripeSubscriptionId) || null,
+    manualPremiumGrantedAt: tsToIso(d.manualPremiumGrantedAt),
+    manualPremiumExpiresAt: tsToIso(d.manualPremiumExpiresAt),
+  };
+}
+
 function mapDocToSubscriber(docSnap) {
   const d = docSnap.data() || {};
   const isPremium = hasPremiumAccess(d);
@@ -136,42 +152,102 @@ async function loadSubscriberUserDocs(db) {
 
 /**
  * Find Users doc by Firebase uid (doc id), owner_uid, or email.
- * @returns {{ ref: FirebaseFirestore.DocumentReference, id: string, data: object } | null | { ambiguous: true, count?: number }}
+ * @returns {{ ref, id, data, resolvedBy, steps } | { ambiguous: true, count?, matchType?, steps } | { notFound: true, steps }}
  */
 async function resolveUserDocument(db, { uid, email }) {
+  const steps = [];
   const u = typeof uid === "string" ? uid.trim() : "";
   const emRaw = typeof email === "string" ? email.trim() : "";
+
   if (u) {
+    steps.push({ step: "Users.doc(uid)", uid: u });
     const byId = await db.collection("Users").doc(u).get();
     if (byId.exists) {
-      return { ref: byId.ref, id: byId.id, data: byId.data() || {} };
+      return {
+        ref: byId.ref,
+        id: byId.id,
+        data: byId.data() || {},
+        resolvedBy: "doc_id",
+        steps,
+      };
     }
+    steps.push({ step: "Users.where(owner_uid)", owner_uid: u, found: false });
+
     const qOwner = await db.collection("Users").where("owner_uid", "==", u).limit(5).get();
     if (!qOwner.empty) {
-      if (qOwner.size > 1) return { ambiguous: true, count: qOwner.size };
+      steps.push({ step: "Users.where(owner_uid)", owner_uid: u, found: true, count: qOwner.size });
+      if (qOwner.size > 1) {
+        return {
+          ambiguous: true,
+          count: qOwner.size,
+          matchType: "owner_uid",
+          steps,
+          docIds: qOwner.docs.map((d) => d.id),
+        };
+      }
       const doc = qOwner.docs[0];
-      return { ref: doc.ref, id: doc.id, data: doc.data() || {} };
+      return {
+        ref: doc.ref,
+        id: doc.id,
+        data: doc.data() || {},
+        resolvedBy: "owner_uid",
+        steps,
+      };
     }
   }
+
   if (emRaw) {
+    steps.push({ step: "Users.where(email)", email: emRaw });
     const qMail = await db.collection("Users").where("email", "==", emRaw).limit(10).get();
     if (qMail.empty) {
       const lower = emRaw.toLowerCase();
       if (lower !== emRaw) {
+        steps.push({ step: "Users.where(email lowercase)", email: lower });
         const q2 = await db.collection("Users").where("email", "==", lower).limit(10).get();
         if (!q2.empty) {
-          if (q2.size > 1) return { ambiguous: true, count: q2.size };
+          steps.push({ step: "Users.where(email lowercase)", email: lower, found: true, count: q2.size });
+          if (q2.size > 1) {
+            return {
+              ambiguous: true,
+              count: q2.size,
+              matchType: "email_lower",
+              steps,
+              docIds: q2.docs.map((d) => d.id),
+            };
+          }
           const doc = q2.docs[0];
-          return { ref: doc.ref, id: doc.id, data: doc.data() || {} };
+          return {
+            ref: doc.ref,
+            id: doc.id,
+            data: doc.data() || {},
+            resolvedBy: "email_lower",
+            steps,
+          };
         }
       }
-      return null;
+      return { notFound: true, steps };
     }
-    if (qMail.size > 1) return { ambiguous: true, count: qMail.size };
+    steps.push({ step: "Users.where(email)", email: emRaw, found: true, count: qMail.size });
+    if (qMail.size > 1) {
+      return {
+        ambiguous: true,
+        count: qMail.size,
+        matchType: "email",
+        steps,
+        docIds: qMail.docs.map((d) => d.id),
+      };
+    }
     const doc = qMail.docs[0];
-    return { ref: doc.ref, id: doc.id, data: doc.data() || {} };
+    return {
+      ref: doc.ref,
+      id: doc.id,
+      data: doc.data() || {},
+      resolvedBy: "email",
+      steps,
+    };
   }
-  return null;
+
+  return { notFound: true, steps };
 }
 
 export default async function handler(req, res) {
@@ -211,23 +287,47 @@ export default async function handler(req, res) {
 
       if (action === "grant_manual") {
         const { uid: uidIn, email: emailIn, months, note, silent } = body;
-        if (!uidIn && !emailIn) {
-          return res.status(400).json({ error: "Provide uid or email" });
+        const input = {
+          uid: typeof uidIn === "string" ? uidIn.trim() || null : null,
+          email: typeof emailIn === "string" ? emailIn.trim() || null : null,
+          months,
+          note: typeof note === "string" ? note.trim() || null : null,
+        };
+
+        console.log("[grant_manual] start", input);
+
+        if (!input.uid && !input.email) {
+          const debug = { input, reason: "missing_uid_and_email" };
+          console.warn("[grant_manual] rejected", debug);
+          return res.status(400).json({ error: "Provide uid or email", debug });
         }
 
-        const resolved = await resolveUserDocument(db, { uid: uidIn, email: emailIn });
+        const resolved = await resolveUserDocument(db, { uid: input.uid, email: input.email });
         if (resolved?.ambiguous) {
+          const debug = {
+            input,
+            reason: "ambiguous_user",
+            matchType: resolved.matchType,
+            count: resolved.count,
+            docIds: resolved.docIds,
+            steps: resolved.steps,
+          };
+          console.warn("[grant_manual] ambiguous", debug);
           return res.status(400).json({
             error: "ambiguous_user",
             message: "Mai mulți utilizatori găsiți. Folosește UID-ul exact din Firebase Auth.",
             count: resolved.count,
+            debug,
           });
         }
-        if (!resolved) {
-          return res.status(404).json({ error: "User not found" });
+        if (resolved?.notFound) {
+          const debug = { input, reason: "user_not_found", steps: resolved.steps };
+          console.warn("[grant_manual] not found", debug);
+          return res.status(404).json({ error: "User not found", debug });
         }
 
-        const { ref, id, data } = resolved;
+        const { ref, id, data, resolvedBy } = resolved;
+        const before = userGrantSnapshot(data, id);
         const stripeSub = typeof data.stripeSubscriptionId === "string" ? data.stripeSubscriptionId.trim() : "";
         /** Nu acoperim peste acces încă activ; permitem dacă e expirat/fără acces dar a rămas vechiul sub id în Firestore. */
         const stillPaidStripeAccess =
@@ -235,16 +335,26 @@ export default async function handler(req, res) {
           hasPremiumAccess(data) &&
           data.subscriptionProvider !== "manual";
         if (stillPaidStripeAccess) {
+          const debug = {
+            input,
+            reason: "stripe_subscription_active",
+            resolvedBy,
+            before,
+            stripeSub,
+          };
+          console.warn("[grant_manual] blocked by stripe", debug);
           return res.status(409).json({
             error: "stripe_subscription_active",
             message:
               "Are încă acces premium (inclusiv prin Stripe). Folosește „Șterge” pe rând sau anulează în Stripe înainte de a acorda manual.",
+            debug,
           });
         }
 
         let expiresField = FieldValue.delete();
         const m = typeof months === "number" ? months : parseInt(String(months ?? ""), 10);
-        if (Number.isFinite(m) && m > 0) {
+        const unlimited = !(Number.isFinite(m) && m > 0);
+        if (!unlimited) {
           expiresField = Timestamp.fromMillis(Date.now() + m * 30 * 24 * 60 * 60 * 1000);
         }
 
@@ -257,23 +367,57 @@ export default async function handler(req, res) {
           noteField = FieldValue.delete();
         }
 
-        await ref.set(
-          {
-            premium: true,
-            subscriptionProvider: "manual",
-            subscriptionStatus: "active",
-            stripeSubscriptionId: FieldValue.delete(),
-            premiumSubscriptionCancelAtPeriodEnd: FieldValue.delete(),
-            currentPeriodEnd: FieldValue.delete(),
-            manualPremiumGrantedAt: FieldValue.serverTimestamp(),
-            manualPremiumExpiresAt: expiresField,
-            manualPremiumNote: noteField,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        );
+        const writePayload = {
+          premium: true,
+          subscriptionProvider: "manual",
+          subscriptionStatus: "active",
+          stripeSubscriptionId: FieldValue.delete(),
+          premiumSubscriptionCancelAtPeriodEnd: FieldValue.delete(),
+          currentPeriodEnd: FieldValue.delete(),
+          manualPremiumGrantedAt: FieldValue.serverTimestamp(),
+          manualPremiumExpiresAt: expiresField,
+          manualPremiumNote: noteField,
+          updatedAt: FieldValue.serverTimestamp(),
+        };
 
-        return res.status(200).json({ ok: true, uid: id, granted: true });
+        console.log("[grant_manual] writing", {
+          input,
+          resolvedBy,
+          targetDocId: id,
+          unlimited,
+          months: unlimited ? 0 : m,
+          before,
+        });
+
+        await ref.set(writePayload, { merge: true });
+
+        const afterSnap = await ref.get();
+        const afterData = afterSnap.data() || {};
+        const after = userGrantSnapshot(afterData, id);
+        const mappedRow = mapDocToSubscriber(afterSnap);
+        const listDocs = await loadSubscriberUserDocs(db);
+        const inSubscriberList = listDocs.some((docSnap) => docSnap.id === id);
+
+        const debug = {
+          input,
+          resolvedBy,
+          targetDocId: id,
+          before,
+          after,
+          unlimited,
+          months: unlimited ? 0 : m,
+          appearsInTable: mappedRow !== null,
+          inSubscriberList,
+          tableRow: mappedRow,
+        };
+
+        if (!debug.appearsInTable || !debug.inSubscriberList) {
+          console.error("[grant_manual] write ok but missing from list", debug);
+        } else {
+          console.log("[grant_manual] success", debug);
+        }
+
+        return res.status(200).json({ ok: true, uid: id, granted: true, debug });
       }
 
       const { uid, confirmActiveRevocation } = body;

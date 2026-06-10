@@ -75,6 +75,25 @@ export async function upsertGoogleUserProfile(user) {
     email: user.email,
   });
 
+  // New Google users: same document shape as expo-mobile-app sign-in/register.
+  if (!userSnap.exists()) {
+    const newUserProfile = {
+      owner_uid: uid,
+      first_name: firstName,
+      last_name: lastName,
+      email: toSafeString(user.email) || "",
+      photoURL: toSafeString(user.photoURL) || "",
+      auth_provider: "Google",
+    };
+    await setDoc(userRef, newUserProfile);
+    return {
+      created: true,
+      updatedFields: Object.keys(newUserProfile),
+      user: newUserProfile,
+      role: resolveMobileCompatibleRole(newUserProfile),
+    };
+  }
+
   const patch = {
     owner_uid: uid,
     auth_provider: "Google",

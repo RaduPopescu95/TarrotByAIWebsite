@@ -39,6 +39,11 @@ export async function startGoogleRedirectSignIn(auth = authentication, { returnU
   if (typeof window !== "undefined" && returnUrl) {
     persistAuthReturnUrl(returnUrl);
   }
+  console.log("🔄 [GOOGLE_AUTH] Starting redirect sign-in", {
+    returnUrl,
+    origin: typeof window !== "undefined" ? window.location.origin : "server",
+    href: typeof window !== "undefined" ? window.location.href : "server",
+  });
   await signInWithRedirect(auth, buildProvider());
 }
 
@@ -49,7 +54,12 @@ export async function signInWithGooglePopupOrRedirect(
   const provider = buildProvider();
 
   try {
+    console.log("🔄 [GOOGLE_AUTH] Attempting popup sign-in");
     const result = await signInWithPopup(auth, provider);
+    console.log("✅ [GOOGLE_AUTH] Popup sign-in succeeded", {
+      uid: result?.user?.uid || null,
+      email: result?.user?.email || null,
+    });
     return {
       status: "signed_in",
       method: "popup",
@@ -57,7 +67,12 @@ export async function signInWithGooglePopupOrRedirect(
       user: result?.user || null,
     };
   } catch (error) {
+    console.warn("⚠️ [GOOGLE_AUTH] Popup sign-in failed", {
+      code: error?.code || "unknown_code",
+      message: error?.message || "unknown_error",
+    });
     if (shouldFallbackToRedirect(error)) {
+      console.log("🔄 [GOOGLE_AUTH] Falling back to redirect sign-in");
       await startGoogleRedirectSignIn(auth, { returnUrl });
       return {
         status: "redirecting",
@@ -85,11 +100,39 @@ export function resolvePendingGoogleRedirectResult(auth = authentication) {
 
   if (!googleRedirectResultPromise) {
     googleRedirectResultPromise = (async () => {
+      console.log("🔄 [GOOGLE_AUTH] Resolving redirect result", {
+        href: window.location.href,
+        hasPendingAuthParams:
+          window.location.hash.includes("apiKey=") ||
+          window.location.search.includes("apiKey="),
+      });
+
       await auth.authStateReady();
-      const result = await getRedirectResult(auth);
+      let redirectError = null;
+      let result = null;
+
+      try {
+        result = await getRedirectResult(auth);
+      } catch (error) {
+        redirectError = error;
+        console.error("❌ [GOOGLE_AUTH] getRedirectResult threw", {
+          code: error?.code || "unknown_code",
+          message: error?.message || "unknown_error",
+        });
+      }
+
       const user =
         result?.user ||
         (isGoogleSignedInUser(auth.currentUser) ? auth.currentUser : null);
+
+      console.log("🔄 [GOOGLE_AUTH] Redirect result resolved", {
+        hasResultUser: Boolean(result?.user),
+        hasCurrentUser: Boolean(auth.currentUser),
+        resolvedUid: user?.uid || null,
+        resolvedEmail: user?.email || null,
+        credentialProvider: result?.providerId || null,
+        redirectErrorCode: redirectError?.code || null,
+      });
 
       if (!user) {
         return {
@@ -97,6 +140,7 @@ export function resolvePendingGoogleRedirectResult(auth = authentication) {
           method: "redirect",
           result: null,
           user: null,
+          error: redirectError,
         };
       }
 
@@ -105,6 +149,7 @@ export function resolvePendingGoogleRedirectResult(auth = authentication) {
         method: "redirect",
         result,
         user,
+        error: redirectError,
       };
     })();
   }

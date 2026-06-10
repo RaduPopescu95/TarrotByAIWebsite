@@ -12,7 +12,6 @@ import { emailWithoutSpace } from "../../utils/strintText";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { authentication } from "../../firebase";
 import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
-import { startGoogleRedirectSignIn } from "../../utils/googleAuthWeb";
 import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
 export async function getServerSideProps({ locale }) {
@@ -26,7 +25,7 @@ export async function getServerSideProps({ locale }) {
 export default function VideotecaLoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
-  const { finalizeEmailPasswordSession } = useAuth();
+  const { finalizeEmailPasswordSession, loginWithGoogle } = useAuth();
 
   const [message, setMessage] = React.useState("");
   const [showSnackback, setShowSnackback] = React.useState(false);
@@ -73,9 +72,19 @@ export default function VideotecaLoginPage() {
     setShowSnackback(false);
     try {
       persistAuthReturnUrl(safeReturnUrl);
-      await startGoogleRedirectSignIn(authentication, { returnUrl: safeReturnUrl });
+      const authResult = await loginWithGoogle({ returnUrl: safeReturnUrl });
+      console.log("[login/videoteca] google_sign_in_result", {
+        status: authResult?.status,
+        uid: authResult?.user?.uid || null,
+      });
+      if (authResult?.status !== "redirecting") {
+        setIsGoogleLoading(false);
+      }
     } catch (error) {
-      console.error("[login/videoteca] google_sign_in_fail", error?.message || error);
+      console.error("[login/videoteca] google_sign_in_fail", {
+        message: error?.message || "unknown_error",
+        code: error?.code || "unknown_code",
+      });
       setShowSnackback(true);
       setMessage(t("loginGoogleError", { defaultValue: "Google sign-in failed. Please try again." }));
       setIsGoogleLoading(false);

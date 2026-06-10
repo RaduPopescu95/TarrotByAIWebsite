@@ -144,7 +144,7 @@ function RemoveSubscriberModal({ subscriber, activeRevokeAck, onAckChange, onClo
   );
 }
 
-function GrantPremiumModal({ subscriber, months, onMonthsChange, onClose, onConfirm, submitting }) {
+function GrantPremiumModal({ subscriber, months, onMonthsChange, note, onNoteChange, onClose, onConfirm, submitting }) {
   if (!subscriber) return null;
   const name = [subscriber.firstName, subscriber.lastName].filter(Boolean).join(" ") || subscriber.email || subscriber.uid;
 
@@ -186,6 +186,18 @@ function GrantPremiumModal({ subscriber, months, onMonthsChange, onClose, onConf
             ))}
           </select>
         </label>
+        <label className="mt-4 block">
+          <span className="mb-1.5 block text-xs font-medium text-slate-600">Notă internă (opțional)</span>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => onNoteChange(e.target.value)}
+            placeholder="ex. Cadou / test"
+            disabled={submitting}
+            maxLength={500}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-400 disabled:opacity-60"
+          />
+        </label>
         <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
@@ -223,6 +235,7 @@ function SubscribersScreen() {
   const [removing, setRemoving] = useState(false);
   const [grantModalTarget, setGrantModalTarget] = useState(null);
   const [grantModalMonths, setGrantModalMonths] = useState(0);
+  const [grantModalNote, setGrantModalNote] = useState("");
   const [grantSubmitting, setGrantSubmitting] = useState(false);
   const [grantUid, setGrantUid] = useState("");
   const [grantEmail, setGrantEmail] = useState("");
@@ -230,9 +243,73 @@ function SubscribersScreen() {
   const [grantNote, setGrantNote] = useState("");
   const [grantBusy, setGrantBusy] = useState(false);
   const [grantBanner, setGrantBanner] = useState(null);
+  const [grantLogs, setGrantLogs] = useState([]);
+
+  const pushGrantLog = (entry) => {
+    const log = { id: Date.now(), at: new Date().toLocaleString("ro-RO"), ...entry };
+    setGrantLogs((prev) => [log, ...prev].slice(0, 15));
+    console.log("[grant_manual]", log);
+    return log;
+  };
+
+  const runGrantManual = async ({ source, uid, email, months, note }) => {
+    const payload = {
+      action: "grant_manual",
+      uid: uid?.trim() || undefined,
+      email: email?.trim() || undefined,
+      months,
+      note: note?.trim() || undefined,
+    };
+
+    pushGrantLog({ source, status: "pending", message: "Trimit cerere…", request: payload });
+
+    const res = await fetch("/api/dashboard/subscribers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-dashboard-token": DASHBOARD_SECRET,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const message = data?.message || data?.error || "grant_failed";
+      pushGrantLog({
+        source,
+        status: "error",
+        httpStatus: res.status,
+        message,
+        request: payload,
+        debug: data?.debug || null,
+      });
+      throw new Error(message);
+    }
+
+    const appears = data?.debug?.appearsInTable !== false;
+    const inList = data?.debug?.inSubscriberList !== false;
+    const resolvedBy = data?.debug?.resolvedBy;
+    const targetDocId = data?.uid || data?.debug?.targetDocId;
+
+    pushGrantLog({
+      source,
+      status: appears && inList ? "success" : "warning",
+      httpStatus: res.status,
+      message:
+        appears && inList
+          ? `Salvat pe document Users/${targetDocId}${resolvedBy ? ` (găsit prin ${resolvedBy})` : ""}`
+          : `Salvat în DB dar NU apare în listă (doc: ${targetDocId}) — vezi debug`,
+      request: payload,
+      debug: data?.debug || null,
+      uid: targetDocId,
+    });
+
+    return data;
+  };
 
   const openGrantModal = (s) => {
     setGrantModalMonths(0);
+    setGrantModalNote("");
     setGrantModalTarget(s);
   };
 
@@ -246,24 +323,17 @@ function SubscribersScreen() {
     setGrantSubmitting(true);
     setError("");
     try {
-      const res = await fetch("/api/dashboard/subscribers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
-        },
-        body: JSON.stringify({
-          action: "grant_manual",
-          uid: grantModalTarget.uid,
-          months: grantModalMonths,
-          silent: true,
-        }),
+      const data = await runGrantManual({
+        source: "modal",
+        uid: grantModalTarget.uid,
+        months: grantModalMonths,
+        note: grantModalNote,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || "grant_failed");
-      }
       setGrantModalTarget(null);
+      setStatusFilter("manual");
+      if (data?.debug?.appearsInTable === false || data?.debug?.inSubscriberList === false) {
+        setError("Acces salvat, dar utilizatorul nu apare în tabel — verifică logul de mai jos.");
+      }
       await load();
     } catch (e) {
       setError(e?.message || "Eroare la acordare");
@@ -280,29 +350,27 @@ function SubscribersScreen() {
     setGrantBusy(true);
     setGrantBanner(null);
     try {
-      const res = await fetch("/api/dashboard/subscribers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
-        },
-        body: JSON.stringify({
-          action: "grant_manual",
-          uid: grantUid.trim() || undefined,
-          email: grantEmail.trim() || undefined,
-          months: grantMonths,
-          note: grantNote.trim(),
-        }),
+      const data = await runGrantManual({
+        source: "form",
+        uid: grantUid,
+        email: grantEmail,
+        months: grantMonths,
+        note: grantNote,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || "grant_failed");
-      }
-      setGrantBanner({ type: "success", text: `Acces premium manual activ (document Users: ${data.uid}).` });
+      const resolvedBy = data?.debug?.resolvedBy ? `, găsit prin ${data.debug.resolvedBy}` : "";
+      const listWarning =
+        data?.debug?.appearsInTable === false || data?.debug?.inSubscriberList === false
+          ? " Atenție: nu apare în tabel — vezi logul."
+          : "";
+      setGrantBanner({
+        type: data?.debug?.appearsInTable === false || data?.debug?.inSubscriberList === false ? "error" : "success",
+        text: `Acces premium manual activ (Users/${data.uid}${resolvedBy}).${listWarning}`,
+      });
       setGrantUid("");
       setGrantEmail("");
       setGrantNote("");
       setGrantMonths(0);
+      setStatusFilter("manual");
       await load();
     } catch (e) {
       setGrantBanner({ type: "error", text: e?.message || "Eroare la acordare" });
@@ -380,9 +448,11 @@ function SubscribersScreen() {
 
   const stats = useMemo(() => {
     const active = subscribers.filter((s) => s.premium).length;
+    const manual = subscribers.filter((s) => s.isManual).length;
+    const manualActive = subscribers.filter((s) => s.isManual && s.premium).length;
     const canceled = subscribers.filter((s) => s.subscriptionStatus === "canceled").length;
     const cancelAtEnd = subscribers.filter((s) => s.cancelAtPeriodEnd && s.premium).length;
-    return { total: subscribers.length, active, canceled, cancelAtEnd };
+    return { total: subscribers.length, active, manual, manualActive, canceled, cancelAtEnd };
   }, [subscribers]);
 
   const filtered = useMemo(() => {
@@ -390,6 +460,7 @@ function SubscribersScreen() {
     if (statusFilter === "active") list = list.filter((s) => s.premium);
     else if (statusFilter === "canceled") list = list.filter((s) => s.subscriptionStatus === "canceled");
     else if (statusFilter === "issues") list = list.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid");
+    else if (statusFilter === "manual") list = list.filter((s) => s.isManual);
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -479,9 +550,15 @@ function SubscribersScreen() {
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label="Total înregistrați" value={stats.total} color="border-slate-200" />
           <StatCard label="Activi acum" value={stats.active} color="border-emerald-200" />
+          <StatCard
+            label="Adăugați manual"
+            value={stats.manual}
+            sub={stats.manualActive < stats.manual ? `${stats.manualActive} activi acum` : "acces din panou"}
+            color="border-fuchsia-200"
+          />
           <StatCard label="Anulați" value={stats.canceled} color="border-slate-200" />
           <StatCard label="Anulare la final perioadă" value={stats.cancelAtEnd} sub="activi, dar fără reînnoire" color="border-amber-200" />
         </div>
@@ -566,6 +643,60 @@ function SubscribersScreen() {
               {grantBusy ? "Se salvează…" : "Acordă premium manual"}
             </button>
           </div>
+
+          {grantLogs.length > 0 ? (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Log acordare manuală ({grantLogs.length})
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setGrantLogs([])}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-800"
+                >
+                  Șterge log
+                </button>
+              </div>
+              <div className="max-h-80 space-y-2 overflow-y-auto">
+                {grantLogs.map((log) => (
+                  <details key={log.id} className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                    <summary className="cursor-pointer list-none font-medium text-slate-800">
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        <span className="text-slate-500">{log.at}</span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 font-semibold ${
+                            log.status === "success"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : log.status === "warning"
+                                ? "bg-amber-100 text-amber-900"
+                                : log.status === "error"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {log.status}
+                          {log.httpStatus ? ` · ${log.httpStatus}` : ""}
+                        </span>
+                        <span>{log.message}</span>
+                      </span>
+                    </summary>
+                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-slate-900 p-2 font-mono text-[10px] leading-relaxed text-slate-100">
+                      {JSON.stringify(
+                        {
+                          source: log.source,
+                          request: log.request,
+                          debug: log.debug,
+                        },
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </details>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
         </details>
 
@@ -583,23 +714,39 @@ function SubscribersScreen() {
               className="w-64 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 shadow-sm outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {[
-              { key: "all", label: "Toți" },
-              { key: "active", label: "Activi" },
-              { key: "canceled", label: "Anulați" },
-              { key: "issues", label: "Probleme" },
+              { key: "all", label: "Toți", count: stats.total },
+              { key: "active", label: "Activi", count: stats.active },
+              { key: "manual", label: "Adăugați manual", count: stats.manual },
+              { key: "canceled", label: "Anulați", count: stats.canceled },
+              { key: "issues", label: "Probleme", count: subscribers.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid").length },
             ].map((f) => (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   statusFilter === f.key
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                    ? f.key === "manual"
+                      ? "bg-fuchsia-600 text-white"
+                      : "bg-indigo-600 text-white"
+                    : f.key === "manual"
+                      ? "border border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
+                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 {f.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                    statusFilter === f.key
+                      ? "bg-white/20 text-inherit"
+                      : f.key === "manual"
+                        ? "bg-fuchsia-100 text-fuchsia-800"
+                        : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {f.count}
+                </span>
               </button>
             ))}
           </div>
@@ -817,6 +964,8 @@ function SubscribersScreen() {
         subscriber={grantModalTarget}
         months={grantModalMonths}
         onMonthsChange={setGrantModalMonths}
+        note={grantModalNote}
+        onNoteChange={setGrantModalNote}
         onClose={closeGrantModal}
         onConfirm={confirmGrantFromModal}
         submitting={grantSubmitting}
