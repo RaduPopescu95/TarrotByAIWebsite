@@ -111,6 +111,7 @@ const dashboardPrefetchScreens = [
   "ore-norocoase",
   "poza-api",
   "abonati",
+  "user-tokens",
   "setari",
   "ads-orchestration",
 ];
@@ -546,6 +547,26 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText
                   primary="Abonați Premium"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "user-tokens",
+                    text: "Tokenuri push",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Tokenuri push" ? "#ffc045" : "white",
+                  }}
+                >
+                  <NotificationsIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Tokenuri push"
                   sx={{ color: "white" }}
                 />
               </ListItemButton>

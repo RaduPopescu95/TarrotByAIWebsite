@@ -3,7 +3,15 @@ import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { firestoreTsToMillis } from "../../../lib/videoLibraryPublic";
-import { resolvePublicVideoLibraryPremiumActive } from "../../../lib/videoLibraryAccess";
+import {
+  resolvePublicVideoLibraryPremiumActive,
+  resolveVideoLibraryPremiumAccessForUser,
+} from "../../../lib/videoLibraryAccess";
+import {
+  auditVideoLibraryResponse,
+  buildClientAccessDebug,
+} from "../../../lib/premiumVideoAccessAudit";
+import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
 
 function buildRequestId() {
   return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -43,7 +51,33 @@ export default async function handler(req, res) {
     const scopeRaw = readSingleQueryValue(req.query.scope);
     const premiumSpotlightOnly = scopeRaw === "premium_zone";
 
-    const premiumActive = await resolvePublicVideoLibraryPremiumActive();
+    const hasAuthHeader =
+      typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
+    const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
+
+    let premiumActive = false;
+    let accessExplain = null;
+    let userDocExists = null;
+
+    if (uid) {
+      const resolved = await resolveVideoLibraryPremiumAccessForUser(uid, {
+        stage: "video_library_list",
+        requestId,
+      });
+      premiumActive = resolved.premiumActive;
+      accessExplain = resolved.accessExplain;
+      userDocExists = resolved.userDocExists;
+    } else {
+      premiumActive = await resolvePublicVideoLibraryPremiumActive();
+      if (hasAuthHeader && !uid) {
+        accessExplain = {
+          hasAccess: false,
+          reason: "auth_token_invalid_or_expired",
+          snapshot: null,
+          now: new Date().toISOString(),
+        };
+      }
+    }
 
     const [videos, rowsForMeta] = await Promise.all([
       loadPremiumVideoLibraryVideos({
@@ -55,11 +89,33 @@ export default async function handler(req, res) {
     ]);
 
     const nowMs = Date.now();
-    const cacheMeta = setDynamicPublicCacheHeaders(res, {
-      nowMs,
-      nextPublishAtMs: getNextPublishAtMs(rowsForMeta, nowMs),
-      maxAgeSeconds: 300,
-      staleWhileRevalidateSeconds: 600,
+    let cacheMeta = { cacheTtlSec: 0 };
+    if (uid) {
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+    } else {
+      cacheMeta = setDynamicPublicCacheHeaders(res, {
+        nowMs,
+        nextPublishAtMs: getNextPublishAtMs(rowsForMeta, nowMs),
+        maxAgeSeconds: 300,
+        staleWhileRevalidateSeconds: 600,
+      });
+    }
+
+    auditVideoLibraryResponse({
+      stage: "video_library_list_response",
+      requestId,
+      uid,
+      premiumActive,
+      subscriptionSystemEnabled,
+      accessExplain,
+      videos,
+      extra: {
+        locale,
+        scope: scopeRaw || null,
+        hasAuthHeader,
+        userDocExists,
+        loggedIn: Boolean(uid),
+      },
     });
 
     const responsePayload = {
@@ -69,16 +125,20 @@ export default async function handler(req, res) {
       loggedIn: Boolean(uid),
       generatedAt: new Date(nowMs).toISOString(),
       cacheTtlSec: cacheMeta.cacheTtlSec,
-    };
-    console.info("[premium.video-library] success", {
       requestId,
-      uid: uid || null,
-      locale,
-      scope: scopeRaw || null,
-      videosCount: Array.isArray(videos) ? videos.length : 0,
-      cacheTtlSec: cacheMeta.cacheTtlSec,
-      publicCache: true,
-    });
+      accessDebug: uid
+        ? buildClientAccessDebug(accessExplain, {
+            userDocExists,
+            hasAuthHeader,
+            subscriptionSystemEnabled,
+          })
+        : hasAuthHeader
+          ? buildClientAccessDebug(accessExplain, {
+              hasAuthHeader: true,
+              subscriptionSystemEnabled,
+            })
+          : undefined,
+    };
     return res.status(200).json(responsePayload);
   } catch (error) {
     console.error("[premium.video-library] failed", {

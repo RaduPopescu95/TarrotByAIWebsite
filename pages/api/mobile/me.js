@@ -1,5 +1,7 @@
 import { readSingleQueryValue } from "../../../lib/courses";
+import { explainPremiumAccess } from "../../../lib/explainPremiumAccess";
 import { loadMobileUserProfile } from "../../../lib/loadMobileUserProfile";
+import { auditUserPremiumFields } from "../../../lib/premiumVideoAccessAudit";
 import { requireAuth } from "../../../lib/requireAuth";
 
 function buildRequestId() {
@@ -47,11 +49,25 @@ export default async function handler(req, res) {
       });
     }
 
+    const accessExplain = explainPremiumAccess(user);
+    auditUserPremiumFields(uid, user, {
+      stage: "mobile_me",
+      requestId,
+      source,
+      fresh,
+    });
+
     return res.status(200).json({
       user,
       source,
       requestId,
       generatedAt: new Date().toISOString(),
+      premiumAccess: {
+        hasAccess: accessExplain.hasAccess,
+        reason: accessExplain.reason,
+        snapshot: accessExplain.snapshot,
+        checkedAt: accessExplain.now,
+      },
     });
   } catch (error) {
     const statusCode = error?.statusCode || 500;

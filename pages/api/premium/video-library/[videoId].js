@@ -13,8 +13,17 @@ import {
 import { mapVideoRowToPublicDto } from "../../../../lib/videoLibraryPublicMapper";
 import {
   resolvePublicVideoLibraryPremiumActive,
-  resolveVideoLibraryPremiumActiveForUser,
+  resolveVideoLibraryPremiumAccessForUser,
 } from "../../../../lib/videoLibraryAccess";
+import {
+  auditPremiumVideoAccess,
+  buildClientAccessDebug,
+} from "../../../../lib/premiumVideoAccessAudit";
+import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
+
+function buildRequestId() {
+  return `vld_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 const RELATED_LIMIT = 12;
 const INTERNAL_VIDEO_DOC_IDS = new Set(["_meta", "_publicCache"]);
@@ -27,9 +36,12 @@ const SITE_LOCALES =
     : ["ro"];
 
 export default async function handler(req, res) {
+  const requestId = buildRequestId();
+  res.setHeader("X-Request-Id", requestId);
+
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed", requestId });
   }
 
   const rawId = typeof req.query.videoId === "string" ? req.query.videoId.trim() : "";
@@ -48,10 +60,31 @@ export default async function handler(req, res) {
       "ro"
     );
 
-    const premiumActive =
-      uid || hasAuthHeader
-        ? await resolveVideoLibraryPremiumActiveForUser(uid)
-        : await resolvePublicVideoLibraryPremiumActive();
+    const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
+    let premiumActive = false;
+    let accessExplain = null;
+    let userDocExists = null;
+
+    if (uid) {
+      const resolved = await resolveVideoLibraryPremiumAccessForUser(uid, {
+        stage: "video_library_detail",
+        requestId,
+        videoId: rawId,
+      });
+      premiumActive = resolved.premiumActive;
+      accessExplain = resolved.accessExplain;
+      userDocExists = resolved.userDocExists;
+    } else if (hasAuthHeader) {
+      premiumActive = false;
+      accessExplain = {
+        hasAccess: false,
+        reason: "auth_token_invalid_or_expired",
+        snapshot: null,
+        now: new Date().toISOString(),
+      };
+    } else {
+      premiumActive = await resolvePublicVideoLibraryPremiumActive();
+    }
 
     const nowMs = Date.now();
     const targetRow = await loadPremiumVideoLibraryRowById(rawId);
@@ -96,6 +129,31 @@ export default async function handler(req, res) {
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }
 
+    const mismatch =
+      video?.isPremium === true &&
+      premiumActive === true &&
+      video?.canPlay !== true;
+
+    auditPremiumVideoAccess({
+      stage: "video_library_detail_response",
+      level: mismatch ? "warn" : "info",
+      requestId,
+      uid: uid || null,
+      videoId: rawId,
+      premiumActive,
+      subscriptionSystemEnabled,
+      hasAccess: accessExplain?.hasAccess,
+      accessReason: accessExplain?.reason || null,
+      accessSnapshot: accessExplain?.snapshot || null,
+      userDocExists,
+      hasAuthHeader,
+      videoIsPremium: video?.isPremium === true,
+      videoCanPlay: video?.canPlay === true,
+      videoLockedReason: video?.lockedReason || null,
+      mismatch: mismatch ? "premium_user_but_video_dto_locked" : null,
+      locale,
+    });
+
     return res.status(200).json({
       video,
       related,
@@ -105,9 +163,26 @@ export default async function handler(req, res) {
       loggedIn: Boolean(uid),
       generatedAt: new Date(nowMs).toISOString(),
       cacheTtlSec,
+      requestId,
+      accessDebug: uid || hasAuthHeader
+        ? buildClientAccessDebug(accessExplain, {
+            userDocExists,
+            hasAuthHeader,
+            subscriptionSystemEnabled,
+            videoId: rawId,
+            videoIsPremium: video?.isPremium === true,
+            videoCanPlay: video?.canPlay === true,
+            videoLockedReason: video?.lockedReason || null,
+          })
+        : undefined,
     });
   } catch (error) {
-    console.error("[premium.video-library.detail] failed", error?.message || error);
-    return res.status(500).json({ error: "Failed to load video" });
+    console.error("[premium.video-library.detail] failed", {
+      requestId,
+      message: error?.message || error,
+      videoId: rawId,
+      uid: uid || null,
+    });
+    return res.status(500).json({ error: "Failed to load video", requestId });
   }
 }
