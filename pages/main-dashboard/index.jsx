@@ -12,6 +12,8 @@ import { useApiData } from "../../context/ApiContext";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import Footer from "../../components/Footer";
+import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
+import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
 
 
 export async function getServerSideProps({ locale }) {
@@ -71,6 +73,65 @@ const MediaCardConstantService = ({ item }) => {
     </div>
   );
 };
+
+const MAIN_DASHBOARD_ADSENSE_DELAY_MS = 9000;
+const MAIN_DASHBOARD_ADSENSE_STORAGE_KEY = "main-dashboard-adsense-requested";
+
+function MainDashboardTopAd() {
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const slotId =
+    process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID || "";
+  const [hasInteraction, setHasInteraction] = React.useState(false);
+  const [delayPassed, setDelayPassed] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const markInteraction = () => {
+      setHasInteraction(true);
+    };
+
+    window.addEventListener("scroll", markInteraction, { passive: true, once: true });
+    window.addEventListener("pointerdown", markInteraction, { passive: true, once: true });
+    window.addEventListener("keydown", markInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener("scroll", markInteraction);
+      window.removeEventListener("pointerdown", markInteraction);
+      window.removeEventListener("keydown", markInteraction);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDelayPassed(true);
+    }, MAIN_DASHBOARD_ADSENSE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const canRequestAd = Boolean(clientId && slotId && hasInteraction && delayPassed);
+
+  return (
+    <>
+      <GoogleAdSenseScript clientId={clientId} shouldLoad={canRequestAd} />
+      <div style={styles.adOuterWrap}>
+        <div style={styles.adInnerWrap}>
+          <p style={styles.adLabel}>Publicitate</p>
+          <div style={styles.adSlotWrap}>
+            <GoogleAdSenseBanner
+              slot={slotId}
+              shouldRequest={canRequestAd}
+              requestStorageKey={MAIN_DASHBOARD_ADSENSE_STORAGE_KEY}
+              className="mx-auto w-full"
+              style={styles.adIns}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export function Landing({ services }) {
   const { currentUser, isGuestUser } = useAuth();
@@ -184,6 +245,7 @@ export function Landing({ services }) {
         {/* Services Grid */}
         <section style={styles.servicesSection}>
           <div className="services-container" style={{...styles.servicesContainer, paddingTop: isMobile ? "10%" : "6%"}}>
+            <MainDashboardTopAd />
 
             <div className="services-grid" style={styles.servicesGrid}>
               {menuOptions.map((item, index) => (
@@ -224,6 +286,44 @@ const styles = {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: '0 20px',
+  },
+  adOuterWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '0 auto 3rem auto',
+    padding: '0 0.25rem',
+    width: '100%',
+  },
+  adInnerWrap: {
+    width: '100%',
+    maxWidth: '860px',
+    border: '1px solid rgba(148, 163, 184, 0.18)',
+    borderRadius: '24px',
+    background: 'rgba(255, 255, 255, 0.88)',
+    boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)',
+    padding: '1rem',
+  },
+  adLabel: {
+    margin: '0 0 0.75rem 0',
+    color: '#64748b',
+    fontSize: '0.72rem',
+    fontWeight: '700',
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  },
+  adSlotWrap: {
+    width: '100%',
+    minHeight: '160px',
+    borderRadius: '18px',
+    border: '1px dashed rgba(148, 163, 184, 0.28)',
+    background: 'linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%)',
+    padding: '1rem',
+  },
+  adIns: {
+    minHeight: '120px',
+    width: '100%',
   },
   headerSection: {
     textAlign: 'center',

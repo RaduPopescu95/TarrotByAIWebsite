@@ -430,7 +430,7 @@ export function buildOblioClientFromNormalized(normalizedClient) {
     state: normalizedClient.state || "",
     city: normalizedClient.city || "",
     country: normalizedClient.country || "",
-    postalCode: normalizedClient.postalCode || "",
+    postalCode: normalizedClient.postalCode || "000000",
     email: normalizedClient.email || "",
     phone: normalizedClient.phone || "",
     contact: normalizedClient.contact || "",

@@ -9,6 +9,12 @@ class MyDocument extends Document {
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
           
           {/* Pastreaza meta tag-ul Google AdSense aici */}
+          {process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID ? (
+            <meta
+              name="google-adsense-account"
+              content={process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID}
+            />
+          ) : null}
           {/* You can add custom tags here, but do not remove the <Head> component */}
     
 
