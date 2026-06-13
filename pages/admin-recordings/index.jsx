@@ -44,6 +44,8 @@ const AdminRecordings = () => {
   const [accessLinkByRecording, setAccessLinkByRecording] = useState({});
   const [accessLinkLoading, setAccessLinkLoading] = useState(null);
   const [copyHint, setCopyHint] = useState('');
+  const [videoPlayer, setVideoPlayer] = useState({ open: false, link: null, title: '', recordingId: null });
+  const [preparingPlayer, setPreparingPlayer] = useState(null);
 
   // Email form state
   const [emailForm, setEmailForm] = useState({
@@ -161,6 +163,43 @@ const AdminRecordings = () => {
       alert(`Eroare: ${e.message}`);
     } finally {
       setAccessLinkLoading(null);
+    }
+  };
+
+  const playRecordingOnline = async (recording) => {
+    const recordingId = recording.id;
+    const title = `${recording.roomName || recordingId} (${recording.durationFormatted || ''})`;
+    const cached = accessLinkByRecording[recordingId];
+    if (cached?.link) {
+      setVideoPlayer({ open: true, link: cached.link, title, recordingId });
+      return;
+    }
+    try {
+      setPreparingPlayer(recordingId);
+      const resp = await fetch('/api/daily/get-recording-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordingId }),
+      });
+      const data = await resp.json();
+      if (data.success && data.downloadLink) {
+        setAccessLinkByRecording((prev) => ({
+          ...prev,
+          [recordingId]: {
+            link: data.downloadLink,
+            expires: data.expires,
+            expiresAt: data.expiresAt,
+            generatedAt: new Date().toISOString(),
+          },
+        }));
+        setVideoPlayer({ open: true, link: data.downloadLink, title, recordingId });
+      } else {
+        alert(`Nu am putut genera link-ul pentru playback: ${data.error || 'unknown'}`);
+      }
+    } catch (e) {
+      alert(`Eroare: ${e.message}`);
+    } finally {
+      setPreparingPlayer(null);
     }
   };
 
@@ -697,6 +736,13 @@ const AdminRecordings = () => {
                         🔍 Detalii Complete
                       </button>
                       <button
+                        onClick={() => playRecordingOnline(recording)}
+                        style={{...styles.actionButton, background: '#6f42c1', opacity: preparingPlayer === recording.id ? 0.7 : 1}}
+                        disabled={recording.status !== 'finished' || preparingPlayer === recording.id}
+                      >
+                        {preparingPlayer === recording.id ? '⏳ Se pregateste...' : '▶️ Vizualizeaza online'}
+                      </button>
+                      <button
                         onClick={() => resendDefaultEmails(recording.id)}
                         style={{...styles.actionButton, background: '#28a745', opacity: resendingDefault && resendingId === recording.id ? 0.7 : 1}}
                         disabled={recording.status !== 'finished' || (resendingDefault && resendingId === recording.id)}
@@ -860,6 +906,17 @@ const AdminRecordings = () => {
                           >
                             Deschide
                           </a>
+                          <button
+                            onClick={() => setVideoPlayer({
+                              open: true,
+                              link: accessLinkByRecording[selectedRecordingDetails.id].link,
+                              title: `${selectedRecordingDetails.roomName || selectedRecordingDetails.id} (${selectedRecordingDetails.durationFormatted || ''})`,
+                              recordingId: selectedRecordingDetails.id,
+                            })}
+                            style={{ ...styles.quickLinkButton, background: '#6f42c1' }}
+                          >
+                            Vizualizeaza online
+                          </button>
                         </div>
                       </div>
                     )}
@@ -1256,6 +1313,58 @@ const AdminRecordings = () => {
 
       {copyHint && (
         <div style={styles.copyHint}>{copyHint}</div>
+      )}
+
+      {videoPlayer.open && videoPlayer.link && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => setVideoPlayer({ open: false, link: null, title: '', recordingId: null })}
+        >
+          <div
+            style={styles.videoPlayerModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.videoPlayerHeader}>
+              <h3 style={styles.modalTitle}>▶️ {videoPlayer.title}</h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => copyToClipboard(videoPlayer.link, 'Link copiat')}
+                  style={styles.quickLinkSecondary}
+                >
+                  Copiaza link
+                </button>
+                <a
+                  href={videoPlayer.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.quickLinkAnchor}
+                >
+                  Deschide in tab nou
+                </a>
+                <button
+                  onClick={() => setVideoPlayer({ open: false, link: null, title: '', recordingId: null })}
+                  style={styles.closeButton}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div style={styles.videoPlayerBody}>
+              <video
+                src={videoPlayer.link}
+                controls
+                autoPlay
+                preload="metadata"
+                style={styles.videoElement}
+              >
+                Browser-ul tau nu suporta playback video direct. Foloseste &quot;Deschide in tab nou&quot;.
+              </video>
+              <p style={styles.videoPlayerHint}>
+                Daca videoul nu porneste imediat, asteapta cateva secunde (Daily face buffering pentru piste pre-signed). Daca tot nu functioneaza, apasa &quot;Deschide in tab nou&quot; - browser-ul va stream-ui MP4-ul direct.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
@@ -1870,7 +1979,43 @@ const styles = {
     padding: '6px 8px',
     fontSize: '12px',
     wordBreak: 'break-all',
-  }
+  },
+  videoPlayerModal: {
+    background: 'white',
+    borderRadius: '12px',
+    width: '95%',
+    maxWidth: '1100px',
+    maxHeight: '95vh',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  videoPlayerHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 18px',
+    borderBottom: '1px solid #eee',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  videoPlayerBody: {
+    padding: '14px 18px',
+    overflowY: 'auto',
+  },
+  videoElement: {
+    width: '100%',
+    maxHeight: '70vh',
+    background: 'black',
+    borderRadius: '8px',
+    display: 'block',
+  },
+  videoPlayerHint: {
+    marginTop: '10px',
+    color: '#666',
+    fontSize: '13px',
+    lineHeight: 1.5,
+  },
 };
 
 export default AdminRecordings; 
