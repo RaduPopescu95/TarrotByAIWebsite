@@ -1,6 +1,18 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
+import { logRecordingError } from '../../../lib/recordingErrors';
+
+function detectSessionType(roomName) {
+  if (!roomName) return { sessionType: 'unknown', documentIdFromRoom: null };
+  if (roomName.startsWith('consultation-')) {
+    return { sessionType: 'consultation', documentIdFromRoom: roomName.replace('consultation-', '') };
+  }
+  if (roomName.startsWith('conference-')) {
+    return { sessionType: 'conference', documentIdFromRoom: roomName.replace('conference-', '') };
+  }
+  return { sessionType: 'unknown', documentIdFromRoom: null };
+}
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -15,95 +27,197 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// Helper function to create detailed log
 function logWithDetails(level, message, data = {}) {
   const timestamp = new Date().toISOString();
-  const emoji = {
-    'INFO': '🔵',
-    'SUCCESS': '✅',
-    'WARNING': '⚠️',
-    'ERROR': '❌',
-    'DEBUG': '🔍'
-  }[level] || '📝';
-  
-  console.log(`${emoji} [${level}] [API/daily-recording-email] ${timestamp} - ${message}`);
+  const prefix = `[${level}] [send-recording-email] ${timestamp}`;
+  console.log(`${prefix} - ${message}`);
   if (Object.keys(data).length > 0) {
-    console.log('📊 Data:', JSON.stringify(data, null, 2));
+    console.log(`${prefix} DATA:`, JSON.stringify(data, null, 2));
   }
 }
 
+function createTransporter() {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+}
+
 export default async function handler(req, res) {
+  const startTime = Date.now();
+
   if (req.method !== 'POST') {
-    logWithDetails('WARNING', 'Invalid HTTP method', { method: req.method });
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { documentId, recordingUrl, roomName, duration, linkExpires } = req.body;
+  logWithDetails('INFO', 'Handler invoked', {
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+    bodyRaw: {
+      documentId: req.body?.documentId || null,
+      roomName: req.body?.roomName || null,
+      duration: req.body?.duration || null,
+      hasRecordingUrl: Boolean(req.body?.recordingUrl),
+      recordingUrlPrefix: req.body?.recordingUrl ? req.body.recordingUrl.substring(0, 60) : null,
+      linkExpires: req.body?.linkExpires || null,
+    },
+  });
 
-    logWithDetails('INFO', 'Received request to send recording email', {
-      documentId,
-      roomName,
-      duration,
-      hasRecordingUrl: !!recordingUrl
+  // 1. Check env vars
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
+    logWithDetails('ERROR', 'SMTP credentials missing in environment', {
+      hasEMAIL_USER: Boolean(emailUser),
+      hasEMAIL_PASS: Boolean(emailPass),
+      EMAIL_USER_length: emailUser ? emailUser.length : 0,
+      EMAIL_PASS_length: emailPass ? emailPass.length : 0,
     });
+    const { sessionType, documentIdFromRoom } = detectSessionType(req.body?.roomName);
+    await logRecordingError(db, {
+      source: 'send-recording-email',
+      documentId: req.body?.documentId || documentIdFromRoom,
+      roomName: req.body?.roomName || null,
+      sessionType,
+      errorMessage: 'SMTP credentials missing (EMAIL_USER or EMAIL_PASS)',
+      errorContext: {
+        step: 'env-check',
+        hasEMAIL_USER: Boolean(emailUser),
+        hasEMAIL_PASS: Boolean(emailPass),
+      },
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Email service not configured (missing EMAIL_USER or EMAIL_PASS)',
+    });
+  }
 
-    // Validate required fields
-    if (!documentId || !recordingUrl) {
-      logWithDetails('ERROR', 'Missing required fields', { documentId, hasRecordingUrl: !!recordingUrl });
-      return res.status(400).json({ error: 'documentId and recordingUrl are required' });
-    }
+  logWithDetails('DEBUG', 'SMTP env vars present', {
+    EMAIL_USER: emailUser.replace(/(.{3}).*(@.*)/, '$1***$2'),
+    EMAIL_PASS_length: emailPass.length,
+  });
 
-    // Get reservation details from Firebase
+  // 2. Parse and validate body
+  const { documentId, recordingUrl, roomName, duration, linkExpires } = req.body || {};
+
+  if (!documentId || !recordingUrl) {
+    logWithDetails('ERROR', 'Missing required fields in body', {
+      hasDocumentId: Boolean(documentId),
+      hasRecordingUrl: Boolean(recordingUrl),
+    });
+    return res.status(400).json({ error: 'documentId and recordingUrl are required' });
+  }
+
+  // 3. Fetch reservation from Firestore
+  let reservationData;
+  try {
+    logWithDetails('DEBUG', 'Fetching reservation from Firestore', { documentId });
     const reservationRef = db.collection('RezervariConsultatii').doc(documentId);
     const reservationDoc = await reservationRef.get();
 
     if (!reservationDoc.exists) {
-      logWithDetails('ERROR', 'Reservation not found', { documentId });
+      logWithDetails('ERROR', 'Reservation document does NOT exist in Firestore', { documentId });
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
-    const reservationData = reservationDoc.data();
-    
-    logWithDetails('DEBUG', 'Retrieved reservation data', {
+    reservationData = reservationDoc.data();
+    logWithDetails('DEBUG', 'Reservation fetched successfully', {
       documentId,
-      hasEmail: !!reservationData.email,
-      email: reservationData.email ? `${reservationData.email.substring(0, 3)}...@${reservationData.email.split('@')[1]}` : 'NO_EMAIL',
-      nume: reservationData.nume || 'NO_NAME',
-      prenume: reservationData.prenume || 'NO_PRENUME',
-      hasReservationData: !!reservationData
+      fields: Object.keys(reservationData),
+      hasEmail: Boolean(reservationData.email),
+      email: reservationData.email
+        ? `${reservationData.email.substring(0, 3)}...@${reservationData.email.split('@')[1] || '?'}`
+        : 'MISSING',
+      nume: reservationData.nume || 'MISSING',
+      prenume: reservationData.prenume || 'MISSING',
+      categorie: reservationData.categorie?.nume || 'MISSING',
     });
-    
-    const clientEmail = reservationData.email;
-    const clientName = `${reservationData.nume} ${reservationData.prenume || ''}`.trim();
-
-    if (!clientEmail) {
-      logWithDetails('ERROR', 'Client email not found in reservation', { 
-        documentId,
-        availableFields: Object.keys(reservationData),
-        reservationData: JSON.stringify(reservationData, null, 2)
-      });
-      return res.status(400).json({ error: 'Client email not found' });
-    }
-
-    logWithDetails('INFO', 'Found reservation details', {
+  } catch (firestoreError) {
+    logWithDetails('ERROR', 'Firestore read FAILED', {
       documentId,
-      clientName,
-      clientEmail: clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'), // Mask email
-      categorie: reservationData.categorie?.nume
+      errorMessage: firestoreError.message,
+      errorCode: firestoreError.code,
+      errorStack: firestoreError.stack,
     });
+    await logRecordingError(db, {
+      source: 'send-recording-email',
+      documentId,
+      roomName: roomName || null,
+      sessionType: detectSessionType(roomName).sessionType,
+      errorMessage: `Firestore read failed: ${firestoreError.message}`,
+      errorCode: firestoreError.code || null,
+      errorContext: { step: 'firestore-read' },
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to read reservation from database',
+      details: firestoreError.message,
+    });
+  }
 
-    // Send the recording email
-    const emailResult = await sendDailyRecordingEmail({
+  // 4. Validate client email
+  const clientEmail = reservationData.email;
+  const clientName = `${reservationData.nume || ''} ${reservationData.prenume || ''}`.trim() || 'Client';
+
+  if (!clientEmail) {
+    logWithDetails('ERROR', 'Client email NOT found in reservation data', {
+      documentId,
+      availableFields: Object.keys(reservationData),
+    });
+    return res.status(400).json({ error: 'Client email not found in reservation' });
+  }
+
+  // 5. Create transporter and verify SMTP connection
+  const transporter = createTransporter();
+  if (!transporter) {
+    logWithDetails('ERROR', 'Transporter creation failed (env vars disappeared mid-request?)');
+    return res.status(500).json({ success: false, error: 'Email transporter unavailable' });
+  }
+
+  try {
+    logWithDetails('DEBUG', 'Verifying SMTP connection...');
+    await transporter.verify();
+    logWithDetails('DEBUG', 'SMTP connection verified OK');
+  } catch (verifyError) {
+    logWithDetails('ERROR', 'SMTP verify() FAILED - cannot connect to Gmail', {
+      errorMessage: verifyError.message,
+      errorCode: verifyError.code,
+      errorCommand: verifyError.command,
+      errorResponse: verifyError.response,
+      errorResponseCode: verifyError.responseCode,
+      errorStack: verifyError.stack,
+    });
+    await logRecordingError(db, {
+      source: 'send-recording-email',
+      documentId,
+      roomName: roomName || null,
+      sessionType: detectSessionType(roomName).sessionType,
+      errorMessage: `SMTP verify() failed: ${verifyError.message}`,
+      errorCode: verifyError.code || null,
+      errorContext: {
+        step: 'smtp-verify',
+        responseCode: verifyError.responseCode || null,
+        response: verifyError.response || null,
+        command: verifyError.command || null,
+      },
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'SMTP connection failed',
+      details: verifyError.message,
+    });
+  }
+
+  // 6. Send the email
+  try {
+    const emailResult = await sendDailyRecordingEmail(transporter, {
       clientEmail,
       clientName,
       recordingUrl,
@@ -111,237 +225,231 @@ export default async function handler(req, res) {
       duration,
       documentId,
       reservationData,
-      linkExpires
+      linkExpires,
     });
 
     if (emailResult.success) {
-      logWithDetails('SUCCESS', 'Recording email sent successfully', {
+      logWithDetails('SUCCESS', 'Email sent, updating Firestore', {
         documentId,
         messageId: emailResult.messageId,
-        clientEmail: clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2')
+        durationMs: Date.now() - startTime,
       });
 
-      // Update the reservation with email sent status
-      await reservationRef.update({
-        'recording.emailSent': true,
-        'recording.emailSentAt': new Date(),
-        'recording.downloadUrl': recordingUrl
-      });
+      try {
+        const reservationRef = db.collection('RezervariConsultatii').doc(documentId);
+        await reservationRef.update({
+          'recording.emailSent': true,
+          'recording.emailSentAt': new Date(),
+          'recording.downloadUrl': recordingUrl,
+        });
+      } catch (updateError) {
+        logWithDetails('WARNING', 'Email sent but Firestore update failed (non-fatal)', {
+          documentId,
+          errorMessage: updateError.message,
+        });
+      }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Recording email sent successfully',
-        messageId: emailResult.messageId
-      });
-    } else {
-      logWithDetails('ERROR', 'Failed to send recording email', {
-        documentId,
-        error: emailResult.error
-      });
-
-      res.status(500).json({
-        success: false,
-        error: 'Failed to send recording email',
-        details: emailResult.error
+        messageId: emailResult.messageId,
       });
     }
 
-  } catch (error) {
-    logWithDetails('ERROR', 'Unexpected error in handler', {
-      error: error.message,
-      stack: error.stack
+    logWithDetails('ERROR', 'sendDailyRecordingEmail returned failure', {
+      documentId,
+      error: emailResult.error,
+      durationMs: Date.now() - startTime,
     });
 
-    res.status(500).json({
+    await logRecordingError(db, {
+      source: 'send-recording-email',
+      documentId,
+      roomName: roomName || null,
+      sessionType: detectSessionType(roomName).sessionType,
+      errorMessage: `sendMail failed: ${emailResult.error || 'unknown'}`,
+      errorCode: emailResult.errorCode || null,
+      errorContext: {
+        step: 'send-mail',
+        responseCode: emailResult.responseCode || null,
+        smtpResponse: emailResult.smtpResponse || null,
+        rejected: emailResult.rejected || null,
+      },
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to send recording email',
+      details: emailResult.error,
+    });
+  } catch (sendError) {
+    logWithDetails('ERROR', 'Unexpected exception during email send', {
+      documentId,
+      errorType: typeof sendError,
+      errorMessage: sendError?.message || String(sendError),
+      errorCode: sendError?.code,
+      errorStack: sendError?.stack,
+      durationMs: Date.now() - startTime,
+    });
+
+    await logRecordingError(db, {
+      source: 'send-recording-email',
+      documentId,
+      roomName: roomName || null,
+      sessionType: detectSessionType(roomName).sessionType,
+      errorMessage: `Unexpected exception during email send: ${sendError?.message || String(sendError)}`,
+      errorCode: sendError?.code || null,
+      errorContext: { step: 'send-mail-exception' },
+    });
+
+    return res.status(500).json({
       success: false,
       error: 'Internal server error',
-      details: error.message
+      details: sendError?.message || 'Unknown error',
     });
   }
 }
 
-async function sendDailyRecordingEmail({ clientEmail, clientName, recordingUrl, roomName, duration, documentId, reservationData, linkExpires }) {
-  try {
-    logWithDetails('INFO', 'Creating email content for Daily recording', {
-      clientName,
-      roomName,
-      duration,
-      documentId
-    });
+async function sendDailyRecordingEmail(transporter, { clientEmail, clientName, recordingUrl, roomName, duration, documentId, reservationData, linkExpires }) {
+  logWithDetails('INFO', 'Building email content', { clientName, roomName, duration, documentId });
 
-    // Format duration
-    const formatDuration = (seconds) => {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
-    };
+  const formatDuration = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
 
-    const formattedDuration = duration ? formatDuration(duration) : 'Necunoscut';
-    
-    // Calculate expiry information
-    const expiryDate = linkExpires ? new Date(linkExpires * 1000) : null;
-    const formattedExpiryDate = expiryDate ? expiryDate.toLocaleDateString('ro-RO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : null;
-    const meetingDate = new Date().toLocaleDateString('ro-RO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formattedDuration = duration ? formatDuration(duration) : 'Necunoscut';
+  const expiryDate = linkExpires ? new Date(linkExpires * 1000) : null;
+  const formattedExpiryDate = expiryDate
+    ? expiryDate.toLocaleDateString('ro-RO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null;
+  const meetingDate = new Date().toLocaleDateString('ro-RO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    const emailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
-        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          
-          <!-- Header -->
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #667eea; margin: 0; font-size: 28px;">🎥 Înregistrarea Consultației</h1>
-            <div style="width: 60px; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 15px auto; border-radius: 2px;"></div>
-          </div>
-          
-          <!-- Welcome Message -->
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-            <h2 style="margin: 0 0 10px 0; font-size: 20px;">Salut ${clientName}! 👋</h2>
-            <p style="margin: 0; opacity: 0.9;">Înregistrarea consultației tale este gata pentru descărcare</p>
-          </div>
-
-          <!-- Recording Details -->
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-            <h3 style="color: #333; margin-top: 0; font-size: 16px;">📋 Detalii înregistrare:</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #666; font-weight: 600;">Data consultației:</td>
-                <td style="padding: 8px 0; color: #333;">${meetingDate}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666; font-weight: 600;">Durata:</td>
-                <td style="padding: 8px 0; color: #333;">${formattedDuration}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666; font-weight: 600;">Tip consultație:</td>
-                <td style="padding: 8px 0; color: #333;">${reservationData.categorie?.nume || 'Consultație video'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666; font-weight: 600;">Cod înregistrare:</td>
-                <td style="padding: 8px 0; color: #333; font-family: monospace; font-size: 12px;">${roomName || documentId}</td>
-              </tr>
-            </table>
-          </div>
-
-          <!-- Download Button -->
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${recordingUrl}" 
-               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;"
-               target="_blank">
-              📥 Descarcă Înregistrarea
-            </a>
-          </div>
-
-          <!-- Instructions -->
-          <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin-bottom: 25px;">
-            <h3 style="color: #1976d2; margin-top: 0; font-size: 16px;">📖 Instrucțiuni de descărcare</h3>
-            <ul style="color: #333; margin: 10px 0; padding-left: 20px; line-height: 1.6;">
-              <li>Apasă pe butonul de mai sus pentru a descărca înregistrarea</li>
-              <li>Fișierul va fi descărcat în format video (MP4)</li>
-              <li>Poți viziona înregistrarea pe orice dispozitiv</li>
-              <li>Recomandăm să salvezi o copie pe dispozitivul tău</li>
-            </ul>
-          </div>
-
-          <!-- Security Notice & Expiry Warning -->
-          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 25px;">
-            <h4 style="color: #856404; margin-top: 0; font-size: 14px;">🔒 Confidențialitate și Securitate</h4>
-            <ul style="color: #856404; margin: 0 0 15px 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
-              <li>Înregistrarea este stocată securizat și criptat</li>
-              <li>Link-ul de descărcare este personal și confidențial</li>
-              <li>Nu împărți acest link cu alte persoane</li>
-              <li>Poți descărca fișierul de câte ori dorești în perioada validă</li>
-            </ul>
-            ${expiryDate ? `
-            <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-top: 15px;">
-              <p style="color: #721c24; margin: 0; line-height: 1.6; font-size: 14px; font-weight: 600;">
-                ⏰ <strong>ATENȚIE - LINK TEMPORAR!</strong><br/>
-                Link-ul expiră pe <strong>${formattedExpiryDate}</strong> (în 12 ore).<br/>
-                După această dată nu vei mai putea descărca înregistrarea.
-              </p>
-            </div>
-            ` : `
-            <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-top: 15px;">
-              <p style="color: #721c24; margin: 0; line-height: 1.6; font-size: 14px; font-weight: 600;">
-                ⏰ <strong>ATENȚIE - LINK TEMPORAR!</strong><br/>
-                Link-ul de descărcare expiră în <strong>12 ore</strong> de la primirea acestui email.<br/>
-                Asigură-te că descarci înregistrarea cât mai curând!
-              </p>
-            </div>
-            `}
-          </div>
-
-          <!-- Support -->
-          <div style="background-color: #f0f8ff; border-left: 4px solid #4169e1; padding: 20px; margin-bottom: 25px;">
-            <h4 style="color: #4169e1; margin-top: 0; font-size: 14px;">🆘 Ai nevoie de ajutor?</h4>
-            <p style="color: #333; margin: 0; line-height: 1.6; font-size: 14px;">
-              Dacă întâmpini probleme cu descărcarea sau ai întrebări despre consultație, 
-              nu ezita să ne contactezi la <strong>webdynamicx@gmail.com</strong>
+  const emailContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
+      <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #667eea; margin: 0; font-size: 28px;">Inregistrarea Consultatiei</h1>
+          <div style="width: 60px; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 15px auto; border-radius: 2px;"></div>
+        </div>
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+          <h2 style="margin: 0 0 10px 0; font-size: 20px;">Salut ${clientName}!</h2>
+          <p style="margin: 0; opacity: 0.9;">Inregistrarea consultatiei tale este gata pentru descarcare</p>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+          <h3 style="color: #333; margin-top: 0; font-size: 16px;">Detalii inregistrare:</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 8px 0; color: #666; font-weight: 600;">Data consultatiei:</td><td style="padding: 8px 0; color: #333;">${meetingDate}</td></tr>
+            <tr><td style="padding: 8px 0; color: #666; font-weight: 600;">Durata:</td><td style="padding: 8px 0; color: #333;">${formattedDuration}</td></tr>
+            <tr><td style="padding: 8px 0; color: #666; font-weight: 600;">Tip consultatie:</td><td style="padding: 8px 0; color: #333;">${reservationData.categorie?.nume || 'Consultatie video'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #666; font-weight: 600;">Cod inregistrare:</td><td style="padding: 8px 0; color: #333; font-family: monospace; font-size: 12px;">${roomName || documentId}</td></tr>
+          </table>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${recordingUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);" target="_blank">
+            Descarca Inregistrarea
+          </a>
+        </div>
+        <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin-bottom: 25px;">
+          <h3 style="color: #1976d2; margin-top: 0; font-size: 16px;">Instructiuni de descarcare</h3>
+          <ul style="color: #333; margin: 10px 0; padding-left: 20px; line-height: 1.6;">
+            <li>Apasa pe butonul de mai sus pentru a descarca inregistrarea</li>
+            <li>Fisierul va fi descarcat in format video (MP4)</li>
+            <li>Poti viziona inregistrarea pe orice dispozitiv</li>
+            <li>Recomandam sa salvezi o copie pe dispozitivul tau</li>
+          </ul>
+        </div>
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 25px;">
+          <h4 style="color: #856404; margin-top: 0; font-size: 14px;">Confidentialitate si Securitate</h4>
+          <ul style="color: #856404; margin: 0 0 15px 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
+            <li>Inregistrarea este stocata securizat si criptat</li>
+            <li>Link-ul de descarcare este personal si confidential</li>
+            <li>Nu imparti acest link cu alte persoane</li>
+            <li>Poti descarca fisierul de cate ori doresti in perioada valida</li>
+          </ul>
+          ${expiryDate ? `
+          <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-top: 15px;">
+            <p style="color: #721c24; margin: 0; line-height: 1.6; font-size: 14px; font-weight: 600;">
+              ATENTIE - LINK TEMPORAR!<br/>
+              Link-ul expira pe <strong>${formattedExpiryDate}</strong> (in 12 ore).<br/>
+              Dupa aceasta data nu vei mai putea descarca inregistrarea.
             </p>
           </div>
-
-          <!-- Footer -->
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-            <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">
-              Mulțumim că ai ales serviciile noastre! 🙏
-            </p>
-            <p style="color: #667eea; margin: 0; font-weight: 600;">
-              Echipa Tarot by AI ✨
+          ` : `
+          <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-top: 15px;">
+            <p style="color: #721c24; margin: 0; line-height: 1.6; font-size: 14px; font-weight: 600;">
+              ATENTIE - LINK TEMPORAR!<br/>
+              Link-ul de descarcare expira in <strong>12 ore</strong> de la primirea acestui email.<br/>
+              Asigura-te ca descarci inregistrarea cat mai curand!
             </p>
           </div>
+          `}
+        </div>
+        <div style="background-color: #f0f8ff; border-left: 4px solid #4169e1; padding: 20px; margin-bottom: 25px;">
+          <h4 style="color: #4169e1; margin-top: 0; font-size: 14px;">Ai nevoie de ajutor?</h4>
+          <p style="color: #333; margin: 0; line-height: 1.6; font-size: 14px;">
+            Daca intampini probleme cu descarcarea sau ai intrebari despre consultatie,
+            nu ezita sa ne contactezi la <strong>webdynamicx@gmail.com</strong>
+          </p>
+        </div>
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Multumim ca ai ales serviciile noastre!</p>
+          <p style="color: #667eea; margin: 0; font-weight: 600;">Echipa Tarot by AI</p>
         </div>
       </div>
-    `;
+    </div>
+  `;
 
-    const mailOptions = {
-      from: `"Înregistrări Ședință - Cristina Zurba" <${process.env.EMAIL_USER}>`,
-      to: clientEmail,
-      subject: `🎥 Înregistrarea consultației tale este gata - ${reservationData.categorie?.nume || 'Video Call'}`,
-      html: emailContent
-    };
+  const mailOptions = {
+    from: `"Inregistrari Sedinta - Cristina Zurba" <${process.env.EMAIL_USER}>`,
+    to: clientEmail,
+    subject: `Inregistrarea consultatiei tale este gata - ${reservationData.categorie?.nume || 'Video Call'}`,
+    html: emailContent,
+  };
 
-    logWithDetails('INFO', 'Sending Daily recording email via SMTP', {
-      to: clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
-      from: process.env.EMAIL_USER ? process.env.EMAIL_USER.replace(/(.{3}).*(@.*)/, '$1***$2') : 'not_configured',
-      subject: mailOptions.subject
-    });
+  logWithDetails('INFO', 'Calling transporter.sendMail()', {
+    to: clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
+    from: mailOptions.from,
+    subject: mailOptions.subject,
+  });
 
-    const smtpStartTime = Date.now();
+  const smtpStartTime = Date.now();
+
+  try {
     const result = await transporter.sendMail(mailOptions);
     const smtpTime = Date.now() - smtpStartTime;
 
-    logWithDetails('SUCCESS', 'Daily recording email sent successfully', {
+    logWithDetails('SUCCESS', 'sendMail() resolved OK', {
       messageId: result.messageId,
-      recipientEmail: clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2'),
-      smtpTime: `${smtpTime}ms`,
-      emailSize: emailContent.length
+      accepted: result.accepted,
+      rejected: result.rejected,
+      response: result.response,
+      smtpTimeMs: smtpTime,
     });
 
-    return { 
-      success: true, 
-      messageId: result.messageId,
-      recipientEmail: clientEmail
+    return { success: true, messageId: result.messageId };
+  } catch (smtpError) {
+    const smtpTime = Date.now() - smtpStartTime;
+
+    logWithDetails('ERROR', 'sendMail() THREW an exception', {
+      errorMessage: smtpError.message,
+      errorCode: smtpError.code,
+      errorCommand: smtpError.command,
+      errorResponse: smtpError.response,
+      errorResponseCode: smtpError.responseCode,
+      rejected: smtpError.rejected,
+      smtpTimeMs: smtpTime,
+      errorStack: smtpError.stack,
+    });
+
+    return {
+      success: false,
+      error: smtpError.message,
+      errorCode: smtpError.code || null,
+      responseCode: smtpError.responseCode || null,
+      smtpResponse: smtpError.response || null,
+      rejected: smtpError.rejected || null,
     };
-
-  } catch (error) {
-    logWithDetails('ERROR', 'Failed to send Daily recording email', {
-      error: error.message,
-      errorCode: error.code,
-      smtpResponse: error.response,
-      smtpCommand: error.command,
-      clientEmail: clientEmail ? clientEmail.replace(/(.{3}).*(@.*)/, '$1***$2') : 'unknown'
-    });
-    return { success: false, error: error.message };
   }
-} 
+}

@@ -30,13 +30,20 @@ const AdminRecordings = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [perPage, setPerPage] = useState(100);
   const [selectedRecordingDetails, setSelectedRecordingDetails] = useState(null);
   const [detailsModal, setDetailsModal] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [currentStartingAfter, setCurrentStartingAfter] = useState(null);
-  const [currentEndingBefore, setCurrentEndingBefore] = useState(null);
+
+  const [recordingErrors, setRecordingErrors] = useState([]);
+  const [errorsLoading, setErrorsLoading] = useState(false);
+  const [errorsExpanded, setErrorsExpanded] = useState(true);
+  const [expandedErrorCards, setExpandedErrorCards] = useState({});
+  const [errorDetailsModal, setErrorDetailsModal] = useState(false);
+  const [errorDetailsPayload, setErrorDetailsPayload] = useState(null);
+  const [accessLinkByRecording, setAccessLinkByRecording] = useState({});
+  const [accessLinkLoading, setAccessLinkLoading] = useState(null);
+  const [copyHint, setCopyHint] = useState('');
 
   // Email form state
   const [emailForm, setEmailForm] = useState({
@@ -45,12 +52,11 @@ const AdminRecordings = () => {
     adminNote: ''
   });
 
-    // Fetch recordings cu paginație Daily.co
   const fetchRecordings = async (startingAfter = null, endingBefore = null) => {
     try {
       setLoading(true);
       
-      const params = new URLSearchParams({ limit: '15' });
+      const params = new URLSearchParams({ limit: perPage.toString() });
       
       if (startingAfter) {
         params.append('starting_after', startingAfter);
@@ -67,8 +73,6 @@ const AdminRecordings = () => {
         setRecordings(data.data);
         setStats(data.stats);
         setPagination(data.pagination);
-        setCurrentStartingAfter(startingAfter);
-        setCurrentEndingBefore(endingBefore);
         setError(null);
       } else {
         setError(data.error || 'Failed to fetch recordings');
@@ -80,7 +84,6 @@ const AdminRecordings = () => {
     }
   };
 
-  // Navigation functions
   const goToNextPage = () => {
     if (pagination.hasNextPage && pagination.lastRecordingId) {
       fetchRecordings(pagination.lastRecordingId, null);
@@ -95,6 +98,122 @@ const AdminRecordings = () => {
 
   const goToFirstPage = () => {
     fetchRecordings(null, null);
+  };
+
+  const fetchRecordingErrors = async () => {
+    try {
+      setErrorsLoading(true);
+      const resp = await fetch('/api/daily/list-recording-errors?limit=100&resolved=false');
+      const data = await resp.json();
+      if (data.success) {
+        setRecordingErrors(data.errors || []);
+      } else {
+        console.error('Failed to load recording errors:', data.error);
+      }
+    } catch (e) {
+      console.error('Error loading recording errors:', e.message);
+    } finally {
+      setErrorsLoading(false);
+    }
+  };
+
+  const markErrorResolved = async (errorId) => {
+    try {
+      const resp = await fetch('/api/daily/list-recording-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: errorId, resolved: true }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setRecordingErrors((prev) => prev.filter((e) => e.id !== errorId));
+      } else {
+        alert(`Nu am putut marca eroarea ca rezolvata: ${data.error || 'unknown'}`);
+      }
+    } catch (e) {
+      alert(`Eroare: ${e.message}`);
+    }
+  };
+
+  const generateAccessLink = async (recordingId) => {
+    try {
+      setAccessLinkLoading(recordingId);
+      const resp = await fetch('/api/daily/get-recording-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordingId }),
+      });
+      const data = await resp.json();
+      if (data.success && data.downloadLink) {
+        setAccessLinkByRecording((prev) => ({
+          ...prev,
+          [recordingId]: {
+            link: data.downloadLink,
+            expires: data.expires,
+            expiresAt: data.expiresAt,
+            generatedAt: new Date().toISOString(),
+          },
+        }));
+      } else {
+        alert(`Nu am putut genera link-ul: ${data.error || 'unknown'}`);
+      }
+    } catch (e) {
+      alert(`Eroare: ${e.message}`);
+    } finally {
+      setAccessLinkLoading(null);
+    }
+  };
+
+  const copyToClipboard = async (text, hint = 'Copiat') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyHint(hint);
+      setTimeout(() => setCopyHint(''), 1500);
+    } catch (e) {
+      alert(`Nu am putut copia: ${e.message}`);
+    }
+  };
+
+  const errorsByRecordingId = recordingErrors.reduce((acc, err) => {
+    if (err.recordingId) {
+      if (!acc[err.recordingId]) acc[err.recordingId] = [];
+      acc[err.recordingId].push(err);
+    }
+    return acc;
+  }, {});
+
+  const errorsByDocumentId = recordingErrors.reduce((acc, err) => {
+    if (err.documentId) {
+      if (!acc[err.documentId]) acc[err.documentId] = [];
+      acc[err.documentId].push(err);
+    }
+    return acc;
+  }, {});
+
+  const getErrorsForRecording = (recording) => {
+    const byId = errorsByRecordingId[recording.id] || [];
+    const byDoc = recording.documentId ? errorsByDocumentId[recording.documentId] || [] : [];
+    const seen = new Set();
+    const merged = [];
+    [...byId, ...byDoc].forEach((e) => {
+      if (seen.has(e.id)) return;
+      seen.add(e.id);
+      merged.push(e);
+    });
+    return merged.sort((a, b) => {
+      const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return tb - ta;
+    });
+  };
+
+  const formatErrorTimestamp = (iso) => {
+    if (!iso) return '?';
+    try {
+      return new Date(iso).toLocaleString('ro-RO');
+    } catch {
+      return iso;
+    }
   };
 
   // Send custom email
@@ -140,7 +259,7 @@ const AdminRecordings = () => {
     try {
       setResendingDefault(true);
       setResendingId(recordingId);
-      setToast({ visible: true, type: 'info', message: '⏳ Se trimite emailul...' });
+      setToast({ visible: true, type: 'info', message: 'Se trimite emailul...', persistent: false });
 
       const response = await fetch('/api/daily/resend-recording-default', {
         method: 'POST',
@@ -149,15 +268,47 @@ const AdminRecordings = () => {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        setToast({ visible: true, type: 'success', message: `✅ Email trimis ${result.sessionType === 'conference' ? `către ${result.recipients} participanți` : 'către client'}.` });
+        setToast({
+          visible: true,
+          type: 'success',
+          message: `Email trimis ${result.sessionType === 'conference' ? `catre ${result.recipients} participanti` : 'catre client'}.`,
+          persistent: false,
+        });
         setTimeout(() => setToast({ visible: false, message: '', type: 'success' }), 3000);
+        // Refresh errors so any prior failed attempts get reflected
+        fetchRecordingErrors();
       } else {
-        setToast({ visible: true, type: 'error', message: `❌ Eroare trimitere: ${result.error || 'necunoscută'}` });
-        setTimeout(() => setToast({ visible: false, message: '', type: 'error' }), 3500);
+        const errPayload = {
+          recordingId,
+          httpStatus: response.status,
+          error: result.error || 'necunoscuta',
+          details: result.details || null,
+          timestamp: new Date().toISOString(),
+        };
+        setToast({
+          visible: true,
+          type: 'error',
+          message: `Eroare trimitere: ${result.error || 'necunoscuta'}`,
+          persistent: true,
+          details: errPayload,
+        });
+        // Pull fresh errors so the new one shows up in the section + badges
+        fetchRecordingErrors();
       }
     } catch (err) {
-      setToast({ visible: true, type: 'error', message: `❌ Eroare: ${err.message}` });
-      setTimeout(() => setToast({ visible: false, message: '', type: 'error' }), 3500);
+      const errPayload = {
+        recordingId,
+        error: err.message,
+        timestamp: new Date().toISOString(),
+        clientSide: true,
+      };
+      setToast({
+        visible: true,
+        type: 'error',
+        message: `Eroare: ${err.message}`,
+        persistent: true,
+        details: errPayload,
+      });
     } finally {
       setResendingDefault(false);
       setResendingId(null);
@@ -207,19 +358,25 @@ const AdminRecordings = () => {
     }
   };
 
-  // Apply search filtering (simple text search on current page)
+  // Apply filters on the full fetched set (all recordings on this page)
   const filteredRecordings = recordings.filter(recording => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      recording.roomName?.toLowerCase().includes(searchLower) ||
-      recording.documentId?.toLowerCase().includes(searchLower) ||
-      recording.id.toLowerCase().includes(searchLower)
-    );
+    // Session type filter
+    if (filter !== 'all' && recording.sessionType !== filter) return false;
+    // Status filter
+    if (statusFilter !== 'all' && recording.status !== statusFilter) return false;
+    // Search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matches =
+        recording.roomName?.toLowerCase().includes(searchLower) ||
+        recording.documentId?.toLowerCase().includes(searchLower) ||
+        recording.id.toLowerCase().includes(searchLower) ||
+        recording.startedAt?.toLowerCase().includes(searchLower);
+      if (!matches) return false;
+    }
+    return true;
   });
 
-  // Stats show current page data
   const currentPageStats = {
     consultations: filteredRecordings.filter(r => r.sessionType === 'consultation').length,
     conferences: filteredRecordings.filter(r => r.sessionType === 'conference').length,
@@ -230,7 +387,11 @@ const AdminRecordings = () => {
 
   useEffect(() => {
     fetchRecordings();
-  }, []); // Doar la mount, filtrarea e locală
+  }, [perPage]);
+
+  useEffect(() => {
+    fetchRecordingErrors();
+  }, []);
 
   return (
     <>
@@ -248,44 +409,155 @@ const AdminRecordings = () => {
           </p>
         </div>
 
+        {/* Errors Section */}
+        {(recordingErrors.length > 0 || errorsLoading) && (
+          <div style={styles.errorsSection}>
+            <div
+              style={styles.errorsHeader}
+              onClick={() => setErrorsExpanded(!errorsExpanded)}
+            >
+              <span style={styles.errorsHeaderTitle}>
+                Erori recente ({recordingErrors.length})
+              </span>
+              <span style={styles.errorsHeaderToggle}>
+                {errorsExpanded ? '▲ Ascunde' : '▼ Arata'}
+              </span>
+            </div>
+            {errorsExpanded && (
+              <div style={styles.errorsList}>
+                {errorsLoading && <p style={{ color: '#666' }}>Se incarca erorile...</p>}
+                {!errorsLoading && recordingErrors.length === 0 && (
+                  <p style={{ color: '#666' }}>Nicio eroare nerezolvata.</p>
+                )}
+                {recordingErrors.map((err) => (
+                  <div key={err.id} style={styles.errorItem}>
+                    <div style={styles.errorItemHeader}>
+                      <span style={styles.errorSourceBadge}>{err.source}</span>
+                      <span style={styles.errorTimestamp}>{formatErrorTimestamp(err.createdAt)}</span>
+                      <button
+                        onClick={() => markErrorResolved(err.id)}
+                        style={styles.errorResolveButton}
+                      >
+                        Marcheaza rezolvat
+                      </button>
+                    </div>
+                    <div style={styles.errorMessage}>{err.errorMessage}</div>
+                    <div style={styles.errorMeta}>
+                      {err.recordingId && (
+                        <span
+                          style={styles.errorMetaLink}
+                          onClick={() => setSearchTerm(err.recordingId)}
+                          title="Filtreaza tabelul dupa acest recording"
+                        >
+                          Recording: {err.recordingId}
+                        </span>
+                      )}
+                      {err.documentId && (
+                        <span
+                          style={styles.errorMetaLink}
+                          onClick={() => setSearchTerm(err.documentId)}
+                          title="Filtreaza tabelul dupa acest document"
+                        >
+                          Doc: {err.documentId}
+                        </span>
+                      )}
+                      {err.roomName && (
+                        <span
+                          style={styles.errorMetaLink}
+                          onClick={() => setSearchTerm(err.roomName)}
+                          title="Filtreaza tabelul dupa aceasta camera"
+                        >
+                          Room: {err.roomName}
+                        </span>
+                      )}
+                      {err.errorCode && <span style={styles.errorMetaPlain}>Cod: {err.errorCode}</span>}
+                      {err.errorContext?.responseCode && (
+                        <span style={styles.errorMetaPlain}>SMTP: {err.errorContext.responseCode}</span>
+                      )}
+                      {err.errorContext?.httpStatus && (
+                        <span style={styles.errorMetaPlain}>HTTP: {err.errorContext.httpStatus}</span>
+                      )}
+                      {err.errorContext?.step && (
+                        <span style={styles.errorMetaPlain}>Pas: {err.errorContext.step}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Controls */}
         <div style={styles.controls}>
           <div style={styles.filtersContainer}>
             <div style={styles.filterRow}>
               <input
                 type="text"
-                placeholder="🔍 Caută în pagina curentă (room, document ID, recording ID)..."
+                placeholder="Cauta (room, document ID, recording ID, data)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={styles.searchInput}
               />
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                style={styles.filterSelect}
+              >
+                <option value="all">Toate tipurile</option>
+                <option value="consultation">Consultatii</option>
+                <option value="conference">Conferinte</option>
+                <option value="unknown">Necunoscut</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={styles.filterSelect}
+              >
+                <option value="all">Toate statusurile</option>
+                <option value="finished">Finalizate</option>
+                <option value="processing">In procesare</option>
+              </select>
+              <select
+                value={perPage}
+                onChange={(e) => setPerPage(Number(e.target.value))}
+                style={styles.filterSelect}
+              >
+                <option value={25}>25 / pagina</option>
+                <option value={50}>50 / pagina</option>
+                <option value={100}>100 / pagina</option>
+              </select>
             </div>
             
             <div style={styles.paginationInfo}>
               <span style={styles.paginationText}>
-                📄 Pagină cu {pagination.returned} înregistrări din {pagination.total} total
+                Afisez {filteredRecordings.length} din {recordings.length} incarcate ({pagination.total} total Daily.co)
               </span>
             </div>
           </div>
           
           <button onClick={goToFirstPage} style={styles.refreshButton}>
-            🔄 Prima pagină
+            Reincarca
           </button>
         </div>
 
-        {/* Stats pentru pagina curentă */}
+        {/* Stats */}
         <div style={styles.statsContainer}>
           <div style={styles.statCard}>
+            <span style={styles.statNumber}>{pagination.total}</span>
+            <span style={styles.statLabel}>Total Daily.co</span>
+          </div>
+          <div style={styles.statCard}>
             <span style={styles.statNumber}>{currentPageStats.total}</span>
-            <span style={styles.statLabel}>Pe pagină</span>
+            <span style={styles.statLabel}>Dupa filtre</span>
           </div>
           <div style={styles.statCard}>
             <span style={styles.statNumber}>{currentPageStats.consultations}</span>
-            <span style={styles.statLabel}>Consultații</span>
+            <span style={styles.statLabel}>Consultatii</span>
           </div>
           <div style={styles.statCard}>
             <span style={styles.statNumber}>{currentPageStats.conferences}</span>
-            <span style={styles.statLabel}>Conferințe</span>
+            <span style={styles.statLabel}>Conferinte</span>
           </div>
           <div style={styles.statCard}>
             <span style={styles.statNumber}>{currentPageStats.finished}</span>
@@ -293,7 +565,7 @@ const AdminRecordings = () => {
           </div>
           <div style={styles.statCard}>
             <span style={styles.statNumber}>{currentPageStats.processing}</span>
-            <span style={styles.statLabel}>În procesare</span>
+            <span style={styles.statLabel}>In procesare</span>
           </div>
         </div>
 
@@ -318,7 +590,10 @@ const AdminRecordings = () => {
               </div>
             ) : (
               <div style={styles.recordingsList}>
-                {filteredRecordings.map((recording) => (
+                {filteredRecordings.map((recording) => {
+                  const recordingErrs = getErrorsForRecording(recording);
+                  const cardErrorsExpanded = Boolean(expandedErrorCards[recording.id]);
+                  return (
                   <div key={recording.id} style={styles.recordingCard}>
                     <div style={styles.recordingHeader}>
                       <div style={styles.recordingTitle}>
@@ -338,8 +613,47 @@ const AdminRecordings = () => {
                         }}>
                           {recording.status === 'finished' ? '✅ Finalizat' : '⏳ În procesare'}
                         </span>
+                        {recordingErrs.length > 0 && (
+                          <span
+                            style={styles.errorBadge}
+                            onClick={() => setExpandedErrorCards((prev) => ({
+                              ...prev,
+                              [recording.id]: !prev[recording.id],
+                            }))}
+                            title={recordingErrs[0]?.errorMessage}
+                          >
+                            {recordingErrs.length} {recordingErrs.length === 1 ? 'eroare' : 'erori'} {cardErrorsExpanded ? '▲' : '▼'}
+                          </span>
+                        )}
                       </div>
                     </div>
+
+                    {recordingErrs.length > 0 && cardErrorsExpanded && (
+                      <div style={styles.errorsPanel}>
+                        {recordingErrs.slice(0, 5).map((err) => (
+                          <div key={err.id} style={styles.errorPanelItem}>
+                            <div style={styles.errorPanelHeader}>
+                              <span style={styles.errorSourceBadge}>{err.source}</span>
+                              <span style={styles.errorTimestamp}>{formatErrorTimestamp(err.createdAt)}</span>
+                            </div>
+                            <div style={styles.errorMessage}>{err.errorMessage}</div>
+                            {(err.errorCode || err.errorContext?.responseCode || err.errorContext?.httpStatus) && (
+                              <div style={styles.errorMetaSmall}>
+                                {err.errorCode && <span>Cod: {err.errorCode}</span>}
+                                {err.errorContext?.responseCode && <span>SMTP: {err.errorContext.responseCode}</span>}
+                                {err.errorContext?.httpStatus && <span>HTTP: {err.errorContext.httpStatus}</span>}
+                                {err.errorContext?.step && <span>Pas: {err.errorContext.step}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {recordingErrs.length > 5 && (
+                          <div style={{ fontSize: '12px', color: '#721c24' }}>
+                            +{recordingErrs.length - 5} alte erori (vezi sectiunea de sus)
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     <div style={styles.recordingDetails}>
                       <div style={styles.detailRow}>
@@ -408,7 +722,8 @@ const AdminRecordings = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             
@@ -419,24 +734,24 @@ const AdminRecordings = () => {
                 style={{...styles.paginationButton, opacity: pagination.hasPrevPage ? 1 : 0.5}}
                 disabled={!pagination.hasPrevPage}
               >
-                ⏮️ Prima
+                Prima
               </button>
               <button 
                 onClick={goToPrevPage}
                 style={{...styles.paginationButton, opacity: pagination.hasPrevPage ? 1 : 0.5}}
                 disabled={!pagination.hasPrevPage}
               >
-                ⬅️ Anterioară
+                Anterioara
               </button>
               <span style={styles.paginationText}>
-                📄 Afișez {pagination.returned} din {pagination.total} înregistrări
+                {filteredRecordings.length} afisate / {recordings.length} incarcate / {pagination.total} total
               </span>
               <button 
                 onClick={goToNextPage}
                 style={{...styles.paginationButton, opacity: pagination.hasNextPage ? 1 : 0.5}}
                 disabled={!pagination.hasNextPage}
               >
-                Următoarea ➡️
+                Urmatoarea
               </button>
             </div>
           </div>
@@ -460,7 +775,165 @@ const AdminRecordings = () => {
               
               <div style={styles.modalContent}>
                 <div style={styles.detailsContainer}>
-                  
+
+                  {/* Quick Links */}
+                  <div style={styles.detailsSection}>
+                    <h4>Linkuri rapide</h4>
+                    <div style={styles.quickLinksGrid}>
+                      <button
+                        onClick={() => generateAccessLink(selectedRecordingDetails.id)}
+                        style={styles.quickLinkButton}
+                        disabled={accessLinkLoading === selectedRecordingDetails.id}
+                      >
+                        {accessLinkLoading === selectedRecordingDetails.id
+                          ? 'Se genereaza...'
+                          : 'Genereaza link descarcare 12h'}
+                      </button>
+                      <a
+                        href={`https://dashboard.daily.co/recordings/${selectedRecordingDetails.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.quickLinkAnchor}
+                      >
+                        Deschide in Daily Dashboard
+                      </a>
+                      {selectedRecordingDetails.mtgSessionId && (
+                        <a
+                          href={`https://dashboard.daily.co/sessions/${selectedRecordingDetails.mtgSessionId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={styles.quickLinkAnchor}
+                        >
+                          Sesiune in Daily Dashboard
+                        </a>
+                      )}
+                      <button
+                        onClick={() => copyToClipboard(selectedRecordingDetails.id, 'Recording ID copiat')}
+                        style={styles.quickLinkSecondary}
+                      >
+                        Copiaza Recording ID
+                      </button>
+                      {selectedRecordingDetails.roomName && (
+                        <button
+                          onClick={() => copyToClipboard(selectedRecordingDetails.roomName, 'Room name copiat')}
+                          style={styles.quickLinkSecondary}
+                        >
+                          Copiaza Room Name
+                        </button>
+                      )}
+                      {selectedRecordingDetails.s3key && (
+                        <button
+                          onClick={() => copyToClipboard(selectedRecordingDetails.s3key, 'S3 Key copiat')}
+                          style={styles.quickLinkSecondary}
+                        >
+                          Copiaza S3 Key
+                        </button>
+                      )}
+                    </div>
+
+                    {accessLinkByRecording[selectedRecordingDetails.id] && (
+                      <div style={styles.accessLinkBox}>
+                        <div style={{ fontSize: 13, color: '#155724', marginBottom: 8 }}>
+                          Link generat la {formatErrorTimestamp(accessLinkByRecording[selectedRecordingDetails.id].generatedAt)}
+                          {accessLinkByRecording[selectedRecordingDetails.id].expiresAt && (
+                            <> (expira {formatErrorTimestamp(accessLinkByRecording[selectedRecordingDetails.id].expiresAt)})</>
+                          )}
+                        </div>
+                        <div style={styles.accessLinkRow}>
+                          <code style={styles.accessLinkCode}>
+                            {accessLinkByRecording[selectedRecordingDetails.id].link}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(
+                              accessLinkByRecording[selectedRecordingDetails.id].link,
+                              'Link copiat'
+                            )}
+                            style={styles.quickLinkSecondary}
+                          >
+                            Copiaza
+                          </button>
+                          <a
+                            href={accessLinkByRecording[selectedRecordingDetails.id].link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={styles.quickLinkAnchor}
+                          >
+                            Deschide
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRecordingDetails.tracks?.details?.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <h5 style={{ margin: '8px 0' }}>Track-uri (descarcare individuala):</h5>
+                        <div style={styles.tracksContainer}>
+                          {selectedRecordingDetails.tracks.details.map((track, idx) => (
+                            <div key={idx} style={styles.trackItem}>
+                              <div style={{ marginBottom: 4 }}>
+                                <strong>Track {idx + 1}:</strong> {track.type}
+                                {track.kind && ` (${track.kind})`}
+                                {track.duration ? ` - ${track.duration}s` : ''}
+                              </div>
+                              {track.downloadUrl ? (
+                                <a
+                                  href={track.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={styles.quickLinkAnchor}
+                                >
+                                  Descarca track
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: 12, color: '#666' }}>Fara link direct</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Errors associated with this recording */}
+                  <div style={{
+                    ...styles.detailsSection,
+                    background: (selectedRecordingDetails.errors && selectedRecordingDetails.errors.length > 0) ? '#fff5f5' : '#f8f9fa',
+                    border: (selectedRecordingDetails.errors && selectedRecordingDetails.errors.length > 0) ? '1px solid #f5c6cb' : '1px solid #e9ecef',
+                  }}>
+                    <h4>Erori asociate {(selectedRecordingDetails.errors && selectedRecordingDetails.errors.length > 0) ? `(${selectedRecordingDetails.errors.length})` : ''}</h4>
+                    {(!selectedRecordingDetails.errors || selectedRecordingDetails.errors.length === 0) ? (
+                      <p style={{ color: '#155724', margin: 0 }}>Niciuna - tot OK.</p>
+                    ) : (
+                      <div style={styles.errorsList}>
+                        {selectedRecordingDetails.errors.map((err) => (
+                          <div key={err.id} style={styles.errorItem}>
+                            <div style={styles.errorItemHeader}>
+                              <span style={styles.errorSourceBadge}>{err.source}</span>
+                              <span style={styles.errorTimestamp}>{formatErrorTimestamp(err.createdAt)}</span>
+                              {!err.resolved && (
+                                <button
+                                  onClick={() => markErrorResolved(err.id)}
+                                  style={styles.errorResolveButton}
+                                >
+                                  Marcheaza rezolvat
+                                </button>
+                              )}
+                            </div>
+                            <div style={styles.errorMessage}>{err.errorMessage}</div>
+                            {(err.errorCode || err.errorContext?.responseCode || err.errorContext?.httpStatus || err.errorContext?.step) && (
+                              <div style={styles.errorMetaSmall}>
+                                {err.errorCode && <span>Cod: {err.errorCode}</span>}
+                                {err.errorContext?.responseCode && <span>SMTP: {err.errorContext.responseCode}</span>}
+                                {err.errorContext?.httpStatus && <span>HTTP: {err.errorContext.httpStatus}</span>}
+                                {err.errorContext?.step && <span>Pas: {err.errorContext.step}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Basic Info */}
                   <div style={styles.detailsSection}>
                     <h4>📋 Informații de bază</h4>
@@ -714,12 +1187,75 @@ const AdminRecordings = () => {
           bottom: 20,
           background: toast.type === 'success' ? '#28a745' : toast.type === 'error' ? '#dc3545' : '#17a2b8',
           color: 'white',
-          padding: '12px 16px',
+          padding: '14px 18px',
           borderRadius: 8,
-          boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+          boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+          maxWidth: 480,
+          zIndex: 1100,
         }}>
-          {toast.message}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ flex: 1, lineHeight: 1.4 }}>{toast.message}</div>
+            {toast.persistent && (
+              <button
+                onClick={() => setToast({ visible: false, message: '', type: 'info' })}
+                style={styles.toastCloseButton}
+                aria-label="Inchide"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {toast.persistent && toast.details && (
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  setErrorDetailsPayload(toast.details);
+                  setErrorDetailsModal(true);
+                }}
+                style={styles.toastActionButton}
+              >
+                Vezi detalii
+              </button>
+              <button
+                onClick={() => fetchRecordingErrors()}
+                style={styles.toastActionButton}
+              >
+                Reincarca erorile
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {errorDetailsModal && errorDetailsPayload && (
+        <div style={styles.modalOverlay} onClick={() => setErrorDetailsModal(false)}>
+          <div style={{ ...styles.modal, maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Detalii eroare</h3>
+              <button onClick={() => setErrorDetailsModal(false)} style={styles.closeButton}>✕</button>
+            </div>
+            <div style={styles.modalContent}>
+              <pre style={styles.errorDetailsPre}>
+                {JSON.stringify(errorDetailsPayload, null, 2)}
+              </pre>
+              <div style={styles.modalActions}>
+                <button onClick={() => setErrorDetailsModal(false)} style={styles.cancelButton}>
+                  Inchide
+                </button>
+                <button
+                  onClick={() => copyToClipboard(JSON.stringify(errorDetailsPayload, null, 2), 'JSON copiat')}
+                  style={styles.sendButton}
+                >
+                  Copiaza JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {copyHint && (
+        <div style={styles.copyHint}>{copyHint}</div>
       )}
     </>
   );
@@ -765,38 +1301,12 @@ const styles = {
     alignItems: 'center',
     flexWrap: 'wrap'
   },
-  dateFilters: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    flexWrap: 'wrap'
-  },
-  dateLabel: {
-    fontSize: '14px',
-    color: '#666',
-    fontWeight: 'bold'
-  },
-  dateInput: {
-    padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px'
-  },
-  clearDateButton: {
-    padding: '6px 12px',
-    background: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px'
-  },
   filterSelect: {
     padding: '10px',
     border: '1px solid #ddd',
     borderRadius: '8px',
     fontSize: '14px',
-    minWidth: '200px'
+    minWidth: '160px'
   },
   searchInput: {
     padding: '10px',
@@ -1127,6 +1637,239 @@ const styles = {
     flexDirection: 'column',
     gap: '5px',
     alignItems: 'center'
+  },
+  errorsSection: {
+    background: '#fff5f5',
+    border: '1px solid #f5c6cb',
+    borderRadius: '12px',
+    marginBottom: '20px',
+    overflow: 'hidden',
+  },
+  errorsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '12px 16px',
+    cursor: 'pointer',
+    background: '#f8d7da',
+    color: '#721c24',
+    fontWeight: 'bold',
+  },
+  errorsHeaderTitle: {
+    fontSize: '16px',
+  },
+  errorsHeaderToggle: {
+    fontSize: '12px',
+    fontWeight: 'normal',
+  },
+  errorsList: {
+    padding: '12px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    maxHeight: '400px',
+    overflowY: 'auto',
+  },
+  errorItem: {
+    background: 'white',
+    border: '1px solid #f5c6cb',
+    borderRadius: '8px',
+    padding: '10px 12px',
+  },
+  errorItemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '6px',
+    flexWrap: 'wrap',
+  },
+  errorSourceBadge: {
+    background: '#dc3545',
+    color: 'white',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  errorTimestamp: {
+    fontSize: '12px',
+    color: '#666',
+  },
+  errorResolveButton: {
+    marginLeft: 'auto',
+    background: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '12px',
+    cursor: 'pointer',
+  },
+  errorMessage: {
+    color: '#721c24',
+    fontSize: '14px',
+    fontWeight: '500',
+    wordBreak: 'break-word',
+    marginBottom: '6px',
+  },
+  errorMeta: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    fontSize: '12px',
+  },
+  errorMetaLink: {
+    background: '#f8d7da',
+    color: '#721c24',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
+  errorMetaPlain: {
+    background: '#e9ecef',
+    color: '#495057',
+    padding: '2px 6px',
+    borderRadius: '4px',
+  },
+  errorMetaSmall: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    fontSize: '11px',
+    color: '#6c757d',
+  },
+  errorBadge: {
+    display: 'inline-block',
+    marginLeft: '8px',
+    background: '#dc3545',
+    color: 'white',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+  errorsPanel: {
+    background: '#fff5f5',
+    border: '1px solid #f5c6cb',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    marginBottom: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  errorPanelItem: {
+    background: 'white',
+    border: '1px solid #f1aeb5',
+    borderRadius: '4px',
+    padding: '8px 10px',
+  },
+  errorPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '4px',
+  },
+  errorDetailsPre: {
+    background: '#f8f9fa',
+    border: '1px solid #e9ecef',
+    borderRadius: '6px',
+    padding: '10px',
+    fontSize: '12px',
+    overflowX: 'auto',
+    maxHeight: '300px',
+  },
+  toastCloseButton: {
+    background: 'rgba(255,255,255,0.2)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  toastActionButton: {
+    background: 'rgba(255,255,255,0.25)',
+    color: 'white',
+    border: '1px solid rgba(255,255,255,0.4)',
+    borderRadius: '4px',
+    padding: '6px 12px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  copyHint: {
+    position: 'fixed',
+    top: 20,
+    right: 20,
+    background: '#28a745',
+    color: 'white',
+    padding: '8px 14px',
+    borderRadius: 6,
+    boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+    fontSize: '13px',
+    zIndex: 1200,
+  },
+  quickLinksGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  quickLinkButton: {
+    background: '#667eea',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  },
+  quickLinkAnchor: {
+    background: '#28a745',
+    color: 'white',
+    textDecoration: 'none',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    display: 'inline-block',
+  },
+  quickLinkSecondary: {
+    background: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  accessLinkBox: {
+    marginTop: '12px',
+    background: '#d4edda',
+    border: '1px solid #c3e6cb',
+    borderRadius: '6px',
+    padding: '10px 12px',
+  },
+  accessLinkRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  accessLinkCode: {
+    flex: 1,
+    minWidth: '200px',
+    background: 'white',
+    border: '1px solid #c3e6cb',
+    borderRadius: '4px',
+    padding: '6px 8px',
+    fontSize: '12px',
+    wordBreak: 'break-all',
   }
 };
 

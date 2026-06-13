@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { logRecordingError } from '../../../lib/recordingErrors';
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -13,6 +14,17 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
+
+function detectSessionType(roomName) {
+  if (!roomName) return { sessionType: 'unknown', documentId: null };
+  if (roomName.startsWith('consultation-')) {
+    return { sessionType: 'consultation', documentId: roomName.replace('consultation-', '') };
+  }
+  if (roomName.startsWith('conference-')) {
+    return { sessionType: 'conference', documentId: roomName.replace('conference-', '') };
+  }
+  return { sessionType: 'unknown', documentId: null };
+}
 
 // Helper function to create detailed log
 function logWithDetails(level, message, data = {}) {
@@ -240,11 +252,32 @@ async function handleRecordingReadyToDownload(webhookData) {
             documentId,
             error: emailResult.error
           });
+          await logRecordingError(db, {
+            source: 'webhook',
+            recordingId,
+            documentId,
+            roomName,
+            sessionType: 'consultation',
+            errorMessage: `Webhook -> send-recording-email failed: ${emailResult.error || 'unknown'}`,
+            errorContext: {
+              step: 'consultation-email-send',
+              emailApiStatus: emailResponse.status,
+            },
+          });
         }
       } else {
         logWithDetails('ERROR', 'Cannot send email - no valid download link generated (consultation)', {
           documentId,
           recordingId: recordingId
+        });
+        await logRecordingError(db, {
+          source: 'webhook',
+          recordingId,
+          documentId,
+          roomName,
+          sessionType: 'consultation',
+          errorMessage: 'Cannot send consultation recording email - no valid download link generated',
+          errorContext: { step: 'consultation-no-download-link' },
         });
       }
     } else {
@@ -305,6 +338,19 @@ async function handleRecordingReadyToDownload(webhookData) {
                 participantEmail: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
                 error: result.error || 'unknown'
               });
+              await logRecordingError(db, {
+                source: 'webhook',
+                recordingId,
+                documentId,
+                roomName,
+                sessionType: 'conference',
+                errorMessage: `Webhook -> conference participant email failed: ${result.error || 'unknown'}`,
+                errorContext: {
+                  step: 'conference-email-send',
+                  participantEmailMasked: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
+                  apiStatus: resp.status,
+                },
+              });
             }
           } catch (e) {
             logWithDetails('ERROR', 'Exception sending conference recording email', {
@@ -312,12 +358,33 @@ async function handleRecordingReadyToDownload(webhookData) {
               participantEmail: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
               error: e.message
             });
+            await logRecordingError(db, {
+              source: 'webhook',
+              recordingId,
+              documentId,
+              roomName,
+              sessionType: 'conference',
+              errorMessage: `Webhook conference email exception: ${e.message}`,
+              errorContext: {
+                step: 'conference-email-exception',
+                participantEmailMasked: email.replace(/(.{3}).*(@.*)/, '$1***$2'),
+              },
+            });
           }
         }
       } else if (!downloadLink) {
         logWithDetails('ERROR', 'Cannot send conference emails - no valid download link generated', {
           documentId,
           recordingId: recordingId
+        });
+        await logRecordingError(db, {
+          source: 'webhook',
+          recordingId,
+          documentId,
+          roomName,
+          sessionType: 'conference',
+          errorMessage: 'Cannot send conference emails - no valid download link generated',
+          errorContext: { step: 'conference-no-download-link' },
         });
       }
     }
@@ -427,47 +494,79 @@ async function handleRecordingFinished(webhookData) {
 }
 
 async function handleRecordingError(webhookData) {
+  const roomName = webhookData.room?.name;
+  const recording = webhookData.recording || {};
+  const recordingId = recording.id || null;
+  const { sessionType, documentId } = detectSessionType(roomName);
+  const errorMessage = webhookData.error?.message || webhookData.error?.msg || 'Recording failed';
+  const errorCode = webhookData.error?.code || webhookData.error?.type || null;
+
   try {
     logWithDetails('WARNING', 'Processing recording.error event', {
-      room: webhookData.room?.name,
-      error: webhookData.error
+      room: roomName,
+      recordingId,
+      error: webhookData.error,
     });
 
-    const roomName = webhookData.room?.name;
-    
+    // Always persist the error in the centralized collection (even if we cannot
+    // determine roomName/sessionType - that is exactly the case we want to see).
+    await logRecordingError(db, {
+      source: 'webhook',
+      recordingId,
+      documentId,
+      roomName,
+      sessionType,
+      errorMessage,
+      errorCode,
+      errorContext: {
+        step: 'recording.error-event',
+        rawError: webhookData.error || null,
+        recordingStatus: recording.status || null,
+        webhookType: webhookData.type || null,
+      },
+    });
+
     if (!roomName) {
       logWithDetails('WARNING', 'Missing room name in recording error');
       return;
     }
 
-    // Extract documentId from room name
-    const documentId = roomName.replace('consultation-', '');
-    
-    if (!documentId || documentId === roomName) {
+    if (!documentId) {
       logWithDetails('WARNING', 'Could not extract documentId from room name', { roomName });
       return;
     }
 
-    // Update Firebase with error status
-    const reservationRef = db.collection('RezervariConsultatii').doc(documentId);
-    
-    await reservationRef.update({
+    // Update the appropriate collection (consultation OR conference)
+    const collection = sessionType === 'conference' ? 'ConferinteGrup' : 'RezervariConsultatii';
+    const docRef = db.collection(collection).doc(documentId);
+
+    await docRef.update({
       'recording.status': 'error',
-      'recording.error': webhookData.error?.message || 'Recording failed',
+      'recording.error': errorMessage,
       'recording.errorAt': new Date(),
-      'recording.webhookProcessed': true
+      'recording.webhookProcessed': true,
     });
 
     logWithDetails('SUCCESS', 'Updated Firebase with recording error', {
+      collection,
       documentId,
-      error: webhookData.error?.message
+      error: errorMessage,
     });
-
   } catch (error) {
     logWithDetails('ERROR', 'Error processing recording.error event', {
       error: error.message,
       stack: error.stack,
-      room: webhookData.room?.name
+      room: roomName,
+    });
+    // Best-effort secondary log so the failure of THIS handler is also visible
+    await logRecordingError(db, {
+      source: 'webhook',
+      recordingId,
+      documentId,
+      roomName,
+      sessionType,
+      errorMessage: `recording.error handler crashed: ${error.message}`,
+      errorContext: { step: 'recording.error-handler-crash', stack: error.stack },
     });
   }
 }

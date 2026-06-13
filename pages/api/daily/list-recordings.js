@@ -12,20 +12,21 @@ export default async function handler(req, res) {
 
   try {
     const { 
-      limit = 15,
+      limit = 100,
       starting_after,
       ending_before
     } = req.query;
 
-    console.log('📋 [LIST-RECORDINGS] Fetching recordings from Daily.co with pagination', {
-      limit: parseInt(limit),
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 100);
+
+    console.log('[LIST-RECORDINGS] Fetching recordings from Daily.co', {
+      limit: parsedLimit,
       starting_after,
       ending_before
     });
 
-    // Build query parameters pentru Daily.co pagination
     const queryParams = new URLSearchParams({
-      limit: limit.toString()
+      limit: parsedLimit.toString()
     });
 
     // Daily.co pagination parameters
@@ -138,13 +139,9 @@ export default async function handler(req, res) {
       };
     });
 
-    console.log('✅ [LIST-RECORDINGS] Successfully fetched recordings with pagination:', {
+    console.log('[LIST-RECORDINGS] Successfully fetched recordings:', {
       total: recordingsData.total_count,
       returned: enhancedRecordings.length,
-      consultations: enhancedRecordings.filter(r => r.sessionType === 'consultation').length,
-      conferences: enhancedRecordings.filter(r => r.sessionType === 'conference').length,
-      finished: enhancedRecordings.filter(r => r.status === 'finished').length,
-      processing: enhancedRecordings.filter(r => r.status === 'processing').length,
       hasNextPage: recordingsData.has_next_page,
       hasPrevPage: recordingsData.has_prev_page
     });
@@ -155,10 +152,9 @@ export default async function handler(req, res) {
       pagination: {
         total: recordingsData.total_count,
         returned: enhancedRecordings.length,
-        limit: parseInt(limit),
+        limit: parsedLimit,
         hasNextPage: recordingsData.has_next_page || false,
         hasPrevPage: recordingsData.has_prev_page || false,
-        // Pentru next/prev page navigation
         firstRecordingId: enhancedRecordings.length > 0 ? enhancedRecordings[0].id : null,
         lastRecordingId: enhancedRecordings.length > 0 ? enhancedRecordings[enhancedRecordings.length - 1].id : null
       },

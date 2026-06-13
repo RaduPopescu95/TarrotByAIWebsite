@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { RECORDING_ERRORS_COLLECTION } from '../../../../lib/recordingErrors';
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -208,11 +209,74 @@ async function getRecordingDetails(req, res, recordingId) {
       }
     }
 
+    // Enrich with RecordingErrors (most recent 20)
+    if (adminDb) {
+      try {
+        const queries = [];
+        if (recordingId) {
+          queries.push(
+            adminDb
+              .collection(RECORDING_ERRORS_COLLECTION)
+              .where('recordingId', '==', recordingId)
+              .orderBy('createdAt', 'desc')
+              .limit(20)
+              .get()
+          );
+        }
+        if (documentId) {
+          queries.push(
+            adminDb
+              .collection(RECORDING_ERRORS_COLLECTION)
+              .where('documentId', '==', documentId)
+              .orderBy('createdAt', 'desc')
+              .limit(20)
+              .get()
+          );
+        }
+
+        const snapshots = await Promise.all(queries);
+        const seen = new Set();
+        const collected = [];
+        for (const snap of snapshots) {
+          for (const doc of snap.docs) {
+            if (seen.has(doc.id)) continue;
+            seen.add(doc.id);
+            const data = doc.data();
+            collected.push({
+              id: doc.id,
+              source: data.source || 'unknown',
+              recordingId: data.recordingId || null,
+              documentId: data.documentId || null,
+              roomName: data.roomName || null,
+              sessionType: data.sessionType || 'unknown',
+              errorMessage: data.errorMessage || '',
+              errorCode: data.errorCode || null,
+              errorContext: data.errorContext || {},
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
+              resolved: Boolean(data.resolved),
+            });
+          }
+        }
+        collected.sort((a, b) => {
+          const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+        detailedInfo.errors = collected.slice(0, 20);
+      } catch (errEnrichError) {
+        console.error('[RECORDING-DETAILS] errors enrichment failed:', errEnrichError.message);
+        detailedInfo.errors = [];
+      }
+    } else {
+      detailedInfo.errors = [];
+    }
+
     console.log('✅ [RECORDING-DETAILS] Successfully fetched detailed info:', {
       recordingId,
       hasDetails: true,
       tracksCount: tracksDetails.length,
-      status: recording.status
+      status: recording.status,
+      errorsCount: detailedInfo.errors?.length || 0,
     });
 
     res.status(200).json({
