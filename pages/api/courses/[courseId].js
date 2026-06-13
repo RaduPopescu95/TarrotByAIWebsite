@@ -1,58 +1,11 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
-import { extractVimeoId, isCourseVisible, toSafeCourse } from "../../../lib/courses";
+import { isCourseVisible, toSafeCourse } from "../../../lib/courses";
 import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
-
-const COURSE_MEDIA_COLLECTION = "courseMedia";
-const VIMEO_ID_PATTERN = /^\d+$/;
-
-function normalizeVimeoId(value) {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  if (!normalized || !VIMEO_ID_PATTERN.test(normalized)) return null;
-  return normalized;
-}
-
-function resolvePreviewVimeoId(course, media) {
-  const candidates = [
-    course?.vimeoPreviewVideoId,
-    course?.vimeoId,
-    media?.vimeoId,
-    extractVimeoId(media?.vimeoUrl),
-    extractVimeoId(course?.vimeoUrl),
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeVimeoId(candidate);
-    if (normalized) return normalized;
-  }
-
-  return null;
-}
-
-async function attachPreviewFallbackFromMedia(db, courseId, courseData = {}) {
-  try {
-    const mediaSnap = await db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get();
-    const media = mediaSnap.exists ? mediaSnap.data() : null;
-    const fallbackPreviewVimeoId = resolvePreviewVimeoId(courseData, media);
-    if (!fallbackPreviewVimeoId) return courseData;
-
-    if (typeof courseData.vimeoPreviewVideoId === "string" && courseData.vimeoPreviewVideoId.trim()) {
-      return courseData;
-    }
-
-    return {
-      ...courseData,
-      vimeoPreviewVideoId: fallbackPreviewVimeoId,
-    };
-  } catch (error) {
-    console.warn("[courses.entitlement] preview_media_fallback_failed", {
-      courseId,
-      message: error?.message || "unknown_error",
-    });
-    return courseData;
-  }
-}
+import {
+  withFirestoreCostLog,
+  withFirestoreReadTelemetry,
+} from "../../../lib/firestoreCostLogger";
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "anonymous";
@@ -60,7 +13,7 @@ function maskUid(value) {
   return `${value.slice(0, 3)}...${value.slice(-3)}`;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");
@@ -88,7 +41,14 @@ export default async function handler(req, res) {
         : undefined;
 
     const courseRef = db.collection("courses").doc(courseId);
-    const courseSnap = await courseRef.get();
+    const courseSnap = await withFirestoreCostLog(
+      {
+        page: "api.courses.detail",
+        queryName: "courses.by_id",
+        operationType: "document",
+      },
+      () => courseRef.get()
+    );
 
     if (!courseSnap.exists) {
       console.warn("[courses.entitlement] course_not_found", {
@@ -98,7 +58,7 @@ export default async function handler(req, res) {
     }
 
     const rawCourseData = courseSnap.data() || {};
-    const courseData = await attachPreviewFallbackFromMedia(db, courseId, rawCourseData);
+    const courseData = rawCourseData;
     const isVisible = isCourseVisible(courseData, Date.now());
 
     let purchaseStatus = "none";
@@ -116,12 +76,20 @@ export default async function handler(req, res) {
     const accessSource = entitlement.accessSource;
 
     if (decoded?.uid) {
-      const purchaseSnap = await db
-        .collection("users")
-        .doc(decoded.uid)
-        .collection("purchases")
-        .doc(courseId)
-        .get();
+      const purchaseSnap = await withFirestoreCostLog(
+        {
+          page: "api.courses.detail",
+          queryName: "users.purchases.debug_by_course",
+          operationType: "document",
+        },
+        () =>
+          db
+            .collection("users")
+            .doc(decoded.uid)
+            .collection("purchases")
+            .doc(courseId)
+            .get()
+      );
       const purchaseData = purchaseSnap.exists ? purchaseSnap.data() || {} : {};
       purchaseStatus =
         purchaseSnap.exists && typeof purchaseData.status === "string"
@@ -202,3 +170,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load course" });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/courses/[courseId]", handler);

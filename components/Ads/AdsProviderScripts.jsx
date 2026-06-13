@@ -1,56 +1,14 @@
-import { useEffect } from "react";
-import GoogleAdSenseScript from "./GoogleAdSenseScript";
-import { useRouter } from "next/router";
-import {
-  isAdsenseRouteEligible,
-  isAdsterraEnabled,
-} from "../../lib/ads/config";
-import { useAdsEngagement } from "./useAdsEngagement";
-
+/**
+ * AdSense is now scoped to `/main-dashboard` and is loaded directly from
+ * `MainDashboardTopAd` (with its own 9s + interaction gate). All other public
+ * routes use AdSterra via `AdPlacementShell`. There is therefore no global
+ * AdSense script to manage from `_app.js`, so this provider intentionally
+ * renders nothing.
+ *
+ * Kept as a thin component so existing `<AdsProviderScripts />` mount points
+ * remain stable; if a future route needs global AdSense Auto Ads, re-add the
+ * route-aware loader here.
+ */
 export default function AdsProviderScripts() {
-  const router = useRouter();
-  const pathname = router?.pathname || "/";
-  const routeEligible = isAdsenseRouteEligible(pathname);
-  const adsterraEnabled = isAdsterraEnabled();
-  const adSenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
-  const { shouldShowAds: engagementReady } = useAdsEngagement({
-    routeCheck: isAdsenseRouteEligible,
-  });
-
-  const shouldLoadAdSenseScript =
-    !adsterraEnabled &&
-    engagementReady &&
-    Boolean(adSenseClientId) &&
-    routeEligible;
-
-  const shouldLogAdsDebug = process.env.NODE_ENV === "development";
-
-  useEffect(() => {
-    if (!shouldLogAdsDebug) return;
-    console.info("[ADS] provider", {
-      pathname,
-      adsterraEnabled,
-      routeEligible,
-      shouldLoadAdSenseScript,
-      hasAdSenseClientId: Boolean(adSenseClientId),
-    });
-  }, [
-    shouldLogAdsDebug,
-    pathname,
-    adsterraEnabled,
-    routeEligible,
-    shouldLoadAdSenseScript,
-    adSenseClientId,
-  ]);
-
-  if (adsterraEnabled) {
-    return null;
-  }
-
-  return (
-    <GoogleAdSenseScript
-      clientId={adSenseClientId}
-      shouldLoad={shouldLoadAdSenseScript}
-    />
-  );
+  return null;
 }

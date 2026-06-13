@@ -112,6 +112,7 @@ const dashboardPrefetchScreens = [
   "poza-api",
   "abonati",
   "user-tokens",
+  "analytics",
   "setari",
   "ads-orchestration",
 ];
@@ -567,6 +568,26 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText
                   primary="Tokenuri push"
+                  sx={{ color: "white" }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "analytics",
+                    text: "Firestore Analytics",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Firestore Analytics" ? "#ffc045" : "white",
+                  }}
+                >
+                  <BarChartIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Firestore Analytics"
                   sx={{ color: "white" }}
                 />
               </ListItemButton>

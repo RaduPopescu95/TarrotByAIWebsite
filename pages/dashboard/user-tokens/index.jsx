@@ -18,12 +18,12 @@ const BULK_DELETE_MODES = [
   {
     key: "delete_all_except_selected",
     label: "Șterge tot în afară de selecție",
-    description: "Bifezi tokenurile pe care le păstrezi, toate celelalte rezultate filtrate vor fi șterse.",
+    description: "Bifezi tokenurile pe care le păstrezi, apoi rulezi preview și confirmi ștergerea restului colecției.",
   },
   {
     key: "delete_selected",
     label: "Șterge doar selecția",
-    description: "Șterge doar tokenurile bifate care încă se potrivesc filtrelor curente.",
+    description: "Bifezi tokenurile pe care vrei să le ștergi, apoi rulezi preview și confirmi ștergerea.",
   },
 ];
 
@@ -290,6 +290,14 @@ function UserTokensScreen() {
   const activeMode = BULK_DELETE_MODES.find((mode) => mode.key === selectionMode) || BULK_DELETE_MODES[0];
   const previewPrimaryLabel =
     selectionMode === "delete_all_except_selected" ? "Tokenuri în colecție" : "Rezultate preview";
+  const previewActionLabel =
+    selectionMode === "delete_all_except_selected"
+      ? "Preview: șterge restul colecției"
+      : "Preview: șterge selecția";
+  const confirmActionLabel =
+    selectionMode === "delete_all_except_selected"
+      ? "Confirmă: șterge restul colecției"
+      : "Confirmă: șterge selecția";
   const thCls =
     "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap";
   const tdCls = "px-4 py-3 text-sm text-slate-800 whitespace-nowrap";
@@ -620,13 +628,15 @@ function UserTokensScreen() {
                   key={mode.key}
                   type="button"
                   onClick={() => setSelectionMode(mode.key)}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                     selectionMode === mode.key
-                      ? "bg-red-600 text-white"
-                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "border-red-600 bg-red-50 text-red-700"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
+                  aria-pressed={selectionMode === mode.key}
                 >
                   {mode.label}
+                  {selectionMode === mode.key ? " (activ)" : ""}
                 </button>
               ))}
             </div>
@@ -666,7 +676,7 @@ function UserTokensScreen() {
               disabled={previewLoading || loading}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
             >
-              {previewLoading ? "Calculez preview…" : "Preview ștergere"}
+              {previewLoading ? "Calculez preview…" : previewActionLabel}
             </button>
             <button
               type="button"
@@ -682,16 +692,16 @@ function UserTokensScreen() {
               }
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50"
             >
-              Confirmă ștergerea
+              {confirmActionLabel}
             </button>
             {selectionMode === "delete_all_except_selected" ? (
               <p className="text-sm text-slate-600">
-                În acest mod, filtrele te ajută să găsești tokenurile de păstrat, iar toate celelalte
-                tokenuri din colecție devin candidate la ștergere.
+                Pas 1: bifezi tokenurile de păstrat. Pas 2: rulezi preview. Pas 3: confirmi ștergerea
+                tuturor celorlalte tokenuri din colecție.
               </p>
             ) : (
               <p className="text-sm text-slate-600">
-                În acest mod, doar tokenurile bifate și încă potrivite filtrelor vor fi șterse.
+                Pas 1: bifezi tokenurile de șters. Pas 2: rulezi preview. Pas 3: confirmi ștergerea.
               </p>
             )}
           </div>

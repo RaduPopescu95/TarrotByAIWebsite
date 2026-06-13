@@ -5,6 +5,10 @@ import {
   isCourseFreeFullAccess,
   resolveCourseEntitlement,
 } from "../../../../lib/courseSubscriptionAccess";
+import {
+  withFirestoreCostLog,
+  withFirestoreReadTelemetry,
+} from "../../../../lib/firestoreCostLogger";
 
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 
@@ -14,7 +18,7 @@ function maskUid(value) {
   return `${value.slice(0, 3)}...${value.slice(-3)}`;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");
@@ -41,7 +45,14 @@ export default async function handler(req, res) {
   try {
     const db = getAdminDb();
 
-    const courseSnap = await db.collection("courses").doc(courseId).get();
+    const courseSnap = await withFirestoreCostLog(
+      {
+        page: "api.courses.playback",
+        queryName: "courses.by_id",
+        operationType: "document",
+      },
+      () => db.collection("courses").doc(courseId).get()
+    );
     if (!courseSnap.exists) {
       console.warn("[courses.entitlement] playback_course_not_found", {
         courseId,
@@ -67,7 +78,14 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "No active entitlement for this course" });
     }
 
-    const mediaSnap = await db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get();
+    const mediaSnap = await withFirestoreCostLog(
+      {
+        page: "api.courses.playback",
+        queryName: "courseMedia.by_course",
+        operationType: "document",
+      },
+      () => db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get()
+    );
 
     const mediaData = mediaSnap.exists ? mediaSnap.data() : null;
     const vimeoUrl =
@@ -99,3 +117,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load playback source" });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/courses/[courseId]/playback", handler);

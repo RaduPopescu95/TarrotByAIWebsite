@@ -7,12 +7,13 @@ import {
   normalizeHomeLimit,
 } from "../../../lib/loadContentHome";
 import { getOptionalAuth } from "../../../lib/requireAuth";
+import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 
 function buildRequestId() {
   return `content_home_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const requestId = buildRequestId();
   res.setHeader("X-Request-Id", requestId);
 
@@ -68,3 +69,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load home content", requestId });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/content/home", handler);

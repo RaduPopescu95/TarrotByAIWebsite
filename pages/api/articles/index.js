@@ -1,6 +1,7 @@
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { loadPublicArticles, parseArticleLimit } from "../../../lib/publicArticles";
 import { readSingleQueryValue } from "../../../lib/courses";
+import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 
 // Direct Firestore reads with in-memory cache - simpler and more reliable
 export const config = {
@@ -11,7 +12,7 @@ function buildRequestId() {
   return `articles_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const requestId = buildRequestId();
   res.setHeader("X-Request-Id", requestId);
 
@@ -73,3 +74,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load articles", requestId });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/articles", handler);

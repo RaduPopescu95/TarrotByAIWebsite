@@ -56,7 +56,7 @@ Users without the key will see a maintenance message and will be prevented from 
 
 ## Ads orchestration (Adsterra Native Banner)
 
-Primary monetization uses discrete Adsterra Native Banner slots on public pages (see `lib/ads/config.js` allowlist). AdSense Auto Ads is disabled when `NEXT_PUBLIC_ENABLE_ADSTERRA=true`.
+Primary monetization uses discrete Adsterra Native Banner slots on public pages (see `lib/ads/config.js` allowlist). AdSense runs in parallel on `/main-dashboard` only (manual `MainDashboardTopAd` + Auto Ads gate); the two providers no longer share routes, so they coexist without the global `NEXT_PUBLIC_ENABLE_ADSTERRA` mutex.
 
 - Route policy: `lib/ads/config.js`
 - Slots: `components/Ads/AdPlacementShell.jsx` + `AdsterraSlot.jsx`

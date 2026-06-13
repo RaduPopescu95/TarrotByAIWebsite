@@ -1,33 +1,10 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
-import { extractVimeoId, resolveDate, toSafeCourse } from "../../../lib/courses";
-
-const COURSE_MEDIA_COLLECTION = "courseMedia";
-const VIMEO_ID_PATTERN = /^\d+$/;
-
-function normalizeVimeoId(value) {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  if (!normalized || !VIMEO_ID_PATTERN.test(normalized)) return null;
-  return normalized;
-}
-
-function resolvePreviewVimeoId(course, media) {
-  const candidates = [
-    course?.vimeoPreviewVideoId,
-    course?.vimeoId,
-    media?.vimeoId,
-    extractVimeoId(media?.vimeoUrl),
-    extractVimeoId(course?.vimeoUrl),
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeVimeoId(candidate);
-    if (normalized) return normalized;
-  }
-
-  return null;
-}
+import { resolveDate, toSafeCourse } from "../../../lib/courses";
+import {
+  withFirestoreCostLog,
+  withFirestoreReadTelemetry,
+} from "../../../lib/firestoreCostLogger";
 
 function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
@@ -46,7 +23,7 @@ function getPurchaseSortMs(purchase) {
   return resolveDate(purchase?.updatedAt)?.getTime() || 0;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");
@@ -78,19 +55,27 @@ export default async function handler(req, res) {
 
   try {
     const db = getAdminDb();
-    const purchasesSnap = await db
-      .collection("users")
-      .doc(authUser.uid)
-      .collection("purchases")
-      .where("status", "==", "paid")
-      .get();
+    const purchasesSnap = await withFirestoreCostLog(
+      { page: "api.courses.purchased", queryName: "users.purchases.paid" },
+      () =>
+        db
+          .collection("users")
+          .doc(authUser.uid)
+          .collection("purchases")
+          .where("status", "==", "paid")
+          .get()
+    );
 
     if (purchasesSnap.empty) {
-      const allPurchasesSnap = await db
-        .collection("users")
-        .doc(authUser.uid)
-        .collection("purchases")
-        .get();
+      const allPurchasesSnap = await withFirestoreCostLog(
+        { page: "api.courses.purchased", queryName: "users.purchases.debug_all" },
+        () =>
+          db
+            .collection("users")
+            .doc(authUser.uid)
+            .collection("purchases")
+            .get()
+      );
       const purchaseStatuses = allPurchasesSnap.docs.map((docSnap) => {
         const data = docSnap.data() || {};
         return {
@@ -136,31 +121,22 @@ export default async function handler(req, res) {
       .sort((left, right) => getPurchaseSortMs(right) - getPurchaseSortMs(left));
 
     const courseSnaps = await Promise.all(
-      purchases.map((purchase) => db.collection("courses").doc(purchase.courseId).get())
+      purchases.map((purchase) =>
+        withFirestoreCostLog(
+          {
+            page: "api.courses.purchased",
+            queryName: "courses.by_purchased_id",
+            operationType: "document",
+          },
+          () => db.collection("courses").doc(purchase.courseId).get()
+        )
+      )
     );
-    const mediaSnaps = await Promise.all(
-      purchases.map((purchase) => db.collection(COURSE_MEDIA_COLLECTION).doc(purchase.courseId).get())
-    );
-
     const payload = purchases.map((purchase, index) => {
       const courseSnap = courseSnaps[index];
-      const mediaSnap = mediaSnaps[index];
       const purchasedAt = purchase.purchasedAt || purchase.updatedAt;
       const courseMissing = !courseSnap.exists;
       const courseData = courseMissing ? null : courseSnap.data() || {};
-      const media = mediaSnap?.exists ? mediaSnap.data() : null;
-      const fallbackPreviewVimeoId = resolvePreviewVimeoId(courseData, media);
-      const courseForResponse =
-        courseMissing || !courseData
-          ? null
-          : {
-              ...courseData,
-              ...(typeof courseData.vimeoPreviewVideoId === "string" && courseData.vimeoPreviewVideoId.trim()
-                ? {}
-                : fallbackPreviewVimeoId
-                ? { vimeoPreviewVideoId: fallbackPreviewVimeoId }
-                : {}),
-            };
 
       return {
         courseId: purchase.courseId,
@@ -169,7 +145,7 @@ export default async function handler(req, res) {
         amountPaid: purchase.amountPaid,
         currency: purchase.currency,
         courseMissing,
-        course: courseForResponse ? toSafeCourse(purchase.courseId, courseForResponse, locale) : null,
+        course: courseData ? toSafeCourse(purchase.courseId, courseData, locale) : null,
       };
     });
 
@@ -187,3 +163,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load purchased courses" });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/courses/purchased", handler);

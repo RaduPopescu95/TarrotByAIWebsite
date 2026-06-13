@@ -5,6 +5,7 @@ import {
   getPublicTarotStorageKey,
 } from "../../../lib/loadPublicTarotData";
 import { logRtdbMetric } from "../../../utils/realtimeMetrics";
+import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 
 const CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
 
@@ -21,7 +22,7 @@ function buildStaleBulkPayload() {
   return datasets;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -59,3 +60,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/public-tarot-data/all", handler);

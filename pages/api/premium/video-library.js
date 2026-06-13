@@ -12,6 +12,7 @@ import {
   buildClientAccessDebug,
 } from "../../../lib/premiumVideoAccessAudit";
 import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
+import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 
 function buildRequestId() {
   return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -29,7 +30,7 @@ const getNextPublishAtMs = (rows, nowMs) => {
   return nextValue;
 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const requestId = buildRequestId();
   res.setHeader("X-Request-Id", requestId);
 
@@ -151,3 +152,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to load video library", requestId });
   }
 }
+
+export default withFirestoreReadTelemetry("/api/premium/video-library", handler);
