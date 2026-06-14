@@ -20,6 +20,10 @@ export default function GoogleAdSenseScript({ clientId, shouldLoad }) {
     script.async = true;
     script.crossOrigin = "anonymous";
     script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      window.dispatchEvent(new Event("adsense-script-loaded"));
+    };
     document.head.appendChild(script);
     if (shouldLogAdsDebug) {
       console.info("[ADS] google-adsense script loaded", { clientId });

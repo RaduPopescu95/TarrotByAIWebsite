@@ -74,43 +74,11 @@ const MediaCardConstantService = ({ item }) => {
   );
 };
 
-const MAIN_DASHBOARD_ADSENSE_DELAY_MS = 9000;
-const MAIN_DASHBOARD_ADSENSE_STORAGE_KEY = "main-dashboard-adsense-requested";
-
 function MainDashboardTopAd() {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
   const slotId =
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID || "";
-  const [hasInteraction, setHasInteraction] = React.useState(false);
-  const [delayPassed, setDelayPassed] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const markInteraction = () => {
-      setHasInteraction(true);
-    };
-
-    window.addEventListener("scroll", markInteraction, { passive: true, once: true });
-    window.addEventListener("pointerdown", markInteraction, { passive: true, once: true });
-    window.addEventListener("keydown", markInteraction, { once: true });
-
-    return () => {
-      window.removeEventListener("scroll", markInteraction);
-      window.removeEventListener("pointerdown", markInteraction);
-      window.removeEventListener("keydown", markInteraction);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDelayPassed(true);
-    }, MAIN_DASHBOARD_ADSENSE_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  const canRequestAd = Boolean(clientId && slotId && hasInteraction && delayPassed);
+  const canRequestAd = Boolean(clientId && slotId);
 
   return (
     <>
@@ -122,7 +90,6 @@ function MainDashboardTopAd() {
             <GoogleAdSenseBanner
               slot={slotId}
               shouldRequest={canRequestAd}
-              requestStorageKey={MAIN_DASHBOARD_ADSENSE_STORAGE_KEY}
               className="mx-auto w-full"
               style={styles.adIns}
             />

@@ -20,25 +20,45 @@ export default function GoogleAdSenseBanner({
       hasRequestedAd.current ||
       typeof window === "undefined"
     ) {
-      return;
+      return undefined;
     }
+
+    const pushAd = () => {
+      if (hasRequestedAd.current) return;
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        hasRequestedAd.current = true;
+        if (requestStorageKey) {
+          window.sessionStorage.setItem(requestStorageKey, "requested");
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.info("[ADSENSE] push skipped", error);
+        }
+      }
+    };
 
     if (requestStorageKey && window.sessionStorage.getItem(requestStorageKey) === "requested") {
       hasRequestedAd.current = true;
-      return;
+      return undefined;
     }
 
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-      hasRequestedAd.current = true;
-      if (requestStorageKey) {
-        window.sessionStorage.setItem(requestStorageKey, "requested");
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.info("[ADSENSE_MAIN_DASHBOARD] push skipped", error);
-      }
+    const script = document.getElementById("google-adsense");
+    if (script?.dataset.loaded === "true") {
+      pushAd();
+      return undefined;
     }
+
+    const onScriptLoaded = () => pushAd();
+    window.addEventListener("adsense-script-loaded", onScriptLoaded);
+
+    if (script) {
+      script.addEventListener("load", onScriptLoaded, { once: true });
+    }
+
+    return () => {
+      window.removeEventListener("adsense-script-loaded", onScriptLoaded);
+    };
   }, [clientId, requestStorageKey, shouldRequest, slot]);
 
   if (!clientId || !slot) {
