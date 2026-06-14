@@ -576,7 +576,6 @@ export default function VideoLibraryPage() {
                         );
                       })}
                       </div>
-                      <VideotecaAdBanner />
                       {showPagination ? (
                         <nav
                           aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
@@ -611,7 +610,6 @@ export default function VideoLibraryPage() {
                           </div>
                         </nav>
                       ) : null}
-                      <VideotecaAdBanner />
                     </>
                   )}
                 </>
