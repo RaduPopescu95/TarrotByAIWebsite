@@ -37,6 +37,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AdsClickIcon from "@mui/icons-material/AdsClick";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -113,6 +114,7 @@ const dashboardPrefetchScreens = [
   "abonati",
   "user-tokens",
   "analytics",
+  "astrograme-pdf",
   "setari",
   "ads-orchestration",
 ];
@@ -650,6 +652,26 @@ export default function CustomDrawer(props) {
                   <QueryBuilderIcon />
                 </ListItemIcon>
                 <ListItemText primary="Ore norocoase" sx={{ color: "white" }} />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() =>
+                  handleSelectedItem({
+                    screen: "astrograme-pdf",
+                    text: "Astrograme PDF",
+                  })
+                }
+              >
+                <ListItemIcon
+                  sx={{
+                    color: selectedItem === "Astrograme PDF" ? "#ffc045" : "white",
+                  }}
+                >
+                  <PictureAsPdfIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Astrograme PDF"
+                  sx={{ color: "white" }}
+                />
               </ListItemButton>
               {/* <ListItemButton
                 onClick={() =>

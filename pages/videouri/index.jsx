@@ -9,7 +9,8 @@ import Footer from "../../components/Footer";
 import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
-import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
+import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../lib/videoLibraryClientUtils";
+import VideoAppOnlyCta from "../../components/VideoLibrary/VideoAppOnlyCta";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
@@ -215,6 +216,10 @@ export default function VideoLibraryPage() {
 
   const handleVideoIntent = useCallback(
     (v) => {
+      if (isVideoAppOnlyLocked(v)) {
+        router.push(`/videouri/${v.id}`);
+        return;
+      }
       if (isVideoPlayableForUser(v, userData)) {
         router.push(`/videouri/${v.id}`);
         return;
@@ -300,7 +305,7 @@ export default function VideoLibraryPage() {
               : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
-          {t("videoLibraryAccessChipFree")}
+          {t("videoLibraryAccessChipAppOnly")}
         </button>
         <button
           type="button"
@@ -457,9 +462,11 @@ export default function VideoLibraryPage() {
                           typeof v.durationSeconds === "number"
                             ? formatDuration(v.durationSeconds, "")
                             : "";
-                        const accessLabel = !v.isPremium
-                          ? t("videoLibraryBadgeFree")
-                          : t("videoLibraryBadgeSubscriber");
+                        const accessLabel = isVideoAppOnlyLocked(v)
+                          ? t("videoLibraryAppOnlyBadge")
+                          : !v.isPremium
+                            ? t("videoLibraryBadgeFree")
+                            : t("videoLibraryBadgeSubscriber");
 
                         return (
                           <article key={v.id} className="group flex flex-col">
@@ -521,6 +528,16 @@ export default function VideoLibraryPage() {
                                   <p className="max-w-[12rem] text-xs font-medium text-amber-50">
                                     {t("videoLibrarySourceMissing")}
                                   </p>
+                                </div>
+                              )}
+                              {isVideoAppOnlyLocked(v) && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/60 px-3 text-center backdrop-blur-[1px]">
+                                  <p className="max-w-[12rem] text-xs font-semibold text-white">
+                                    {t("videoLibraryAppOnlyBadge")}
+                                  </p>
+                                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-900">
+                                    {t("videoLibraryAppOnlyViewDetails")}
+                                  </span>
                                 </div>
                               )}
                               {isVideoPlayableForUser(v, userData) && (

@@ -61,6 +61,10 @@ async function handler(req, res) {
       "ro"
     );
 
+    const clientRaw = readSingleQueryValue(req.query.client);
+    const webClient =
+      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
+
     const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
     let premiumActive = false;
     let accessExplain = null;
@@ -99,7 +103,7 @@ async function handler(req, res) {
       return res.status(404).json({ error: "Not found" });
     }
 
-    const ctx = { locale, premiumActive };
+    const ctx = { locale, premiumActive, webClient };
     const video = mapVideoRowToPublicDto(targetRow, ctx);
 
     const catTrim = typeof video.category === "string" ? video.category.trim() : "";

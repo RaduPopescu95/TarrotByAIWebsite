@@ -10,7 +10,8 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
-import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
+import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../lib/videoLibraryClientUtils";
+import VideoAppOnlyCta from "../../components/VideoLibrary/VideoAppOnlyCta";
 import { LANGUAGE_LABELS } from "../../data/constants";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
@@ -296,7 +297,10 @@ export default function VideoDetailPage() {
                               {t("videoLibrarySourceMissing")}
                             </p>
                           ) : null}
-                          {video.lockedReason !== "source_invalid" ? (
+                          {isVideoAppOnlyLocked(video) ? (
+                            <VideoAppOnlyCta />
+                          ) : null}
+                          {video.lockedReason !== "source_invalid" && !isVideoAppOnlyLocked(video) ? (
                             <div className="flex flex-wrap justify-center gap-2">
                               <button
                                 type="button"
@@ -347,7 +351,11 @@ export default function VideoDetailPage() {
                   <p className="mt-2 text-sm text-slate-600">
                     {[
                       channelName,
-                      !video.isPremium ? t("videoLibraryBadgeFree") : t("videoLibraryBadgeSubscriber"),
+                      !video.isPremium
+                        ? isVideoAppOnlyLocked(video)
+                          ? t("videoLibraryAppOnlyBadge")
+                          : t("videoLibraryBadgeFree")
+                        : t("videoLibraryBadgeSubscriber"),
                       typeof video.category === "string" && video.category.trim() ? video.category.trim() : null,
                       typeof video.durationSeconds === "number"
                         ? formatDuration(video.durationSeconds, "")

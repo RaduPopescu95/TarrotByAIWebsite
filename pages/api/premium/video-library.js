@@ -52,6 +52,10 @@ async function handler(req, res) {
     const scopeRaw = readSingleQueryValue(req.query.scope);
     const premiumSpotlightOnly = scopeRaw === "premium_zone";
 
+    const clientRaw = readSingleQueryValue(req.query.client);
+    const webClient =
+      typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
+
     const hasAuthHeader =
       typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
     const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
@@ -85,6 +89,7 @@ async function handler(req, res) {
         locale,
         premiumActive,
         premiumSpotlightOnly,
+        webClient,
       }),
       loadPremiumVideoLibraryRows(),
     ]);

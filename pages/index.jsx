@@ -22,6 +22,7 @@ import { buildArticleHref } from "../utils/commonUtils";
 import Footer from "../components/Footer";
 import PublicVideoThumbnail from "../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../components/VideoLibrary/VideoPremiumThumbBadge";
+import { isVideoAppOnlyLocked } from "../lib/videoLibraryClientUtils";
 import CourseCard from "../components/Courses/CourseCard";
 import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { loadContentHome } from "../lib/loadContentHome";
@@ -174,6 +175,10 @@ function Landing(props) {
   const router = useRouter();
 
   const handleHomeVideoIntent = (v) => {
+    if (isVideoAppOnlyLocked(v)) {
+      router.push(`/videouri/${v.id}`);
+      return;
+    }
     if (v.canPlay && v.embedSrc) {
       router.push(`/videouri/${v.id}`);
       return;
@@ -701,9 +706,11 @@ function Landing(props) {
                         typeof v.durationSeconds === "number"
                           ? formatVideoDuration(v.durationSeconds, "")
                           : "";
-                      const accessLabel = !v.isPremium
-                        ? t("videoLibraryBadgeFree")
-                        : t("videoLibraryBadgeSubscriber");
+                      const accessLabel = isVideoAppOnlyLocked(v)
+                        ? t("videoLibraryAppOnlyBadge")
+                        : !v.isPremium
+                          ? t("videoLibraryBadgeFree")
+                          : t("videoLibraryBadgeSubscriber");
                       return (
                         <article key={v.id} className="group flex flex-col">
                           <button
@@ -757,6 +764,16 @@ function Landing(props) {
                                 <p className="max-w-[12rem] text-xs font-medium text-amber-50">
                                   {t("videoLibrarySourceMissing")}
                                 </p>
+                              </div>
+                            )}
+                            {isVideoAppOnlyLocked(v) && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/60 px-3 text-center backdrop-blur-[1px]">
+                                <p className="max-w-[12rem] text-xs font-semibold text-white">
+                                  {t("videoLibraryAppOnlyBadge")}
+                                </p>
+                                <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-900">
+                                  {t("videoLibraryAppOnlyViewDetails")}
+                                </span>
                               </div>
                             )}
                             {v.canPlay && v.embedSrc && (
