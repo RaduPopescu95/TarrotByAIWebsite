@@ -1,42 +1,12 @@
 import { buildPublicCacheControl } from "../../../lib/httpCache";
-import { getAdminDb } from "../../../lib/firebaseAdmin";
-import {
-  withFirestoreCostLog,
-  withFirestoreReadTelemetry,
-} from "../../../lib/firestoreCostLogger";
+import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
+import { loadVisibleCourseCandidates } from "../../../lib/coursesCache";
 import {
   isCourseVisible,
   parseQueryBoolean,
   readSingleQueryValue,
   toSafeCourse,
 } from "../../../lib/courses";
-
-async function fetchCourseCandidates(db) {
-  try {
-    const snapshot = await withFirestoreCostLog(
-      { page: "api.courses.list", queryName: "courses.visible_by_updated" },
-      () =>
-        db
-          .collection("courses")
-          .where("status", "in", ["published", "scheduled"])
-          .orderBy("updatedAt", "desc")
-          .get()
-    );
-
-    return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-  } catch (error) {
-    console.warn("[courses.list] list_query_fallback", {
-      message: error?.message || "unknown_error",
-    });
-    const fallbackSnapshot = await withFirestoreCostLog(
-      { page: "api.courses.list", queryName: "courses.updated_fallback" },
-      () => db.collection("courses").orderBy("updatedAt", "desc").get()
-    );
-    return fallbackSnapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter((course) => course.status === "published" || course.status === "scheduled");
-  }
-}
 
 async function handler(req, res) {
   if (req.method !== "GET") {
@@ -45,12 +15,15 @@ async function handler(req, res) {
   }
 
   try {
-    const db = getAdminDb();
     const locale = readSingleQueryValue(req.query?.locale);
     const featuredOnly = parseQueryBoolean(req.query?.featuredOnly);
 
     const nowMs = Date.now();
-    const filteredCourses = (await fetchCourseCandidates(db))
+    const candidates = await loadVisibleCourseCandidates({
+      page: "api.courses.list",
+      queryName: "courses.visible_by_updated",
+    });
+    const filteredCourses = candidates
       .filter((course) => isCourseVisible(course, nowMs))
       .filter((course) => {
         if (featuredOnly === null) return true;
