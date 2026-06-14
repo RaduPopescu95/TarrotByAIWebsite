@@ -11,7 +11,8 @@ import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumTh
 import { useAuth } from "../../context/AuthContext";
 import { isVideoPlayableForUser } from "../../lib/videoLibraryClientUtils";
 import { resolveUiLocale } from "../../lib/siteLocales";
-import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
+import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -55,6 +56,31 @@ function VideoLibrarySkeletonGrid({ loadingLabel }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function VideotecaAdBanner() {
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const slotId =
+    process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_VIDEOTECA_SLOT_ID ||
+    process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID ||
+    "";
+  const canRequestAd = Boolean(clientId && slotId);
+
+  return (
+    <div className="my-6 flex justify-center">
+      <div className="w-full max-w-[860px] rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+        <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          Publicitate
+        </p>
+        <GoogleAdSenseBanner
+          slot={slotId}
+          shouldRequest={canRequestAd}
+          className="mx-auto w-full"
+          style={{ minHeight: "120px", width: "100%" }}
+        />
+      </div>
     </div>
   );
 }
@@ -291,8 +317,14 @@ export default function VideoLibraryPage() {
     </>
   );
 
+  const adsenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+
   return (
     <>
+      <GoogleAdSenseScript
+        clientId={adsenseClientId}
+        shouldLoad={Boolean(adsenseClientId)}
+      />
       <Head>
         <title>{t("videoLibrarySeoTitle")}</title>
         <meta name="description" content={t("videoLibrarySeoDesc")} />
@@ -411,7 +443,7 @@ export default function VideoLibraryPage() {
                       {accessFilterControls}
                     </div>
                   </div>
-                  <AdPlacementShell placementId="banner1" />
+                  <VideotecaAdBanner />
                   {filteredVideos.length === 0 ? (
                     <p className="py-12 text-center text-slate-600">
                       {normalizedSearch ? t("videoLibrarySearchNoResults") : t("videoLibraryFilteredEmpty")}
@@ -544,7 +576,7 @@ export default function VideoLibraryPage() {
                         );
                       })}
                       </div>
-                      <AdPlacementShell placementId="banner2" />
+                      <VideotecaAdBanner />
                       {showPagination ? (
                         <nav
                           aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
@@ -579,7 +611,7 @@ export default function VideoLibraryPage() {
                           </div>
                         </nav>
                       ) : null}
-                      <AdPlacementShell placementId="banner3" />
+                      <VideotecaAdBanner />
                     </>
                   )}
                 </>
