@@ -11,9 +11,65 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { LANGUAGE_LABELS } from "../../data/constants";
+import { SITE_LOCALES } from "../../lib/siteLocales";
 import { gTranslateFetch } from "../../utils/apiUtils";
 
 const DEFAULT_CURRENCY = "RON";
+
+const PLATFORM_OPTIONS = [
+  { value: "youtube", label: "YouTube" },
+  { value: "vimeo", label: "Vimeo" },
+  { value: "bunny", label: "Bunny Stream" },
+];
+
+function normalizePlatform(value) {
+  if (value === "youtube" || value === "vimeo" || value === "bunny") return value;
+  return "vimeo";
+}
+
+function getVideoUrlLabel(platform) {
+  if (platform === "bunny") return "URL Bunny Stream";
+  if (platform === "youtube") return "Link YouTube";
+  return "URL Vimeo";
+}
+
+function getVideoUrlPlaceholder(platform) {
+  if (platform === "bunny") {
+    return "https://iframe.mediadelivery.net/embed/{libraryId}/{videoId}";
+  }
+  if (platform === "youtube") {
+    return "https://www.youtube.com/watch?v=...";
+  }
+  return "https://vimeo.com/123456789";
+}
+
+function resolveInitialVideoUrl(initialValue) {
+  if (typeof initialValue?.videoUrl === "string" && initialValue.videoUrl.trim()) {
+    return initialValue.videoUrl.trim();
+  }
+  if (typeof initialValue?.vimeoUrl === "string" && initialValue.vimeoUrl.trim()) {
+    return initialValue.vimeoUrl.trim();
+  }
+  return "";
+}
+
+function resolveInitialLocaleVideoUrls(initialValue) {
+  const fromInitial = initialValue?.localeVideoUrls || initialValue?.localeVimeoUrls;
+  if (fromInitial && typeof fromInitial === "object" && !Array.isArray(fromInitial)) {
+    return { ...fromInitial };
+  }
+  const roUrl = resolveInitialVideoUrl(initialValue);
+  return roUrl ? { ro: roUrl } : {};
+}
+
+function resolveCategoryLabel(category) {
+  if (!category || typeof category !== "object") return "";
+  const locales = category.locales;
+  if (locales && typeof locales.ro === "string" && locales.ro.trim()) {
+    return locales.ro.trim();
+  }
+  return typeof category.name === "string" ? category.name.trim() : "";
+}
 
 function resolveDate(value) {
   if (!value) return null;
@@ -119,6 +175,8 @@ const GENERAL_ERROR_FIELDS = [
   "title",
   "description",
   "vimeoUrl",
+  "videoUrl",
+  "platform",
   "price",
   "currency",
   "status",
@@ -166,7 +224,9 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
   const [form, setForm] = useState(() => ({
     title: initialValue?.title || "",
     description: initialValue?.description || "",
-    vimeoUrl: initialValue?.vimeoUrl || "",
+    platform: normalizePlatform(initialValue?.platform),
+    vimeoUrl: resolveInitialVideoUrl(initialValue),
+    thumbnailUrl: typeof initialValue?.thumbnailUrl === "string" ? initialValue.thumbnailUrl : "",
     price: initialValue?.price ?? "",
     currency: initialValue?.currency || DEFAULT_CURRENCY,
     status: initialValue?.status || "draft",
@@ -181,6 +241,9 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
   }));
   const [errors, setErrors] = useState({});
   const [locales, setLocales] = useState(initialValue?.locales);
+  const [localeVimeoUrls, setLocaleVimeoUrls] = useState(() => resolveInitialLocaleVideoUrls(initialValue));
+  const [editingLocale, setEditingLocale] = useState(null);
+  const [editLocaleDraft, setEditLocaleDraft] = useState({ title: "", description: "" });
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateMessage, setTranslateMessage] = useState("");
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
@@ -190,7 +253,9 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     setForm({
       title: initialValue?.title || "",
       description: initialValue?.description || "",
-      vimeoUrl: initialValue?.vimeoUrl || "",
+      platform: normalizePlatform(initialValue?.platform),
+      vimeoUrl: resolveInitialVideoUrl(initialValue),
+      thumbnailUrl: typeof initialValue?.thumbnailUrl === "string" ? initialValue.thumbnailUrl : "",
       price: initialValue?.price ?? "",
       currency: initialValue?.currency || DEFAULT_CURRENCY,
       status: initialValue?.status || "draft",
@@ -205,27 +270,34 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     });
     setErrors({});
     setLocales(initialValue?.locales);
+    setLocaleVimeoUrls(resolveInitialLocaleVideoUrls(initialValue));
+    setEditingLocale(null);
+    setEditLocaleDraft({ title: "", description: "" });
     setTranslateMessage("");
     setShowTranslateConfirm(false);
     setActiveTab("general");
   }, [initialValue]);
 
-  const vimeoId = useMemo(() => extractVimeoId(form.vimeoUrl), [form.vimeoUrl]);
-  const invalidateLocales = () => {
-    setLocales(undefined);
-    if (translateMessage) setTranslateMessage("");
-  };
+  const vimeoId = useMemo(
+    () => (form.platform === "vimeo" ? extractVimeoId(form.vimeoUrl) : null),
+    [form.platform, form.vimeoUrl]
+  );
+  const videoUrlLabel = getVideoUrlLabel(form.platform);
+  const videoUrlPlaceholder = getVideoUrlPlaceholder(form.platform);
+
+  const localesCompleteCount = useMemo(() => {
+    if (!locales || typeof locales !== "object") return 0;
+    return SITE_LOCALES.filter((lang) => {
+      const entry = locales[lang];
+      return entry && typeof entry.title === "string" && entry.title.trim().length > 0;
+    }).length;
+  }, [locales]);
 
   const handleChange = (field) => (event) => {
     const value = event.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (
-      field === "title" ||
-      field === "description" ||
-      field === "notesContent" ||
-      field === "contactContent"
-    ) {
-      invalidateLocales();
+    if (field === "vimeoUrl") {
+      setLocaleVimeoUrls((prev) => ({ ...prev, ro: value }));
     }
     if (errors[field]) {
       setErrors((prev) => {
@@ -265,9 +337,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         lessonIndex === index ? { ...lesson, [field]: value } : lesson
       ),
     }));
-    if (field === "title" || field === "summary") {
-      invalidateLocales();
-    }
     if (errors.curriculumLessons) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -282,7 +351,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       ...prev,
       curriculumLessons: [...prev.curriculumLessons, createEmptyLesson(prev.curriculumLessons.length)],
     }));
-    invalidateLocales();
   };
 
   const removeLesson = (index) => {
@@ -290,7 +358,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       ...prev,
       curriculumLessons: reorderLessons(prev.curriculumLessons.filter((_, lessonIndex) => lessonIndex !== index)),
     }));
-    invalidateLocales();
   };
 
   const moveLesson = (index, direction) => {
@@ -313,8 +380,13 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
 
     if (!form.title.trim()) nextErrors.title = "Titlul este obligatoriu.";
     if (!form.description.trim()) nextErrors.description = "Descrierea este obligatorie.";
-    if (!form.vimeoUrl.trim()) nextErrors.vimeoUrl = "Linkul Vimeo este obligatoriu.";
-    if (form.vimeoUrl && !isValidUrl(form.vimeoUrl)) nextErrors.vimeoUrl = "URL invalid.";
+    if (!form.vimeoUrl.trim()) {
+      nextErrors.vimeoUrl = "Linkul video este obligatoriu.";
+      nextErrors.videoUrl = "Linkul video este obligatoriu.";
+    } else if (!isValidUrl(form.vimeoUrl)) {
+      nextErrors.vimeoUrl = "URL invalid.";
+      nextErrors.videoUrl = "URL invalid.";
+    }
 
     const priceValue = Number(form.price);
     if (!Number.isFinite(priceValue) || priceValue < 0) {
@@ -381,7 +453,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       Object.keys(localesToSubmit).length > 0;
 
     const inputLocales = hasLocales ? localesToSubmit : {};
-    const localeKeys = Array.from(new Set(["ro", ...Object.keys(inputLocales)]));
+    const localeKeys = SITE_LOCALES;
 
     return localeKeys.reduce((acc, lang) => {
       const localeEntry =
@@ -418,7 +490,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     setTranslateMessage("");
     try {
       const result = {};
-      const languageKeys = Object.keys(LANGUAGE_LABELS);
+      const languageKeys = SITE_LOCALES;
       const baseDescription = form.description?.trim() || "";
       const baseNotes = form.notesContent?.trim() || "";
       const baseContact = form.contactContent?.trim() || "";
@@ -517,6 +589,8 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     const payload = {
       title,
       description,
+      platform: form.platform,
+      videoUrl: form.vimeoUrl.trim(),
       vimeoUrl: form.vimeoUrl.trim(),
       vimeoId: vimeoId || null,
       categoryIds: form.categoryIds,
@@ -529,14 +603,62 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
         form.status === "scheduled" && form.scheduledAt
           ? new Date(form.scheduledAt).toISOString()
           : null,
-      thumbnailUrl: null,
+      thumbnailUrl:
+        form.platform === "bunny" && form.thumbnailUrl.trim() ? form.thumbnailUrl.trim() : null,
       curriculumLessons,
       notesContent,
       contactContent,
       locales: safeLocales,
+      localeVideoUrls: buildLocaleVimeoPayload(),
+      localeVimeoUrls: buildLocaleVimeoPayload(),
     };
 
     onSubmit(payload);
+  };
+
+  const openLocaleEditor = (lang) => {
+    const entry = locales?.[lang];
+    setEditingLocale(lang);
+    setEditLocaleDraft({
+      title: typeof entry?.title === "string" ? entry.title : "",
+      description: typeof entry?.description === "string" ? entry.description : "",
+    });
+  };
+
+  const saveLocaleEditor = () => {
+    if (!editingLocale) return;
+    const lang = editingLocale;
+    setLocales((prev) => {
+      const base = prev && typeof prev === "object" && !Array.isArray(prev) ? { ...prev } : {};
+      const existing = base[lang] && typeof base[lang] === "object" ? { ...base[lang] } : {};
+      base[lang] = {
+        ...existing,
+        title: editLocaleDraft.title.trim() || existing.title || form.title.trim(),
+        ...(editLocaleDraft.description.trim() || existing.description
+          ? { description: editLocaleDraft.description.trim() || existing.description }
+          : {}),
+      };
+      return base;
+    });
+    setEditingLocale(null);
+    setEditLocaleDraft({ title: "", description: "" });
+  };
+
+  const handleLocaleVimeoUrlChange = (lang) => (event) => {
+    const value = event.target.value;
+    setLocaleVimeoUrls((prev) => ({ ...prev, [lang]: value }));
+    if (lang === "ro") {
+      setForm((prev) => ({ ...prev, vimeoUrl: value }));
+    }
+  };
+
+  const buildLocaleVimeoPayload = () => {
+    const payload = { ...localeVimeoUrls };
+    const roUrl = form.vimeoUrl.trim();
+    if (roUrl) payload.ro = roUrl;
+    return Object.fromEntries(
+      Object.entries(payload).filter(([, url]) => typeof url === "string" && url.trim().length > 0)
+    );
   };
 
   const confirmTranslateAndSubmit = async () => {
@@ -643,25 +765,63 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
           </div>
 
           <div>
+            <label htmlFor="platform" className="block text-sm font-medium text-gray-900">
+              Platformă video <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="platform"
+              value={form.platform}
+              onChange={handleChange("platform")}
+              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              disabled={loading}
+            >
+              {PLATFORM_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label htmlFor="vimeoUrl" className="block text-sm font-medium text-gray-900">
-              URL Vimeo <span className="text-red-500">*</span>
+              {videoUrlLabel} <span className="text-red-500">*</span>
             </label>
             <Input
               id="vimeoUrl"
               value={form.vimeoUrl}
               onChange={handleChange("vimeoUrl")}
               className="mt-2"
-              placeholder="https://vimeo.com/123456789"
+              placeholder={videoUrlPlaceholder}
               disabled={loading}
             />
-            {vimeoId && (
+            {form.platform === "vimeo" && vimeoId && (
               <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Vimeo ID detectat: {vimeoId}
               </div>
             )}
-            {errors.vimeoUrl && <p className="mt-1.5 text-xs text-red-600">{errors.vimeoUrl}</p>}
+            {(errors.vimeoUrl || errors.videoUrl) && (
+              <p className="mt-1.5 text-xs text-red-600">{errors.vimeoUrl || errors.videoUrl}</p>
+            )}
           </div>
+
+          {form.platform === "bunny" ? (
+            <div>
+              <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-900">
+                Thumbnail Bunny{" "}
+                <span className="font-normal text-gray-600">(opțional, același pentru toate limbile)</span>
+              </label>
+              <Input
+                id="thumbnailUrl"
+                value={form.thumbnailUrl}
+                onChange={handleChange("thumbnailUrl")}
+                className="mt-2"
+                placeholder="https://vz-....b-cdn.net/.../thumbnail.jpg"
+                disabled={loading}
+              />
+            </div>
+          ) : null}
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">Categorii</label>
@@ -677,7 +837,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {resolveCategoryLabel(category)}
                     </option>
                   ))}
                 </select>
@@ -901,6 +1061,126 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               Localizarea folosește titlul, descrierea, notele, contactul și lecțiile curriculum. Dacă
               nu localizezi, se salvează cu fallback RO.
             </p>
+            {locales && typeof locales === "object" && Object.keys(locales).length > 0 && (
+              <p className="mt-1 text-xs font-medium text-gray-700">
+                {localesCompleteCount}/{SITE_LOCALES.length} limbi cu titlu localizat
+              </p>
+            )}
+          </div>
+
+          {locales && typeof locales === "object" && Object.keys(locales).length > 0 ? (
+            <div className="overflow-hidden rounded-xl border border-gray-200">
+              <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                Localizări generate (titlu / descriere)
+              </div>
+              <div className="max-h-[min(30vh,280px)] overflow-y-auto overscroll-contain">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="sticky top-0 z-[1] bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-700">
+                    <tr>
+                      <th className="px-4 py-2.5">Limbă</th>
+                      <th className="px-4 py-2.5">Titlu</th>
+                      <th className="px-4 py-2.5">Descriere</th>
+                      <th className="px-4 py-2.5">Status</th>
+                      <th className="px-4 py-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {SITE_LOCALES.map((lang) => {
+                      const langInfo = LANGUAGE_LABELS?.[lang];
+                      const langLabel =
+                        typeof langInfo?.denumire === "string" && langInfo.denumire.trim()
+                          ? langInfo.denumire
+                          : lang;
+                      const entry = locales?.[lang];
+                      const titleVal = typeof entry?.title === "string" ? entry.title.trim() : "";
+                      const descVal =
+                        typeof entry?.description === "string" ? entry.description.trim() : "";
+                      const isMissing = !titleVal;
+                      return (
+                        <tr key={lang}>
+                          <td className="px-4 py-2.5 font-medium text-gray-900">
+                            {langLabel}{" "}
+                            <span className="text-xs font-normal text-gray-500">({lang})</span>
+                          </td>
+                          <td className="max-w-[12rem] truncate px-4 py-2.5 text-gray-700" title={titleVal}>
+                            {isMissing ? <span className="text-gray-400">—</span> : titleVal}
+                          </td>
+                          <td
+                            className="max-w-[14rem] truncate px-4 py-2.5 text-gray-700"
+                            title={descVal}
+                          >
+                            {!descVal ? <span className="text-gray-400">—</span> : descVal}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                                isMissing
+                                  ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                                  : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                              }`}
+                            >
+                              {isMissing ? "Lipsește" : "OK"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openLocaleEditor(lang)}
+                              disabled={uiLocked}
+                            >
+                              Editează
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">Link video per limbă</label>
+            <p className="mt-1 text-xs text-gray-500">
+              RO este obligatoriu (sau folosește URL-ul principal). Celelalte limbi sunt opționale;
+              dacă lipsesc, se folosește fallback RO. Platformă selectată: {videoUrlLabel}.
+            </p>
+            <div className="mt-3 max-h-[min(40vh,320px)] space-y-3 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+              {SITE_LOCALES.map((lang) => {
+                const langLabel = LANGUAGE_LABELS?.[lang]?.denumire || lang.toUpperCase();
+                const urlValue = lang === "ro" ? form.vimeoUrl : localeVimeoUrls[lang] || "";
+                const hasUrl = Boolean(urlValue?.trim());
+                return (
+                  <div key={`vimeo-${lang}`}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-gray-700">
+                        {langLabel}{" "}
+                        <span className="font-normal text-gray-500">({lang})</span>
+                        {lang === "ro" ? (
+                          <span className="ml-1 text-red-500">*</span>
+                        ) : null}
+                      </span>
+                      <span
+                        className={`text-xs font-medium ${hasUrl ? "text-emerald-600" : "text-gray-400"}`}
+                      >
+                        {hasUrl ? "link setat" : "opțional · lipsește"}
+                      </span>
+                    </div>
+                    <Input
+                      value={urlValue}
+                      onChange={
+                        lang === "ro" ? handleChange("vimeoUrl") : handleLocaleVimeoUrlChange(lang)
+                      }
+                      placeholder={videoUrlPlaceholder}
+                      disabled={uiLocked}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -1047,6 +1327,57 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             : "Creează cursul"}
         </Button>
       </div>
+
+      <Dialog open={Boolean(editingLocale)} onOpenChange={(open) => !open && setEditingLocale(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Editează localizarea ({editingLocale})
+            </DialogTitle>
+            <DialogDescription>
+              Corectează manual titlul și descrierea pentru această limbă.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-900">Titlu</label>
+              <Input
+                value={editLocaleDraft.title}
+                onChange={(event) =>
+                  setEditLocaleDraft((prev) => ({ ...prev, title: event.target.value }))
+                }
+                className="mt-2"
+                disabled={uiLocked}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900">Descriere</label>
+              <textarea
+                value={editLocaleDraft.description}
+                onChange={(event) =>
+                  setEditLocaleDraft((prev) => ({ ...prev, description: event.target.value }))
+                }
+                rows={4}
+                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                disabled={uiLocked}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditingLocale(null)}
+              disabled={uiLocked}
+            >
+              Anulează
+            </Button>
+            <Button type="button" onClick={saveLocaleEditor} disabled={uiLocked}>
+              Salvează
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showTranslateConfirm} onOpenChange={setShowTranslateConfirm}>
         <DialogContent>

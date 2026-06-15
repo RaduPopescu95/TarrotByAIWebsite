@@ -1,7 +1,19 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
-import { extractVimeoId, sanitizeCurriculumLessons } from "../../../../lib/courses";
+import {
+  COURSE_PLATFORMS,
+  extractVimeoId,
+  isValidCourseVideoUrl,
+  normalizeCourseMediaForRead,
+  normalizeCoursePlatform,
+  sanitizeCurriculumLessons,
+} from "../../../../lib/courses";
+import {
+  attachCourseMediaFields,
+  buildCourseMediaPayload,
+  mergeCourseMediaInput,
+} from "../../../../lib/courseMediaAdmin";
 import { fetchVimeoPreviewThumbnail } from "../../../../lib/vimeo";
 
 const ALLOWED_CURRENCIES = ["RON", "EUR"];
@@ -67,15 +79,13 @@ function hasValidCurriculumLessons(value) {
 async function getCourseWithMedia(db, courseId, courseData) {
   const mediaSnap = await db.collection(COURSE_MEDIA_COLLECTION).doc(courseId).get();
   const media = mediaSnap.exists ? mediaSnap.data() : null;
-  const fallbackUrl = typeof courseData?.vimeoUrl === "string" ? courseData.vimeoUrl : "";
-  const vimeoUrl = typeof media?.vimeoUrl === "string" ? media.vimeoUrl : fallbackUrl;
-  const vimeoId = media?.vimeoId || courseData?.vimeoId || extractVimeoId(vimeoUrl) || null;
-  return {
-    id: courseId,
-    ...courseData,
-    vimeoUrl,
-    vimeoId,
-  };
+  return attachCourseMediaFields({ id: courseId, ...courseData }, media);
+}
+
+function validateLocaleVideoUrls(value) {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return !Object.values(value).some((entry) => typeof entry !== "string");
 }
 
 function validateUpdate(input) {
@@ -83,7 +93,18 @@ function validateUpdate(input) {
   if (input.title !== undefined && typeof input.title !== "string") errors.push("title");
   if (input.description !== undefined && typeof input.description !== "string")
     errors.push("description");
-  if (input.vimeoUrl !== undefined && typeof input.vimeoUrl !== "string") errors.push("vimeoUrl");
+  const hasVideoUrlField = input.videoUrl !== undefined || input.vimeoUrl !== undefined;
+  if (hasVideoUrlField) {
+    const { platform, rootVideoUrl } = mergeCourseMediaInput(input);
+    if (typeof rootVideoUrl !== "string" || !rootVideoUrl.trim()) {
+      errors.push("videoUrl");
+    } else if (!isValidCourseVideoUrl(platform, rootVideoUrl)) {
+      errors.push("videoUrl");
+    }
+  }
+  if (input.platform !== undefined && !COURSE_PLATFORMS.includes(normalizeCoursePlatform(input.platform))) {
+    errors.push("platform");
+  }
   if (input.categoryIds !== undefined) {
     if (!Array.isArray(input.categoryIds) || input.categoryIds.some((id) => typeof id !== "string")) {
       errors.push("categoryIds");
@@ -120,6 +141,8 @@ function validateUpdate(input) {
     errors.push("contactContent");
   }
   if (input.locales !== undefined && !isCourseLocales(input.locales)) errors.push("locales");
+  if (!validateLocaleVideoUrls(input.localeVideoUrls)) errors.push("localeVideoUrls");
+  if (!validateLocaleVideoUrls(input.localeVimeoUrls)) errors.push("localeVimeoUrls");
   return errors;
 }
 
@@ -182,13 +205,25 @@ export default async function handler(req, res) {
       });
       return res.status(500).json({ error: "Failed to load course" });
     }
-    let nextVimeoUrl = null;
+    const mergedMediaInput = mergeCourseMediaInput(input);
+    let nextRootVideoUrl = null;
+    let nextPlatform = null;
     let nextVimeoPreviewThumbnailUrl = null;
     let nextVimeoPreviewVideoId = null;
-    if (input.vimeoUrl !== undefined) {
-      nextVimeoUrl = input.vimeoUrl.trim();
-      nextVimeoPreviewVideoId = extractVimeoId(nextVimeoUrl) || null;
-      nextVimeoPreviewThumbnailUrl = await fetchVimeoPreviewThumbnail(nextVimeoUrl);
+
+    if (input.videoUrl !== undefined || input.vimeoUrl !== undefined || input.platform !== undefined) {
+      const mediaSnap = await mediaRef.get();
+      const existingMedia = mediaSnap.exists ? mediaSnap.data() : null;
+      const existingNormalized = normalizeCourseMediaForRead(existingMedia, existing.data());
+      nextPlatform = mergedMediaInput.platform || existingNormalized.platform;
+      nextRootVideoUrl =
+        input.videoUrl !== undefined || input.vimeoUrl !== undefined
+          ? mergedMediaInput.rootVideoUrl
+          : existingNormalized.videoUrl;
+      if (nextPlatform === "vimeo" && nextRootVideoUrl) {
+        nextVimeoPreviewVideoId = extractVimeoId(nextRootVideoUrl) || null;
+        nextVimeoPreviewThumbnailUrl = await fetchVimeoPreviewThumbnail(nextRootVideoUrl);
+      }
     }
     const payload = {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
@@ -217,7 +252,7 @@ export default async function handler(req, res) {
       ...(input.contactContent !== undefined
         ? { contactContent: input.contactContent.trim() }
         : {}),
-      ...(input.vimeoUrl !== undefined
+      ...(nextVimeoPreviewVideoId !== null || nextVimeoPreviewThumbnailUrl !== null
         ? {
             vimeoPreviewVideoId: nextVimeoPreviewVideoId,
             vimeoPreviewThumbnailUrl: nextVimeoPreviewThumbnailUrl || null,
@@ -232,12 +267,44 @@ export default async function handler(req, res) {
       const batch = db.batch();
       batch.update(ref, payload);
 
-      if (input.vimeoUrl !== undefined) {
+      let existingMediaRootUrl = "";
+      let existingPlatform = "vimeo";
+      const mediaSnapForLocales = await mediaRef.get();
+      if (mediaSnapForLocales.exists) {
+        const existingNormalized = normalizeCourseMediaForRead(
+          mediaSnapForLocales.data(),
+          existing.data()
+        );
+        existingMediaRootUrl = existingNormalized.videoUrl;
+        existingPlatform = existingNormalized.platform;
+      }
+
+      const shouldUpdateMedia =
+        input.videoUrl !== undefined ||
+        input.vimeoUrl !== undefined ||
+        input.platform !== undefined ||
+        input.localeVideoUrls !== undefined ||
+        input.localeVimeoUrls !== undefined;
+
+      if (shouldUpdateMedia) {
+        const { localeVideoUrls, platform, rootVideoUrl } = mergeCourseMediaInput({
+          ...input,
+          platform: nextPlatform || input.platform || existingPlatform,
+          videoUrl:
+            input.videoUrl !== undefined || input.vimeoUrl !== undefined
+              ? nextRootVideoUrl
+              : existingMediaRootUrl,
+          localeVideoUrls: input.localeVideoUrls ?? input.localeVimeoUrls,
+        });
+
         batch.set(
           mediaRef,
           {
-            vimeoUrl: nextVimeoUrl,
-            vimeoId: extractVimeoId(nextVimeoUrl) || null,
+            ...buildCourseMediaPayload({
+              platform: platform || existingPlatform,
+              rootVideoUrl: rootVideoUrl || existingMediaRootUrl,
+              localeVideoUrls,
+            }),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }

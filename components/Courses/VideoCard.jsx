@@ -21,6 +21,7 @@ export default function VideoCard({
   hasAccess,
   playbackLoading,
   playbackError,
+  playbackEmbedSrc,
   playbackVimeoId,
   previewThumbnailUrl,
   shouldRenderPreviewVideo,
@@ -32,6 +33,9 @@ export default function VideoCard({
   fallbackPlayerTitle,
 }) {
   const hasLockedPreview = Boolean(previewThumbnailUrl) || Boolean(shouldRenderPreviewVideo);
+  const resolvedEmbedSrc =
+    (typeof playbackEmbedSrc === "string" && playbackEmbedSrc.trim()) ||
+    (playbackVimeoId ? `https://player.vimeo.com/video/${playbackVimeoId}` : null);
 
   return (
     <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_14px_34px_-26px_rgba(15,23,42,0.75)]">
@@ -45,12 +49,12 @@ export default function VideoCard({
             <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-red-200">
               {playbackError}
             </div>
-          ) : playbackVimeoId ? (
+          ) : resolvedEmbedSrc ? (
             <iframe
-              src={`https://player.vimeo.com/video/${playbackVimeoId}`}
+              src={resolvedEmbedSrc}
               title={title || fallbackPlayerTitle}
               className="h-full w-full"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
               allowFullScreen
             />
           ) : (

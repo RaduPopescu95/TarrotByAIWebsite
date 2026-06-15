@@ -86,13 +86,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing courseId" });
   }
 
-  const requestedLocale = normalizeLocale(readLocale(req.query?.locale), "en");
-  const localeCode = resolveCertificateLocale(requestedLocale);
+  const requestedLocale = normalizeLocale(readLocale(req.query?.locale), "ro");
+  const copyLocale = resolveCertificateLocale(requestedLocale);
+  const contentLocale = requestedLocale;
 
   console.info("[courses.certificate] start", {
     courseId,
     uid: maskUid(authUser.uid),
-    locale: localeCode,
+    locale: requestedLocale,
+    copyLocale,
   });
 
   try {
@@ -140,7 +142,7 @@ export default async function handler(req, res) {
       .get();
     const purchaseData = purchaseSnap.exists ? purchaseSnap.data() || {} : {};
 
-    const safeCourse = toSafeCourse(courseId, courseData, localeCode);
+    const safeCourse = toSafeCourse(courseId, courseData, contentLocale);
     const courseTitle = safeCourse?.title || "Course";
 
     let authRecord = null;
@@ -163,10 +165,10 @@ export default async function handler(req, res) {
       uid: authUser.uid,
       courseId,
     });
-    const copy = getCertificateLocaleCopy(localeCode);
+    const copy = getCertificateLocaleCopy(copyLocale);
 
     const pdfBuffer = await buildCourseCertificatePdf({
-      localeCode,
+      localeCode: copyLocale,
       copy,
       recipientName,
       courseTitle,
@@ -175,7 +177,7 @@ export default async function handler(req, res) {
     });
 
     const safeCourseSlug = slugifyFilename(courseTitle);
-    const filename = `certificat-${safeCourseSlug}-${localeCode}.pdf`;
+    const filename = `certificat-${safeCourseSlug}-${copyLocale}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -186,7 +188,8 @@ export default async function handler(req, res) {
     console.info("[courses.certificate] success", {
       courseId,
       uid: maskUid(authUser.uid),
-      locale: localeCode,
+      locale: requestedLocale,
+      copyLocale,
       filename,
     });
 
@@ -195,7 +198,8 @@ export default async function handler(req, res) {
     console.error("[courses.certificate] failed", {
       courseId,
       uid: maskUid(authUser.uid),
-      locale: localeCode,
+      locale: requestedLocale,
+      copyLocale,
       message: error?.message || "unknown_error",
     });
     return res.status(500).json({ error: "Failed to generate certificate" });

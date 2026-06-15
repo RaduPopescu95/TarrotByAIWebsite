@@ -1,6 +1,11 @@
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
-import { extractVimeoId, isCourseVisible } from "../../../../lib/courses";
+import {
+  isCourseVisible,
+  normalizeLocale,
+  readSingleQueryValue,
+  resolveCoursePlaybackSource,
+} from "../../../../lib/courses";
 import {
   isCourseFreeFullAccess,
   resolveCourseEntitlement,
@@ -27,12 +32,14 @@ async function handler(req, res) {
   res.setHeader("Cache-Control", "private, no-store, max-age=0");
 
   const {
-    query: { courseId },
+    query: { courseId, locale: localeQuery },
   } = req;
 
   if (!courseId || typeof courseId !== "string") {
     return res.status(400).json({ error: "Missing courseId" });
   }
+
+  const requestedLocale = normalizeLocale(readSingleQueryValue(localeQuery), "ro");
 
   const decoded = await getOptionalAuth(req);
   const uid = decoded?.uid || null;
@@ -40,6 +47,7 @@ async function handler(req, res) {
   console.info("[courses.entitlement] playback_start", {
     courseId,
     uid: maskUid(uid),
+    locale: requestedLocale,
   });
 
   try {
@@ -88,15 +96,15 @@ async function handler(req, res) {
     );
 
     const mediaData = mediaSnap.exists ? mediaSnap.data() : null;
-    const vimeoUrl =
-      (typeof mediaData?.vimeoUrl === "string" && mediaData.vimeoUrl) ||
-      (typeof courseData?.vimeoUrl === "string" ? courseData.vimeoUrl : "");
-    const vimeoId = mediaData?.vimeoId || courseData?.vimeoId || extractVimeoId(vimeoUrl);
+    const playback = resolveCoursePlaybackSource(mediaData, courseData, requestedLocale);
 
-    if (!vimeoId) {
+    if (!playback.embedSrc) {
       console.warn("[courses.entitlement] playback_source_missing", {
         courseId,
         uid: maskUid(uid),
+        locale: requestedLocale,
+        platform: playback.platform,
+        source: playback.source,
       });
       return res.status(404).json({ error: "Playback source not found" });
     }
@@ -104,10 +112,20 @@ async function handler(req, res) {
     console.info("[courses.entitlement] playback_ok", {
       courseId,
       uid: maskUid(uid),
-      provider: "vimeo",
+      platform: playback.platform,
+      locale: requestedLocale,
+      localeUsed: playback.localeUsed,
+      source: playback.source,
     });
 
-    return res.status(200).json({ provider: "vimeo", vimeoId });
+    return res.status(200).json({
+      platform: playback.platform,
+      provider: playback.provider,
+      videoUrl: playback.videoUrl,
+      embedSrc: playback.embedSrc,
+      vimeoId: playback.vimeoId || null,
+      localeUsed: playback.localeUsed,
+    });
   } catch (error) {
     console.error("[courses.entitlement] playback_failed", {
       courseId,

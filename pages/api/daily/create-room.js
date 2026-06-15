@@ -25,6 +25,53 @@ const adminDb = (() => {
   }
 })();
 
+const ROOM_LIFETIME_SEC = 4 * 60 * 60;
+/** Reînnoim exp dacă au rămas mai puțin de 2h — evită „se termină în 4 minute” la consultații. */
+const MIN_ROOM_REMAINING_BEFORE_EXTEND_SEC = 2 * 60 * 60;
+
+const getRoomExpSec = (room) => {
+  const exp = room?.config?.exp ?? room?.properties?.exp;
+  return typeof exp === 'number' && Number.isFinite(exp) ? exp : null;
+};
+
+const extendRoomExpirationIfNeeded = async (roomName, room, apiKey) => {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const currentExp = getRoomExpSec(room);
+  const remainingSec = currentExp ? currentExp - nowSec : 0;
+
+  if (currentExp && remainingSec >= MIN_ROOM_REMAINING_BEFORE_EXTEND_SEC) {
+    return room;
+  }
+
+  const newExp = nowSec + ROOM_LIFETIME_SEC;
+  console.log(`Extending Daily.co room expiration: ${roomName}`, {
+    previousExp: currentExp ? new Date(currentExp * 1000).toISOString() : null,
+    remainingMinutes: currentExp ? Math.round(remainingSec / 60) : null,
+    newExp: new Date(newExp * 1000).toISOString(),
+  });
+
+  const extendResponse = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      properties: {
+        exp: newExp,
+      },
+    }),
+  });
+
+  if (!extendResponse.ok) {
+    const errorData = await extendResponse.text();
+    console.error('Failed to extend Daily.co room expiration:', errorData);
+    return room;
+  }
+
+  return extendResponse.json();
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -106,7 +153,7 @@ export default async function handler(req, res) {
             enable_network_ui: true,
             enable_noise_cancellation_ui: true,
             max_participants: sessionType === 'conference' ? 50 : 2, // Conference: up to 50, Consultation: only admin and client
-            exp: Math.floor(Date.now() / 1000) + (4 * 60 * 60), // 4 hours from now
+            exp: Math.floor(Date.now() / 1000) + ROOM_LIFETIME_SEC,
             eject_at_room_exp: true,
             // Recording capability enabled for all sessions (admin controls via token)
             enable_recording: 'cloud',
@@ -123,9 +170,9 @@ export default async function handler(req, res) {
 
       room = await createRoomResponse.json();
     } else if (roomResponse.ok) {
-      // Room exists
       room = await roomResponse.json();
       console.log(`Using existing Daily.co room: ${roomName}`);
+      room = await extendRoomExpirationIfNeeded(roomName, room, DAILY_API_KEY);
     } else {
       const errorData = await roomResponse.text();
       console.error('Error checking room existence:', errorData);
@@ -174,7 +221,7 @@ export default async function handler(req, res) {
           // Prefer explicit names when available
           ...((userRole === 'admin') && { user_name: 'Cristina Zurba' }),
           ...((userRole === 'client' && (resolvedClientName || clientName)) && { user_name: resolvedClientName || clientName }),
-          exp: Math.floor(Date.now() / 1000) + (4 * 60 * 60), // 4 hours from now
+          exp: Math.floor(Date.now() / 1000) + ROOM_LIFETIME_SEC,
           start_video_off: false,
           start_audio_off: false,
           

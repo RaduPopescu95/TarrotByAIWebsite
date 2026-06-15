@@ -1,7 +1,18 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
-import { extractVimeoId, sanitizeCurriculumLessons } from "../../../../lib/courses";
+import {
+  COURSE_PLATFORMS,
+  extractVimeoId,
+  isValidCourseVideoUrl,
+  normalizeCoursePlatform,
+  sanitizeCurriculumLessons,
+} from "../../../../lib/courses";
+import {
+  attachCourseMediaFields,
+  buildCourseMediaPayload,
+  mergeCourseMediaInput,
+} from "../../../../lib/courseMediaAdmin";
 import { fetchVimeoPreviewThumbnail } from "../../../../lib/vimeo";
 
 const ALLOWED_CURRENCIES = ["RON", "EUR"];
@@ -70,22 +81,29 @@ async function attachCourseMedia(db, courses) {
   );
   return courses.map((course, index) => {
     const media = mediaSnaps[index]?.exists ? mediaSnaps[index].data() : null;
-    const fallbackUrl = typeof course.vimeoUrl === "string" ? course.vimeoUrl : "";
-    const mediaUrl = typeof media?.vimeoUrl === "string" ? media.vimeoUrl : fallbackUrl;
-    const mediaId = media?.vimeoId || course.vimeoId || extractVimeoId(mediaUrl) || null;
-    return {
-      ...course,
-      vimeoUrl: mediaUrl,
-      vimeoId: mediaId,
-    };
+    return attachCourseMediaFields(course, media);
   });
+}
+
+function validateLocaleVideoUrls(value) {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return !Object.values(value).some((entry) => typeof entry !== "string");
 }
 
 function validateCourseInput(input) {
   const errors = [];
+  const { platform, rootVideoUrl } = mergeCourseMediaInput(input);
   if (!input.title || typeof input.title !== "string") errors.push("title");
   if (!input.description || typeof input.description !== "string") errors.push("description");
-  if (!input.vimeoUrl || typeof input.vimeoUrl !== "string") errors.push("vimeoUrl");
+  if (!rootVideoUrl) {
+    errors.push("videoUrl");
+  } else if (!isValidCourseVideoUrl(platform, rootVideoUrl)) {
+    errors.push("videoUrl");
+  }
+  if (input.platform !== undefined && !COURSE_PLATFORMS.includes(normalizeCoursePlatform(input.platform))) {
+    errors.push("platform");
+  }
   if (input.categoryIds !== undefined) {
     if (!Array.isArray(input.categoryIds) || input.categoryIds.some((id) => typeof id !== "string")) {
       errors.push("categoryIds");
@@ -121,6 +139,8 @@ function validateCourseInput(input) {
     errors.push("contactContent");
   }
   if (input.locales !== undefined && !isCourseLocales(input.locales)) errors.push("locales");
+  if (!validateLocaleVideoUrls(input.localeVideoUrls)) errors.push("localeVideoUrls");
+  if (!validateLocaleVideoUrls(input.localeVimeoUrls)) errors.push("localeVimeoUrls");
   return errors;
 }
 
@@ -162,9 +182,11 @@ export default async function handler(req, res) {
       }
       return res.status(400).json({ error: "Invalid fields", fields: errors });
     }
-    const normalizedVimeoUrl = input.vimeoUrl.trim();
-    const vimeoPreviewVideoId = extractVimeoId(normalizedVimeoUrl) || null;
-    const vimeoPreviewThumbnailUrl = await fetchVimeoPreviewThumbnail(normalizedVimeoUrl);
+    const { localeVideoUrls, platform, rootVideoUrl } = mergeCourseMediaInput(input);
+    const vimeoPreviewVideoId =
+      platform === "vimeo" ? extractVimeoId(rootVideoUrl) || null : null;
+    const vimeoPreviewThumbnailUrl =
+      platform === "vimeo" ? await fetchVimeoPreviewThumbnail(rootVideoUrl) : null;
     const payload = {
       title: input.title.trim(),
       description: input.description.trim(),
@@ -187,8 +209,7 @@ export default async function handler(req, res) {
       createdBy: "dashboard",
     };
     const mediaPayload = {
-      vimeoUrl: normalizedVimeoUrl,
-      vimeoId: extractVimeoId(normalizedVimeoUrl) || null,
+      ...buildCourseMediaPayload({ platform, rootVideoUrl, localeVideoUrls }),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };

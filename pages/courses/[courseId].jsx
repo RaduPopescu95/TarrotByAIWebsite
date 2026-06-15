@@ -7,6 +7,7 @@ import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import VideoCard from "../../components/Courses/VideoCard";
+import CourseLanguageSelect from "../../components/Courses/CourseLanguageSelect";
 import LessonTabs from "../../components/Courses/LessonTabs";
 import MaterialsPanel from "../../components/Courses/MaterialsPanel";
 import SidebarCurriculum from "../../components/Courses/SidebarCurriculum";
@@ -141,7 +142,8 @@ export default function CourseDetailPage() {
     phone: "",
   });
   const [billingForm, setBillingForm] = useState(createInitialBillingFormValues());
-  const [playbackVimeoId, setPlaybackVimeoId] = useState(null);
+  const [playbackEmbedSrc, setPlaybackEmbedSrc] = useState(null);
+  const [playbackPlatform, setPlaybackPlatform] = useState("vimeo");
   const [playbackLoading, setPlaybackLoading] = useState(false);
   const [playbackError, setPlaybackError] = useState("");
   const [activeTab, setActiveTab] = useState("materials");
@@ -149,6 +151,7 @@ export default function CourseDetailPage() {
   const [shareFeedback, setShareFeedback] = useState("");
   const [certificateLoading, setCertificateLoading] = useState(false);
   const [certificateError, setCertificateError] = useState("");
+  const [availableLocales, setAvailableLocales] = useState([]);
 
   const getAuthHeaders = useCallback(
     async ({ required = false } = {}) => {
@@ -214,11 +217,15 @@ export default function CourseDetailPage() {
         setHasAccess(nextHasAccess);
         setAccessSource(nextAccessSource);
         setIsVisible(nextIsVisible);
+        setAvailableLocales(
+          Array.isArray(data?.availableLocales) ? data.availableLocales : []
+        );
         return {
           course: nextCourse,
           hasAccess: nextHasAccess,
           isVisible: nextIsVisible,
           accessSource: nextAccessSource,
+          availableLocales: Array.isArray(data?.availableLocales) ? data.availableLocales : [],
         };
       } catch (err) {
         console.error("[courses.detail] state_load_fail", {
@@ -230,7 +237,9 @@ export default function CourseDetailPage() {
         setHasAccess(false);
         setAccessSource(null);
         setIsVisible(false);
-        setPlaybackVimeoId(null);
+        setAvailableLocales([]);
+        setPlaybackEmbedSrc(null);
+        setPlaybackPlatform("vimeo");
         setPageError(err.message || t("coursesErrorsLoadCourse"));
         return null;
       } finally {
@@ -305,7 +314,8 @@ export default function CourseDetailPage() {
 
   const loadPlayback = useCallback(async () => {
     if (!normalizedCourseId || !hasAccess) {
-      setPlaybackVimeoId(null);
+      setPlaybackEmbedSrc(null);
+      setPlaybackPlatform("vimeo");
       setPlaybackError("");
       setPlaybackLoading(false);
       return;
@@ -319,47 +329,71 @@ export default function CourseDetailPage() {
       if (needAuth && !authHeaders.Authorization) {
         throw new Error(t("coursesErrorsAuthRequired"));
       }
-      const response = await fetch(`/api/courses/${normalizedCourseId}/playback`, {
+      const playbackLocale = router.locale || "ro";
+      const response = await fetch(
+        `/api/courses/${normalizedCourseId}/playback?locale=${encodeURIComponent(playbackLocale)}`,
+        {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           ...authHeaders,
         },
-      });
+      }
+      );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(mapPlaybackError(response.status, t));
       }
-      if (!data?.vimeoId) {
+      const embedSrc =
+        typeof data?.embedSrc === "string" && data.embedSrc.trim()
+          ? data.embedSrc.trim()
+          : data?.vimeoId
+            ? `https://player.vimeo.com/video/${data.vimeoId}`
+            : null;
+      if (!embedSrc) {
         throw new Error(t("coursesErrorsPlaybackSourceMissing"));
       }
-      setPlaybackVimeoId(data.vimeoId);
+      setPlaybackEmbedSrc(embedSrc);
+      setPlaybackPlatform(
+        typeof data?.platform === "string" && data.platform.trim()
+          ? data.platform.trim()
+          : "vimeo"
+      );
     } catch (err) {
       console.error("[courses.detail] playback_load_fail", {
         courseId: normalizedCourseId,
         message: err?.message || "unknown_error",
       });
-      setPlaybackVimeoId(null);
+      setPlaybackEmbedSrc(null);
+      setPlaybackPlatform("vimeo");
       setPlaybackError(err.message || t("coursesErrorsLoadPlayback"));
     } finally {
       setPlaybackLoading(false);
     }
-  }, [normalizedCourseId, getAuthHeaders, hasAccess, accessSource, t]);
+  }, [normalizedCourseId, getAuthHeaders, hasAccess, accessSource, t, router.locale]);
 
   useEffect(() => {
     loadPlayback();
   }, [loadPlayback]);
 
   useEffect(() => {
-    if (!course?.id) return;
+    if (!course?.id || !hasAccess || !playbackEmbedSrc) return;
     void requestPlayback({
       contentType: "course",
       contentId: course.id,
-      platform: "vimeo",
+      platform: playbackPlatform || "vimeo",
       title: course.title || "",
       locale: router.locale || "ro",
     });
-  }, [course?.id, course?.title, requestPlayback, router.locale]);
+  }, [
+    course?.id,
+    course?.title,
+    hasAccess,
+    playbackEmbedSrc,
+    playbackPlatform,
+    requestPlayback,
+    router.locale,
+  ]);
 
   useEffect(() => {
     if (loading || pageError || !course) return;
@@ -859,7 +893,7 @@ export default function CourseDetailPage() {
                       hasAccess={hasAccess}
                       playbackLoading={playbackLoading}
                       playbackError={playbackError}
-                      playbackVimeoId={playbackVimeoId}
+                      playbackEmbedSrc={playbackEmbedSrc}
                       previewThumbnailUrl={course.thumbnailUrl}
                       shouldRenderPreviewVideo={shouldRenderPreviewVideo}
                       previewVimeoId={course.previewVimeoId}
@@ -876,6 +910,8 @@ export default function CourseDetailPage() {
                       </div>
                     </section>
                   )}
+
+                  <CourseLanguageSelect availableLocales={availableLocales} />
 
                   <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.75)] md:p-7">
                     <header className="mb-5 space-y-2">

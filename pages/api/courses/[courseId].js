@@ -1,6 +1,10 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
-import { isCourseVisible, toSafeCourse } from "../../../lib/courses";
+import {
+  isCourseVisible,
+  toSafeCourse,
+  resolveCourseAvailableLocales,
+} from "../../../lib/courses";
 import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
 import {
   withFirestoreCostLog,
@@ -130,6 +134,17 @@ async function handler(req, res) {
       includeDetailContent: true,
     });
 
+    const mediaSnap = await withFirestoreCostLog(
+      {
+        page: "api.courses.detail",
+        queryName: "courseMedia.by_course_id",
+        operationType: "document",
+      },
+      () => db.collection("courseMedia").doc(courseId).get()
+    );
+    const mediaData = mediaSnap.exists ? mediaSnap.data() || {} : null;
+    const availableLocales = resolveCourseAvailableLocales(courseData, mediaData);
+
     if (
       Array.isArray(safeCourse.curriculumLessons) &&
       safeCourse.curriculumLessons.length === 0 &&
@@ -160,6 +175,7 @@ async function handler(req, res) {
       course: safeCourse,
       isVisible,
       hasAccess,
+      availableLocales,
       ...(accessSource ? { accessSource } : {}),
     });
   } catch (error) {
