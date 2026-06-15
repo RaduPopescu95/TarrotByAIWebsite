@@ -1,17 +1,17 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { getAdminDb } from "../../../lib/firebaseAdmin";
-import { requireDashboardAccess } from "../../../lib/requireAuth";
+import { getAdminDb } from "../../../../lib/firebaseAdmin";
+import { requireDashboardAccess } from "../../../../lib/requireAuth";
 import {
   buildPartnerPromotionWritePayload,
   serializePartnerPromotionRow,
   validatePartnerPromotionInput,
-} from "../../../lib/partnerPromotions/partnerPromotions.service";
+} from "../../../../lib/partnerPromotions/partnerPromotions.service";
 import {
   clearPartnerPromotionsMemoryCache,
   listAllPartnerPromotionsAdmin,
   rebuildPartnerPromotionsMaterializedCache,
-} from "../../../lib/partnerPromotions/loadPartnerPromotionsPublic";
-import { PARTNER_PROMOTION_ZONES } from "../../../lib/partnerPromotions/zones";
+} from "../../../../lib/partnerPromotions/loadPartnerPromotionsPublic";
+import { PARTNER_PROMOTION_ZONES } from "../../../../lib/partnerPromotions/zones";
 
 async function rebuildCacheBestEffort() {
   try {

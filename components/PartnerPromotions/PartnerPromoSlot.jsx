@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { resolvePartnerPromotionLinkUrl } from "../../lib/partnerPromotions/partnerPromotions.service";
+import { resolvePartnerPromotionLinkUrl } from "../../lib/partnerPromotions/partnerPromotionLinks";
 
 export default function PartnerPromoSlot({ placement, className = "" }) {
   const router = useRouter();
