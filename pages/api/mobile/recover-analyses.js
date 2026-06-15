@@ -5,14 +5,41 @@ function buildRequestId() {
   return `mobile_recover_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const uniqueTrimmed = (values) => {
+  const seen = new Set();
+  const out = [];
+  (values || []).forEach((value) => {
+    const t = String(value || "").trim();
+    if (t && !seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  });
+  return out;
+};
+
 const readContact = (body, decoded) => {
   const fromBody = body && typeof body === "object" ? body : {};
-  const phone =
-    String(fromBody.phone || "").trim() ||
-    String(decoded?.phone_number || "").trim();
-  const email =
-    String(fromBody.email || "").trim() || String(decoded?.email || "").trim();
-  return { phone, email };
+
+  // Acceptăm atât forma veche (phone/email) cât și listele (phones/emails),
+  // plus contactul din token ca fallback. Union + dedup.
+  const phones = uniqueTrimmed([
+    ...(Array.isArray(fromBody.phones) ? fromBody.phones : []),
+    fromBody.phone,
+    decoded?.phone_number,
+  ]);
+  const emails = uniqueTrimmed([
+    ...(Array.isArray(fromBody.emails) ? fromBody.emails : []),
+    fromBody.email,
+    decoded?.email,
+  ]);
+
+  return {
+    phones,
+    emails,
+    phone: phones[0] || "",
+    email: emails[0] || "",
+  };
 };
 
 export default async function handler(req, res) {
@@ -31,24 +58,24 @@ export default async function handler(req, res) {
     // Auth is optional: recovery must keep working for guests who paid without
     // an account. We still accept a token to derive contact when the body omits it.
     const decoded = await getOptionalAuth(req);
-    const { phone, email } = readContact(req.body, decoded);
+    const { phone, email, phones, emails } = readContact(req.body, decoded);
 
-    if (!phone && !email) {
+    if (!phones.length && !emails.length) {
       return res.status(400).json({
         error: "Missing contact (phone or email required)",
         requestId,
       });
     }
 
-    const result = await loadAnalysesByContact({ phone, email });
+    const result = await loadAnalysesByContact({ phone, email, phones, emails });
 
     return res.status(200).json({
       ...result,
       requestId,
       generatedAt: new Date().toISOString(),
       matchedBy: {
-        phone: Boolean(phone),
-        email: Boolean(email),
+        phones: phones.length,
+        emails: emails.length,
       },
     });
   } catch (error) {
