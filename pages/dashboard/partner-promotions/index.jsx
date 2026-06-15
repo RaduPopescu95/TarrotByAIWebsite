@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
-import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
+import PartnerPromotionsOverview from "../../../components/PartnerPromotions/PartnerPromotionsOverview";
+import PartnerPromotionsTable from "../../../components/PartnerPromotions/PartnerPromotionsTable";
+import PartnerPromotionsEmptyState from "../../../components/PartnerPromotions/PartnerPromotionsEmptyState";
+import PartnerPromotionForm from "../../../components/PartnerPromotions/PartnerPromotionForm";
 import {
   createAdminPartnerPromotion,
   deleteAdminPartnerPromotion,
@@ -14,21 +18,23 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Badge } from "../../../components/ui/badge";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { Separator } from "../../../components/ui/separator";
+import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
-import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Plus, ChevronRight, Search, X, RefreshCw } from "lucide-react";
 
 const EMPTY_FORM = {
   name: "",
@@ -44,6 +50,9 @@ const EMPTY_FORM = {
   locale: "all",
 };
 
+const SELECT_CLASS =
+  "h-10 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200";
+
 function toLocalDateTimeInput(iso) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -52,10 +61,13 @@ function toLocalDateTimeInput(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function formatPeriod(row) {
-  const start = row.displayStartAt ? new Date(row.displayStartAt).toLocaleDateString("ro-RO") : "—";
-  const end = row.displayEndAt ? new Date(row.displayEndAt).toLocaleDateString("ro-RO") : "—";
-  return `${start} → ${end}`;
+function isPromotionLive(row, nowMs = Date.now()) {
+  if (!row || row.isActive !== true) return false;
+  const startMs = row.displayStartAt ? Date.parse(row.displayStartAt) : null;
+  const endMs = row.displayEndAt ? Date.parse(row.displayEndAt) : null;
+  if (startMs !== null && Number.isFinite(startMs) && startMs > nowMs) return false;
+  if (endMs !== null && Number.isFinite(endMs) && endMs < nowMs) return false;
+  return true;
 }
 
 export default function PartnerPromotionsDashboardPage() {
@@ -64,10 +76,18 @@ export default function PartnerPromotionsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogError, setDialogError] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [logoUploading, setLogoUploading] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [localeFilter, setLocaleFilter] = useState("all");
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [promotionToDelete, setPromotionToDelete] = useState(null);
 
   const zoneList = useMemo(() => Object.values(zones || {}), [zones]);
 
@@ -89,9 +109,92 @@ export default function PartnerPromotionsDashboardPage() {
     load();
   }, [load]);
 
+  const filtered = useMemo(() => {
+    const lower = search.trim().toLowerCase();
+    const nowMs = Date.now();
+
+    return promotions.filter((row) => {
+      const matchesSearch =
+        !lower ||
+        (row.name || "").toLowerCase().includes(lower) ||
+        (row.description || "").toLowerCase().includes(lower);
+
+      let matchesStatus = true;
+      if (statusFilter === "active") {
+        matchesStatus = isPromotionLive(row, nowMs);
+      } else if (statusFilter === "inactive") {
+        matchesStatus = row.isActive !== true;
+      } else if (statusFilter === "scheduled") {
+        const startMs = row.displayStartAt ? Date.parse(row.displayStartAt) : null;
+        matchesStatus =
+          row.isActive === true &&
+          startMs !== null &&
+          Number.isFinite(startMs) &&
+          startMs > nowMs;
+      } else if (statusFilter === "expired") {
+        const endMs = row.displayEndAt ? Date.parse(row.displayEndAt) : null;
+        matchesStatus = endMs !== null && Number.isFinite(endMs) && endMs < nowMs;
+      }
+
+      let matchesLocale = true;
+      if (localeFilter === "all-locale") {
+        matchesLocale = (row.locale || "all") === "all";
+      } else if (localeFilter !== "all") {
+        matchesLocale = (row.locale || "all") === localeFilter;
+      }
+
+      return matchesSearch && matchesStatus && matchesLocale;
+    });
+  }, [promotions, search, statusFilter, localeFilter]);
+
+  const stats = useMemo(() => {
+    const nowMs = Date.now();
+    const total = promotions.length;
+    const active = promotions.filter((row) => isPromotionLive(row, nowMs)).length;
+    const inactive = promotions.filter((row) => row.isActive !== true).length;
+    const scheduled = promotions.filter((row) => {
+      const startMs = row.displayStartAt ? Date.parse(row.displayStartAt) : null;
+      return (
+        row.isActive === true &&
+        startMs !== null &&
+        Number.isFinite(startMs) &&
+        startMs > nowMs
+      );
+    }).length;
+    const expired = promotions.filter((row) => {
+      const endMs = row.displayEndAt ? Date.parse(row.displayEndAt) : null;
+      return endMs !== null && Number.isFinite(endMs) && endMs < nowMs;
+    }).length;
+
+    const webZoneIds = new Set(
+      zoneList.filter((z) => z.platform === "web").map((z) => z.id)
+    );
+    const mobileZoneIds = new Set(
+      zoneList.filter((z) => z.platform === "mobile").map((z) => z.id)
+    );
+
+    let webZones = 0;
+    let mobileZones = 0;
+    for (const row of promotions) {
+      for (const placement of row.placements || []) {
+        if (webZoneIds.has(placement)) webZones += 1;
+        if (mobileZoneIds.has(placement)) mobileZones += 1;
+      }
+    }
+
+    return { total, active, inactive, scheduled, expired, webZones, mobileZones };
+  }, [promotions, zoneList]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setLocaleFilter("all");
+  };
+
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setDialogError("");
     setDialogOpen(true);
   };
 
@@ -110,6 +213,7 @@ export default function PartnerPromotionsDashboardPage() {
       sortOrder: typeof row.sortOrder === "number" ? row.sortOrder : 0,
       locale: row.locale || "all",
     });
+    setDialogError("");
     setDialogOpen(true);
   };
 
@@ -126,7 +230,7 @@ export default function PartnerPromotionsDashboardPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
-    setError("");
+    setDialogError("");
     try {
       const result = await uploadImage([file], [], true, "PartnerPromotions", null, null);
       const url = result?.finalUri || result;
@@ -134,7 +238,7 @@ export default function PartnerPromotionsDashboardPage() {
         setForm((prev) => ({ ...prev, logoUrl: url }));
       }
     } catch (e) {
-      setError(e?.message || "Upload logo eșuat.");
+      setDialogError(e?.message || "Upload logo eșuat.");
     } finally {
       setLogoUploading(false);
       event.target.value = "";
@@ -143,7 +247,7 @@ export default function PartnerPromotionsDashboardPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    setError("");
+    setDialogError("");
     try {
       const payload = {
         ...form,
@@ -160,273 +264,256 @@ export default function PartnerPromotionsDashboardPage() {
       setDialogOpen(false);
       await load();
     } catch (e) {
-      setError(e?.message || "Salvare eșuată.");
+      setDialogError(e?.message || "Salvare eșuată.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Ștergi această promovare?")) return;
+  const handleToggleActive = async (row) => {
     setError("");
     try {
-      await deleteAdminPartnerPromotion(id);
+      await updateAdminPartnerPromotion(row.id, { isActive: !row.isActive });
       await rebuildPartnerPromotionsCache().catch(() => {});
+      await load();
+    } catch (e) {
+      setError(e?.message || "Actualizare status eșuată.");
+    }
+  };
+
+  const openDeleteDialog = (row) => {
+    setPromotionToDelete(row);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setPromotionToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!promotionToDelete) return;
+    setError("");
+    try {
+      await deleteAdminPartnerPromotion(promotionToDelete.id);
+      await rebuildPartnerPromotionsCache().catch(() => {});
+      closeDeleteDialog();
       await load();
     } catch (e) {
       setError(e?.message || "Ștergere eșuată.");
     }
   };
 
+  const hasActiveFilters =
+    search.trim() !== "" || statusFilter !== "all" || localeFilter !== "all";
+
   return (
     <>
       <Head>
         <title>Promovări parteneri | Dashboard</title>
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <LocalPasswordGate>
-        <CustomDrawer selectedItem="Promovări parteneri" drawerText="Promovări parteneri">
-          <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Promovări parteneri</h1>
-                <p className="mt-1 text-sm text-slate-600">
-                  Gestionează firmele promovate pentru site și aplicație. Modificările apar automat după salvare.
-                </p>
+      <LocalPasswordGate redirectTo="/dashboard/login">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+          <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+              <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+                <Link href="/dashboard" className="transition-colors hover:text-gray-900">
+                  Dashboard
+                </Link>
+                <ChevronRight className="h-4 w-4" />
+                <span className="font-medium text-gray-900">Promovări parteneri</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={load} disabled={loading}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Reîncarcă
-                </Button>
-                <Button onClick={openCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Firmă nouă
-                </Button>
+
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Promovări parteneri</h1>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Gestionează firmele promovate pentru site și aplicație. Modificările apar automat
+                    după salvare.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Reîncarcă
+                  </Button>
+                  <Button onClick={openCreate} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Firmă nouă
+                  </Button>
+                </div>
               </div>
             </div>
+          </div>
 
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             {error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Firmă</TableHead>
-                    <TableHead>Perioadă</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Acțiuni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-8 text-center text-slate-500">
-                        Se încarcă…
-                      </TableCell>
-                    </TableRow>
-                  ) : promotions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-8 text-center text-slate-500">
-                        Nicio promovare încă. Adaugă prima firmă parteneră.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    promotions.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {row.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={row.logoUrl}
-                                alt=""
-                                className="h-10 w-10 rounded-lg border object-contain bg-white"
-                              />
-                            ) : null}
-                            <div>
-                              <div className="font-medium text-slate-900">{row.name}</div>
-                              <div className="text-xs text-slate-500 line-clamp-1">{row.description}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">{formatPeriod(row)}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {(row.placements || []).slice(0, 3).map((p) => (
-                              <Badge key={p} variant="secondary" className="text-[10px]">
-                                {zones[p]?.label || p}
-                              </Badge>
-                            ))}
-                            {(row.placements || []).length > 3 ? (
-                              <Badge variant="outline">+{(row.placements || []).length - 3}</Badge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={row.isActive ? "default" : "secondary"}>
-                            {row.isActive ? "Activ" : "Inactiv"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => openEdit(row)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDelete(row.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingId ? "Editează promovarea" : "Firmă parteneră nouă"}</DialogTitle>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-2">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Nume firmă</label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Logo / imagine</label>
-                  <Input
-                    value={form.logoUrl}
-                    onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-                    placeholder="URL imagine sau încarcă fișier"
-                  />
-                  <Input type="file" accept="image/*" onChange={handleLogoFile} disabled={logoUploading} />
-                  {logoUploading ? <p className="text-xs text-slate-500">Se încarcă logo…</p> : null}
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Descriere scurtă</label>
-                  <Input
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    maxLength={200}
-                  />
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Link</label>
-                    <Input value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Tip link</label>
-                    <select
-                      className="h-10 rounded-md border border-slate-200 px-3 text-sm"
-                      value={form.linkType}
-                      onChange={(e) => setForm({ ...form, linkType: e.target.value })}
-                    >
-                      <option value="website">Website</option>
-                      <option value="store">Magazin online</option>
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="offer">Pagină ofertă</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Început afișare</label>
-                    <Input
-                      type="datetime-local"
-                      value={form.displayStartAt}
-                      onChange={(e) => setForm({ ...form, displayStartAt: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Sfârșit afișare</label>
-                    <Input
-                      type="datetime-local"
-                      value={form.displayEndAt}
-                      onChange={(e) => setForm({ ...form, displayEndAt: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Prioritate (sort)</label>
-                    <Input
-                      type="number"
-                      value={form.sortOrder}
-                      onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Limbă</label>
-                    <select
-                      className="h-10 rounded-md border border-slate-200 px-3 text-sm"
-                      value={form.locale}
-                      onChange={(e) => setForm({ ...form, locale: e.target.value })}
-                    >
-                      <option value="all">Toate</option>
-                      <option value="ro">Română</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <select
-                      className="h-10 rounded-md border border-slate-200 px-3 text-sm"
-                      value={form.isActive ? "active" : "inactive"}
-                      onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}
-                    >
-                      <option value="active">Activ</option>
-                      <option value="inactive">Inactiv</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Zone de afișare</label>
-                  <div className="grid max-h-48 gap-2 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
-                    {zoneList.map((zone) => (
-                      <label key={zone.id} className="flex items-start gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={form.placements.includes(zone.id)}
-                          onChange={() => togglePlacement(zone.id)}
-                          className="mt-1"
+            <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+              <div className="space-y-6">
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Lista promovări</CardTitle>
+                        <CardDescription>
+                          Filtrează și gestionează firmele partenere promovate.
+                        </CardDescription>
+                      </div>
+                      {filtered.length > 0 && (
+                        <Badge variant="secondary" className="text-sm">
+                          {filtered.length} {filtered.length === 1 ? "rezultat" : "rezultate"}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="relative min-w-[240px] flex-1">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Caută după nume sau descriere..."
+                          className="pl-9 pr-9"
                         />
-                        <span>
-                          <span className="font-medium">{zone.label}</span>
-                          <span className="block text-xs text-slate-500">{zone.id}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                        {search ? (
+                          <button
+                            type="button"
+                            onClick={() => setSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+                        <TabsList>
+                          <TabsTrigger value="all">Toate</TabsTrigger>
+                          <TabsTrigger value="active">Active</TabsTrigger>
+                          <TabsTrigger value="inactive">Inactive</TabsTrigger>
+                          <TabsTrigger value="scheduled">Programate</TabsTrigger>
+                          <TabsTrigger value="expired">Expirate</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+
+                      <select
+                        className={SELECT_CLASS}
+                        value={localeFilter}
+                        onChange={(e) => setLocaleFilter(e.target.value)}
+                      >
+                        <option value="all">Toate limbile</option>
+                        <option value="all-locale">Locale: toate</option>
+                        <option value="ro">Română</option>
+                        <option value="en">English</option>
+                      </select>
+
+                      {hasActiveFilters ? (
+                        <Button variant="outline" size="sm" onClick={resetFilters}>
+                          Resetează
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    <Separator />
+
+                    {loading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+                          Se încarcă promovările…
+                        </div>
+                      </div>
+                    ) : promotions.length === 0 ? (
+                      <PartnerPromotionsEmptyState type="noPromotions" onAction={openCreate} />
+                    ) : filtered.length === 0 ? (
+                      <PartnerPromotionsEmptyState type="noResults" onAction={resetFilters} />
+                    ) : (
+                      <PartnerPromotionsTable
+                        promotions={filtered}
+                        zones={zones}
+                        onEdit={openEdit}
+                        onToggleActive={handleToggleActive}
+                        onDelete={openDeleteDialog}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-                  Anulează
-                </Button>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Se salvează…" : "Salvează"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CustomDrawer>
+              <aside className="lg:sticky lg:top-8 lg:self-start">
+                <PartnerPromotionsOverview stats={stats} />
+              </aside>
+            </div>
+          </div>
+        </div>
+
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            if (!saving) setDialogOpen(open);
+          }}
+        >
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Editează promovarea" : "Firmă parteneră nouă"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingId
+                  ? "Modifică detaliile firmei partenere și zonele de afișare."
+                  : "Completează formularul pentru a adăuga o firmă parteneră nouă."}
+              </DialogDescription>
+            </DialogHeader>
+
+            {dialogError ? (
+              <div className="mx-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {dialogError}
+              </div>
+            ) : null}
+
+            <PartnerPromotionForm
+              form={form}
+              setForm={setForm}
+              zoneList={zoneList}
+              onTogglePlacement={togglePlacement}
+              onLogoFile={handleLogoFile}
+              logoUploading={logoUploading}
+              onCancel={() => setDialogOpen(false)}
+              onSave={handleSave}
+              saving={saving}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmare ștergere</DialogTitle>
+              <DialogDescription>
+                Ești sigur că vrei să ștergi promovarea{" "}
+                <span className="font-semibold text-gray-900">
+                  &quot;{promotionToDelete?.name}&quot;
+                </span>
+                ? Această acțiune nu poate fi anulată.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDeleteDialog}>
+                Anulează
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                Șterge promovarea
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </LocalPasswordGate>
     </>
   );
