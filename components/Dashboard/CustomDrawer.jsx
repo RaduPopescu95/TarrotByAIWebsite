@@ -111,6 +111,10 @@ const dashboardPrefetchScreens = [
   "numere-norocoase",
   "ore-norocoase",
   "poza-api",
+  "partner-promotions",
+];
+
+const administrarePrefetchScreens = [
   "abonati",
   "user-tokens",
   "analytics",
@@ -119,7 +123,19 @@ const dashboardPrefetchScreens = [
   "ads-orchestration",
 ];
 
+const ADMIN_MENU_ITEMS = [
+  { screen: "abonati", text: "Abonați Premium", Icon: PeopleAltIcon },
+  { screen: "user-tokens", text: "Tokenuri push", Icon: NotificationsIcon },
+  { screen: "analytics", text: "Firestore Analytics", Icon: BarChartIcon },
+  { screen: "astrograme-pdf", text: "Astrograme PDF", Icon: PictureAsPdfIcon },
+  { screen: "setari", text: "Setări", Icon: SettingsIcon },
+  { screen: "ads-orchestration", text: "Orchestrare Ads", Icon: AdsClickIcon },
+];
+
 export default function CustomDrawer(props) {
+  const basePath = props.basePath || "/dashboard";
+  const variant = props.variant || "content";
+  const shellTitle = variant === "admin" ? "Administrare" : "Dashboard";
   const [open, setOpen] = React.useState(true);
   const [selectedItem, setSelectedItem] = React.useState(
     props.selectedItem ? props.selectedItem : ""
@@ -133,26 +149,33 @@ export default function CustomDrawer(props) {
   React.useEffect(() => {
     if (!router.isReady || hasPrefetchedRef.current) return;
     hasPrefetchedRef.current = true;
-    dashboardPrefetchScreens.forEach((screen) => {
-      router.prefetch(`/dashboard/${screen}`);
+    const screens =
+      variant === "admin" ? administrarePrefetchScreens : dashboardPrefetchScreens;
+    screens.forEach((screen) => {
+      router.prefetch(`${basePath}/${screen}`);
     });
-  }, [router.isReady, router]);
+  }, [router.isReady, router, basePath, variant]);
   const toggleDrawer = () => {
     setOpen(!open);
   };
 
-  const handleSelectedItem = (i, index) => {
+  const handleSelectedItem = (i) => {
     if (i.text === "Log out") {
       handleSignOut(router);
     } else if (i.citire) {
       setSelectedItem(i.citire);
       setDrawerText(i.text);
-      router.push(`/dashboard/${i.screen}`);
+      router.push(`${basePath}/${i.screen}`);
     } else {
       setSelectedItem(i.text);
       setDrawerText(i.text);
-      router.push(`/dashboard/${i.screen}`);
+      router.push(`${basePath}/${i.screen}`);
     }
+  };
+
+  const handleLogout = () => {
+    clearDashboardAccess();
+    router.replace(`${basePath}/login`);
   };
 
   // Firebase checks removed; access is handled by LocalPasswordGate
@@ -191,7 +214,7 @@ export default function CustomDrawer(props) {
               noWrap
               sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}
             >
-              Dashboard{" "}
+              {shellTitle}{" "}
               {selectedItem.length > 0 && (
                 <>
                   <span style={{ display: "flex", alignItems: "center" }}>
@@ -232,6 +255,39 @@ export default function CustomDrawer(props) {
             component="nav"
             sx={{ backgroundColor: "#303030", height: "100%" }}
           >
+            {variant === "admin" ? (
+              <>
+                {ADMIN_MENU_ITEMS.map((item) => (
+                  <ListItemButton
+                    key={item.screen}
+                    onClick={() => handleSelectedItem(item)}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        color: selectedItem === item.text ? "#ffc045" : "white",
+                      }}
+                    >
+                      <item.Icon />
+                    </ListItemIcon>
+                    <ListItemText primary={item.text} sx={{ color: "white" }} />
+                  </ListItemButton>
+                ))}
+                <Divider sx={{ my: 1 }} />
+                <ListItemButton onClick={() => router.push("/dashboard")}>
+                  <ListItemIcon sx={{ color: "white" }}>
+                    <DashboardIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Dashboard conținut" sx={{ color: "white" }} />
+                </ListItemButton>
+                <ListItemButton onClick={handleLogout}>
+                  <ListItemIcon sx={{ color: "white" }}>
+                    <LogoutIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Log out" sx={{ color: "white" }} />
+                </ListItemButton>
+              </>
+            ) : (
+            <>
             <React.Fragment>
               {open && (
                 <ListItemText
@@ -536,66 +592,6 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
-                    screen: "abonati",
-                    text: "Abonați Premium",
-                  })
-                }
-              >
-                <ListItemIcon
-                  sx={{
-                    color: selectedItem === "Abonați Premium" ? "#ffc045" : "white",
-                  }}
-                >
-                  <PeopleAltIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Abonați Premium"
-                  sx={{ color: "white" }}
-                />
-              </ListItemButton>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({
-                    screen: "user-tokens",
-                    text: "Tokenuri push",
-                  })
-                }
-              >
-                <ListItemIcon
-                  sx={{
-                    color: selectedItem === "Tokenuri push" ? "#ffc045" : "white",
-                  }}
-                >
-                  <NotificationsIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Tokenuri push"
-                  sx={{ color: "white" }}
-                />
-              </ListItemButton>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({
-                    screen: "analytics",
-                    text: "Firestore Analytics",
-                  })
-                }
-              >
-                <ListItemIcon
-                  sx={{
-                    color: selectedItem === "Firestore Analytics" ? "#ffc045" : "white",
-                  }}
-                >
-                  <BarChartIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Firestore Analytics"
-                  sx={{ color: "white" }}
-                />
-              </ListItemButton>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({
                     screen: "culori-norocoase",
                     text: "Culori Norocoase",
                   })
@@ -653,26 +649,6 @@ export default function CustomDrawer(props) {
                 </ListItemIcon>
                 <ListItemText primary="Ore norocoase" sx={{ color: "white" }} />
               </ListItemButton>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({
-                    screen: "astrograme-pdf",
-                    text: "Astrograme PDF",
-                  })
-                }
-              >
-                <ListItemIcon
-                  sx={{
-                    color: selectedItem === "Astrograme PDF" ? "#ffc045" : "white",
-                  }}
-                >
-                  <PictureAsPdfIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Astrograme PDF"
-                  sx={{ color: "white" }}
-                />
-              </ListItemButton>
               {/* <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
@@ -700,38 +676,27 @@ export default function CustomDrawer(props) {
               <ListItemButton
                 onClick={() =>
                   handleSelectedItem({
-                    screen: "setari",
-                    text: "Setări",
+                    screen: "partner-promotions",
+                    text: "Promovări parteneri",
                   })
                 }
               >
                 <ListItemIcon
                   sx={{
-                    color: selectedItem === "Setări" ? "#ffc045" : "white",
+                    color: selectedItem === "Promovări parteneri" ? "#ffc045" : "white",
                   }}
                 >
+                  <ShoppingCartIcon />
+                </ListItemIcon>
+                <ListItemText primary="Promovări parteneri" sx={{ color: "white" }} />
+              </ListItemButton>
+              <ListItemButton onClick={() => router.push("/administrare")}>
+                <ListItemIcon sx={{ color: "white" }}>
                   <SettingsIcon />
                 </ListItemIcon>
-                <ListItemText primary="Setări" sx={{ color: "white" }} />
+                <ListItemText primary="Administrare" sx={{ color: "white" }} />
               </ListItemButton>
-              <ListItemButton
-                onClick={() =>
-                  handleSelectedItem({
-                    screen: "ads-orchestration",
-                    text: "Orchestrare Ads",
-                  })
-                }
-              >
-                <ListItemIcon
-                  sx={{
-                    color: selectedItem === "Orchestrare Ads" ? "#ffc045" : "white",
-                  }}
-                >
-                  <AdsClickIcon />
-                </ListItemIcon>
-                <ListItemText primary="Orchestrare Ads" sx={{ color: "white" }} />
-              </ListItemButton>
-              <ListItemButton onClick={() => { clearDashboardAccess(); router.replace("/dashboard"); }}>
+              <ListItemButton onClick={handleLogout}>
                 <ListItemIcon
                   sx={{
                     color: "white",
@@ -742,6 +707,8 @@ export default function CustomDrawer(props) {
                 <ListItemText primary="Log out" sx={{ color: "white" }} />
               </ListItemButton>
             </React.Fragment>
+            </>
+            )}
           </List>
         </Drawer>
         <Box

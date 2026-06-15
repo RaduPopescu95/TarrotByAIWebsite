@@ -15,6 +15,7 @@ import {
   loadPublicArticles,
 } from "../../../lib/publicArticles";
 import AdPlacementShell from "../../../components/Ads/AdPlacementShell";
+import PartnerPromoSlot from "../../../components/PartnerPromotions/PartnerPromoSlot";
 
 const SIDEBAR_ARTICLES_LIMIT = 12;
 function buildArticlesPreview(articlesData = []) {
@@ -424,6 +425,7 @@ function BlogDetail({ articles, filteredArticle, relatedArticles, error, slug })
                 )}
 
                 <AdPlacementShell placementId="banner1" />
+                <PartnerPromoSlot placement="web_article_detail" className="my-6" />
 
                 {/* Main Article Content */}
                 <article className="bg-white rounded-3xl shadow-xl overflow-hidden">

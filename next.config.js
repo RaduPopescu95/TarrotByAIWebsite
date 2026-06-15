@@ -36,7 +36,19 @@ const nextConfig = {
   },
   // Important: ensure proper redirects if needed
   async redirects() {
-    return [];
+    const adminPaths = [
+      "abonati",
+      "user-tokens",
+      "analytics",
+      "astrograme-pdf",
+      "setari",
+      "ads-orchestration",
+    ];
+    return adminPaths.map((path) => ({
+      source: `/dashboard/${path}`,
+      destination: `/administrare/${path}`,
+      permanent: true,
+    }));
   },
   // Important: ensure proper headers for i18n
   async headers() {

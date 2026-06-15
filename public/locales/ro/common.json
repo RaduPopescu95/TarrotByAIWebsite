@@ -549,5 +549,7 @@
   "coursesDetailLessonDurationLabel": "Durata",
   "coursesDetailLessonDurationUnknown": "Durata indisponibila",
   "coursesDetailNotesEmpty": "Nu exista note disponibile pentru acest curs momentan.",
-  "coursesDetailContactEmpty": "Nu exista detalii de contact disponibile pentru acest curs momentan."
+  "coursesDetailContactEmpty": "Nu exista detalii de contact disponibile pentru acest curs momentan.",
+  "partnerPromoBadge": "Partener",
+  "partnerPromoCta": "Vezi oferta"
 }

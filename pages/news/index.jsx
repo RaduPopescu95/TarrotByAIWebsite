@@ -24,6 +24,7 @@ import { buildArticleHref } from "../../utils/commonUtils";
 import { loadPublicArticles } from "../../lib/publicArticles";
 import { usePaginatedArticleGrid } from "../../hooks/usePaginatedArticleGrid";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import PartnerPromoSlot from "../../components/PartnerPromotions/PartnerPromoSlot";
 
 function buildArticlesPreview(articlesData = []) {
   if (!Array.isArray(articlesData) || articlesData.length === 0) {
@@ -352,6 +353,7 @@ function BlogHome(props) {
               )}
 
               <AdPlacementShell placementId="banner1" />
+              <PartnerPromoSlot placement="web_news_list" className="mb-8" />
 
               {/* Next 2 Articles Section */}
               <AdPlacementShell placementId="banner2" />

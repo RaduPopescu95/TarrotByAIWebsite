@@ -28,6 +28,7 @@ import HeadlineConsultatii from "../components/Blog/HeadlineConsultatii";
 import { loadContentHome } from "../lib/loadContentHome";
 import { usePaginatedArticleGrid } from "../hooks/usePaginatedArticleGrid";
 import AdPlacementShell from "../components/Ads/AdPlacementShell";
+import PartnerPromoSlot from "../components/PartnerPromotions/PartnerPromoSlot";
 
 const HOME_VIDEO_PREVIEW_LIMIT = 6;
 
@@ -421,6 +422,9 @@ function Landing(props) {
 
 
         </section>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <PartnerPromoSlot placement="web_home_top" className="py-6" />
+        </div>
         <AdPlacementShell placementId="banner1" />
         {/* Modern Blog Content Area */}
         <main style={styles.contentWrapper}>
@@ -805,6 +809,9 @@ function Landing(props) {
 
             {shouldRenderHomeCoursesSection && (
             <section className="bg-transparent">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <PartnerPromoSlot placement="web_home_mid" className="pb-4" />
+              </div>
               <div className="w-full space-y-10 px-4 py-16 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                   <div className="max-w-3xl">

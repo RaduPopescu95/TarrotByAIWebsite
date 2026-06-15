@@ -19,6 +19,7 @@ import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonali
 import languageDetector from "../../lib/languageDetector";
 import { Sparkles } from "lucide-react";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import PartnerPromoSlot from "../../components/PartnerPromotions/PartnerPromoSlot";
 import { logI18nStatus, testTranslations } from "../../utils/i18nLogger";
 
 export async function getServerSideProps({ locale }) {
@@ -585,6 +586,7 @@ export function CitirePersonalizata({ services }) {
               paddingTop: isMobile ? "30%" : "8%",
             }}>
               <AdPlacementShell placementId="banner1" />
+              <PartnerPromoSlot placement="web_feature_reading" className="my-6" />
               <div style={{
                 ...styles.cardsGrid,
                 width: isMobile ? "100%" : "90%",

@@ -74,7 +74,7 @@ Primary monetization uses discrete Adsterra Native Banner slots on public pages 
 - Banners load only in `production`, on allowlisted routes, after 4 seconds on the page.
 - No popunder/interstitial formats in code.
 - Middleware rate-limits automation UA on the same public routes.
-- Dashboard preview: `/dashboard/ads-orchestration`
+- Dashboard preview: `/administrare/ads-orchestration`
 - Banner loads inside an **iframe** (isolates `invoke.js` from the main page — helps avoid popunder/fullscreen leaking to the site chrome).
 - Default `NEXT_PUBLIC_ADSTERRA_MAX_SLOTS_PER_PAGE=1` — never reuse the same Adsterra code twice on one page.
 

@@ -40,6 +40,8 @@ export default function LocalPasswordGate({
   ttlMinutes = 20160,
   onGranted,
   redirectTo,
+  title = "Acces Dashboard",
+  description = "Introduceți parola pentru a accesa dashboard-ul",
 }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -113,8 +115,8 @@ export default function LocalPasswordGate({
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-xl"
       >
-        <h2 className="mb-2 text-2xl font-bold text-gray-900">Acces Dashboard</h2>
-        <p className="mb-6 text-sm text-gray-600">Introduceți parola pentru a accesa dashboard-ul</p>
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">{title}</h2>
+        <p className="mb-6 text-sm text-gray-600">{description}</p>
         <label className="mb-2 block text-sm font-medium text-gray-700">
           Parolă
         </label>

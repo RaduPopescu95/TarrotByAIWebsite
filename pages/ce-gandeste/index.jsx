@@ -19,6 +19,7 @@ import { useNumberContext } from "../../context/NumberContext";
 import CitirePersonalizatDialog from "../../components/DialogBox/CitirePersonalizatDialog";
 import languageDetector from "../../lib/languageDetector";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import PartnerPromoSlot from "../../components/PartnerPromotions/PartnerPromoSlot";
 
 // export async function getStaticProps() {
 //   const services = await handleGetServices();
@@ -554,6 +555,7 @@ export function CitirePersonalizata({ services }) {
             <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
 
               <AdPlacementShell placementId="banner1" />
+              <PartnerPromoSlot placement="web_feature_reading" className="my-6" />
               
               {/* Two Column Layout for Desktop */}
               <div style={{
