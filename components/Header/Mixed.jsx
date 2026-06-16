@@ -4,6 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
+import i18nextConfig from "../../next-i18next.config";
+import { getLocaleAbbreviation, getLocaleNativeLabel } from "../../lib/localeFlags";
 
 // SVG Icons from the old navbar
 const StarIcon = ({ style, className, ...props }) => (
@@ -119,23 +121,15 @@ function Mixed(props) {
                              router.pathname.includes('/facturi-client-consultatii') ||
                              router.pathname.includes('/categorii-consultatii');
 
-  // Language mapping with flags
-  const languages = {
-    en: { name: "English", flag: "/flags/english.png" },
-    ro: { name: "Română", flag: "/flags/romania.png" },
-    bg: { name: "Български", flag: "/flags/bulgaria.png" },
-    hr: { name: "Hrvatski", flag: "/flags/croatia.png" },
-    cs: { name: "Čeština", flag: "/flags/czech.png" },
-    fr: { name: "Français", flag: "/flags/france.png" },
-    de: { name: "Deutsch", flag: "/flags/germany.png" },
-    el: { name: "Ελληνικά", flag: "/flags/greece.png" },
-    hi: { name: "हिंदी", flag: "/flags/india.png" },
-    id: { name: "Bahasa Indonesia", flag: "/flags/indonesia.png" },
-    it: { name: "Italiano", flag: "/flags/italy.png" },
-    pl: { name: "Polski", flag: "/flags/poland.png" },
-    sk: { name: "Slovenčina", flag: "/flags/slovakia.png" },
-    es: { name: "Español", flag: "/flags/spanish.png" },
-  };
+  const languages = Object.fromEntries(
+    (i18nextConfig.i18n?.locales ?? ["ro"]).map((locale) => [
+      locale,
+      {
+        name: getLocaleNativeLabel(locale),
+        abbreviation: getLocaleAbbreviation(locale),
+      },
+    ])
+  );
 
   // Handle responsive breakpoints
   useEffect(() => {
@@ -384,11 +378,7 @@ function Mixed(props) {
                   }}
                   aria-label="Change language"
                 >
-                  <img 
-                    src={currentLanguage.flag} 
-                    alt={currentLanguage.name}
-                    style={styles.flagIcon}
-                  />
+                  <span style={styles.langAbbrBadge}>{currentLanguage.abbreviation}</span>
                   {isDesktop && <span style={styles.languageText}>{currentLanguage.name}</span>}
                   <svg 
                     width="16" 
@@ -432,11 +422,6 @@ function Mixed(props) {
                           }
                         }}
                       >
-                        <img 
-                          src={lang.flag} 
-                          alt={lang.name}
-                          style={styles.flagIconSmall}
-                        />
                         <span style={styles.languageOptionText}>{lang.name}</span>
                       </button>
                     ))}
@@ -747,11 +732,16 @@ const styles = {
     borderRadius: "10px",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   },
-  flagIcon: {
-    width: "20px",
-    height: "20px",
+  langAbbrBadge: {
+    minWidth: "28px",
+    height: "22px",
+    padding: "0 6px",
     borderRadius: "4px",
-    objectFit: "cover",
+    border: "1px solid rgba(255, 255, 255, 0.35)",
+    fontSize: "11px",
+    fontWeight: "700",
+    lineHeight: "20px",
+    textAlign: "center",
   },
   languageText: {
     fontSize: "12px",
@@ -797,12 +787,6 @@ const styles = {
     backgroundColor: "rgba(102, 126, 234, 0.15)",
     color: "#667eea",
     fontWeight: "600",
-  },
-  flagIconSmall: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "4px",
-    objectFit: "cover",
   },
   languageOptionText: {
     fontSize: "14px",

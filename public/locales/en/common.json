@@ -475,6 +475,10 @@
   "videoLibraryChannelName": "Cristina Zurba",
   "videoLibrarySidebarTitle": "Navigation",
   "videoLibraryFilteredEmpty": "No videos in this category.",
+  "videoCategoryEmpty": "No videos in this category.",
+  "videoCategoryBackLabel": "Back to video library",
+  "videoLibrarySeeAllInCategory": "See all",
+  "videoCategoryMetaDesc": "Videos from category",
   "videoLibraryPaginationRange": "{{from}}–{{to}} of {{total}}",
   "videoLibraryPaginationPrev": "Previous",
   "videoLibraryPaginationNext": "Next",
@@ -492,6 +496,9 @@
   "videoLibraryHomePreviewTitle": "Latest videos",
   "videoLibraryHomePreviewSubtitle": "Recently added clips from the video library.",
   "videoLibraryHomePreviewAll": "See all videos",
+  "videoLibraryHomeFeaturedTitle": "Featured videos",
+  "videoLibraryHomeFeaturedSubtitle": "Editor's picks on the homepage.",
+  "videoLibraryHomeFeaturedBadge": "Featured",
   "videoConsentTitle": "Protected content – viewing terms",
   "videoConsentOfficialNotice": "OFFICIAL VIDEO © CRISTINA ZURBA | EXCLUSIVE ON WWW.CRISTINAZURBA.COM AND IN THE CRISTINA ZURBA TAROT & ASTROLOGY APP | IF THIS VIDEO APPEARS IN FULL ON ANY OTHER PLATFORM, IT IS CONTENT THEFT AND COPYRIGHT INFRINGEMENT | UNAUTHORIZED DISTRIBUTION IS SUBJECT TO SANCTIONS UNDER THE LAW.",
   "videoConsentRecordingNotice": "Your acceptance is recorded (date, account or email if available, session identifier, and content viewed). This data may be used as evidence in civil or criminal proceedings if unauthorized copying, redistribution, or recording is found.",
@@ -551,5 +558,9 @@
   "coursesDetailNotesEmpty": "No notes are available for this course yet.",
   "coursesDetailContactEmpty": "No contact details are available for this course yet.",
   "partnerPromoBadge": "Partner",
-  "partnerPromoCta": "View offer"
+  "partnerPromoCta": "View offer",
+  "horoscopeViewVideos": "Watch {sign} videos",
+  "shareCategory": "Share",
+  "shareCategoryMessage": "Discover {category} videos on Cristina Zurba",
+  "linkCopied": "Link copied!"
 }

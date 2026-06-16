@@ -49,6 +49,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     order: undefined,
     isPublished: false,
     isPremium: true,
+    featuredOnHome: false,
     publishAt: null,
   });
   const [localeVideoUrls, setLocaleVideoUrls] = useState<Record<string, string>>(() =>
@@ -114,6 +115,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         order: initialValue.order,
         isPublished: initialValue.isPublished,
         isPremium: initialValue.isPremium === true,
+        featuredOnHome: initialValue.featuredOnHome === true,
         publishAt: initialValue.publishAt ?? null,
       });
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(initialValue));
@@ -135,6 +137,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         order: undefined,
         isPublished: false,
         isPremium: true,
+        featuredOnHome: false,
         publishAt: null,
       });
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(null));
@@ -478,6 +481,27 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
             </label>
           </div>
           {errors.isPublished ? <p className="mt-1.5 text-xs text-red-600">{errors.isPublished}</p> : null}
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={!!form.featuredOnHome}
+                onChange={(e) => handleChange("featuredOnHome", e.target.checked)}
+                disabled={uiLocked}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+              />
+              <span className="block">
+                <span className="text-sm font-medium text-gray-900">
+                  Videoclip evidențiat pe homepage
+                </span>
+                <span className="mt-1 block text-xs text-gray-500">
+                  Maximum 2 videoclipuri publicate pot fi evidențiate simultan pe homepage (web și
+                  aplicație).
+                </span>
+              </span>
+            </label>
+          </div>
 
           <div>
             <label className="text-sm font-medium text-gray-700">Localizare</label>

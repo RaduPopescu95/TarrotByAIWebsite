@@ -114,6 +114,7 @@ export async function getServerSideProps({ locale }) {
   let articlesData = [];
   let lastVisibleId = null;
   let homeVideosPreview = [];
+  let homeFeaturedVideos = [];
   try {
     const payload = await loadContentHome({
       locale,
@@ -123,6 +124,7 @@ export async function getServerSideProps({ locale }) {
     });
     articlesData = Array.isArray(payload?.articles) ? payload.articles : [];
     lastVisibleId = typeof payload?.nextCursor === "string" ? payload.nextCursor : null;
+    homeFeaturedVideos = Array.isArray(payload?.featuredVideos) ? payload.featuredVideos : [];
     homeVideosPreview = Array.isArray(payload?.videos) ? payload.videos : [];
   } catch (error) {
     console.error("[index getServerSideProps] content.home failed", error?.message || error);
@@ -132,6 +134,7 @@ export async function getServerSideProps({ locale }) {
     props: {
       articles: buildArticlesPreview(articlesData),
       lastVisibleId,
+      homeFeaturedVideos,
       homeVideosPreview,
       ...(await serverSideTranslations(locale, ["common"])),
     },
@@ -149,6 +152,110 @@ function getCourseGridClass(courseCount = 0) {
     return "mx-auto grid w-full max-w-[96rem] grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3";
   }
   return "mx-auto grid w-full max-w-[120rem] grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
+}
+
+function getFeaturedVideoGridClass(videoCount = 0) {
+  if (videoCount <= 1) {
+    return "mx-auto grid w-full max-w-3xl grid-cols-1 gap-8";
+  }
+  return "mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 md:grid-cols-2";
+}
+
+function renderHomeVideoPreviewCard(v, { t, handleHomeVideoIntent, featuredBadgeLabel = null }) {
+  const durationLabel =
+    typeof v.durationSeconds === "number" ? formatVideoDuration(v.durationSeconds, "") : "";
+  const accessLabel = isVideoAppOnlyLocked(v)
+    ? t("videoLibraryAppOnlyBadge")
+    : !v.isPremium
+      ? t("videoLibraryBadgeFree")
+      : t("videoLibraryBadgeSubscriber");
+
+  return (
+    <article key={v.id} className="group flex flex-col">
+      <button
+        type="button"
+        disabled={!(v.canPlay && v.embedSrc) && v.lockedReason === "source_invalid"}
+        className={`relative aspect-video w-full overflow-hidden rounded-xl bg-slate-200 text-left ${
+          v.canPlay && v.embedSrc
+            ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+            : v.lockedReason === "source_invalid"
+              ? "cursor-not-allowed"
+              : "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        }`}
+        onClick={() => handleHomeVideoIntent(v)}
+        aria-label={v.title}
+      >
+        <PublicVideoThumbnail
+          src={v.thumbnailUrl}
+          imgClassName={
+            v.canPlay && v.embedSrc
+              ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+              : "h-full w-full object-cover"
+          }
+          fallback={
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
+              <svg
+                className="h-12 w-12 opacity-50"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.25"
+                aria-hidden
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
+          }
+        />
+        {featuredBadgeLabel ? (
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow">
+            {featuredBadgeLabel}
+          </span>
+        ) : null}
+        {v.isPremium ? <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} /> : null}
+        {durationLabel ? (
+          <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+            {durationLabel}
+          </span>
+        ) : null}
+        {v.lockedReason === "source_invalid" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/55 px-4 text-center backdrop-blur-[1px]">
+            <p className="max-w-[12rem] text-xs font-medium text-amber-50">
+              {t("videoLibrarySourceMissing")}
+            </p>
+          </div>
+        )}
+        {isVideoAppOnlyLocked(v) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/60 px-3 text-center backdrop-blur-[1px]">
+            <p className="max-w-[12rem] text-xs font-semibold text-white">
+              {t("videoLibraryAppOnlyBadge")}
+            </p>
+            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-900">
+              {t("videoLibraryAppOnlyViewDetails")}
+            </span>
+          </div>
+        )}
+        {v.canPlay && v.embedSrc && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
+            <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-lg">
+              {t("videoLibraryPlay")}
+            </span>
+          </div>
+        )}
+      </button>
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => handleHomeVideoIntent(v)}
+          className="line-clamp-2 block w-full text-left text-sm font-medium leading-snug text-gray-900 hover:text-indigo-700"
+        >
+          {v.title}
+        </button>
+        <p className="mt-1 text-xs text-gray-500">{accessLabel}</p>
+      </div>
+    </article>
+  );
 }
 
 function Landing(props) {
@@ -171,7 +278,7 @@ function Landing(props) {
   } = useApiData();
   const { t, i18n } = useTranslation("common");
 
-  const { articles, homeVideosPreview = [], lastVisibleId } = props;
+  const { articles, homeFeaturedVideos = [], homeVideosPreview = [], lastVisibleId } = props;
 
   const router = useRouter();
 
@@ -683,11 +790,35 @@ function Landing(props) {
               </section>
             )}
 
-            {homeVideosPreview.length > 0 ? (
+            {(homeFeaturedVideos.length > 0 || homeVideosPreview.length > 0) ? (
               <>
               <AdPlacementShell placementId="banner3" />
               <section className="border-t border-gray-200 bg-white py-14">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  {homeFeaturedVideos.length > 0 ? (
+                    <div className="mb-12">
+                      <div className="mb-8">
+                        <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+                          {t("videoLibraryHomeFeaturedTitle")}
+                        </h2>
+                        <p className="mt-2 max-w-2xl text-sm text-gray-600">
+                          {t("videoLibraryHomeFeaturedSubtitle")}
+                        </p>
+                      </div>
+                      <div className={getFeaturedVideoGridClass(homeFeaturedVideos.length)}>
+                        {homeFeaturedVideos.map((v) =>
+                          renderHomeVideoPreviewCard(v, {
+                            t,
+                            handleHomeVideoIntent,
+                            featuredBadgeLabel: t("videoLibraryHomeFeaturedBadge"),
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {homeVideosPreview.length > 0 ? (
+                    <>
                   <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
                       <h2 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -705,103 +836,12 @@ function Landing(props) {
                     </Link>
                   </div>
                   <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                    {homeVideosPreview.map((v) => {
-                      const durationLabel =
-                        typeof v.durationSeconds === "number"
-                          ? formatVideoDuration(v.durationSeconds, "")
-                          : "";
-                      const accessLabel = isVideoAppOnlyLocked(v)
-                        ? t("videoLibraryAppOnlyBadge")
-                        : !v.isPremium
-                          ? t("videoLibraryBadgeFree")
-                          : t("videoLibraryBadgeSubscriber");
-                      return (
-                        <article key={v.id} className="group flex flex-col">
-                          <button
-                            type="button"
-                            disabled={
-                              !(v.canPlay && v.embedSrc) && v.lockedReason === "source_invalid"
-                            }
-                            className={`relative aspect-video w-full overflow-hidden rounded-xl bg-slate-200 text-left ${
-                              v.canPlay && v.embedSrc
-                                ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-                                : v.lockedReason === "source_invalid"
-                                  ? "cursor-not-allowed"
-                                  : "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-                            }`}
-                            onClick={() => handleHomeVideoIntent(v)}
-                            aria-label={v.title}
-                          >
-                            <PublicVideoThumbnail
-                              src={v.thumbnailUrl}
-                              imgClassName={
-                                v.canPlay && v.embedSrc
-                                  ? "h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
-                                  : "h-full w-full object-cover"
-                              }
-                              fallback={
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400">
-                                  <svg
-                                    className="h-12 w-12 opacity-50"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.25"
-                                    aria-hidden
-                                  >
-                                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                                    <path d="M10 9l6 3-6 3V9z" fill="currentColor" stroke="none" />
-                                  </svg>
-                                </div>
-                              }
-                            />
-                            {v.isPremium ? (
-                              <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
-                            ) : null}
-                            {durationLabel ? (
-                              <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
-                                {durationLabel}
-                              </span>
-                            ) : null}
-                            {v.lockedReason === "source_invalid" && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/55 px-4 text-center backdrop-blur-[1px]">
-                                <p className="max-w-[12rem] text-xs font-medium text-amber-50">
-                                  {t("videoLibrarySourceMissing")}
-                                </p>
-                              </div>
-                            )}
-                            {isVideoAppOnlyLocked(v) && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/60 px-3 text-center backdrop-blur-[1px]">
-                                <p className="max-w-[12rem] text-xs font-semibold text-white">
-                                  {t("videoLibraryAppOnlyBadge")}
-                                </p>
-                                <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-900">
-                                  {t("videoLibraryAppOnlyViewDetails")}
-                                </span>
-                              </div>
-                            )}
-                            {v.canPlay && v.embedSrc && (
-                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
-                                <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-lg">
-                                  {t("videoLibraryPlay")}
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                          <div className="mt-3">
-                            <button
-                              type="button"
-                              onClick={() => handleHomeVideoIntent(v)}
-                              className="line-clamp-2 block w-full text-left text-sm font-medium leading-snug text-gray-900 hover:text-indigo-700"
-                            >
-                              {v.title}
-                            </button>
-                            <p className="mt-1 text-xs text-gray-500">{accessLabel}</p>
-                          </div>
-                        </article>
-                      );
-                    })}
+                    {homeVideosPreview.map((v) =>
+                      renderHomeVideoPreviewCard(v, { t, handleHomeVideoIntent })
+                    )}
                   </div>
+                    </>
+                  ) : null}
                 </div>
               </section>
               </>

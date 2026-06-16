@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -14,6 +15,7 @@ import VideoAppOnlyCta from "../../components/VideoLibrary/VideoAppOnlyCta";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
+import { slugify } from "../../lib/slugify";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -424,20 +426,33 @@ export default function VideoLibraryPage() {
                         >
                           {t("videoLibraryChipAll")}
                         </button>
-                        {categories.map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setSelectedCategory(cat)}
-                            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                              selectedCategory === cat
-                                ? "bg-slate-900 text-white"
-                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                            }`}
-                          >
-                            {cat}
-                          </button>
-                        ))}
+                        {categories.map((cat) => {
+                          const catSlug = slugify(cat);
+                          return (
+                            <div key={cat} className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                                  selectedCategory === cat
+                                    ? "bg-slate-900 text-white"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                              <Link
+                                href={`/videouri/categorie/${catSlug}`}
+                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                title={t("videoLibrarySeeAllInCategory")}
+                              >
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </Link>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                     <div

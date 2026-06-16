@@ -62,6 +62,20 @@ const nextConfig = {
             value: 'public, max-age=3600, must-revalidate'
           }
         ]
+      },
+      {
+        source: '/.well-known/:path*',
+        locale: false,
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400'
+          }
+        ]
       }
     ];
   }

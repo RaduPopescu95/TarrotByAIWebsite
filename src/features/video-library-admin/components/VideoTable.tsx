@@ -280,8 +280,13 @@ export default function VideoTable({
               >
                 <td className="px-6 py-4 text-gray-600">{video.order ?? "—"}</td>
                 <td className="px-6 py-4">
-                  <div className="font-semibold text-gray-900">
-                    {video.title}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-semibold text-gray-900">{video.title}</div>
+                    {video.featuredOnHome ? (
+                      <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                        Evidențiat
+                      </span>
+                    ) : null}
                   </div>
                 </td>
                 <td className="px-6 py-4">

@@ -1,4 +1,7 @@
-import { rebuildPremiumVideoLibraryMaterializedCache } from "../../../../lib/loadPremiumVideoLibrary";
+import {
+  clearPremiumVideoLibraryMemoryCache,
+  rebuildPremiumVideoLibraryMaterializedCache,
+} from "../../../../lib/loadPremiumVideoLibrary";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
 
 export default async function handler(req, res) {
@@ -9,6 +12,7 @@ export default async function handler(req, res) {
 
   try {
     requireDashboardAccess(req);
+    clearPremiumVideoLibraryMemoryCache();
     const rows = await rebuildPremiumVideoLibraryMaterializedCache();
     return res.status(200).json({
       ok: true,

@@ -3,13 +3,13 @@ import { useRouter } from "next/router";
 import { setCookie } from "../../utils/cookies";
 import languageDetector from "../../lib/languageDetector";
 import i18nextConfig from "../../next-i18next.config";
-import { getLocaleFlagSrc, getLocaleNativeLabel } from "../../lib/localeFlags";
+import { getLocaleAbbreviation, getLocaleNativeLabel } from "../../lib/localeFlags";
 
 const siteLocales = i18nextConfig.i18n.locales;
 const options = siteLocales.map((value) => ({
   value,
   label: getLocaleNativeLabel(value),
-  flag: getLocaleFlagSrc(value),
+  abbreviation: getLocaleAbbreviation(value),
 }));
 
 export default function SelectLang() {
@@ -37,11 +37,7 @@ export default function SelectLang() {
         style={styles.trigger}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <img 
-          src={currentLanguage.flag} 
-          alt={currentLanguage.label}
-          style={styles.flag}
-        />
+        <span style={styles.abbrBadge}>{currentLanguage.abbreviation}</span>
         <span style={styles.label}>{currentLanguage.label}</span>
         <i 
           className="fa fa-chevron-down" 
@@ -64,11 +60,6 @@ export default function SelectLang() {
                 }}
                 onClick={() => handleLanguageChange(option.value)}
               >
-                <img 
-                  src={option.flag} 
-                  alt={option.label}
-                  style={styles.optionFlag}
-                />
                 <span style={styles.optionLabel}>{option.label}</span>
               </div>
             ))}
@@ -100,12 +91,18 @@ const styles = {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
   },
-  flag: {
-    width: "20px",
-    height: "15px",
+  abbrBadge: {
+    minWidth: "28px",
+    height: "22px",
+    padding: "0 6px",
     marginRight: "8px",
-    borderRadius: "2px",
-    objectFit: "cover",
+    borderRadius: "4px",
+    border: "1px solid rgba(255, 255, 255, 0.35)",
+    fontSize: "11px",
+    fontWeight: "700",
+    lineHeight: "20px",
+    textAlign: "center",
+    color: "white",
   },
   label: {
     marginRight: "8px",
@@ -149,13 +146,6 @@ const styles = {
   optionActive: {
     backgroundColor: "#667eea",
     color: "white",
-  },
-  optionFlag: {
-    width: "20px",
-    height: "15px",
-    marginRight: "8px",
-    borderRadius: "2px",
-    objectFit: "cover",
   },
   optionLabel: {
     fontSize: "14px",

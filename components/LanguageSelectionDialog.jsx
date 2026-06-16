@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import i18nextConfig from '../next-i18next.config';
-import { getLocaleFlagSrc, getLocaleNativeLabel } from '../lib/localeFlags';
+import { getLocaleAbbreviation, getLocaleNativeLabel } from '../lib/localeFlags';
 
 // Helper function to set language cookie for next-i18next
 const setLanguageCookie = (locale) => {
@@ -22,7 +22,7 @@ const LanguageSelectionDialog = ({ isOpen, onClose, onLanguageSelect }) => {
       i18nextConfig.i18n.locales.map((code) => ({
         code,
         name: getLocaleNativeLabel(code),
-        flag: getLocaleFlagSrc(code),
+        abbreviation: getLocaleAbbreviation(code),
       })),
     []
   );
@@ -141,14 +141,9 @@ const LanguageSelectionDialog = ({ isOpen, onClose, onLanguageSelect }) => {
                 )}
                 
                 <div className="flex flex-col items-center">
-                  <img 
-                    src={lang.flag} 
-                    alt={lang.name}
-                    className="w-8 h-8 mb-2 rounded shadow-sm"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
+                  <span className="text-lg font-bold text-gray-600 mb-2 tracking-wide">
+                    {lang.abbreviation}
+                  </span>
                   <span className="text-sm font-medium text-gray-700 text-center leading-tight">
                     {lang.name}
                   </span>

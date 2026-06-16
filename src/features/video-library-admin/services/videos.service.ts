@@ -29,6 +29,7 @@ const CATEGORY_COLLECTION_NAME = "videoCategories";
 const INTERNAL_DOC_IDS = new Set(["_meta", "_publicCache"]);
 const VIDEO_NOTIFICATION_STATE_PENDING = "pending";
 const VIDEO_NOTIFICATION_STATE_SENT = "sent";
+const MAX_FEATURED_ON_HOME = 2;
 const videosCollection = collection(db, COLLECTION_NAME);
 const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
 const metaDocRef = doc(db, COLLECTION_NAME, "_meta");
@@ -146,6 +147,18 @@ export async function listVideos(): Promise<VideoDoc[]> {
   return sortVideos(items);
 }
 
+export async function assertFeaturedOnHomeLimit(excludeId?: string): Promise<void> {
+  const all = await listVideos();
+  const featuredCount = all.filter(
+    (video) => video.featuredOnHome === true && video.id !== excludeId
+  ).length;
+  if (featuredCount >= MAX_FEATURED_ON_HOME) {
+    throw new Error(
+      `Poți evidenția maximum ${MAX_FEATURED_ON_HOME} videoclipuri pe homepage. Dezactivează evidențierea de la un alt videoclip înainte de a continua.`
+    );
+  }
+}
+
 export async function listVideosPage(
   pageSize = 20,
   cursor: VideoListCursor | null = null
@@ -185,6 +198,9 @@ export async function listVideosPage(
 }
 
 export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
+  if (input.featuredOnHome === true) {
+    await assertFeaturedOnHomeLimit();
+  }
   const nextOrder = input.order ?? (await getNextOrder());
   const isPublished = !!input.isPublished;
   const payload = {
@@ -202,6 +218,9 @@ export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
 }
 
 export async function updateVideo(id: string, data: VideoUpdateInput): Promise<void> {
+  if (data.featuredOnHome === true) {
+    await assertFeaturedOnHomeLimit(id);
+  }
   const ref = doc(db, COLLECTION_NAME, id);
   const snapshot = await getDoc(ref);
   const current = snapshot.exists() ? ((snapshot.data() as Partial<VideoDoc>) ?? {}) : {};

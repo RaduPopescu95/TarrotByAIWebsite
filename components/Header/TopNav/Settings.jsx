@@ -4,7 +4,7 @@ import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
 import i18nextConfig from "../../../next-i18next.config";
 import LanguageSwitch from "../../LangSwitch/Menu";
-import { getLocaleFlagSrc } from "../../../lib/localeFlags";
+import { getLocaleAbbreviation } from "../../../lib/localeFlags";
 
 function Settings(props) {
   const [open, setOpen] = useState(false);
@@ -63,14 +63,9 @@ function Settings(props) {
         onClick={handleToggle}
         style={styles.iconButton}
       >
-        <img
-          className="flag"
-          src={getLocaleFlagSrc(router.locale || i18n.language)}
-          alt={router.locale || i18n.language}
-          width={45}
-          height={45}
-          style={styles.flagImage}
-        />
+        <span style={styles.langAbbrBadge}>
+          {getLocaleAbbreviation(router.locale || i18n.language)}
+        </span>
       </button>
       
       {open && (
@@ -114,12 +109,17 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-  flagImage: {
-    marginRight: 10,
-    minWidth: 45,
-    minHeight: 45,
-    borderRadius: "50%",
-    objectFit: "cover",
+  langAbbrBadge: {
+    minWidth: "40px",
+    height: "40px",
+    padding: "0 8px",
+    borderRadius: "6px",
+    border: "1px solid rgba(255, 255, 255, 0.35)",
+    fontSize: "12px",
+    fontWeight: "700",
+    lineHeight: "38px",
+    textAlign: "center",
+    color: "inherit",
   },
   popper: {
     position: "absolute",

@@ -42,6 +42,7 @@ export type VideoDoc = {
   order?: number | null;
   durationSeconds?: number | null;
   locales?: VideoLocales;
+  featuredOnHome?: boolean;
 };
 
 export type VideoCategoryDoc = {
@@ -65,6 +66,7 @@ export type VideoCreateInput = {
   order?: number;
   durationSeconds?: number;
   locales?: VideoLocales;
+  featuredOnHome?: boolean;
 };
 
 export type VideoUpdateInput = Partial<VideoCreateInput>;

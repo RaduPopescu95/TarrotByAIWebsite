@@ -4,7 +4,7 @@ import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
 import i18nextConfig from "../../next-i18next.config";
 import languageDetector from "../../lib/languageDetector";
-import { getLocaleFlagSrc } from "../../lib/localeFlags";
+import { getLocaleAbbreviation } from "../../lib/localeFlags";
 
 const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
   const [currentLocale, setCurrentLocale] = useState("");
@@ -48,9 +48,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
       style={styles.listItem}
       onClick={() => changeLang(locale)}
     >
-      <div style={styles.flag}>
-        <i className={locale} />
-      </div>
+      <span style={styles.abbrBadgeDark}>{getLocaleAbbreviation(locale)}</span>
       <div style={styles.text}>
         {t(locale)}
       </div>
@@ -65,12 +63,7 @@ const LanguageSwitch = ({ locale, checked, toggleDir, ssg, closePopup }) => {
       style={styles.listItem}
       onClick={() => changeLang(locale)}
     >
-      <img
-        className="flag"
-        src={getLocaleFlagSrc(locale)}
-        alt={locale}
-        style={styles.flagImage}
-      />
+      <span style={styles.abbrBadge}>{getLocaleAbbreviation(locale)}</span>
       <div style={styles.textWhite}>
         {t(locale)}
       </div>
@@ -94,20 +87,31 @@ const styles = {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
   },
-  flag: {
+  abbrBadgeDark: {
+    minWidth: "28px",
+    height: "22px",
+    padding: "0 6px",
     marginRight: "10px",
-    width: "20px",
-    height: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: "4px",
+    border: "1px solid rgba(0, 0, 0, 0.15)",
+    fontSize: "11px",
+    fontWeight: "700",
+    lineHeight: "20px",
+    textAlign: "center",
+    color: "#333",
   },
-  flagImage: {
-    width: "20px",
-    height: "20px",
+  abbrBadge: {
+    minWidth: "28px",
+    height: "22px",
+    padding: "0 6px",
     marginRight: "10px",
-    borderRadius: "2px",
-    objectFit: "cover",
+    borderRadius: "4px",
+    border: "1px solid rgba(255, 255, 255, 0.35)",
+    fontSize: "11px",
+    fontWeight: "700",
+    lineHeight: "20px",
+    textAlign: "center",
+    color: "white",
   },
   text: {
     flex: 1,

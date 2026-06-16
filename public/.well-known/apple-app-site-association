@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "<TEAM_ID>.com.cristina.zurba.tarot",
+        "paths": ["/videouri/categorie/*", "/videouri/*"]
+      },
+      {
+        "appID": "<TEAM_ID>.com.cristina.zurba.tarotai",
+        "paths": ["/videouri/categorie/*", "/videouri/*"]
+      }
+    ]
+  }
+}
