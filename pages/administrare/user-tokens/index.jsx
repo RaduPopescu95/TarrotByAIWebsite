@@ -2,6 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
+import {
+  DEFAULT_RECIPIENT_LIMIT_CITIES,
+  DEFAULT_RECIPIENT_LIMIT_NAMES,
+} from "../../../lib/userTokenRecipientLimit";
 
 const DASHBOARD_SECRET = "Cristina1994!";
 const DELETE_CONFIRM_TEXT = "STERGE TOKENS";
@@ -158,6 +162,86 @@ function ConfirmDeleteDialog({
   );
 }
 
+function RecipientLimitDialog({ open, loading, recipients, onClose }) {
+  if (!open) return null;
+  const reasonLabel = (reasons) => {
+    const values = Array.isArray(reasons) ? reasons : [];
+    if (values.includes("city") && values.includes("name")) return "Oraș + nume";
+    if (values.includes("city")) return "Oraș";
+    if (values.includes("name")) return "Nume";
+    return "—";
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-8">
+      <div className="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Destinatarii limitați</h2>
+            <p className="text-sm text-slate-500">{recipients.length} tokenuri Expo unice</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Închide
+          </button>
+        </div>
+        <div className="overflow-auto">
+          {loading ? (
+            <p className="p-8 text-center text-slate-500">Se încarcă lista…</p>
+          ) : recipients.length === 0 ? (
+            <p className="p-8 text-center text-slate-500">Lista activă nu conține tokenuri.</p>
+          ) : (
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr>
+                  {["Nume", "Oraș", "Email", "Platformă", "Motiv", "Token", "Doc ID"].map((label) => (
+                    <th
+                      key={label}
+                      className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recipients.map((recipient) => (
+                  <tr key={`${recipient.id}-${recipient.tokenPreview}`} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-800">
+                      {recipient.displayName || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-800">
+                      {recipient.city || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-800">
+                      {recipient.email || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-800">
+                      {recipient.isIos ? "iOS" : "Android"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-indigo-700">
+                      {reasonLabel(recipient.matchReasons)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500">
+                      {recipient.tokenPreview || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-[10px] text-slate-400">
+                      {recipient.id}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UserTokensScreen() {
   const router = useRouter();
   const [tokens, setTokens] = useState([]);
@@ -186,6 +270,19 @@ function UserTokensScreen() {
   const [bulkPreview, setBulkPreview] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [recipientLimitConfig, setRecipientLimitConfig] = useState(null);
+  const [recipientLimitEnabled, setRecipientLimitEnabled] = useState(false);
+  const [recipientLimitCities, setRecipientLimitCities] = useState(
+    DEFAULT_RECIPIENT_LIMIT_CITIES.join(", ")
+  );
+  const [recipientLimitNames, setRecipientLimitNames] = useState(
+    DEFAULT_RECIPIENT_LIMIT_NAMES.join(", ")
+  );
+  const [recipientLimitLoading, setRecipientLimitLoading] = useState(true);
+  const [recipientLimitSaving, setRecipientLimitSaving] = useState(false);
+  const [recipientDialogOpen, setRecipientDialogOpen] = useState(false);
+  const [recipientDialogLoading, setRecipientDialogLoading] = useState(false);
+  const [recipientLimitRecipients, setRecipientLimitRecipients] = useState([]);
 
   const filters = useMemo(
     () => ({
@@ -266,6 +363,101 @@ function UserTokensScreen() {
     load();
   }, [load]);
 
+  const loadRecipientLimit = useCallback(async ({ includeRecipients = false } = {}) => {
+    if (includeRecipients) {
+      setRecipientDialogLoading(true);
+    } else {
+      setRecipientLimitLoading(true);
+    }
+    try {
+      const suffix = includeRecipients ? "?includeRecipients=1" : "";
+      const res = await fetch(`/api/dashboard/user-token-recipient-limit${suffix}`, {
+        headers: { "x-dashboard-token": DASHBOARD_SECRET },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "recipient_limit_load_failed");
+      const config = data.config || {};
+      setRecipientLimitConfig(config);
+      setRecipientLimitEnabled(config.desiredEnabled === true);
+      setRecipientLimitCities(
+        (config.criteria?.cities || DEFAULT_RECIPIENT_LIMIT_CITIES).join(", ")
+      );
+      setRecipientLimitNames(
+        (config.criteria?.names || DEFAULT_RECIPIENT_LIMIT_NAMES).join(", ")
+      );
+      if (includeRecipients) {
+        setRecipientLimitRecipients(Array.isArray(data.recipients) ? data.recipients : []);
+      }
+    } catch (e) {
+      setError(e?.message || "Nu am putut încărca limitarea destinatarilor.");
+    } finally {
+      setRecipientLimitLoading(false);
+      setRecipientDialogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecipientLimit();
+  }, [loadRecipientLimit]);
+
+  useEffect(() => {
+    if (!["requested", "building"].includes(recipientLimitConfig?.status)) return undefined;
+    const timer = window.setInterval(() => {
+      loadRecipientLimit();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [loadRecipientLimit, recipientLimitConfig?.status]);
+
+  const saveRecipientLimit = async () => {
+    const cities = normalizeCsvInput(recipientLimitCities);
+    const names = normalizeCsvInput(recipientLimitNames);
+    if (recipientLimitEnabled && cities.length === 0 && names.length === 0) {
+      setError("Adaugă cel puțin un oraș sau un nume înainte de activare.");
+      return;
+    }
+    setRecipientLimitSaving(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch("/api/dashboard/user-token-recipient-limit", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dashboard-token": DASHBOARD_SECRET,
+        },
+        body: JSON.stringify({
+          enabled: recipientLimitEnabled,
+          criteria: { cities, names },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "recipient_limit_save_failed");
+      setRecipientLimitConfig((previous) => ({
+        ...(previous || {}),
+        desiredEnabled: recipientLimitEnabled,
+        criteria: { cities, names },
+        status: data.status || "requested",
+        requestVersion: data.requestVersion,
+        lastError: "",
+      }));
+      setSuccessMessage(
+        recipientLimitEnabled
+          ? "Construirea listei limitate a pornit."
+          : "Revenirea la toți destinatarii a pornit."
+      );
+    } catch (e) {
+      setError(e?.message || "Nu am putut salva limitarea destinatarilor.");
+    } finally {
+      setRecipientLimitSaving(false);
+    }
+  };
+
+  const openRecipientDialog = async () => {
+    setRecipientDialogOpen(true);
+    setRecipientLimitRecipients([]);
+    await loadRecipientLimit({ includeRecipients: true });
+  };
+
   useEffect(() => {
     setBulkPreview(null);
     setConfirmDialogOpen(false);
@@ -301,6 +493,16 @@ function UserTokensScreen() {
   const thCls =
     "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap";
   const tdCls = "px-4 py-3 text-sm text-slate-800 whitespace-nowrap";
+  const recipientLimitBusy = ["requested", "building"].includes(recipientLimitConfig?.status);
+  const recipientLimitStatusLabel = recipientLimitLoading
+    ? "Se încarcă…"
+    : recipientLimitConfig?.status === "error"
+      ? "Eroare"
+      : recipientLimitBusy
+        ? "Se construiește lista…"
+        : recipientLimitConfig?.enabled
+          ? "Activă"
+          : "Dezactivată";
 
   const toggleRowSelection = (id) => {
     setSelectedIds((prev) =>
@@ -404,6 +606,12 @@ function UserTokensScreen() {
         }}
         onConfirm={handleDelete}
       />
+      <RecipientLimitDialog
+        open={recipientDialogOpen}
+        loading={recipientDialogLoading}
+        recipients={recipientLimitRecipients}
+        onClose={() => setRecipientDialogOpen(false)}
+      />
 
       <div className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-4">
@@ -451,6 +659,101 @@ function UserTokensScreen() {
           Filtrezi colecția <code className="text-xs">userTokens</code>, alegi tokenurile care trebuie
           păstrate sau șterse, apoi rulezi preview înainte de bulk delete.
         </p>
+
+        <div className="mb-8 rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Limitare destinatari pentru toate notificările Firebase
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                Include tokenul dacă orașul corespunde exact sau numele conține una dintre expresii.
+                Majusculele și diacriticele sunt ignorate.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <input
+                type="checkbox"
+                checked={recipientLimitEnabled}
+                onChange={(event) => setRecipientLimitEnabled(event.target.checked)}
+                disabled={recipientLimitLoading || recipientLimitSaving || recipientLimitBusy}
+                className="h-5 w-5 rounded border-slate-300"
+              />
+              <span className="text-sm font-bold text-slate-800">
+                {recipientLimitEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Orașe — potrivire exactă
+              </span>
+              <textarea
+                value={recipientLimitCities}
+                onChange={(event) => setRecipientLimitCities(event.target.value)}
+                rows={3}
+                placeholder="Iași, Târgoviște"
+                disabled={recipientLimitBusy}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Nume — conține expresia
+              </span>
+              <textarea
+                value={recipientLimitNames}
+                onChange={(event) => setRecipientLimitNames(event.target.value)}
+                rows={3}
+                placeholder="Cristina, Tarot Soare și Lună"
+                disabled={recipientLimitBusy}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={saveRecipientLimit}
+              disabled={recipientLimitLoading || recipientLimitSaving || recipientLimitBusy}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {recipientLimitSaving ? "Se salvează…" : "Salvează și reconstruiește"}
+            </button>
+            <button
+              type="button"
+              onClick={openRecipientDialog}
+              disabled={
+                recipientDialogLoading ||
+                !recipientLimitConfig?.enabled ||
+                !recipientLimitConfig?.activeVersion
+              }
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+            >
+              Vezi lista
+            </button>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm">
+              <span className="font-semibold text-slate-600">Status: </span>
+              <span className="font-bold text-slate-900">{recipientLimitStatusLabel}</span>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm">
+              <span className="font-semibold text-emerald-700">Se va trimite la: </span>
+              <span className="font-bold text-emerald-900">
+                {recipientLimitConfig?.enabled ? recipientLimitConfig?.recipientCount || 0 : "toate"}
+              </span>
+              {recipientLimitConfig?.enabled ? " tokenuri unice" : " tokenurile eligibile"}
+            </div>
+          </div>
+
+          {recipientLimitConfig?.lastError ? (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {recipientLimitConfig.lastError}
+            </p>
+          ) : null}
+        </div>
 
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard

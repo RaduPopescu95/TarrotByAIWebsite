@@ -7,7 +7,9 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   testEnvironment: "node",
   testRegex: ".*\\.test\\.(js|jsx|ts|tsx)$",
-  testPathIgnorePatterns: ["/node_modules/", "/.next/"]
+  testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
+  modulePathIgnorePatterns: ["<rootDir>/.next/"],
+  watchPathIgnorePatterns: ["<rootDir>/.next/"]
 };
 
 module.exports = createJestConfig(customJestConfig);
