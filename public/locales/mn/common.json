@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Зөвхөн аппликейшн",
   "videoLibraryAccessChipPremium": "Дээд зэрэглэлийн",
   "videoLibraryAppOnlyMessage": "Энэ видеог зөвхөн гар утасны аппликейшн дээр үнэгүй үзэх боломжтой.",
+  "videoLibraryAppOnlyDownloadHint": "Аппликейшнийг эндээс татаж аваарай:",
   "videoLibraryAppOnlyBadge": "Зөвхөн аппликейшн",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "Апп Дэлгүүр",

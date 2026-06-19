@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "アプリ限定",
   "videoLibraryAccessChipPremium": "プレミアム",
   "videoLibraryAppOnlyMessage": "この動画はモバイルアプリでのみ無料で視聴できます。\n",
+  "videoLibraryAppOnlyDownloadHint": "こちらからアプリをダウンロード:",
   "videoLibraryAppOnlyBadge": "アプリ限定",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

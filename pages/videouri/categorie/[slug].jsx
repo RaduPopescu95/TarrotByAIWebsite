@@ -208,7 +208,7 @@ export default function VideoCategoryPage({ category }) {
       const allVideos = Array.isArray(data?.videos) ? data.videos : [];
       const categoryVideos = allVideos.filter((v) => {
         const cat = typeof v.category === "string" ? v.category.trim() : "";
-        return cat === categoryName;
+        return cat === categoryName || (categorySlug && slugify(cat) === categorySlug);
       });
       setVideos(categoryVideos);
     } catch (e) {
@@ -218,7 +218,7 @@ export default function VideoCategoryPage({ category }) {
     } finally {
       setLoading(false);
     }
-  }, [router.locale, t, categoryName]);
+  }, [router.locale, t, categoryName, categorySlug]);
 
   useEffect(() => {
     if (categoryName) {

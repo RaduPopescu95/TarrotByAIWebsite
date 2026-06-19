@@ -47,6 +47,19 @@ function adminPrimaryVideoUrl(video: VideoDoc): string {
     ""
   );
 }
+
+function slugifyText(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const CREATE_CLICK_FEEDBACK_MS = 600;
 const CREATE_MODAL_OPEN_TIMEOUT_MS = 800;
 const DESC_FIRST_FIELDS: ReadonlySet<VideoSortField> = new Set<VideoSortField>([
@@ -662,6 +675,22 @@ export default function VideoLibraryAdminScreen() {
       setCategoryMessage("Categoria există deja.");
       return;
     }
+    const nextSlug = slugifyText(trimmed);
+    if (!nextSlug) {
+      setCategoryMessage("Categoria nu poate genera un slug valid.");
+      return;
+    }
+    const slugExists = categoryDocs.some((item) => {
+      const existingSlug =
+        typeof item.slug === "string" && item.slug.trim()
+          ? item.slug.trim()
+          : slugifyText(item.name);
+      return existingSlug === nextSlug;
+    });
+    if (slugExists) {
+      setCategoryMessage("Există deja o categorie cu același slug. Alege un nume mai specific.");
+      return;
+    }
     if (!categoryLocales || Object.keys(categoryLocales).length === 0) {
       setPendingCategoryName(trimmed);
       setShowCategoryTranslateConfirm(true);
@@ -1158,6 +1187,12 @@ export default function VideoLibraryAdminScreen() {
                     <div className="text-xl font-semibold text-gray-900">{selectedCategory.name}</div>
                     <div className="mt-1 text-sm text-gray-600">
                       Verifică localizările pe limbile necesare.
+                    </div>
+                    <div className="mt-1 text-sm text-gray-500">
+                      Slug:{" "}
+                      <span className="font-mono text-gray-700">
+                        {selectedCategory.slug || slugifyText(selectedCategory.name)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

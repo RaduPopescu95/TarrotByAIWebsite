@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Pouze v aplikaci",
   "videoLibraryAccessChipPremium": "Prémiová",
   "videoLibraryAppOnlyMessage": "Toto video je k dispozici zdarma pouze v mobilní aplikaci.",
+  "videoLibraryAppOnlyDownloadHint": "Stáhněte si aplikaci zde:",
   "videoLibraryAppOnlyBadge": "Pouze v aplikaci",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

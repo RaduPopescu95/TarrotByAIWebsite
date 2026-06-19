@@ -15,7 +15,7 @@ import VideoAppOnlyCta from "../../components/VideoLibrary/VideoAppOnlyCta";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
-import { slugify } from "../../lib/slugify";
+import { getCategorySlug, slugify } from "../../lib/slugify";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -93,6 +93,7 @@ export default function VideoLibraryPage() {
   const { t } = useTranslation("common");
   const { currentUser, isGuestUser, userData } = useAuth();
   const [videos, setVideos] = useState([]);
+  const [categoryDocs, setCategoryDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -106,14 +107,18 @@ export default function VideoLibraryPage() {
     setError("");
     try {
       const locale = router.locale || "ro";
-      const res = await fetch(
-        `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
-        {
+      const [res, categoriesRes] = await Promise.all([
+        fetch(`/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`, {
           headers: {
             Accept: "application/json",
           },
-        }
-      );
+        }),
+        fetch("/api/public/video-categories", {
+          headers: {
+            Accept: "application/json",
+          },
+        }).catch(() => null),
+      ]);
       const requestId = res.headers.get("x-request-id");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -134,6 +139,12 @@ export default function VideoLibraryPage() {
         videosCount: Array.isArray(data?.videos) ? data.videos.length : 0,
       });
       setVideos(Array.isArray(data?.videos) ? data.videos : []);
+      if (categoriesRes?.ok) {
+        const categoriesData = await categoriesRes.json().catch(() => ({}));
+        setCategoryDocs(Array.isArray(categoriesData?.categories) ? categoriesData.categories : []);
+      } else {
+        setCategoryDocs([]);
+      }
     } catch (e) {
       console.error("[video-library] load_failed", {
         message: e?.message || String(e),
@@ -159,6 +170,16 @@ export default function VideoLibraryPage() {
     });
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [videos]);
+
+  const categorySlugByName = useMemo(() => {
+    const out = new Map();
+    categoryDocs.forEach((category) => {
+      const name = typeof category?.name === "string" ? category.name.trim() : "";
+      if (!name) return;
+      out.set(name, getCategorySlug(category));
+    });
+    return out;
+  }, [categoryDocs]);
 
   const categoryFilteredVideos = useMemo(() => {
     if (!selectedCategory) return videos;
@@ -427,7 +448,7 @@ export default function VideoLibraryPage() {
                           {t("videoLibraryChipAll")}
                         </button>
                         {categories.map((cat) => {
-                          const catSlug = slugify(cat);
+                          const catSlug = categorySlugByName.get(cat) || slugify(cat);
                           return (
                             <div key={cat} className="flex shrink-0 items-center gap-1">
                               <button

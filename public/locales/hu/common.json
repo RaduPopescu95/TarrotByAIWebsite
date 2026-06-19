@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Csak az alkalmazásban",
   "videoLibraryAccessChipPremium": "Prémium",
   "videoLibraryAppOnlyMessage": "Ez a videó csak ingyenesen érhető el a mobilalkalmazásban.",
+  "videoLibraryAppOnlyDownloadHint": "Töltse le az alkalmazást innen:",
   "videoLibraryAppOnlyBadge": "Csak az alkalmazásban",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

@@ -10,6 +10,9 @@ export default function VideoAppOnlyCta({ compact = false, className = "" }) {
       <p className={`font-medium text-slate-100 ${compact ? "text-xs" : "text-sm"}`}>
         {t("videoLibraryAppOnlyMessage")}
       </p>
+      <p className={`text-slate-300 ${compact ? "text-[11px]" : "text-xs"}`}>
+        {t("videoLibraryAppOnlyDownloadHint")}
+      </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <a
           href={GOOGLE_PLAY_APP_URL}

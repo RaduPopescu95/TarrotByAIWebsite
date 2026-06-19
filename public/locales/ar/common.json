@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "التطبيق فقط",
   "videoLibraryAccessChipPremium": "غالي",
   "videoLibraryAppOnlyMessage": "هذا الفيديو متاح مجاناً فقط في تطبيق الهاتف المحمول.",
+  "videoLibraryAppOnlyDownloadHint": "حمّل التطبيق من هنا:",
   "videoLibraryAppOnlyBadge": "التطبيق فقط",
   "videoLibraryAppOnlyGooglePlay": "متجر جوجل بلاي",
   "videoLibraryAppOnlyAppStore": "متجر التطبيقات",

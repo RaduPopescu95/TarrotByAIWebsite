@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Sadece uygulama",
   "videoLibraryAccessChipPremium": "Premium",
   "videoLibraryAppOnlyMessage": "Bu video yalnızca mobil uygulamada ücretsiz olarak izlenebilir.",
+  "videoLibraryAppOnlyDownloadHint": "Uygulamayı buradan indirin:",
   "videoLibraryAppOnlyBadge": "Sadece uygulama",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

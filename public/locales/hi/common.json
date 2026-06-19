@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "केवल ऐप",
   "videoLibraryAccessChipPremium": "प्रीमियम",
   "videoLibraryAppOnlyMessage": "यह वीडियो केवल मोबाइल ऐप में मुफ्त में उपलब्ध है।",
+  "videoLibraryAppOnlyDownloadHint": "ऐप यहाँ से डाउनलोड करें:",
   "videoLibraryAppOnlyBadge": "केवल ऐप",
   "videoLibraryAppOnlyGooglePlay": "गूगल प्ले",
   "videoLibraryAppOnlyAppStore": "ऐप स्टोर",

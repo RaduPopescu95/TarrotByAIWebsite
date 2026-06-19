@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Само в приложението",
   "videoLibraryAccessChipPremium": "Премиум",
   "videoLibraryAppOnlyMessage": "Това видео е достъпно безплатно само в мобилното приложение.",
+  "videoLibraryAppOnlyDownloadHint": "Изтеглете приложението оттук:",
   "videoLibraryAppOnlyBadge": "Само в приложението",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

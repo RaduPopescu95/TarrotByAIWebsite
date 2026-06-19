@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "\n限應用程式內觀看",
   "videoLibraryAccessChipPremium": "\n高級版",
   "videoLibraryAppOnlyMessage": "\n此影片僅在行動應用程式中免費提供。\n",
+  "videoLibraryAppOnlyDownloadHint": "在此下载应用程序：",
   "videoLibraryAppOnlyBadge": "\n限應用",
   "videoLibraryAppOnlyGooglePlay": "\nGoogle Play",
   "videoLibraryAppOnlyAppStore": "\nApp Store",

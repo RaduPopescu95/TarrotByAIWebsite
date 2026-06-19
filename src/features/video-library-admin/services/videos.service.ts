@@ -34,6 +34,23 @@ const videosCollection = collection(db, COLLECTION_NAME);
 const categoriesCollection = collection(db, CATEGORY_COLLECTION_NAME);
 const metaDocRef = doc(db, COLLECTION_NAME, "_meta");
 
+function slugifyText(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function resolveCategorySlug(category: Partial<VideoCategoryDoc>): string {
+  const explicit = typeof category.slug === "string" ? category.slug.trim() : "";
+  return explicit || slugifyText(category.name || "");
+}
+
 export type VideoListCursor = {
   createdAt: VideoDoc["createdAt"] | null;
   id: string;
@@ -78,6 +95,11 @@ const toMillisOrNull = (value: unknown): number | null => {
     return value.getTime();
   }
   return null;
+};
+
+const isPublishAtInFuture = (value: unknown, nowMs = Date.now()): boolean => {
+  const publishAtMs = toMillisOrNull(value);
+  return Number.isFinite(publishAtMs) && Number(publishAtMs) > nowMs;
 };
 
 const hasOwn = <T extends object, K extends PropertyKey>(obj: T, key: K): obj is T & Record<K, unknown> =>
@@ -147,14 +169,24 @@ export async function listVideos(): Promise<VideoDoc[]> {
   return sortVideos(items);
 }
 
+function isFeaturedOnHomeSlotCandidate(video: Partial<VideoDoc>, nowMs = Date.now()): boolean {
+  return (
+    video.featuredOnHome === true &&
+    video.isPublished === true &&
+    !isPublishAtInFuture(video.publishAt ?? null, nowMs)
+  );
+}
+
 export async function assertFeaturedOnHomeLimit(excludeId?: string): Promise<void> {
   const all = await listVideos();
-  const featuredCount = all.filter(
-    (video) => video.featuredOnHome === true && video.id !== excludeId
-  ).length;
+  const nowMs = Date.now();
+  const featuredCount = all.filter((video) => {
+    if (video.id === excludeId) return false;
+    return isFeaturedOnHomeSlotCandidate(video, nowMs);
+  }).length;
   if (featuredCount >= MAX_FEATURED_ON_HOME) {
     throw new Error(
-      `Poți evidenția maximum ${MAX_FEATURED_ON_HOME} videoclipuri pe homepage. Dezactivează evidențierea de la un alt videoclip înainte de a continua.`
+      `Poți evidenția maximum ${MAX_FEATURED_ON_HOME} videoclipuri publice pe homepage. Dezactivează evidențierea de la un alt videoclip public înainte de a continua.`
     );
   }
 }
@@ -198,7 +230,7 @@ export async function listVideosPage(
 }
 
 export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
-  if (input.featuredOnHome === true) {
+  if (isFeaturedOnHomeSlotCandidate({ ...input, isPublished: input.isPublished === true })) {
     await assertFeaturedOnHomeLimit();
   }
   const nextOrder = input.order ?? (await getNextOrder());
@@ -218,12 +250,21 @@ export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
 }
 
 export async function updateVideo(id: string, data: VideoUpdateInput): Promise<void> {
-  if (data.featuredOnHome === true) {
-    await assertFeaturedOnHomeLimit(id);
-  }
   const ref = doc(db, COLLECTION_NAME, id);
   const snapshot = await getDoc(ref);
   const current = snapshot.exists() ? ((snapshot.data() as Partial<VideoDoc>) ?? {}) : {};
+  const nextVideo = {
+    ...current,
+    ...data,
+    id,
+    isPublished: hasOwn(data, "isPublished") ? data.isPublished === true : current.isPublished === true,
+    featuredOnHome: hasOwn(data, "featuredOnHome")
+      ? data.featuredOnHome === true
+      : current.featuredOnHome === true,
+  };
+  if (isFeaturedOnHomeSlotCandidate(nextVideo)) {
+    await assertFeaturedOnHomeLimit(id);
+  }
   const updatePayload: Record<string, unknown> = {
     ...data,
     updatedAt: serverTimestamp(),
@@ -247,6 +288,13 @@ export async function deleteVideo(id: string): Promise<void> {
 
 export async function togglePublish(id: string, isPublished: boolean): Promise<void> {
   const ref = doc(db, COLLECTION_NAME, id);
+  if (isPublished) {
+    const snapshot = await getDoc(ref);
+    const current = snapshot.exists() ? ((snapshot.data() as Partial<VideoDoc>) ?? {}) : {};
+    if (isFeaturedOnHomeSlotCandidate({ ...current, id, isPublished: true })) {
+      await assertFeaturedOnHomeLimit(id);
+    }
+  }
   await updateDoc(ref, {
     isPublished,
     notificationState: isPublished ? VIDEO_NOTIFICATION_STATE_PENDING : VIDEO_NOTIFICATION_STATE_SENT,
@@ -260,19 +308,39 @@ export async function listVideoCategories(): Promise<VideoCategoryDoc[]> {
   const snapshot = await getDocs(categoriesCollection);
   const items = snapshot.docs.map((docSnap) => {
     const data = docSnap.data() as Omit<VideoCategoryDoc, "id">;
-    return { id: docSnap.id, ...data };
+    return { id: docSnap.id, ...data, slug: resolveCategorySlug(data) };
   });
   return items
     .filter((item) => typeof item.name === "string" && item.name.trim().length > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+async function resolveUniqueCategorySlug(name: string): Promise<string> {
+  const baseSlug = slugifyText(name);
+  if (!baseSlug) {
+    throw new Error("Categoria nu poate genera un slug valid.");
+  }
+
+  const existing = await listVideoCategories();
+  const usedSlugs = new Set(existing.map((category) => resolveCategorySlug(category)).filter(Boolean));
+  if (!usedSlugs.has(baseSlug)) return baseSlug;
+
+  let suffix = 2;
+  while (usedSlugs.has(`${baseSlug}-${suffix}`)) {
+    suffix += 1;
+  }
+  return `${baseSlug}-${suffix}`;
+}
+
 export async function addVideoCategory(
   name: string,
   locales?: VideoCategoryLocales
 ): Promise<VideoCategoryDoc> {
+  const trimmedName = name.trim();
+  const slug = await resolveUniqueCategorySlug(trimmedName);
   const payload = {
-    name: name.trim(),
+    name: trimmedName,
+    slug,
     locales,
     createdAt: serverTimestamp(),
   };

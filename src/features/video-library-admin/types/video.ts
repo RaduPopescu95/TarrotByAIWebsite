@@ -48,6 +48,7 @@ export type VideoDoc = {
 export type VideoCategoryDoc = {
   id: string;
   name: string;
+  slug?: string;
   createdAt: Timestamp;
   locales?: VideoCategoryLocales;
 };

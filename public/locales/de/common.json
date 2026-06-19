@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "Nur App",
   "videoLibraryAccessChipPremium": "Prämie",
   "videoLibraryAppOnlyMessage": "Dieses Video ist nur in der mobilen App kostenlos verfügbar.",
+  "videoLibraryAppOnlyDownloadHint": "Laden Sie die App hier herunter:",
   "videoLibraryAppOnlyBadge": "Nur App",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",

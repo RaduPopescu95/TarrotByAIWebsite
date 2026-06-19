@@ -489,6 +489,7 @@
   "videoLibraryAccessChipAppOnly": "App only",
   "videoLibraryAccessChipPremium": "Premium",
   "videoLibraryAppOnlyMessage": "This video is available for free only in the mobile app.",
+  "videoLibraryAppOnlyDownloadHint": "Download the app here:",
   "videoLibraryAppOnlyBadge": "App only",
   "videoLibraryAppOnlyGooglePlay": "Google Play",
   "videoLibraryAppOnlyAppStore": "App Store",
