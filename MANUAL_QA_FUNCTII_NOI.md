@@ -6,9 +6,58 @@ Document de testare fizică pentru cele 8 funcții marcate **IMPLEMENTAT NECESIT
 |------|---------|
 | **Data QA** | _________________ |
 | **Tester** | _________________ |
-| **Web (branch/commit)** | _________________ |
-| **Build iOS** | _________________ |
-| **Build Android** | _________________ |
+| **Next.js (branch/commit)** | _________________ |
+| **Expo iOS (build # / TestFlight)** | _________________ |
+| **Expo Android (versionCode / AAB)** | _________________ |
+
+---
+
+## Mapare proiecte (Next.js + Expo)
+
+Monorepo-ul conține **două codebase-uri**. Fiecare coloană din checklist-uri corespunde unui proiect:
+
+| Coloană în ghid | Proiect | Folder | Ce rulezi |
+|-----------------|---------|--------|-----------|
+| **Web** | Next.js (site public) | [`next-js/`](../next-js/) | Browser → `https://www.cristinazurba.com` sau staging |
+| **Admin** | Next.js (dashboard) | [`next-js/`](../next-js/) | Browser → `/dashboard/*`, `/administrare/*` |
+| **iOS** | Expo mobile app | [`expo-mobile-app/`](../expo-mobile-app/) | Build **EAS/native** pe iPhone (nu Expo Go pentru #5) |
+| **Android** | Expo mobile app | [`expo-mobile-app/`](../expo-mobile-app/) | Build **EAS/native** pe device Android |
+
+```mermaid
+flowchart LR
+  subgraph nextjs [next-js]
+    WebSite[Site public Web]
+    AdminDash[Admin Dashboard]
+    APIs[API Routes Firestore]
+  end
+  subgraph expo [expo-mobile-app]
+    iOSApp[iOS App]
+    AndroidApp[Android App]
+  end
+  APIs --> WebSite
+  APIs --> iOSApp
+  APIs --> AndroidApp
+  AdminDash --> APIs
+```
+
+### Unde testezi fiecare funcție
+
+| # | Funcție | Next.js (`next-js`) | Expo (`expo-mobile-app`) |
+|---|---------|---------------------|---------------------------|
+| 1 | Cursuri multilingve | `/courses`, `/courses/{id}`, admin [`CourseForm.jsx`](components/Courses/CourseForm.jsx) | [`CourseDetailScreen.tsx`](../expo-mobile-app/src/features/courses/screens/CourseDetailScreen.tsx) |
+| 2 | Featured homepage | [`pages/index.jsx`](pages/index.jsx) | [`ClinicDashboard.tsx`](../expo-mobile-app/src/pages/doctors/ClinicDashboard.tsx) |
+| 3 | Categorie separată | [`pages/videouri/categorie/[slug].jsx`](pages/videouri/categorie/[slug].jsx) | [`VideoCategoryScreen.tsx`](../expo-mobile-app/src/features/video-library/screens/VideoCategoryScreen.tsx) |
+| 4 | Traduceri 27 limbi | [`public/locales/*/common.json`](public/locales), header LangSwitch | [`labels.ts`](../expo-mobile-app/src/utils/labels.ts), [`LangueageSelect.tsx`](../expo-mobile-app/src/pages/LangueageSelect.tsx) |
+| 5 | Link direct zodie | [`pages/videouri/categorie/[slug].jsx`](pages/videouri/categorie/[slug].jsx), [`.well-known/`](public/.well-known/) | [`HoroscopZilnic.js`](../expo-mobile-app/src/pages/astral/initials/HoroscopZilnic.js), [`linkingConfig.ts`](../expo-mobile-app/src/navigation/linkingConfig.ts) |
+| 6 | Dual-release 18:00 | [`lib/videoReleaseSchedule.js`](lib/videoReleaseSchedule.js), admin [`VideoForm.tsx`](src/features/video-library-admin/components/VideoForm.tsx) | [`videoRelease.ts`](../expo-mobile-app/src/features/video-library/utils/videoRelease.ts) |
+| 7 | Trilogie Stripe Live | [`pages/courses/bundles/[bundleId].jsx`](pages/courses/bundles/[bundleId].jsx), admin tab Trilogii | [`CourseBundleDetailScreen.tsx`](../expo-mobile-app/src/features/courses/screens/CourseBundleDetailScreen.tsx) |
+| 8 | Like-uri + comentarii | [`pages/videouri/[videoId].jsx`](pages/videouri/[videoId].jsx), [`administrare/comentarii-video`](pages/administrare/comentarii-video/index.jsx) | [`VideoPlayerScreen.tsx`](../expo-mobile-app/src/features/video-library/screens/VideoPlayerScreen.tsx) |
+
+**Reguli rapide:**
+- **Admin** = doar Next.js; Expo nu are panou admin.
+- **Web + iOS + Android** = aceeași funcție, același backend Firestore/API — trebuie verificată pe **toate trei** pentru PASS complet.
+- **#4 Traduceri:** nu are coloană Admin — stringurile UI sunt în fișiere JSON / `labels.ts`, nu în dashboard.
+- **#5 Deep link:** testat pe Expo (iOS/Android) cu build nativ; pe Web testezi URL-ul + share + OG tags.
 
 ---
 
@@ -816,9 +865,9 @@ flowchart TB
 | **Tester** | |
 | **Data finalizare** | |
 | **Durată totală QA** | |
-| **Web — URL / commit** | |
-| **iOS — build # / TestFlight** | |
-| **Android — build # / versionCode** | |
+| **Next.js — URL / commit** | |
+| **Expo iOS — build # / TestFlight** | |
+| **Expo Android — build # / versionCode** | |
 | **Rezultat general** | PASS / PASS cu defecte minore / FAIL |
 | **Observații** | |
 
