@@ -5,7 +5,7 @@ import {
   isCourseVisible,
   parseQueryBoolean,
   readSingleQueryValue,
-  toSafeCourse,
+  toSafeCourseForPublicCatalog,
 } from "../../../lib/courses";
 
 async function handler(req, res) {
@@ -30,7 +30,9 @@ async function handler(req, res) {
         return (course.featuredOnHome === true) === featuredOnly;
       });
 
-    const courses = filteredCourses.map((course) => toSafeCourse(course.id, course, locale));
+    const courses = filteredCourses.map((course) =>
+      toSafeCourseForPublicCatalog(course.id, course, locale)
+    );
 
     res.setHeader(
       "Cache-Control",

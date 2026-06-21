@@ -7,7 +7,7 @@ import { loadVisibleCourseCandidates } from "../../../lib/coursesCache";
 import {
   isCourseVisible,
   readSingleQueryValue,
-  toSafeCourse,
+  toSafeCourseForPublicCatalog,
 } from "../../../lib/courses";
 
 const LATEST_LIMIT = 4;
@@ -41,11 +41,11 @@ async function handler(req, res) {
     const visibleCandidates = candidates.filter((course) => isCourseVisible(course, nowMs));
     const latestCourses = visibleCandidates
       .slice(0, LATEST_LIMIT)
-      .map((course) => toSafeCourse(course.id, course, locale));
+      .map((course) => toSafeCourseForPublicCatalog(course.id, course, locale));
 
     const featuredCourses = visibleCandidates
       .filter((course) => course.featuredOnHome === true)
-      .map((course) => toSafeCourse(course.id, course, locale));
+      .map((course) => toSafeCourseForPublicCatalog(course.id, course, locale));
 
     console.info("[courses.home] success", {
       candidatesCount: candidates.length,

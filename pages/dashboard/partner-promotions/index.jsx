@@ -5,7 +5,7 @@ import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 import PartnerPromotionsOverview from "../../../components/PartnerPromotions/PartnerPromotionsOverview";
 import PartnerPromotionsTable from "../../../components/PartnerPromotions/PartnerPromotionsTable";
 import PartnerPromotionsEmptyState from "../../../components/PartnerPromotions/PartnerPromotionsEmptyState";
-import PartnerPromotionForm from "../../../components/PartnerPromotions/PartnerPromotionForm";
+import PartnerPromotionSheet from "../../../components/PartnerPromotions/PartnerPromotionSheet";
 import {
   createAdminPartnerPromotion,
   deleteAdminPartnerPromotion,
@@ -75,8 +75,8 @@ export default function PartnerPromotionsDashboardPage() {
   const [zones, setZones] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogError, setDialogError] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetError, setSheetError] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -194,8 +194,8 @@ export default function PartnerPromotionsDashboardPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
-    setDialogError("");
-    setDialogOpen(true);
+    setSheetError("");
+    setSheetOpen(true);
   };
 
   const openEdit = (row) => {
@@ -213,8 +213,8 @@ export default function PartnerPromotionsDashboardPage() {
       sortOrder: typeof row.sortOrder === "number" ? row.sortOrder : 0,
       locale: row.locale || "all",
     });
-    setDialogError("");
-    setDialogOpen(true);
+    setSheetError("");
+    setSheetOpen(true);
   };
 
   const togglePlacement = (zoneId) => {
@@ -230,7 +230,7 @@ export default function PartnerPromotionsDashboardPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
-    setDialogError("");
+    setSheetError("");
     try {
       const result = await uploadImage([file], [], true, "PartnerPromotions", null, null);
       const url = result?.finalUri || result;
@@ -238,7 +238,7 @@ export default function PartnerPromotionsDashboardPage() {
         setForm((prev) => ({ ...prev, logoUrl: url }));
       }
     } catch (e) {
-      setDialogError(e?.message || "Upload logo eșuat.");
+      setSheetError(e?.message || "Upload logo eșuat.");
     } finally {
       setLogoUploading(false);
       event.target.value = "";
@@ -247,7 +247,7 @@ export default function PartnerPromotionsDashboardPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    setDialogError("");
+    setSheetError("");
     try {
       const payload = {
         ...form,
@@ -261,10 +261,10 @@ export default function PartnerPromotionsDashboardPage() {
         await createAdminPartnerPromotion(payload);
       }
       await rebuildPartnerPromotionsCache().catch(() => {});
-      setDialogOpen(false);
+      setSheetOpen(false);
       await load();
     } catch (e) {
-      setDialogError(e?.message || "Salvare eșuată.");
+      setSheetError(e?.message || "Salvare eșuată.");
     } finally {
       setSaving(false);
     }
@@ -454,43 +454,23 @@ export default function PartnerPromotionsDashboardPage() {
           </div>
         </div>
 
-        <Dialog
-          open={dialogOpen}
+        <PartnerPromotionSheet
+          open={sheetOpen}
           onOpenChange={(open) => {
-            if (!saving) setDialogOpen(open);
+            if (!saving) setSheetOpen(open);
           }}
-        >
-          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? "Editează promovarea" : "Firmă parteneră nouă"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingId
-                  ? "Modifică detaliile firmei partenere și zonele de afișare."
-                  : "Completează formularul pentru a adăuga o firmă parteneră nouă."}
-              </DialogDescription>
-            </DialogHeader>
-
-            {dialogError ? (
-              <div className="mx-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {dialogError}
-              </div>
-            ) : null}
-
-            <PartnerPromotionForm
-              form={form}
-              setForm={setForm}
-              zoneList={zoneList}
-              onTogglePlacement={togglePlacement}
-              onLogoFile={handleLogoFile}
-              logoUploading={logoUploading}
-              onCancel={() => setDialogOpen(false)}
-              onSave={handleSave}
-              saving={saving}
-            />
-          </DialogContent>
-        </Dialog>
+          editingId={editingId}
+          form={form}
+          setForm={setForm}
+          zoneList={zoneList}
+          onTogglePlacement={togglePlacement}
+          onLogoFile={handleLogoFile}
+          logoUploading={logoUploading}
+          onCancel={() => setSheetOpen(false)}
+          onSave={handleSave}
+          saving={saving}
+          error={sheetError}
+        />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>

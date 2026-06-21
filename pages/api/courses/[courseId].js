@@ -3,6 +3,7 @@ import { getOptionalAuth } from "../../../lib/requireAuth";
 import {
   isCourseVisible,
   toSafeCourse,
+  applyCoursePreviewAccessGate,
   resolveCourseAvailableLocales,
 } from "../../../lib/courses";
 import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
@@ -130,9 +131,12 @@ async function handler(req, res) {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    const safeCourse = toSafeCourse(courseId, courseData, locale, {
-      includeDetailContent: true,
-    });
+    const safeCourse = applyCoursePreviewAccessGate(
+      toSafeCourse(courseId, courseData, locale, {
+        includeDetailContent: true,
+      }),
+      hasAccess
+    );
 
     const mediaSnap = await withFirestoreCostLog(
       {
