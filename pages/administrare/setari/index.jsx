@@ -15,6 +15,8 @@ function SettingsScreen() {
     subscriptionSystemEnabled: true,
     mobileUpdatePromptEnabled: false,
     mobileForceUpdateEnabled: false,
+    mobileMinAppVersionIos: "",
+    mobileMinAppVersionAndroid: "",
   });
   const [pendingToggle, setPendingToggle] = useState(null);
   const [pendingMobileToggle, setPendingMobileToggle] = useState(null);
@@ -34,6 +36,8 @@ function SettingsScreen() {
           subscriptionSystemEnabled: true,
           mobileUpdatePromptEnabled: false,
           mobileForceUpdateEnabled: false,
+          mobileMinAppVersionIos: "",
+          mobileMinAppVersionAndroid: "",
         }
       );
     } catch (e) {
@@ -133,6 +137,13 @@ function SettingsScreen() {
 
   const confirmMobileForceToggle = async () => {
     if (pendingMobileForceToggle === null) return;
+    if (pendingMobileForceToggle && !canEnableForceUpdate()) {
+      setError(
+        "Setează versiunile minime iOS și Android (ex. 2.3.0) înainte de a activa force update."
+      );
+      setPendingMobileForceToggle(null);
+      return;
+    }
     setSaving(true);
     setError("");
     setSuccess("");
@@ -165,6 +176,47 @@ function SettingsScreen() {
 
   const cancelMobileForceToggle = () => {
     setPendingMobileForceToggle(null);
+  };
+
+  const handleMinVersionChange = (field, value) => {
+    setSettings((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const saveMinAppVersions = async () => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dashboard-token": DASHBOARD_SECRET,
+        },
+        body: JSON.stringify({
+          mobileMinAppVersionIos: settings.mobileMinAppVersionIos?.trim() || null,
+          mobileMinAppVersionAndroid:
+            settings.mobileMinAppVersionAndroid?.trim() || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess("Versiunile minime iOS/Android au fost salvate.");
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canEnableForceUpdate = () => {
+    const ios = String(settings.mobileMinAppVersionIos || "").trim();
+    const android = String(settings.mobileMinAppVersionAndroid || "").trim();
+    return ios.length > 0 && android.length > 0;
   };
 
   return (
@@ -424,7 +476,7 @@ function SettingsScreen() {
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     {settings.mobileForceUpdateEnabled === true
-                      ? "Utilizatorii nu pot închide modalul și nu pot continua în aplicație până nu fac update."
+                      ? "Utilizatorii cu versiunea sub minimul setat nu pot închide modalul până fac update. Cei deja la versiunea minimă sau mai nouă nu sunt afectați."
                       : "Modalul poate rămâne soft (închidere permisă), în funcție de toggle-ul de prompt."}
                   </p>
                 </div>
@@ -459,6 +511,70 @@ function SettingsScreen() {
                   />
                 </button>
               </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Versiuni minime necesare
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Utilizatorii la această versiune sau mai nouă{" "}
+                <strong>nu</strong> văd modalul, chiar dacă force update rămâne
+                activ. Setează versiunea publicată pe App Store / Google Play
+                (ex. 2.3.0).
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm text-slate-700">
+                  <span className="mb-1 block font-medium">Versiune minimă iOS</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="2.3.0"
+                    value={settings.mobileMinAppVersionIos || ""}
+                    onChange={(event) =>
+                      handleMinVersionChange(
+                        "mobileMinAppVersionIos",
+                        event.target.value
+                      )
+                    }
+                    disabled={saving}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                </label>
+                <label className="block text-sm text-slate-700">
+                  <span className="mb-1 block font-medium">
+                    Versiune minimă Android
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="2.3.0"
+                    value={settings.mobileMinAppVersionAndroid || ""}
+                    onChange={(event) =>
+                      handleMinVersionChange(
+                        "mobileMinAppVersionAndroid",
+                        event.target.value
+                      )
+                    }
+                    disabled={saving}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={saveMinAppVersions}
+                disabled={saving}
+                className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Salvează versiuni minime
+              </button>
+              {settings.mobileForceUpdateEnabled === true ? (
+                <p className="mt-3 text-xs text-rose-700">
+                  Force update este activ: doar utilizatorii sub versiunea minimă
+                  vor fi blocați.
+                </p>
+              ) : null}
             </div>
           </div>
           </>

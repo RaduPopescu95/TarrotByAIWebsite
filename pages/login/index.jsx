@@ -7,31 +7,15 @@ import { emailWithoutSpace } from "../../utils/strintText";
 import { handleFirebaseAuthError } from "../../utils/authUtils";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { authentication } from "../../firebase";
-import Header from "../../components/Header";
+import AuthFunnelShell from "../../components/auth/AuthFunnelShell";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import Head from "next/head";
 import { sanitizeInternalReturnUrl, persistAuthReturnUrl } from "../../lib/navigation";
 import { useAuthFunnelRedirect } from "../../hooks/useAuthFunnelRedirect";
 
-function Copyright(props) {
-  return (
-    <div style={styles.copyrightContainer}>
-      <p style={styles.copyrightText}>
-        {"Copyright © "}
-        <span>Cristina Zurba</span> {new Date().getFullYear()}
-        {"."}
-      </p>
-      <p style={styles.copyrightText}>
-        {"dezvoltat de "}
-        <Link href="https://webappdynamicx.ro/" style={styles.copyrightLink}>
-          Web App Dynamicx
-        </Link>{" "}
-        {"."}
-      </p>
-    </div>
-  );
-}
+const inputClassName =
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:opacity-60 sm:text-sm";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -47,7 +31,6 @@ export default function SignInSide() {
   const [showSnackback, setShowSnackback] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  const [isMobile, setIsMobile] = React.useState(false);
 
   const { t } = useTranslation("common");
   const router = useRouter();
@@ -59,16 +42,6 @@ export default function SignInSide() {
     [rawReturnUrl]
   );
   const { authBootstrapReady } = useAuthFunnelRedirect(safeReturnUrl);
-
-  // Check if mobile
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -139,6 +112,7 @@ export default function SignInSide() {
   };
 
   const isActionLoading = isLoading || isGoogleLoading || !authBootstrapReady;
+  const registerHref = `/register?returnUrl=${encodeURIComponent(safeReturnUrl)}`;
 
   return (
     <>
@@ -150,42 +124,40 @@ export default function SignInSide() {
         <meta property="og:description" content={t("loginDescription")} />
       </Head>
 
-      {/* Main wrapper with unified design */}
-      <div style={styles.mainWrapper}>
-        {/* Header */}
-        <section>
-          <Header isOnlySettngs={true} />
-        </section>
-
-        {/* Main content container */}
-        <div style={styles.contentContainer}>
-          
-          {/* Left side - Login form */}
-          <div style={{...styles.leftSide, marginLeft: isMobile ? '15%' : '0', marginTop: isMobile ? '10%' : '0'}}>
-            <div style={styles.formContainer}>
-              
-              {/* Logo */}
-              <div style={styles.logoContainer}>
+      <AuthFunnelShell>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid lg:grid-cols-5">
+          <section className="flex flex-col px-5 py-6 sm:px-8 sm:py-8 lg:col-span-2 lg:justify-center lg:px-10 lg:py-10">
+            <div className="mx-auto w-full max-w-md lg:max-w-none">
+              <div className="mb-5 flex flex-col items-center text-center sm:mb-6">
                 <Image
                   src="/LogoPngTransparent.png"
                   width={120}
                   height={120}
                   alt="Cristina Zurba Logo"
+                  className="mb-3 h-20 w-20 object-contain sm:h-24 sm:w-24"
+                  priority
                 />
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                  {t("login")}
+                </h1>
               </div>
 
-              {/* Title */}
-              <h1 style={styles.title}>
-                Autentificare
-              </h1>
+              {showSnackback && message ? (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800"
+                >
+                  {message}
+                </div>
+              ) : null}
 
-              {/* Login Form */}
-              <form onSubmit={handleSubmit} style={styles.form}>
-                
-                {/* Email Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="email" style={styles.label}>
-                    Email *
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+                  >
+                    {t("email")} *
                   </label>
                   <input
                     type="email"
@@ -194,15 +166,18 @@ export default function SignInSide() {
                     required
                     autoComplete="email"
                     autoFocus
-                    style={styles.input}
+                    disabled={isActionLoading}
+                    className={inputClassName}
                     placeholder="exemplu@email.com"
                   />
                 </div>
 
-                {/* Password Field */}
-                <div style={styles.inputGroup}>
-                  <label htmlFor="password" style={styles.label}>
-                    Parolă *
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+                  >
+                    {t("password")} *
                   </label>
                   <input
                     type="password"
@@ -210,474 +185,191 @@ export default function SignInSide() {
                     name="password"
                     required
                     autoComplete="current-password"
-                    style={styles.input}
+                    disabled={isActionLoading}
+                    className={inputClassName}
                     placeholder="••••••••"
                   />
                 </div>
 
-                {/* Guest Login Button */}
                 <button
                   type="button"
                   onClick={handleLoginAsGuest}
-                  style={styles.guestButton}
                   disabled={isActionLoading}
+                  className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 bg-transparent py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? (
-                    <div style={styles.spinner}></div>
-                  ) : (
-                    "Continuă fără cont"
-                  )}
+                  {t("loginNowNoAccount")}
                 </button>
 
-                {/* Login Button */}
                 <button
                   type="submit"
-                  style={styles.loginButton}
                   disabled={isActionLoading}
+                  className="flex w-full items-center justify-center rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isLoading ? (
-                    <div style={styles.spinner}></div>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      {t("loginNow")}
+                    </span>
                   ) : (
-                    "Autentificare"
+                    t("loginNow")
                   )}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  style={styles.googleButton}
                   disabled={isActionLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isGoogleLoading ? (
-                    <span style={styles.googleLoadingWrap}>
-                      <div style={styles.spinner}></div>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                       {t("loginGoogleLoading")}
                     </span>
                   ) : (
-                    t("loginGoogleButton")
+                    <>
+                      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
+                        <path
+                          fill="#4285F4"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        />
+                      </svg>
+                      {t("loginGoogleButton")}
+                    </>
                   )}
                 </button>
 
-                {/* Links */}
-                <div style={styles.linksContainer}>
-                  <div style={styles.linkGroup}>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/forgotpassword")}
-                      style={styles.link}
+                <div className="flex flex-col gap-3 pt-1 text-center text-sm sm:flex-row sm:items-center sm:justify-between sm:text-left">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/forgotpassword")}
+                    className="font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+                  >
+                    {t("forgotPassword")}
+                  </button>
+                  <p className="text-slate-600">
+                    {t("dntHaveAccount")}{" "}
+                    <Link
+                      href={registerHref}
+                      className="font-semibold text-indigo-700 underline-offset-2 hover:underline"
                     >
-                      Ai uitat parola?
-                    </button>
-                  </div>
-                  <div style={styles.linkGroup}>
-                    <span style={styles.linkText}>
-                      Nu ai un cont?
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        router.push(
-                          `/register?returnUrl=${encodeURIComponent(safeReturnUrl)}`
-                        )
-                      }
-                      style={styles.link}
-                    >
-                      Înregistrează-te
-                    </button>
-                  </div>
+                      {t("signUp")}
+                    </Link>
+                  </p>
                 </div>
-
-                {/* Copyright */}
-                <div style={styles.copyrightSection}>
-                  <Copyright />
-                </div>
-
               </form>
             </div>
-          </div>
+          </section>
 
-          {/* Right side - Marketing content */}
-          <div style={styles.rightSide}>
-            <div style={styles.marketingContent}>
-              <div style={styles.marketingContainer}>
-                
-                {/* App marketing section */}
-                <div style={styles.appSection}>
-                  <Image
-                    src="/appmarketing.png"
-                    width={450}
-                    height={450}
-                    alt="App Marketing"
-                    style={styles.appImage}
-                  />
-                  
-                  <div style={styles.downloadSection}>
-                    <h2 style={styles.downloadTitle}>
-                      Descarcă 
-                      <span style={styles.downloadTitleBold}>
-                        aplicația acum
-                      </span>
-                    </h2>
+          <aside className="hidden flex-col items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-400 px-8 py-10 lg:col-span-3 lg:flex xl:px-12">
+            <div className="flex max-w-xl flex-col items-center gap-8 xl:flex-row xl:items-center xl:gap-10">
+              <div className="flex flex-col items-center text-center">
+                <Image
+                  src="/appmarketing.png"
+                  width={320}
+                  height={320}
+                  alt="App Marketing"
+                  className="h-auto w-full max-w-[240px] object-contain xl:max-w-[280px]"
+                />
+                <h2 className="mt-4 text-lg font-light text-white xl:text-xl">
+                  Descarcă{" "}
+                  <span className="font-bold">aplicația acum</span>
+                </h2>
+                <div className="mt-4 flex items-center justify-center gap-6">
+                  <div className="flex flex-col items-center">
+                    <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
+                      <img
+                        src="/gplay.png"
+                        alt="Google Play"
+                        className="h-14 w-14 object-contain"
+                      />
+                    </Link>
+                    <p className="mt-1 rounded-lg bg-slate-900/50 px-2 py-0.5 text-xs text-white">
+                      Android
+                    </p>
                   </div>
-                  
-                  <div style={styles.storeButtons}>
-                    <div style={styles.storeButton}>
-                      <Link href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot">
-                        <img
-                          src="/gplay.png"
-                          alt="Google Play"
-                          style={styles.storeIcon}
-                        />
-                      </Link>
-                      <p style={styles.storeLabel}>Android</p>
-                    </div>
-                    <div style={styles.storeButton}>
-                      <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
-                        <img
-                          src="/appstore.png"
-                          alt="App Store"
-                          style={styles.storeIcon}
-                        />
-                      </Link>
-                      <p style={styles.storeLabel}>iOS</p>
-                    </div>
+                  <div className="flex flex-col items-center">
+                    <Link href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937">
+                      <img
+                        src="/appstore.png"
+                        alt="App Store"
+                        className="h-14 w-14 object-contain"
+                      />
+                    </Link>
+                    <p className="mt-1 rounded-lg bg-slate-900/50 px-2 py-0.5 text-xs text-white">
+                      iOS
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                {/* Tarot section */}
-                <div style={styles.tarotSection}>
-                  <Image
-                    src="/lucky-deco.png"
-                    width={278}
-                    height={65}
-                    alt="Lucky decoration"
-                  />
-                  <Image
-                    src="/onboardImg.png"
-                    width={400}
-                    height={450}
-                    alt="Tarot reading"
-                    style={styles.tarotImage}
-                  />
-                  <h1 style={{...styles.tarotTitle, fontSize: isMobile ? '40px' : '80px'}}>
-                    Tarot by AI
-                  </h1>
-                </div>
-
+              <div className="flex flex-col items-center text-center">
+                <Image
+                  src="/lucky-deco.png"
+                  width={220}
+                  height={52}
+                  alt=""
+                  className="h-auto w-full max-w-[180px] object-contain"
+                />
+                <Image
+                  src="/onboardImg.png"
+                  width={280}
+                  height={320}
+                  alt="Tarot reading"
+                  className="my-3 h-auto w-full max-w-[220px] object-contain xl:max-w-[260px]"
+                />
+                <p className="text-3xl font-bold text-white xl:text-4xl">Tarot by AI</p>
               </div>
             </div>
-          </div>
-
+          </aside>
         </div>
 
-        {/* Error notification */}
-        {showSnackback && (
-          <div style={styles.errorNotification}>
-            <div style={styles.errorContent}>
-              <i className="fa fa-exclamation-triangle" style={styles.errorIcon}></i>
-              <span>{message}</span>
-              <button
-                style={styles.errorClose}
-                onClick={() => setShowSnackback(false)}
-              >
-                <i className="fa fa-times"></i>
-              </button>
-            </div>
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm lg:hidden">
+          <p className="mb-3 text-center text-sm font-medium text-slate-700">
+            Descarcă aplicația
+          </p>
+          <div className="flex items-center justify-center gap-8">
+            <Link
+              href="https://play.google.com/store/apps/details?id=com.cristina.zurba.tarot"
+              className="flex flex-col items-center"
+            >
+              <img src="/gplay.png" alt="Google Play" className="h-12 w-12 object-contain" />
+              <span className="mt-1 text-xs text-slate-500">Android</span>
+            </Link>
+            <Link
+              href="https://apps.apple.com/ro/app/cristina-zurba/id6475713937"
+              className="flex flex-col items-center"
+            >
+              <img src="/appstore.png" alt="App Store" className="h-12 w-12 object-contain" />
+              <span className="mt-1 text-xs text-slate-500">iOS</span>
+            </Link>
           </div>
-        )}
+        </div>
 
-      </div>
+        <p className="mx-auto mt-6 text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+          Copyright © Cristina Zurba {new Date().getFullYear()}.{" "}
+          dezvoltat de{" "}
+          <Link
+            href="https://webappdynamicx.ro/"
+            className="text-indigo-700 underline-offset-2 hover:underline"
+          >
+            Web App Dynamicx
+          </Link>
+          .
+        </p>
+      </AuthFunnelShell>
     </>
   );
 }
-
-// Styles matching /consultatii design
-const styles = {
-  mainWrapper: {
-    minHeight: '100vh',
-    backgroundColor: '#ffffff',
-    width: '100%',
-  },
-  contentContainer: {
-    display: 'flex',
-    minHeight: '100vh',
-  },
-  leftSide: {
-    width: '41.67%', // 5/12
-    padding: '2rem',
-    backgroundColor: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    '@media (max-width: 768px)': {
-      width: '100%',
-      padding: '1rem',
-    },
-  },
-  rightSide: {
-    width: '58.33%', // 7/12
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    '@media (max-width: 768px)': {
-      display: 'none',
-    },
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: '400px',
-    padding: '2rem',
-  },
-  logoContainer: {
-    textAlign: 'center',
-    marginBottom: '2rem',
-  },
-  title: {
-    fontSize: '1.8rem',
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: '2rem',
-  },
-  form: {
-    width: '100%',
-  },
-  inputGroup: {
-    marginBottom: '1.5rem',
-  },
-  label: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    width: '100%',
-    padding: '12px 16px',
-    border: '2px solid #e9ecef',
-    borderRadius: '12px',
-    fontSize: '16px',
-    transition: 'all 0.3s ease',
-    backgroundColor: 'white',
-    boxSizing: 'border-box',
-  },
-  guestButton: {
-    width: '100%',
-    padding: '15px 24px',
-    marginBottom: '1rem',
-    backgroundColor: 'transparent',
-    border: '2px solid #667eea',
-    color: '#667eea',
-    borderRadius: '25px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '50px',
-  },
-  loginButton: {
-    width: '100%',
-    padding: '15px 24px',
-    marginBottom: '2rem',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    border: 'none',
-    color: 'white',
-    borderRadius: '25px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '50px',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-  },
-  googleButton: {
-    width: '100%',
-    padding: '15px 24px',
-    marginBottom: '2rem',
-    backgroundColor: '#ffffff',
-    border: '2px solid #e5e7eb',
-    color: '#111827',
-    borderRadius: '25px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '50px',
-  },
-  googleLoadingWrap: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  spinner: {
-    width: '20px',
-    height: '20px',
-    border: '2px solid transparent',
-    borderTop: '2px solid currentColor',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  linksContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '1rem',
-    marginBottom: '2rem',
-  },
-  linkGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
-  link: {
-    background: 'none',
-    border: 'none',
-    color: '#667eea',
-    fontSize: '14px',
-    cursor: 'pointer',
-    textDecoration: 'underline',
-    padding: '0',
-  },
-  linkText: {
-    fontSize: '14px',
-    color: '#666',
-  },
-  copyrightSection: {
-    marginTop: '2rem',
-  },
-  copyrightContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: '1rem',
-  },
-  copyrightText: {
-    fontSize: '12px',
-    color: '#666',
-    margin: '0',
-  },
-  copyrightLink: {
-    color: '#667eea',
-    textDecoration: 'none',
-  },
-  marketingContent: {
-    padding: '2rem',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  marketingContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '3rem',
-    maxWidth: '1000px',
-  },
-  appSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  appImage: {
-    marginBottom: '1rem',
-  },
-  downloadSection: {
-    textAlign: 'center',
-    marginBottom: '1rem',
-  },
-  downloadTitle: {
-    color: 'white',
-    fontWeight: '300',
-    margin: '0',
-    fontSize: '1.5rem',
-  },
-  downloadTitleBold: {
-    fontWeight: 'bold',
-    marginLeft: '5px',
-  },
-  storeButtons: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    gap: '2rem',
-    width: '70%',
-  },
-  storeButton: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  storeIcon: {
-    width: '60px',
-    height: '60px',
-    marginBottom: '0.5rem',
-  },
-  storeLabel: {
-    margin: '0',
-    color: 'white',
-    backgroundColor: 'rgba(40, 49, 64, 0.5)',
-    padding: '4px 8px',
-    borderRadius: '8px',
-    fontSize: '14px',
-  },
-  tarotSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  tarotImage: {
-    marginTop: '1rem',
-    marginBottom: '1rem',
-  },
-  tarotTitle: {
-    color: 'white',
-    fontWeight: 'bold',
-    margin: '0',
-    textAlign: 'center',
-  },
-  errorNotification: {
-    position: 'fixed',
-    bottom: '20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    zIndex: 1000,
-    animation: 'slideInUp 0.3s ease-out',
-  },
-  errorContent: {
-    background: '#ff4757',
-    color: 'white',
-    padding: '15px 20px',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-  },
-  errorIcon: {
-    fontSize: '18px',
-  },
-  errorClose: {
-    background: 'none',
-    border: 'none',
-    color: 'white',
-    cursor: 'pointer',
-    padding: '0',
-    marginLeft: '10px',
-    fontSize: '16px',
-  },
-};

@@ -2,6 +2,10 @@ const loadMobileUpdateStatus = jest.fn();
 
 jest.mock("../../../../lib/mobileUpdatePromptSettings", () => ({
   loadMobileUpdateStatus: (...args) => loadMobileUpdateStatus(...args),
+  normalizeMobilePlatform: jest.requireActual("../../../../lib/mobileUpdatePromptSettings")
+    .normalizeMobilePlatform,
+  resolveMobileUpdatePrompt: jest.requireActual("../../../../lib/mobileUpdatePromptSettings")
+    .resolveMobileUpdatePrompt,
 }));
 
 import handler from "../update-status";
@@ -32,9 +36,14 @@ describe("/api/mobile/update-status", () => {
     jest.clearAllMocks();
   });
 
-  it("returns normalized flags (force implies show)", async () => {
-    loadMobileUpdateStatus.mockResolvedValueOnce({ update: false, forceUpdate: true });
-    const req = { method: "GET" };
+  it("returns normalized flags (force implies show) without version filtering", async () => {
+    loadMobileUpdateStatus.mockResolvedValueOnce({
+      update: false,
+      forceUpdate: true,
+      minAppVersionIos: null,
+      minAppVersionAndroid: null,
+    });
+    const req = { method: "GET", query: {} };
     const res = makeRes();
 
     await handler(req, res);
@@ -44,9 +53,54 @@ describe("/api/mobile/update-status", () => {
     expect(res.body).toEqual({
       showUpdatePrompt: true,
       forceUpdate: true,
+      minAppVersionIos: null,
+      minAppVersionAndroid: null,
       source: "firestore:ShouldUpdate/unicde",
     });
     expect(loadMobileUpdateStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters prompt when app version meets minimum", async () => {
+    loadMobileUpdateStatus.mockResolvedValueOnce({
+      update: true,
+      forceUpdate: true,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+    });
+    const req = {
+      method: "GET",
+      query: { platform: "ios", appVersion: "2.3.0" },
+    };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    expect(res.body).toEqual({
+      showUpdatePrompt: false,
+      forceUpdate: false,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+      source: "firestore:ShouldUpdate/unicde",
+    });
+  });
+
+  it("shows force prompt when app version is below minimum", async () => {
+    loadMobileUpdateStatus.mockResolvedValueOnce({
+      update: true,
+      forceUpdate: true,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+    });
+    const req = {
+      method: "GET",
+      query: { platform: "android", appVersion: "2.2.9" },
+    };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    expect(res.body.showUpdatePrompt).toBe(true);
+    expect(res.body.forceUpdate).toBe(true);
   });
 
   it("rejects non-GET methods", async () => {
@@ -62,7 +116,7 @@ describe("/api/mobile/update-status", () => {
 
   it("returns 500 when settings read fails", async () => {
     loadMobileUpdateStatus.mockRejectedValueOnce(new Error("boom"));
-    const req = { method: "GET" };
+    const req = { method: "GET", query: {} };
     const res = makeRes();
 
     await handler(req, res);

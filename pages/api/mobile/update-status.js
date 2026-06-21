@@ -1,4 +1,15 @@
-import { loadMobileUpdateStatus } from "../../../lib/mobileUpdatePromptSettings";
+import {
+  loadMobileUpdateStatus,
+  normalizeMobilePlatform,
+  resolveMobileUpdatePrompt,
+} from "../../../lib/mobileUpdatePromptSettings";
+
+function readSingleQueryValue(value) {
+  if (Array.isArray(value)) {
+    return typeof value[0] === "string" ? value[0] : "";
+  }
+  return typeof value === "string" ? value : "";
+}
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -8,10 +19,20 @@ export default async function handler(req, res) {
 
   try {
     const status = await loadMobileUpdateStatus();
+    const platform = normalizeMobilePlatform(readSingleQueryValue(req.query?.platform));
+    const appVersion = readSingleQueryValue(req.query?.appVersion).trim() || null;
 
-    // Safety normalization: force implies show.
-    const normalizedShow = Boolean(status.update || status.forceUpdate);
-    const normalizedForce = Boolean(status.forceUpdate);
+    const resolved = resolveMobileUpdatePrompt({
+      update: status.update,
+      forceUpdate: status.forceUpdate,
+      minAppVersionIos: status.minAppVersionIos,
+      minAppVersionAndroid: status.minAppVersionAndroid,
+      platform,
+      appVersion,
+    });
+
+    const normalizedShow = resolved.showUpdatePrompt;
+    const normalizedForce = resolved.forceUpdate;
 
     if (normalizedForce) {
       res.setHeader("Cache-Control", "public, max-age=60");
@@ -24,6 +45,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       showUpdatePrompt: normalizedShow,
       forceUpdate: normalizedForce,
+      minAppVersionIos: status.minAppVersionIos,
+      minAppVersionAndroid: status.minAppVersionAndroid,
       source: "firestore:ShouldUpdate/unicde",
     });
   } catch (error) {
