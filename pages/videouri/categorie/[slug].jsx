@@ -14,6 +14,8 @@ import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../../lib/video
 import { resolveUiLocale } from "../../../lib/siteLocales";
 import GoogleAdSenseScript from "../../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../../components/Ads/GoogleAdSenseBanner";
+import VideoLibraryFiltersToolbar from "../../../components/VideoLibrary/VideoLibraryFiltersToolbar";
+import { buildVideoLibraryCategoryNavItems } from "../../../lib/videoLibraryCategoryNav";
 import { loadVideoCategories } from "../../../lib/mobilePublicData";
 import { slugify } from "../../../lib/slugify";
 
@@ -174,6 +176,7 @@ export default function VideoCategoryPage({ category }) {
   const { t } = useTranslation("common");
   const { currentUser, isGuestUser, userData } = useAuth();
   const [videos, setVideos] = useState([]);
+  const [categoryDocs, setCategoryDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [accessFilter, setAccessFilter] = useState("all");
@@ -194,16 +197,27 @@ export default function VideoCategoryPage({ category }) {
     setError("");
     try {
       const locale = router.locale || "ro";
-      const res = await fetch(
-        `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
-        { headers: { Accept: "application/json" } }
-      );
+      const [res, categoriesRes] = await Promise.all([
+        fetch(
+          `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
+          { headers: { Accept: "application/json" } }
+        ),
+        fetch("/api/public/video-categories", {
+          headers: { Accept: "application/json" },
+        }).catch(() => null),
+      ]);
       const requestId = res.headers.get("x-request-id");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const err = new Error(data?.error || "load_failed");
         err.requestId = data?.requestId || requestId || null;
         throw err;
+      }
+      if (categoriesRes?.ok) {
+        const categoriesData = await categoriesRes.json().catch(() => ({}));
+        setCategoryDocs(Array.isArray(categoriesData?.categories) ? categoriesData.categories : []);
+      } else {
+        setCategoryDocs([]);
       }
       const allVideos = Array.isArray(data?.videos) ? data.videos : [];
       const categoryVideos = allVideos.filter((v) => {
@@ -225,6 +239,11 @@ export default function VideoCategoryPage({ category }) {
       load();
     }
   }, [load, currentUser?.uid, categoryName]);
+
+  const categoryNavItems = useMemo(() => {
+    const locale = router.locale || "ro";
+    return buildVideoLibraryCategoryNavItems(categoryDocs, locale);
+  }, [categoryDocs, router.locale]);
 
   const accessFilteredVideos = useMemo(() => {
     if (accessFilter === "all") return videos;
@@ -298,87 +317,18 @@ export default function VideoCategoryPage({ category }) {
   const channelName = t("videoLibraryChannelName");
   const adsenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
 
-  const searchInput = (
-    <div className="relative">
-      <svg
-        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.35-4.35" />
-      </svg>
-      <input
-        id="category-video-search"
-        type="search"
-        enterKeyHint="search"
-        autoComplete="off"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        disabled={loading}
-        placeholder={t("videoLibrarySearchPlaceholder")}
-        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
-      />
-      {searchQuery.trim() ? (
-        <button
-          type="button"
-          onClick={() => setSearchQuery("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-          aria-label={t("videoLibrarySearchClear")}
-        >
-          ×
-        </button>
-      ) : null}
-    </div>
-  );
-
-  const accessFilterControls = (
-    <>
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 lg:text-right">
-        {t("videoLibraryAccessSectionLabel")}
-      </span>
-      <div className="flex flex-wrap gap-2 lg:justify-end">
-        <button
-          type="button"
-          onClick={() => setAccessFilter("all")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "all"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipAll")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAccessFilter("free")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "free"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipAppOnly")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAccessFilter("premium")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "premium"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipPremium")}
-        </button>
-      </div>
-    </>
+  const filtersToolbar = (
+    <VideoLibraryFiltersToolbar
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      loading={loading}
+      searchInputId="category-video-search"
+      accessFilter={accessFilter}
+      onAccessFilterChange={setAccessFilter}
+      categories={categoryNavItems}
+      activeCategorySlug={categorySlug}
+      t={t}
+    />
   );
 
   return (
@@ -418,25 +368,21 @@ export default function VideoCategoryPage({ category }) {
             <main className="min-w-0">
               {loading ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {localizedCategoryName}
                     </h1>
-                    <div className="w-full max-w-md">
-                      <label htmlFor="category-video-search" className="sr-only">
-                        {t("videoLibrarySearchLabel")}
-                      </label>
-                      {searchInput}
-                    </div>
+                    {filtersToolbar}
                   </div>
                   <VideoLibrarySkeletonGrid loadingLabel={t("videoLibraryLoading")} />
                 </>
               ) : error ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {localizedCategoryName}
                     </h1>
+                    {filtersToolbar}
                   </div>
                   <div className="max-w-md rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-center text-sm text-red-800">
                     {error}
@@ -451,10 +397,11 @@ export default function VideoCategoryPage({ category }) {
                 </>
               ) : videos.length === 0 ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {localizedCategoryName}
                     </h1>
+                    {filtersToolbar}
                   </div>
                   <p className="py-12 text-center text-slate-600">{t("videoCategoryEmpty")}</p>
                   <div className="text-center">
@@ -465,25 +412,11 @@ export default function VideoCategoryPage({ category }) {
                 </>
               ) : (
                 <>
-                  <div className="mb-6 grid grid-cols-1 gap-5 border-b border-slate-100 pb-6 lg:mb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-x-10 lg:gap-y-4 xl:gap-x-14 lg:border-b-0 lg:pb-0">
-                    <div className="min-w-0 flex flex-col gap-3 sm:gap-4">
-                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                        {localizedCategoryName}
-                      </h1>
-                      <div className="w-full max-w-md">
-                        <label htmlFor="category-video-search" className="sr-only">
-                          {t("videoLibrarySearchLabel")}
-                        </label>
-                        {searchInput}
-                      </div>
-                    </div>
-                    <div
-                      className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:border-t-0 sm:pt-0 lg:max-w-none lg:border-t-0 lg:pt-0.5 lg:pl-2"
-                      role="group"
-                      aria-label={t("videoLibraryAccessSectionLabel")}
-                    >
-                      {accessFilterControls}
-                    </div>
+                  <div className="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-6 lg:mb-7">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                      {localizedCategoryName}
+                    </h1>
+                    {filtersToolbar}
                   </div>
                   <CategoryAdBanner />
                   {filteredVideos.length === 0 ? (

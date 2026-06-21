@@ -922,12 +922,15 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               <option value="draft">Ciornă (Draft)</option>
               <option value="published">Publicat</option>
               <option value="scheduled">Programat</option>
+              <option value="archived">Arhivat (retras din magazin)</option>
             </select>
             {errors.status && <p className="mt-1.5 text-xs text-red-600">{errors.status}</p>}
             <p className="mt-1.5 text-xs text-gray-500">
               {form.status === "draft" && "Cursul nu va fi vizibil utilizatorilor."}
               {form.status === "published" && "Cursul va fi disponibil public pentru achiziție."}
               {form.status === "scheduled" && "Cursul va fi publicat la o dată programată."}
+              {form.status === "archived" &&
+                "Cursul nu apare în magazin, dar cumpărătorii existenți îl păstrează în Cursurile mele."}
             </p>
           </div>
 

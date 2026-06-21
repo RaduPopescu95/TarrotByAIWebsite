@@ -294,7 +294,8 @@ export default function CoursesDashboardPage() {
     const published = courses.filter((c) => c.status === "published").length;
     const draft = courses.filter((c) => c.status === "draft").length;
     const scheduled = courses.filter((c) => c.status === "scheduled").length;
-    return { total, published, draft, scheduled };
+    const archived = courses.filter((c) => c.status === "archived").length;
+    return { total, published, draft, scheduled, archived };
   }, [courses]);
 
   // Handlers
@@ -399,7 +400,13 @@ export default function CoursesDashboardPage() {
 
   const handleTogglePublish = async (course) => {
     try {
-      const nextStatus = course.status === "published" ? "draft" : "published";
+      const purchaseCount = Number(course.purchaseCount || 0);
+      const nextStatus =
+        course.status === "published"
+          ? purchaseCount > 0
+            ? "archived"
+            : "draft"
+          : "published";
       await updateAdminCourse(course.id, { status: nextStatus });
       const items = await fetchAdminCourses();
       setCourses(items);
@@ -974,6 +981,7 @@ export default function CoursesDashboardPage() {
                             <TabsTrigger value="published">Publicate</TabsTrigger>
                             <TabsTrigger value="draft">Ciorne</TabsTrigger>
                             <TabsTrigger value="scheduled">Programate</TabsTrigger>
+                            <TabsTrigger value="archived">Arhivate</TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
@@ -1512,17 +1520,37 @@ export default function CoursesDashboardPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete / Archive Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirmare ștergere</DialogTitle>
+              <DialogTitle>
+                {Number(courseToDelete?.purchaseCount || 0) > 0
+                  ? "Confirmare arhivare"
+                  : "Confirmare ștergere"}
+              </DialogTitle>
               <DialogDescription>
-                Ești sigur că vrei să ștergi cursul{" "}
-                <span className="font-semibold text-gray-900">
-                  "{courseToDelete?.title}"
-                </span>
-                ? Această acțiune nu poate fi anulată.
+                {Number(courseToDelete?.purchaseCount || 0) > 0 ? (
+                  <>
+                    <span className="font-semibold text-gray-900">
+                      {Number(courseToDelete.purchaseCount)} clienți
+                    </span>{" "}
+                    au cumpărat cursul{" "}
+                    <span className="font-semibold text-gray-900">
+                      &quot;{courseToDelete?.title}&quot;
+                    </span>
+                    . Cursul va dispărea din magazin, dar rămâne accesibil cumpărătorilor în
+                    Cursurile mele.
+                  </>
+                ) : (
+                  <>
+                    Ești sigur că vrei să ștergi cursul{" "}
+                    <span className="font-semibold text-gray-900">
+                      &quot;{courseToDelete?.title}&quot;
+                    </span>
+                    ? Această acțiune nu poate fi anulată.
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -1530,7 +1558,9 @@ export default function CoursesDashboardPage() {
                 Anulează
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>
-                Șterge cursul
+                {Number(courseToDelete?.purchaseCount || 0) > 0
+                  ? "Arhivează"
+                  : "Șterge cursul"}
               </Button>
             </DialogFooter>
           </DialogContent>

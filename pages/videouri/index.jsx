@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -11,11 +10,14 @@ import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumb
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
 import { useAuth } from "../../context/AuthContext";
 import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../lib/videoLibraryClientUtils";
-import VideoAppOnlyCta from "../../components/VideoLibrary/VideoAppOnlyCta";
+import VideoLibraryFiltersToolbar from "../../components/VideoLibrary/VideoLibraryFiltersToolbar";
 import { resolveUiLocale } from "../../lib/siteLocales";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
-import { getCategorySlug, slugify } from "../../lib/slugify";
+import {
+  buildVideoLibraryCategoryNavItems,
+  collectVideoCategoryNames,
+} from "../../lib/videoLibraryCategoryNav";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -96,7 +98,6 @@ export default function VideoLibraryPage() {
   const [categoryDocs, setCategoryDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [accessFilter, setAccessFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [paginationPage, setPaginationPage] = useState(1);
@@ -162,35 +163,20 @@ export default function VideoLibraryPage() {
     load();
   }, [load, currentUser?.uid]);
 
-  const categories = useMemo(() => {
-    const set = new Set();
-    videos.forEach((v) => {
-      const c = typeof v.category === "string" ? v.category.trim() : "";
-      if (c) set.add(c);
+  const categoryNavItems = useMemo(() => {
+    const locale = router.locale || "ro";
+    const videoCategoryNames = collectVideoCategoryNames(videos);
+    return buildVideoLibraryCategoryNavItems(categoryDocs, locale, {
+      onlyWithVideos: true,
+      videoCategoryNames,
     });
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [videos]);
-
-  const categorySlugByName = useMemo(() => {
-    const out = new Map();
-    categoryDocs.forEach((category) => {
-      const name = typeof category?.name === "string" ? category.name.trim() : "";
-      if (!name) return;
-      out.set(name, getCategorySlug(category));
-    });
-    return out;
-  }, [categoryDocs]);
-
-  const categoryFilteredVideos = useMemo(() => {
-    if (!selectedCategory) return videos;
-    return videos.filter((v) => (typeof v.category === "string" ? v.category.trim() : "") === selectedCategory);
-  }, [videos, selectedCategory]);
+  }, [categoryDocs, router.locale, videos]);
 
   const accessFilteredVideos = useMemo(() => {
-    if (accessFilter === "all") return categoryFilteredVideos;
-    if (accessFilter === "free") return categoryFilteredVideos.filter((v) => !v.isPremium);
-    return categoryFilteredVideos.filter((v) => v.isPremium);
-  }, [categoryFilteredVideos, accessFilter]);
+    if (accessFilter === "all") return videos;
+    if (accessFilter === "free") return videos.filter((v) => !v.isPremium);
+    return videos.filter((v) => v.isPremium);
+  }, [videos, accessFilter]);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -209,7 +195,7 @@ export default function VideoLibraryPage() {
 
   useEffect(() => {
     setPaginationPage(1);
-  }, [selectedCategory, normalizedSearch, accessFilter]);
+  }, [normalizedSearch, accessFilter]);
 
   useEffect(() => {
     setPaginationPage((p) => Math.min(Math.max(1, p), totalPages));
@@ -262,87 +248,18 @@ export default function VideoLibraryPage() {
 
   const channelName = t("videoLibraryChannelName");
 
-  const searchInput = (
-    <div className="relative">
-      <svg
-        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.35-4.35" />
-      </svg>
-      <input
-        id="video-library-search"
-        type="search"
-        enterKeyHint="search"
-        autoComplete="off"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        disabled={loading}
-        placeholder={t("videoLibrarySearchPlaceholder")}
-        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
-      />
-      {searchQuery.trim() ? (
-        <button
-          type="button"
-          onClick={() => setSearchQuery("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-          aria-label={t("videoLibrarySearchClear")}
-        >
-          ×
-        </button>
-      ) : null}
-    </div>
-  );
-
-  const accessFilterControls = (
-    <>
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 lg:text-right">
-        {t("videoLibraryAccessSectionLabel")}
-      </span>
-      <div className="flex flex-wrap gap-2 lg:justify-end">
-        <button
-          type="button"
-          onClick={() => setAccessFilter("all")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "all"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipAll")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAccessFilter("free")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "free"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipAppOnly")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAccessFilter("premium")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            accessFilter === "premium"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
-        >
-          {t("videoLibraryAccessChipPremium")}
-        </button>
-      </div>
-    </>
+  const filtersToolbar = (
+    <VideoLibraryFiltersToolbar
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      loading={loading}
+      searchInputId="video-library-search"
+      accessFilter={accessFilter}
+      onAccessFilterChange={setAccessFilter}
+      categories={categoryNavItems}
+      activeCategorySlug={null}
+      t={t}
+    />
   );
 
   const adsenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
@@ -364,35 +281,21 @@ export default function VideoLibraryPage() {
             <main className="min-w-0">
               {loading ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {t("videoLibraryHeroTitle")}
                     </h1>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="w-full max-w-md">
-                        <label htmlFor="video-library-search" className="sr-only">
-                          {t("videoLibrarySearchLabel")}
-                        </label>
-                        {searchInput}
-                      </div>
-                    </div>
+                    {filtersToolbar}
                   </div>
                   <VideoLibrarySkeletonGrid loadingLabel={t("videoLibraryLoading")} />
                 </>
               ) : error ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {t("videoLibraryHeroTitle")}
                     </h1>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="w-full max-w-md">
-                        <label htmlFor="video-library-search" className="sr-only">
-                          {t("videoLibrarySearchLabel")}
-                        </label>
-                        {searchInput}
-                      </div>
-                    </div>
+                    {filtersToolbar}
                   </div>
                   <div className="max-w-md rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-center text-sm text-red-800">
                     {error}
@@ -407,82 +310,21 @@ export default function VideoLibraryPage() {
                 </>
               ) : videos.length === 0 ? (
                 <>
-                  <div className="mb-6 flex flex-col gap-2 sm:gap-3 lg:mb-5">
+                  <div className="mb-6 flex flex-col gap-4 lg:mb-7">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                       {t("videoLibraryHeroTitle")}
                     </h1>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="w-full max-w-md">
-                        <label htmlFor="video-library-search" className="sr-only">
-                          {t("videoLibrarySearchLabel")}
-                        </label>
-                        {searchInput}
-                      </div>
-                    </div>
+                    {filtersToolbar}
                   </div>
                   <p className="py-12 text-center text-slate-600">{t("videoLibraryEmpty")}</p>
                 </>
               ) : (
                 <>
-                  <div className="mb-6 grid grid-cols-1 gap-5 border-b border-slate-100 pb-6 lg:mb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-x-10 lg:gap-y-4 xl:gap-x-14 lg:border-b-0 lg:pb-0">
-                    <div className="min-w-0 flex flex-col gap-3 sm:gap-4">
-                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                        {t("videoLibraryHeroTitle")}
-                      </h1>
-                      <div className="w-full max-w-md">
-                        <label htmlFor="video-library-search" className="sr-only">
-                          {t("videoLibrarySearchLabel")}
-                        </label>
-                        {searchInput}
-                      </div>
-                      <div className="-mx-4 flex gap-2 overflow-x-auto pb-2 pl-4 pr-4 sm:mx-0 sm:px-0">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategory(null)}
-                          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                            selectedCategory === null
-                              ? "bg-slate-900 text-white"
-                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                          }`}
-                        >
-                          {t("videoLibraryChipAll")}
-                        </button>
-                        {categories.map((cat) => {
-                          const catSlug = categorySlugByName.get(cat) || slugify(cat);
-                          return (
-                            <div key={cat} className="flex shrink-0 items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedCategory(cat)}
-                                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                                  selectedCategory === cat
-                                    ? "bg-slate-900 text-white"
-                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                }`}
-                              >
-                                {cat}
-                              </button>
-                              <Link
-                                href={`/videouri/categorie/${catSlug}`}
-                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                                title={t("videoLibrarySeeAllInCategory")}
-                              >
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                              </Link>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div
-                      className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:border-t-0 sm:pt-0 lg:max-w-none lg:border-t-0 lg:pt-0.5 lg:pl-2"
-                      role="group"
-                      aria-label={t("videoLibraryAccessSectionLabel")}
-                    >
-                      {accessFilterControls}
-                    </div>
+                  <div className="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-6 lg:mb-7">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                      {t("videoLibraryHeroTitle")}
+                    </h1>
+                    {filtersToolbar}
                   </div>
                   <VideotecaAdBanner />
                   {filteredVideos.length === 0 ? (

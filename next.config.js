@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 const { i18n } = require("./next-i18next.config");
+const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = { 
   i18n,
+  experimental: {
+    instrumentationHook: true,
+  },
   // Important for Vercel: ensure proper builds
   poweredByHeader: false,
   // Important: ensure proper static optimization
@@ -81,4 +85,14 @@ const nextConfig = {
   }
 };
 
-module.exports = nextConfig;
+const sentryWebpackPluginOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+};
+
+module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);

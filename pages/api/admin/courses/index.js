@@ -14,9 +14,10 @@ import {
   mergeCourseMediaInput,
 } from "../../../../lib/courseMediaAdmin";
 import { fetchVimeoPreviewThumbnail } from "../../../../lib/vimeo";
+import { COURSE_STATUSES } from "../../../../lib/coursePurchases";
 
 const ALLOWED_CURRENCIES = ["RON", "EUR"];
-const ALLOWED_STATUS = ["draft", "published", "scheduled"];
+const ALLOWED_STATUS = COURSE_STATUSES;
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 
 function parseScheduledAt(value) {
@@ -204,6 +205,7 @@ export default async function handler(req, res) {
       contactContent: typeof input.contactContent === "string" ? input.contactContent.trim() : "",
       vimeoPreviewVideoId,
       vimeoPreviewThumbnailUrl: vimeoPreviewThumbnailUrl || null,
+      purchaseCount: 0,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: "dashboard",

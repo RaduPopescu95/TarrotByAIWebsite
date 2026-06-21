@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
-import { Video, CheckCircle2, FileText, CalendarClock } from "lucide-react";
+import { Video, CheckCircle2, FileText, CalendarClock, Archive } from "lucide-react";
 
 export default function CoursesOverview({ stats, lastUpdated }) {
   return (
@@ -67,6 +67,24 @@ export default function CoursesOverview({ stats, lastUpdated }) {
                 </div>
               </div>
               <span className="text-2xl font-bold text-purple-600">{stats.scheduled}</span>
+            </div>
+          </>
+        )}
+
+        {"archived" in stats && (
+          <>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
+                  <Archive className="h-4 w-4 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Arhivate</p>
+                  <p className="text-xs text-gray-500">Retrase din magazin</p>
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-gray-600">{stats.archived}</span>
             </div>
           </>
         )}

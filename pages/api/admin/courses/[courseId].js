@@ -15,9 +15,13 @@ import {
   mergeCourseMediaInput,
 } from "../../../../lib/courseMediaAdmin";
 import { fetchVimeoPreviewThumbnail } from "../../../../lib/vimeo";
+import {
+  COURSE_STATUSES,
+  resolveCoursePurchaseCount,
+} from "../../../../lib/coursePurchases";
 
 const ALLOWED_CURRENCIES = ["RON", "EUR"];
-const ALLOWED_STATUS = ["draft", "published", "scheduled"];
+const ALLOWED_STATUS = COURSE_STATUSES;
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 
 function parseScheduledAt(value) {
@@ -205,6 +209,18 @@ export default async function handler(req, res) {
       });
       return res.status(500).json({ error: "Failed to load course" });
     }
+
+    const existingData = existing.data() || {};
+    if (input.status === "draft") {
+      const purchaseCount = await resolveCoursePurchaseCount(db, courseId, existingData);
+      if (purchaseCount > 0) {
+        return res.status(409).json({
+          error:
+            "Courses with purchases cannot be set to draft. Use archived status instead.",
+          purchaseCount,
+        });
+      }
+    }
     const mergedMediaInput = mergeCourseMediaInput(input);
     let nextRootVideoUrl = null;
     let nextPlatform = null;
@@ -232,7 +248,8 @@ export default async function handler(req, res) {
       ...(input.price !== undefined ? { price: input.price } : {}),
       ...(input.currency !== undefined ? { currency: input.currency } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(input.featuredOnHome !== undefined
+      ...(input.status === "archived" ? { featuredOnHome: false } : {}),
+      ...(input.featuredOnHome !== undefined && input.status !== "archived"
         ? { featuredOnHome: input.featuredOnHome === true }
         : {}),
       ...(input.sitePremiumAccess !== undefined
@@ -327,6 +344,28 @@ export default async function handler(req, res) {
 
   if (req.method === "DELETE") {
     try {
+      const existing = await ref.get();
+      if (!existing.exists) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+
+      const purchaseCount = await resolveCoursePurchaseCount(
+        db,
+        courseId,
+        existing.data() || {}
+      );
+      if (purchaseCount > 0) {
+        await ref.set(
+          {
+            status: "archived",
+            featuredOnHome: false,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        return res.status(200).json({ id: courseId, archived: true, purchaseCount });
+      }
+
       const batch = db.batch();
       batch.delete(ref);
       batch.delete(mediaRef);

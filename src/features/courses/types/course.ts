@@ -1,5 +1,5 @@
 export type CourseCurrency = "RON" | "EUR";
-export type CourseStatus = "draft" | "published" | "scheduled";
+export type CourseStatus = "draft" | "published" | "scheduled" | "archived";
 
 export interface CourseLocaleCurriculumLesson {
   id: string;

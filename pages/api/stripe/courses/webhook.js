@@ -813,6 +813,14 @@ async function processBundleCheckoutSessionEvent(db, event, session, context) {
           },
           { merge: true }
         );
+        transaction.set(
+          db.collection("courses").doc(courseIds[index]),
+          {
+            purchaseCount: FieldValue.increment(1),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
       });
 
       if (bundleSnap.exists && !bundleAlreadyPaid) {
@@ -997,6 +1005,17 @@ async function processCheckoutSessionEvent(db, event, session) {
       );
     } else {
       transaction.set(purchaseRef, purchasePayload, { merge: true });
+    }
+
+    if (entitlementGranted && !purchaseAlreadyPaid) {
+      transaction.set(
+        db.collection("courses").doc(courseId),
+        {
+          purchaseCount: FieldValue.increment(1),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
 
     transaction.set(
