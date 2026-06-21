@@ -413,6 +413,18 @@ export default function CourseDetailPage() {
     typeof course?.previewVimeoId === "string" &&
     course.previewVimeoId.length > 0;
 
+  const lockedPreviewThumbnailUrl = useMemo(() => {
+    if (typeof course?.thumbnailUrl === "string" && course.thumbnailUrl.trim()) {
+      return course.thumbnailUrl.trim();
+    }
+    const previewVimeoId =
+      typeof course?.previewVimeoId === "string" ? course.previewVimeoId.trim() : "";
+    if (previewVimeoId.length > 0) {
+      return `https://vumbnail.com/${previewVimeoId}.jpg`;
+    }
+    return null;
+  }, [course?.previewVimeoId, course?.thumbnailUrl]);
+
   const priceLabel = useMemo(() => {
     if (typeof course?.price === "number" && course.price === 0) {
       return t("coursesPriceFree");
@@ -888,14 +900,22 @@ export default function CourseDetailPage() {
 
               <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
                 <section className="space-y-5">
-                  {consentGranted ? (
+                  {hasAccess && !consentGranted ? (
+                    <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_14px_34px_-26px_rgba(15,23,42,0.75)]">
+                      <div className="flex aspect-video w-full items-center justify-center bg-slate-900 text-sm text-slate-300">
+                        {t("coursesPlaybackPreparing")}
+                      </div>
+                    </section>
+                  ) : (
                     <VideoCard
                       hasAccess={hasAccess}
                       playbackLoading={playbackLoading}
                       playbackError={playbackError}
                       playbackEmbedSrc={playbackEmbedSrc}
-                      previewThumbnailUrl={course.thumbnailUrl}
-                      shouldRenderPreviewVideo={shouldRenderPreviewVideo}
+                      previewThumbnailUrl={
+                        hasAccess ? course.thumbnailUrl : lockedPreviewThumbnailUrl
+                      }
+                      shouldRenderPreviewVideo={hasAccess ? shouldRenderPreviewVideo : false}
                       previewVimeoId={course.previewVimeoId}
                       title={course.title}
                       preparingLabel={t("coursesPlaybackPreparing")}
@@ -903,12 +923,6 @@ export default function CourseDetailPage() {
                       playbackUnavailableLabel={t("coursesPlaybackUnavailable")}
                       fallbackPlayerTitle={t("coursesPlayerTitleFallback")}
                     />
-                  ) : (
-                    <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_14px_34px_-26px_rgba(15,23,42,0.75)]">
-                      <div className="flex aspect-video w-full items-center justify-center bg-slate-900 text-sm text-slate-300">
-                        {t("coursesPlaybackPreparing")}
-                      </div>
-                    </section>
                   )}
 
                   <CourseLanguageSelect availableLocales={availableLocales} />
