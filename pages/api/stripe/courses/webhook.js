@@ -9,6 +9,10 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../../../utils/billingAudit.mjs";
+import {
+  COURSE_BUNDLE_COLLECTION,
+  normalizeBundleCourseIds,
+} from "../../../../lib/courseBundles";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const HANDLED_EVENTS = new Set([
@@ -68,6 +72,29 @@ function parseExpectedAmountCents(metadata) {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.round(parsed);
+}
+
+function resolvePurchaseContext(session) {
+  const metadata = session?.metadata || {};
+  const purchaseType =
+    sanitizeString(metadata.purchaseType, 32).toLowerCase() === "bundle"
+      ? "bundle"
+      : "course";
+  const courseId = sanitizeString(metadata.courseId, 128);
+  const bundleId = sanitizeString(metadata.bundleId, 128);
+  const courseIds =
+    purchaseType === "bundle"
+      ? normalizeBundleCourseIds(sanitizeString(metadata.courseIds, 1500).split(","))
+      : courseId
+      ? [courseId]
+      : [];
+  return {
+    purchaseType,
+    courseId,
+    bundleId,
+    itemId: purchaseType === "bundle" ? bundleId : courseId,
+    courseIds,
+  };
 }
 
 function getPurchaseStatus({ isPaid, entitlementGranted, isFailureEvent }) {
@@ -301,7 +328,10 @@ function buildOblioClient(billing) {
 
 async function createCourseOblioInvoice(db, event, session) {
   const uid = sanitizeString(session?.metadata?.uid, 128);
-  const courseId = sanitizeString(session?.metadata?.courseId, 128);
+  const context = resolvePurchaseContext(session);
+  const purchaseType = context.purchaseType;
+  const bundleId = context.bundleId;
+  const courseId = context.itemId;
   const checkoutSessionId = sanitizeString(session?.id, 128);
   const paymentStatus = sanitizeString(session?.payment_status, 64) || "unknown";
 
@@ -323,7 +353,8 @@ async function createCourseOblioInvoice(db, event, session) {
     await checkoutSessionRef.set(
       {
         uid,
-        courseId,
+        purchaseType,
+        ...(purchaseType === "bundle" ? { bundleId, courseIds: context.courseIds } : { courseId }),
         stripeCheckoutSessionId: checkoutSessionId,
         paymentStatus,
         lastWebhookEventId: event.id,
@@ -365,10 +396,12 @@ async function createCourseOblioInvoice(db, event, session) {
     };
   }
 
+  const itemCollection =
+    purchaseType === "bundle" ? COURSE_BUNDLE_COLLECTION : "courses";
   const [paymentSnap, checkoutSessionSnap, courseSnap] = await Promise.all([
     paymentRef.get(),
     checkoutSessionRef.get(),
-    db.collection("courses").doc(courseId).get(),
+    db.collection(itemCollection).doc(courseId).get(),
   ]);
 
   const existingOblio = paymentSnap.exists ? paymentSnap.data()?.oblio : null;
@@ -386,7 +419,7 @@ async function createCourseOblioInvoice(db, event, session) {
   if (!courseSnap.exists) {
     const skippedPayload = {
       status: "skipped_course_not_found",
-      reason: "Course not found",
+      reason: purchaseType === "bundle" ? "Course bundle not found" : "Course not found",
       checkoutSessionId,
       courseId,
       uid,
@@ -495,7 +528,9 @@ async function createCourseOblioInvoice(db, event, session) {
   }
 
   const course = courseSnap.data() || {};
-  const courseTitle = sanitizeString(course?.title, 180) || `Curs ${courseId}`;
+  const courseTitle =
+    sanitizeString(course?.title, 180) ||
+    (purchaseType === "bundle" ? `Trilogie ${courseId}` : `Curs ${courseId}`);
   const currency = normalizeCurrency(session?.currency, "RON");
   const amountPaid = amountPaidCents / 100;
   const issueDate = todayISO();
@@ -519,7 +554,10 @@ async function createCourseOblioInvoice(db, event, session) {
     products: [
       {
         name: courseTitle,
-        description: `Acces curs online (${courseId})`,
+        description:
+          purchaseType === "bundle"
+            ? `Acces trilogie de 3 cursuri online (${courseId})`
+            : `Acces curs online (${courseId})`,
         price: amountPaid,
         measuringUnit: "bucata",
         vatName: vatCfg.vatName,
@@ -529,8 +567,10 @@ async function createCourseOblioInvoice(db, event, session) {
         productType: "Serviciu",
       },
     ],
-    mentions: `Factura generata automat pentru curs. Stripe session: ${checkoutSessionId}`,
-    internalNote: `courseId=${courseId}; uid=${uid}; eInvoice=${invoiceDecision.sendEInvoice ? "1" : "0"}; dueDays=${invoicePreferences.dueDays ?? ""}`,
+    mentions: `Factura generata automat pentru ${
+      purchaseType === "bundle" ? "trilogie" : "curs"
+    }. Stripe session: ${checkoutSessionId}`,
+    internalNote: `${purchaseType === "bundle" ? "bundleId" : "courseId"}=${courseId}; uid=${uid}; eInvoice=${invoiceDecision.sendEInvoice ? "1" : "0"}; dueDays=${invoicePreferences.dueDays ?? ""}`,
     collect: {
       type: "Card",
       documentNumber: `STRIPE-${checkoutSessionId}`,
@@ -553,6 +593,8 @@ async function createCourseOblioInvoice(db, event, session) {
       requestId,
       checkoutSessionId,
       courseId,
+      purchaseType,
+      ...(purchaseType === "bundle" ? { bundleId } : {}),
       uid,
       eventType: event.type,
       errorText: sanitizeString(oblioResp?.errorText || "Oblio invoice failed", 500),
@@ -583,6 +625,8 @@ async function createCourseOblioInvoice(db, event, session) {
     requestId,
     checkoutSessionId,
     courseId,
+    purchaseType,
+    ...(purchaseType === "bundle" ? { bundleId } : {}),
     uid,
     amountPaid,
     currency,
@@ -630,6 +674,8 @@ async function createCourseOblioInvoice(db, event, session) {
     status: "created",
     uid: maskUid(uid),
     courseId,
+    purchaseType,
+    ...(purchaseType === "bundle" ? { bundleId } : {}),
     checkoutSessionId,
     eventType: event.type,
     number: invoiceResult.number,
@@ -637,7 +683,211 @@ async function createCourseOblioInvoice(db, event, session) {
   };
 }
 
+async function processBundleCheckoutSessionEvent(db, event, session, context) {
+  const uid = sanitizeString(session?.metadata?.uid, 128);
+  const bundleId = context.bundleId;
+  const courseIds = context.courseIds;
+  const checkoutSessionId = sanitizeString(session?.id, 128);
+
+  if (!uid || !bundleId || courseIds.length !== 3 || !checkoutSessionId) {
+    return {
+      skipped: true,
+      reason: "missing_bundle_metadata",
+      uid: maskUid(uid),
+      bundleId: bundleId || "unknown",
+      checkoutSessionId: checkoutSessionId || "unknown",
+      eventType: event.type,
+    };
+  }
+
+  const eventRef = db.collection("stripeWebhookEvents").doc(event.id);
+  const bundleRef = db.collection(COURSE_BUNDLE_COLLECTION).doc(bundleId);
+  const bundlePurchaseRef = db
+    .collection("users")
+    .doc(uid)
+    .collection("bundlePurchases")
+    .doc(bundleId);
+  const purchaseRefs = courseIds.map((courseId) =>
+    db.collection("users").doc(uid).collection("purchases").doc(courseId)
+  );
+  const paymentRef = db.collection("payments").doc(checkoutSessionId);
+
+  const paymentStatus =
+    typeof session?.payment_status === "string" ? session.payment_status : "unknown";
+  const isPaid = paymentStatus === "paid";
+  const isFailureEvent = event.type === "checkout.session.async_payment_failed";
+  const stripePaymentIntentId =
+    typeof session?.payment_intent === "string" ? session.payment_intent : null;
+  const amountPaidCents = toAmountCents(session?.amount_total);
+  const expectedAmountCents = parseExpectedAmountCents(session?.metadata);
+  const currency = normalizeCurrency(session?.currency, "RON");
+  const expectedCurrency = normalizeCurrency(session?.metadata?.expectedCurrency, "");
+  const amountMatches =
+    expectedAmountCents === null ||
+    (amountPaidCents !== null && amountPaidCents === expectedAmountCents);
+  const currencyMatches = !expectedCurrency || currency === expectedCurrency;
+  const entitlementGranted = isPaid && amountMatches && currencyMatches;
+  const purchaseStatus = getPurchaseStatus({
+    isPaid,
+    entitlementGranted,
+    isFailureEvent,
+  });
+
+  return db.runTransaction(async (transaction) => {
+    const [eventSnap, bundleSnap, bundlePurchaseSnap, ...purchaseSnaps] =
+      await Promise.all([
+        transaction.get(eventRef),
+        transaction.get(bundleRef),
+        transaction.get(bundlePurchaseRef),
+        ...purchaseRefs.map((ref) => transaction.get(ref)),
+      ]);
+
+    if (eventSnap.exists) {
+      return {
+        skipped: true,
+        reason: "already_processed",
+        uid: maskUid(uid),
+        bundleId,
+        checkoutSessionId,
+        eventType: event.type,
+      };
+    }
+
+    const bundleAlreadyPaid =
+      bundlePurchaseSnap.exists && bundlePurchaseSnap.data()?.status === "paid";
+    const bundlePurchasePayload = {
+      bundleId,
+      courseIds,
+      stripeCheckoutSessionId: checkoutSessionId,
+      stripePaymentIntentId,
+      amountPaid: amountPaidCents !== null ? amountPaidCents / 100 : 0,
+      amountPaidCents,
+      currency,
+      paymentStatus,
+      status: purchaseStatus,
+      lastWebhookEventId: event.id,
+      lastWebhookEventType: event.type,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (entitlementGranted) {
+      bundlePurchasePayload.purchasedAt = FieldValue.serverTimestamp();
+    }
+
+    if (bundleAlreadyPaid) {
+      transaction.set(
+        bundlePurchaseRef,
+        {
+          lastWebhookEventId: event.id,
+          lastWebhookEventType: event.type,
+          paymentStatus,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      transaction.set(bundlePurchaseRef, bundlePurchasePayload, { merge: true });
+    }
+
+    if (entitlementGranted) {
+      purchaseRefs.forEach((purchaseRef, index) => {
+        const purchaseSnap = purchaseSnaps[index];
+        const existingStatus = purchaseSnap.exists ? purchaseSnap.data()?.status : null;
+        if (existingStatus === "paid") return;
+        transaction.set(
+          purchaseRef,
+          {
+            courseId: courseIds[index],
+            stripeCheckoutSessionId: checkoutSessionId,
+            stripePaymentIntentId,
+            amountPaid: 0,
+            amountPaidCents: 0,
+            currency,
+            paymentStatus,
+            status: "paid",
+            accessSource: "bundle",
+            bundleId,
+            purchasedAt: FieldValue.serverTimestamp(),
+            lastWebhookEventId: event.id,
+            lastWebhookEventType: event.type,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      });
+
+      if (bundleSnap.exists && !bundleAlreadyPaid) {
+        transaction.set(
+          bundleRef,
+          {
+            purchaseCount: FieldValue.increment(1),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    }
+
+    transaction.set(
+      paymentRef,
+      {
+        uid,
+        purchaseType: "bundle",
+        bundleId,
+        courseIds,
+        stripeCheckoutSessionId: checkoutSessionId,
+        stripePaymentIntentId,
+        amountPaid: amountPaidCents !== null ? amountPaidCents / 100 : 0,
+        amountPaidCents,
+        currency,
+        expectedAmountCents,
+        expectedCurrency: expectedCurrency || null,
+        amountMatches,
+        currencyMatches,
+        paymentStatus,
+        entitlementGranted,
+        rawEventType: event.type,
+        lastWebhookEventId: event.id,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    transaction.set(eventRef, {
+      eventId: event.id,
+      eventType: event.type,
+      uid,
+      purchaseType: "bundle",
+      bundleId,
+      courseIds,
+      stripeCheckoutSessionId: checkoutSessionId,
+      entitlementGranted,
+      processedAt: FieldValue.serverTimestamp(),
+    });
+
+    return {
+      skipped: false,
+      uid: maskUid(uid),
+      purchaseType: "bundle",
+      bundleId,
+      courseIds,
+      checkoutSessionId,
+      eventType: event.type,
+      paymentStatus,
+      status: purchaseStatus,
+      entitlementGranted,
+      amountMatches,
+      currencyMatches,
+      bundleAlreadyPaid,
+    };
+  });
+}
+
 async function processCheckoutSessionEvent(db, event, session) {
+  const context = resolvePurchaseContext(session);
+  if (context.purchaseType === "bundle") {
+    return processBundleCheckoutSessionEvent(db, event, session, context);
+  }
+
   const uid = typeof session?.metadata?.uid === "string" ? session.metadata.uid.trim() : "";
   const courseId =
     typeof session?.metadata?.courseId === "string" ? session.metadata.courseId.trim() : "";
@@ -731,6 +981,7 @@ async function processCheckoutSessionEvent(db, event, session) {
 
     if (entitlementGranted) {
       purchasePayload.purchasedAt = FieldValue.serverTimestamp();
+      purchasePayload.accessSource = "purchase";
     }
 
     if (purchaseAlreadyPaid) {
@@ -807,6 +1058,12 @@ async function processCheckoutSessionEvent(db, event, session) {
     }
   );
 }
+
+export {
+  processBundleCheckoutSessionEvent,
+  processCheckoutSessionEvent,
+  resolvePurchaseContext,
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

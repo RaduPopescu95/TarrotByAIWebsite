@@ -16,6 +16,13 @@ import {
   normalizeBillingDetails,
   buildBillingContextInput,
 } from "../../../../lib/stripeBillingDetails";
+import {
+  COURSE_BUNDLE_COLLECTION,
+  isCourseBundleVisible,
+  loadBundleCourses,
+  normalizeBundleCourseIds,
+  resolveBundleAccess,
+} from "../../../../lib/courseBundles";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
@@ -249,20 +256,32 @@ export default async function handler(req, res) {
 
   const {
     courseId: rawCourseId,
+    bundleId: rawBundleId,
+    purchaseType: rawPurchaseType,
     successUrl: rawSuccessUrl,
     cancelUrl: rawCancelUrl,
     platform: rawPlatform,
     billingDetails: rawBillingDetails,
   } = req.body || {};
+  const purchaseType =
+    typeof rawPurchaseType === "string" && rawPurchaseType.trim().toLowerCase() === "bundle"
+      ? "bundle"
+      : "course";
   const courseId = typeof rawCourseId === "string" ? rawCourseId.trim() : "";
-  if (!courseId) {
-    return res.status(400).json({ error: "Missing courseId" });
+  const bundleId = typeof rawBundleId === "string" ? rawBundleId.trim() : "";
+  const itemId = purchaseType === "bundle" ? bundleId : courseId;
+  if (!itemId) {
+    return res
+      .status(400)
+      .json({ error: purchaseType === "bundle" ? "Missing bundleId" : "Missing courseId" });
   }
   const sourcePlatform = sanitizeString(rawPlatform, 32).toLowerCase() || "web";
 
   console.info("[courses.checkout] start", {
     uid: maskUid(authUser.uid),
     courseId,
+    bundleId,
+    purchaseType,
     sourcePlatform,
     hasSuccessUrl: Boolean(sanitizeString(rawSuccessUrl, 2048)),
     hasCancelUrl: Boolean(sanitizeString(rawCancelUrl, 2048)),
@@ -292,48 +311,87 @@ export default async function handler(req, res) {
         details: billingAudit.validation.blockingErrors,
       });
     }
-    const snap = await db.collection("courses").doc(courseId).get();
+    const collection =
+      purchaseType === "bundle" ? COURSE_BUNDLE_COLLECTION : "courses";
+    const snap = await db.collection(collection).doc(itemId).get();
     if (!snap.exists) {
       console.warn("[courses.checkout] course_not_found", {
         uid: maskUid(authUser.uid),
         courseId,
+        bundleId,
+        purchaseType,
       });
-      return res.status(404).json({ error: "Course not found" });
+      return res
+        .status(404)
+        .json({ error: purchaseType === "bundle" ? "Course bundle not found" : "Course not found" });
     }
-    const course = snap.data();
-    if (isCourseFreeFullAccess(course)) {
+    const item = snap.data() || {};
+    const bundleCourseIds =
+      purchaseType === "bundle" ? normalizeBundleCourseIds(item.courseIds) : [];
+    if (purchaseType === "bundle" && bundleCourseIds.length !== 3) {
+      return res.status(400).json({ error: "Course bundle is invalid" });
+    }
+    if (purchaseType === "bundle") {
+      const visibleCourses = await loadBundleCourses(db, bundleCourseIds, "ro", {
+        visibleOnly: true,
+      });
+      if (visibleCourses.length !== 3) {
+        return res.status(400).json({
+          error: "All courses in this bundle must be published",
+        });
+      }
+    }
+    if (purchaseType === "course" && isCourseFreeFullAccess(item)) {
       console.warn("[courses.checkout] free_course", {
         uid: maskUid(authUser.uid),
         courseId,
       });
       return res.status(400).json({ error: "free_course" });
     }
-    if (!isCoursePurchasable(course)) {
+    const isPurchasable =
+      purchaseType === "bundle"
+        ? isCourseBundleVisible(item)
+        : isCoursePurchasable(item);
+    if (!isPurchasable) {
       console.warn("[courses.checkout] course_not_purchasable", {
         uid: maskUid(authUser.uid),
         courseId,
-        status: course?.status || "unknown",
+        bundleId,
+        purchaseType,
+        status: item?.status || "unknown",
       });
-      return res.status(400).json({ error: "Course not available for purchase" });
+      return res.status(400).json({
+        error:
+          purchaseType === "bundle"
+            ? "Course bundle not available for purchase"
+            : "Course not available for purchase",
+      });
     }
 
-    const courseVisible = isCourseVisible(course, Date.now());
-    const entitlement = await resolveCourseEntitlement(db, authUser.uid, courseId, course, {
-      courseVisible,
-    });
+    const entitlement =
+      purchaseType === "bundle"
+        ? await resolveBundleAccess(db, authUser.uid, bundleId, item)
+        : await resolveCourseEntitlement(db, authUser.uid, courseId, item, {
+            courseVisible: isCourseVisible(item, Date.now()),
+          });
     if (entitlement.hasAccess) {
       console.info("[courses.checkout] already_has_access", {
         uid: maskUid(authUser.uid),
         courseId,
+        bundleId,
+        purchaseType,
         accessSource: entitlement.accessSource,
       });
       return res.status(409).json({
-        error: "You already have access to this course",
+        error:
+          purchaseType === "bundle"
+            ? "You already have access to all courses in this bundle"
+            : "You already have access to this course",
       });
     }
 
-    const currency = String(course.currency || "RON").toLowerCase();
-    const unitAmount = Math.round(Number(course.price) * 100);
+    const currency = String(item.currency || "RON").toLowerCase();
+    const unitAmount = Math.round(Number(item.price) * 100);
     if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
       return res.status(400).json({ error: "Invalid course price" });
     }
@@ -349,7 +407,7 @@ export default async function handler(req, res) {
 
     const returnUrls = resolveReturnUrls({
       baseUrl,
-      courseId,
+      courseId: purchaseType === "bundle" ? `bundles/${bundleId}` : courseId,
       successUrl: rawSuccessUrl,
       cancelUrl: rawCancelUrl,
       sourcePlatform,
@@ -357,6 +415,8 @@ export default async function handler(req, res) {
     console.info("[courses.checkout] return_urls_resolved", {
       uid: maskUid(authUser.uid),
       courseId,
+      bundleId,
+      purchaseType,
       baseUrl,
       successUrl: returnUrls.successUrl,
       cancelUrl: returnUrls.cancelUrl,
@@ -364,7 +424,11 @@ export default async function handler(req, res) {
 
     const metadata = {
       uid: authUser.uid,
-      courseId,
+      purchaseType,
+      ...(purchaseType === "bundle" ? { bundleId } : { courseId }),
+      ...(purchaseType === "bundle"
+        ? { courseIds: bundleCourseIds.join(",") }
+        : {}),
       expectedAmount: String(unitAmount),
       expectedCurrency: currency.toUpperCase(),
       sourcePlatform,
@@ -393,7 +457,7 @@ export default async function handler(req, res) {
           price_data: {
             currency,
             product_data: {
-              name: course.title,
+              name: item.title,
             },
             unit_amount: unitAmount,
           },
@@ -401,7 +465,7 @@ export default async function handler(req, res) {
         },
       ],
       metadata,
-      client_reference_id: `${authUser.uid}:${courseId}`,
+      client_reference_id: `${authUser.uid}:${purchaseType}:${itemId}`,
       ...(authUser.email ? { customer_email: authUser.email } : {}),
       success_url: returnUrls.successUrl,
       cancel_url: returnUrls.cancelUrl,
@@ -410,7 +474,9 @@ export default async function handler(req, res) {
     try {
       const checkoutSessionPayload = {
         uid: authUser.uid,
-        courseId,
+        purchaseType,
+        ...(purchaseType === "bundle" ? { bundleId } : { courseId }),
+        ...(purchaseType === "bundle" ? { courseIds: bundleCourseIds } : {}),
         sourcePlatform,
         stripeCheckoutSessionId: session.id,
         paymentStatus: "pending",
@@ -443,6 +509,8 @@ export default async function handler(req, res) {
     console.info("[courses.checkout] session_created", {
       uid: maskUid(authUser.uid),
       courseId,
+      bundleId,
+      purchaseType,
       sessionId: session.id,
     });
 
@@ -452,6 +520,8 @@ export default async function handler(req, res) {
     console.error("[courses.checkout] failed", {
       uid: maskUid(authUser.uid),
       courseId,
+      bundleId,
+      purchaseType,
       statusCode,
       message: error?.message || "unknown_error",
     });

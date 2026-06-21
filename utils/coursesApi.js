@@ -73,6 +73,31 @@ export async function deleteAdminCourse(courseId) {
   });
 }
 
+export async function fetchAdminCourseBundles() {
+  const data = await apiRequest("/api/admin/course-bundles", { method: "GET" });
+  return data?.bundles || [];
+}
+
+export async function createAdminCourseBundle(payload) {
+  return apiRequest("/api/admin/course-bundles", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminCourseBundle(bundleId, payload) {
+  return apiRequest(`/api/admin/course-bundles/${bundleId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminCourseBundle(bundleId) {
+  return apiRequest(`/api/admin/course-bundles/${bundleId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function fetchCourseCategories() {
   const data = await apiRequest("/api/admin/course-categories", { method: "GET" });
   return data?.categories || [];

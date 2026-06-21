@@ -17,6 +17,7 @@ export default function CourseCard({
   openLabel = "",
   featuredLabel = "",
   freePriceLabel = "",
+  bundleLabel = "",
 }) {
   const shouldShowVideoPreview =
     !course?.hasCustomThumbnail &&
@@ -59,6 +60,11 @@ export default function CourseCard({
         {featuredLabel ? (
           <span className="absolute left-3 top-3 inline-flex items-center rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1 text-xs font-semibold text-amber-700 shadow-sm">
             {featuredLabel}
+          </span>
+        ) : null}
+        {bundleLabel ? (
+          <span className="absolute right-3 top-3 inline-flex items-center rounded-full bg-indigo-600/95 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            {bundleLabel}
           </span>
         ) : null}
 

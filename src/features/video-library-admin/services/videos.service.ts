@@ -23,6 +23,7 @@ import type {
   VideoUpdateInput,
 } from "../types/video";
 import { sortVideos } from "../utils/videoSorting";
+import { resolveVideoNotificationAt } from "../../../../lib/videoReleaseSchedule";
 
 const COLLECTION_NAME = "videosVideoModule";
 const CATEGORY_COLLECTION_NAME = "videoCategories";
@@ -107,23 +108,31 @@ const hasOwn = <T extends object, K extends PropertyKey>(obj: T, key: K): obj is
 
 const shouldResetNotificationStateToPending = (
   current: Partial<VideoDoc>,
-  next: VideoUpdateInput
+  next: VideoUpdateInput,
+  nextNotificationAt: unknown
 ): boolean => {
   const currentPublished = current.isPublished === true;
   const nextPublished = hasOwn(next, "isPublished") ? next.isPublished === true : currentPublished;
   if (!nextPublished) return false;
+  if (toMillisOrNull(nextNotificationAt) == null) return false;
 
   if (nextPublished && !currentPublished) {
     return true;
   }
 
-  if (!hasOwn(next, "publishAt")) {
+  if (
+    !hasOwn(next, "publishAt") &&
+    !hasOwn(next, "publicReleaseAt") &&
+    !hasOwn(next, "notificationAt")
+  ) {
     return false;
   }
 
-  const currentPublishAtMs = toMillisOrNull(current.publishAt ?? null);
-  const nextPublishAtMs = toMillisOrNull(next.publishAt ?? null);
-  return currentPublishAtMs !== nextPublishAtMs;
+  const currentNotificationAtMs = toMillisOrNull(
+    current.notificationAt ?? resolveVideoNotificationAt(current)
+  );
+  const nextNotificationAtMs = toMillisOrNull(nextNotificationAt);
+  return currentNotificationAtMs !== nextNotificationAtMs;
 };
 
 const getNextOrder = async (): Promise<number> => {
@@ -235,10 +244,15 @@ export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
   }
   const nextOrder = input.order ?? (await getNextOrder());
   const isPublished = !!input.isPublished;
+  const notificationAt = resolveVideoNotificationAt(input);
   const payload = {
     ...input,
     isPublished,
-    notificationState: isPublished ? VIDEO_NOTIFICATION_STATE_PENDING : VIDEO_NOTIFICATION_STATE_SENT,
+    notificationAt,
+    notificationState:
+      isPublished && notificationAt
+        ? VIDEO_NOTIFICATION_STATE_PENDING
+        : VIDEO_NOTIFICATION_STATE_SENT,
     notificationSentAt: null,
     order: nextOrder,
     createdAt: serverTimestamp(),
@@ -262,14 +276,19 @@ export async function updateVideo(id: string, data: VideoUpdateInput): Promise<v
       ? data.featuredOnHome === true
       : current.featuredOnHome === true,
   };
+  const notificationAt = resolveVideoNotificationAt(nextVideo);
   if (isFeaturedOnHomeSlotCandidate(nextVideo)) {
     await assertFeaturedOnHomeLimit(id);
   }
   const updatePayload: Record<string, unknown> = {
     ...data,
+    notificationAt,
     updatedAt: serverTimestamp(),
   };
-  if (shouldResetNotificationStateToPending(current, data)) {
+  if (nextVideo.isPublished === true && toMillisOrNull(notificationAt) == null) {
+    updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_SENT;
+    updatePayload.notificationSentAt = null;
+  } else if (shouldResetNotificationStateToPending(current, data, notificationAt)) {
     updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_PENDING;
     updatePayload.notificationSentAt = null;
   } else if (hasOwn(data, "isPublished") && data.isPublished === false) {
@@ -288,16 +307,22 @@ export async function deleteVideo(id: string): Promise<void> {
 
 export async function togglePublish(id: string, isPublished: boolean): Promise<void> {
   const ref = doc(db, COLLECTION_NAME, id);
+  const snapshot = await getDoc(ref);
+  const current: Partial<VideoDoc> = snapshot.exists()
+    ? ((snapshot.data() as Partial<VideoDoc>) ?? {})
+    : {};
   if (isPublished) {
-    const snapshot = await getDoc(ref);
-    const current = snapshot.exists() ? ((snapshot.data() as Partial<VideoDoc>) ?? {}) : {};
     if (isFeaturedOnHomeSlotCandidate({ ...current, id, isPublished: true })) {
       await assertFeaturedOnHomeLimit(id);
     }
   }
   await updateDoc(ref, {
     isPublished,
-    notificationState: isPublished ? VIDEO_NOTIFICATION_STATE_PENDING : VIDEO_NOTIFICATION_STATE_SENT,
+    notificationAt: isPublished ? resolveVideoNotificationAt(current) : current.notificationAt ?? null,
+    notificationState:
+      isPublished && resolveVideoNotificationAt(current)
+        ? VIDEO_NOTIFICATION_STATE_PENDING
+        : VIDEO_NOTIFICATION_STATE_SENT,
     notificationSentAt: null,
     updatedAt: serverTimestamp(),
   });

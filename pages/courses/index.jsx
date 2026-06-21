@@ -7,6 +7,7 @@ import { useTranslation } from "next-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import CourseCard from "../../components/Courses/CourseCard";
+import BundleCard from "../../components/Courses/BundleCard";
 
 function getCourseGridClass(courseCount = 0) {
   if (courseCount <= 1) {
@@ -33,6 +34,7 @@ export default function CoursesPage() {
   const router = useRouter();
   const { t } = useTranslation("common");
   const [courses, setCourses] = useState([]);
+  const [bundles, setBundles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const coursesCardsGridClass = getCourseGridClass(courses.length);
@@ -45,18 +47,22 @@ export default function CoursesPage() {
       setError("");
       try {
         const locale = router.locale || "ro";
-        const response = await fetch(`/api/courses?locale=${encodeURIComponent(locale)}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data?.error || "load_failed");
-        }
+        const [response, bundlesResponse] = await Promise.all([
+          fetch(`/api/courses?locale=${encodeURIComponent(locale)}`),
+          fetch(`/api/course-bundles?locale=${encodeURIComponent(locale)}`),
+        ]);
+        const [data, bundlesData] = await Promise.all([
+          response.json().catch(() => ({})),
+          bundlesResponse.json().catch(() => ({})),
+        ]);
+        if (!response.ok) throw new Error(data?.error || "load_failed");
+        if (!bundlesResponse.ok) throw new Error(bundlesData?.error || "bundle_load_failed");
 
         const items = Array.isArray(data?.courses) ? data.courses : [];
-        if (mounted) setCourses(items);
+        if (mounted) {
+          setCourses(items);
+          setBundles(Array.isArray(bundlesData?.bundles) ? bundlesData.bundles : []);
+        }
       } catch (err) {
         console.error("[courses.page] load_fail", {
           locale: router.locale || "ro",
@@ -110,6 +116,33 @@ export default function CoursesPage() {
             </div>
           )}
 
+          {!loading && bundles.length > 0 ? (
+            <section className="mb-12">
+              <div className="mb-5">
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
+                  {t("courseBundlesBadge", "Trilogii")}
+                </span>
+                <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                  {t("courseBundlesHeading", "Pachete de 3 mini-cursuri")}
+                </h2>
+              </div>
+              <div className="grid gap-7 lg:grid-cols-2">
+                {bundles.map((bundle) => (
+                  <BundleCard
+                    key={bundle.id}
+                    bundle={bundle}
+                    locale={router.locale || "ro-RO"}
+                    labels={{
+                      badge: t("courseBundlesBadge", "Trilogie"),
+                      open: t("courseBundlesOpen", "Vezi trilogia"),
+                    }}
+                    onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {loading ? (
             <div className="text-sm text-gray-600">{t("coursesLoading")}</div>
           ) : courses.length === 0 ? (
@@ -126,6 +159,11 @@ export default function CoursesPage() {
                   openLabel={t("coursesHomeOpenCourse")}
                   priceLocale={router.locale || "ro-RO"}
                   freePriceLabel={t("coursesPriceFree")}
+                  bundleLabel={
+                    bundles.some((bundle) => bundle.courseIds?.includes(course.id))
+                      ? t("courseBundlesCourseBadge", "Disponibil în trilogie")
+                      : ""
+                  }
                   onClick={() => router.push(`/courses/${course.id}`)}
                 />
               ))}

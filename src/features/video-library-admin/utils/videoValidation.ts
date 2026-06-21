@@ -8,6 +8,20 @@ export type VideoValidationErrors = {
   localeVideos?: Partial<Record<string, string>>;
   thumbnailUrl?: string;
   isPublished?: string;
+  publicReleaseAt?: string;
+};
+
+const toMillis = (value: unknown): number | null => {
+  if (!value) return null;
+  if (typeof value === "object" && typeof (value as { toMillis?: unknown }).toMillis === "function") {
+    const millis = (value as { toMillis: () => number }).toMillis();
+    return Number.isFinite(millis) ? millis : null;
+  }
+  if (value instanceof Date) {
+    const millis = value.getTime();
+    return Number.isFinite(millis) ? millis : null;
+  }
+  return null;
 };
 
 function embedHintForPlatform(platform: string | undefined): string {
@@ -34,6 +48,25 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
   if (input.publishAt && input.isPublished !== true) {
     errors.isPublished =
       "Pentru publicare programată, activează \"Publicat în aplicație\"; altfel videoclipul rămâne ascuns.";
+  }
+
+  if (input.publicReleaseAt) {
+    const publishAtMs = toMillis(input.publishAt);
+    const publicReleaseAtMs = toMillis(input.publicReleaseAt);
+    if (input.isPublished !== true) {
+      errors.publicReleaseAt =
+        "Pentru acces Premium anticipat, activează „Publicat în aplicație”.";
+    } else if (input.isPremium !== true) {
+      errors.publicReleaseAt =
+        "Accesul Premium anticipat necesită modul „Premium apoi public”.";
+    } else if (
+      publishAtMs == null ||
+      publicReleaseAtMs == null ||
+      publicReleaseAtMs <= publishAtMs
+    ) {
+      errors.publicReleaseAt =
+        "Publicarea generală la 18:00 trebuie să fie după începutul accesului Premium.";
+    }
   }
 
   const pairs: Array<{ lc: string; url: string }> = [];

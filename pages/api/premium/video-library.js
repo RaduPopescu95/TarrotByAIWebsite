@@ -2,7 +2,7 @@ import { normalizeLocale, readSingleQueryValue } from "../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
 import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
 import { getOptionalAuth } from "../../../lib/requireAuth";
-import { firestoreTsToMillis } from "../../../lib/videoLibraryPublic";
+import { getNextVideoTransitionAtMs } from "../../../lib/videoReleaseSchedule";
 import {
   resolvePublicVideoLibraryPremiumActive,
   resolveVideoLibraryPremiumAccessForUser,
@@ -17,18 +17,6 @@ import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 function buildRequestId() {
   return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
-
-const getNextPublishAtMs = (rows, nowMs) => {
-  let nextValue = null;
-  for (const row of rows) {
-    const publishMs = firestoreTsToMillis(row?.publishAt);
-    if (!Number.isFinite(publishMs) || publishMs <= nowMs) continue;
-    if (nextValue == null || publishMs < nextValue) {
-      nextValue = publishMs;
-    }
-  }
-  return nextValue;
-};
 
 async function handler(req, res) {
   const requestId = buildRequestId();
@@ -99,11 +87,16 @@ async function handler(req, res) {
     if (uid) {
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
     } else {
+      const nextVideoTransitionAtMs = getNextVideoTransitionAtMs(
+        rowsForMeta,
+        nowMs
+      );
       cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
-        nextPublishAtMs: getNextPublishAtMs(rowsForMeta, nowMs),
+        nextPublishAtMs: nextVideoTransitionAtMs,
         maxAgeSeconds: 300,
-        staleWhileRevalidateSeconds: 600,
+        staleWhileRevalidateSeconds:
+          nextVideoTransitionAtMs != null ? 0 : 600,
       });
     }
 

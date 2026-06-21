@@ -664,12 +664,9 @@ function UserTokensScreen() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Limitare destinatari pentru toate notificările Firebase
+                Limit
               </h2>
-              <p className="mt-1 max-w-3xl text-sm text-slate-600">
-                Include tokenul dacă orașul corespunde exact sau numele conține una dintre expresii.
-                Majusculele și diacriticele sunt ignorate.
-              </p>
+              
             </div>
             <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <input

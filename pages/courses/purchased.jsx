@@ -171,6 +171,7 @@ export default function PurchasedCoursesPage() {
                   resolvedLocale,
                   t("coursesPurchasedUnknownAmount")
                 );
+                const grantedByBundle = purchase?.accessSource === "bundle";
 
                 return (
                   <div
@@ -214,7 +215,9 @@ export default function PurchasedCoursesPage() {
                           <span className="font-semibold text-gray-700">
                             {t("coursesPurchasedAmountLabel")}:
                           </span>{" "}
-                          {amountPaid}
+                          {grantedByBundle
+                            ? t("courseBundlesAccessLabel", "Acces acordat prin trilogie")
+                            : amountPaid}
                         </p>
                       </div>
 

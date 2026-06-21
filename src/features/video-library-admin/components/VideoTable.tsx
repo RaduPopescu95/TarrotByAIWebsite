@@ -1,6 +1,45 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { VideoDoc, VideoSortDirection, VideoSortField } from "../types/video";
 import { formatTimestamp } from "../utils/videoFormat";
+import { resolveVideoReleasePhase } from "../../../../lib/videoReleaseSchedule";
+
+function getReleaseStatus(video: VideoDoc) {
+  const release = resolveVideoReleasePhase(video);
+  if (release.phase === "scheduled" && release.hasDualRelease) {
+    return {
+      label: "Programat Premium",
+      className: "bg-amber-50 text-amber-800 ring-amber-600/20",
+    };
+  }
+  if (release.phase === "premium_early_access") {
+    return {
+      label: "Acces Premium",
+      className: "bg-violet-50 text-violet-800 ring-violet-600/20",
+    };
+  }
+  if (release.hasDualRelease && release.phase === "public") {
+    return {
+      label: "Public",
+      className: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
+    };
+  }
+  if (release.phase === "premium") {
+    return {
+      label: "Premium permanent",
+      className: "bg-violet-50 text-violet-800 ring-violet-600/20",
+    };
+  }
+  if (release.phase === "scheduled") {
+    return {
+      label: video.isPremium ? "Programat Premium" : "Programat",
+      className: "bg-amber-50 text-amber-800 ring-amber-600/20",
+    };
+  }
+  return {
+    label: "Public",
+    className: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
+  };
+}
 
 function RowActionsMenu({
   video,
@@ -273,11 +312,10 @@ export default function VideoTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {videos.map((video) => (
-              <tr
-                key={video.id}
-                className="transition-colors hover:bg-gray-50"
-              >
+            {videos.map((video) => {
+              const releaseStatus = getReleaseStatus(video);
+              return (
+              <tr key={video.id} className="transition-colors hover:bg-gray-50">
                 <td className="px-6 py-4 text-gray-600">{video.order ?? "—"}</td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -310,17 +348,16 @@ export default function VideoTable({
                 <td className="px-6 py-4 text-gray-600">
                   {video.publishAt ? (
                     <div className="flex flex-col gap-1">
-                      <span>{formatTimestamp(video.publishAt)}</span>
+                      <span>T1: {formatTimestamp(video.publishAt)}</span>
+                      {video.publicReleaseAt ? (
+                        <span className="text-xs text-gray-500">
+                          Public la 18:00: {formatTimestamp(video.publicReleaseAt)}
+                        </span>
+                      ) : null}
                       <span
-                        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                          video.publishAt.toDate && video.publishAt.toDate() > new Date()
-                            ? "bg-amber-50 text-amber-700 ring-amber-600/20"
-                            : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                        }`}
+                        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${releaseStatus.className}`}
                       >
-                        {video.publishAt.toDate && video.publishAt.toDate() > new Date()
-                          ? "Programat"
-                          : "Activ"}
+                        {releaseStatus.label}
                       </span>
                     </div>
                   ) : (
@@ -342,7 +379,11 @@ export default function VideoTable({
                   </button>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  {video.isPremium === true ? (
+                  {video.publicReleaseAt ? (
+                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-600/15">
+                      Premium → public
+                    </span>
+                  ) : video.isPremium === true ? (
                     <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-800 ring-1 ring-violet-600/15">
                       Abonament site
                     </span>
@@ -369,7 +410,8 @@ export default function VideoTable({
                   />
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

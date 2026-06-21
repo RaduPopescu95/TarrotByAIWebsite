@@ -50,7 +50,8 @@ async function handler(req, res) {
         nowMs,
         nextPublishAtMs: payload.nextPublishAtMs,
         maxAgeSeconds: 300,
-        staleWhileRevalidateSeconds: 600,
+        staleWhileRevalidateSeconds:
+          payload.nextPublishAtMs != null ? 0 : 600,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }

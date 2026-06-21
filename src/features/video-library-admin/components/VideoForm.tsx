@@ -9,6 +9,15 @@ import { deriveRootVideoUrlFromLocales, hasAnyLocalizedVideoUrl } from "../../..
 import { SITE_LOCALES } from "../utils/siteLocales";
 import { mergeLocalesWithVideoUrls, siteLocalesRootPreferredOrder } from "../utils/localeVideoMerge";
 import { sortLocalesForVideoAdmin } from "../utils/videoAdminLocaleOrder";
+import {
+  buildVideoPublicReleaseDate,
+  formatVideoPublicReleaseDateInput,
+  resolveVideoAccessMode,
+  VIDEO_ACCESS_MODE_DUAL,
+  VIDEO_ACCESS_MODE_FREE,
+  VIDEO_ACCESS_MODE_PREMIUM,
+  VIDEO_RELEASE_TIMEZONE,
+} from "../../../../lib/videoReleaseSchedule";
 
 type Props = {
   initialValue?: VideoDoc | null;
@@ -51,6 +60,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     isPremium: true,
     featuredOnHome: false,
     publishAt: null,
+    publicReleaseAt: null,
   });
   const [localeVideoUrls, setLocaleVideoUrls] = useState<Record<string, string>>(() =>
     buildInitialLocaleVideoUrls(null)
@@ -64,6 +74,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const uiLocked = submitting || isTranslating;
   const [publishAtInput, setPublishAtInput] = useState("");
+  const [publicReleaseDateInput, setPublicReleaseDateInput] = useState("");
+  const [accessMode, setAccessMode] = useState<string>(VIDEO_ACCESS_MODE_PREMIUM);
   const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
 
   const hasLocalePreview = Boolean(locales && Object.keys(locales).length > 0);
@@ -117,7 +129,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         isPremium: initialValue.isPremium === true,
         featuredOnHome: initialValue.featuredOnHome === true,
         publishAt: initialValue.publishAt ?? null,
+        publicReleaseAt: initialValue.publicReleaseAt ?? null,
       });
+      setAccessMode(resolveVideoAccessMode(initialValue));
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(initialValue));
       setErrors({});
       setLocales(initialValue.locales);
@@ -127,6 +141,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       } else {
         setPublishAtInput("");
       }
+      setPublicReleaseDateInput(
+        formatVideoPublicReleaseDateInput(initialValue.publicReleaseAt)
+      );
     } else {
       setForm({
         title: "",
@@ -139,7 +156,10 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         isPremium: true,
         featuredOnHome: false,
         publishAt: null,
+        publicReleaseAt: null,
       });
+      setAccessMode(VIDEO_ACCESS_MODE_PREMIUM);
+      setPublicReleaseDateInput("");
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(null));
       setLocales(undefined);
       setErrors({});
@@ -174,6 +194,45 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       return;
     }
     setForm((prev) => ({ ...prev, publishAt: Timestamp.fromDate(parsed) }));
+  };
+
+  const handleAccessModeChange = (value: string) => {
+    setAccessMode(value);
+    setErrors((prev) => ({ ...prev, publicReleaseAt: undefined }));
+    if (value === VIDEO_ACCESS_MODE_FREE) {
+      setPublicReleaseDateInput("");
+      setForm((prev) => ({
+        ...prev,
+        isPremium: false,
+        publicReleaseAt: null,
+      }));
+      return;
+    }
+    if (value === VIDEO_ACCESS_MODE_PREMIUM) {
+      setPublicReleaseDateInput("");
+      setForm((prev) => ({
+        ...prev,
+        isPremium: true,
+        publicReleaseAt: null,
+      }));
+      return;
+    }
+    const releaseDate = buildVideoPublicReleaseDate(publicReleaseDateInput);
+    setForm((prev) => ({
+      ...prev,
+      isPremium: true,
+      publicReleaseAt: releaseDate ? Timestamp.fromDate(releaseDate) : null,
+    }));
+  };
+
+  const handlePublicReleaseDateChange = (value: string) => {
+    setPublicReleaseDateInput(value);
+    const releaseDate = buildVideoPublicReleaseDate(value);
+    setForm((prev) => ({
+      ...prev,
+      isPremium: true,
+      publicReleaseAt: releaseDate ? Timestamp.fromDate(releaseDate) : null,
+    }));
   };
 
   const generateLocales = async (): Promise<VideoLocales | undefined> => {
@@ -237,6 +296,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       });
       await onSubmit({
         ...form,
+        isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
+        publicReleaseAt:
+          accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
         title: form.title.trim(),
         description: form.description?.trim() || "",
         videoUrl: denormUrl || "",
@@ -277,11 +339,18 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
     const validation = validateVideoInput({
       ...form,
+      isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
+      publicReleaseAt:
+        accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
       videoUrl: denormUrl || "",
       locales: mergedLocales,
       thumbnailUrl:
         form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
     });
+    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
+      validation.publicReleaseAt =
+        "Alege data publicării generale la ora 18:00.";
+    }
     setErrors(validation);
     if (Object.keys(validation).length > 0) return;
     setLocales(baseBare);
@@ -300,11 +369,18 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
     const validation = validateVideoInput({
       ...form,
+      isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
+      publicReleaseAt:
+        accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
       videoUrl: denormUrl || "",
       locales: mergedLocales,
       thumbnailUrl:
         form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
     });
+    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
+      validation.publicReleaseAt =
+        "Alege data publicării generale la ora 18:00.";
+    }
     setErrors(validation);
     if (Object.keys(validation).length > 0) {
       console.warn("[VideoForm] Validation failed", validation);
@@ -412,6 +488,45 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                 Data/ora locală din browser (fusul tău orar) când videoclipul devine vizibil în aplicație.
               </p>
             </div>
+
+            <div className="min-w-0">
+              <label className="text-sm font-medium text-gray-700">Mod acces</label>
+              <select
+                value={accessMode}
+                onChange={(e) => handleAccessModeChange(e.target.value)}
+                disabled={uiLocked}
+                className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+              >
+                <option value={VIDEO_ACCESS_MODE_FREE}>Gratuit de la T1</option>
+                <option value={VIDEO_ACCESS_MODE_PREMIUM}>Premium permanent</option>
+                <option value={VIDEO_ACCESS_MODE_DUAL}>Premium apoi public</option>
+              </select>
+            </div>
+
+            {accessMode === VIDEO_ACCESS_MODE_DUAL ? (
+              <div className="min-w-0">
+                <label className="text-sm font-medium text-gray-700">
+                  Data publicării generale
+                </label>
+                <input
+                  type="date"
+                  value={publicReleaseDateInput}
+                  onChange={(e) => handlePublicReleaseDateChange(e.target.value)}
+                  disabled={uiLocked}
+                  className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                    errors.publicReleaseAt
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                  } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Devine gratuit în aplicație la ora 18:00, fus {VIDEO_RELEASE_TIMEZONE}.
+                </p>
+                {errors.publicReleaseAt ? (
+                  <p className="mt-1.5 text-xs text-red-600">{errors.publicReleaseAt}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {form.platform === "bunny" ? (
@@ -454,7 +569,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <label className="group flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
               <input
                 type="checkbox"
@@ -465,18 +580,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
               />
               <span className="min-w-0 text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-800 group-has-[:checked]:text-emerald-800">
                 Publicat în aplicație
-              </span>
-            </label>
-            <label className="group flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 shadow-sm transition-colors hover:border-amber-400 hover:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
-              <input
-                type="checkbox"
-                checked={!!form.isPremium}
-                onChange={(e) => handleChange("isPremium", e.target.checked)}
-                disabled={uiLocked}
-                className="h-4 w-4 shrink-0 rounded border-gray-300 text-amber-600 shadow-sm transition-all focus:ring-2 focus:ring-amber-500/30 focus:ring-offset-0"
-              />
-              <span className="min-w-0 text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-amber-800 group-has-[:checked]:text-amber-900">
-                Necesită abonament site
               </span>
             </label>
           </div>

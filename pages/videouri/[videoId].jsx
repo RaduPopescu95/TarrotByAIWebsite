@@ -20,6 +20,7 @@ import {
   resolveLibraryPlatform,
   useVideoPlaybackConsentGate,
 } from "../../lib/videoPlaybackConsent";
+import VideoComments from "../../components/VideoLibrary/VideoComments";
 
 export async function getServerSideProps({ locale }) {
   const uiLocale = resolveUiLocale(locale);
@@ -77,6 +78,8 @@ export default function VideoDetailPage() {
   const [loadError, setLoadError] = useState("");
   const [fullscreenActive, setFullscreenActive] = useState(false);
   const [availableLocales, setAvailableLocales] = useState([]);
+  const [likePending, setLikePending] = useState(false);
+  const [likeError, setLikeError] = useState("");
   const {
     consentGranted,
     modalVisible,
@@ -126,6 +129,7 @@ export default function VideoDetailPage() {
       setVideo(data?.video || null);
       setRelated(Array.isArray(data?.related) ? data.related : []);
       setAvailableLocales(Array.isArray(data?.availableLocales) ? data.availableLocales : []);
+      setLikeError("");
     } catch (e) {
       console.error("[video-detail]", e?.message || e);
       setLoadError(t("videoLibraryLoadError"));
@@ -191,6 +195,80 @@ export default function VideoDetailPage() {
     }
     router.push("/abonament");
   }, [currentUser, isGuestUser, router, videoId]);
+
+  const handleToggleLike = useCallback(async () => {
+    if (!video?.id || likePending) return;
+    const signedIn = Boolean(currentUser) && !isGuestUser;
+    if (!signedIn) {
+      const returnPath = router.asPath || `/videouri/${videoId}`;
+      router.push(`/login/videoteca?returnUrl=${encodeURIComponent(returnPath)}`);
+      return;
+    }
+
+    const previousLiked = video.likedByCurrentUser === true;
+    const previousCount =
+      typeof video.likesCount === "number" && Number.isFinite(video.likesCount)
+        ? Math.max(0, Math.floor(video.likesCount))
+        : 0;
+    const nextLiked = !previousLiked;
+    const optimisticCount = Math.max(0, previousCount + (nextLiked ? 1 : -1));
+
+    setLikeError("");
+    setLikePending(true);
+    setVideo((current) =>
+      current
+        ? {
+            ...current,
+            likedByCurrentUser: nextLiked,
+            likesCount: optimisticCount,
+          }
+        : current
+    );
+
+    try {
+      const headers = await getFirebaseBearerHeader({ required: true });
+      const response = await fetch(
+        `/api/video-likes/${encodeURIComponent(video.id)}`,
+        {
+          method: nextLiked ? "PUT" : "DELETE",
+          headers: {
+            Accept: "application/json",
+            ...headers,
+          },
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "video_like_failed");
+      }
+      setVideo((current) =>
+        current
+          ? {
+              ...current,
+              likedByCurrentUser: data?.likedByCurrentUser === true,
+              likesCount:
+                typeof data?.likesCount === "number"
+                  ? Math.max(0, Math.floor(data.likesCount))
+                  : optimisticCount,
+            }
+          : current
+      );
+    } catch (error) {
+      console.error("[video-like]", error?.message || error);
+      setVideo((current) =>
+        current
+          ? {
+              ...current,
+              likedByCurrentUser: previousLiked,
+              likesCount: previousCount,
+            }
+          : current
+      );
+      setLikeError(t("videoLibraryLikeError"));
+    } finally {
+      setLikePending(false);
+    }
+  }, [currentUser, isGuestUser, likePending, router, t, video, videoId]);
 
   const channelName = t("videoLibraryChannelName");
   const defaultTitle = t("videoLibrarySeoTitle");
@@ -318,6 +396,53 @@ export default function VideoDetailPage() {
                     )}
                   </div>
 
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleToggleLike}
+                      disabled={likePending}
+                      aria-pressed={video.likedByCurrentUser === true}
+                      className={`inline-flex min-h-[42px] items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+                        video.likedByCurrentUser
+                          ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                          : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                      }`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill={video.likedByCurrentUser ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className="h-5 w-5"
+                        aria-hidden
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M7.5 10.5v9m0-9H5.25A2.25 2.25 0 0 0 3 12.75v4.5a2.25 2.25 0 0 0 2.25 2.25H7.5m0-9 3.38-6.08A1.5 1.5 0 0 1 12.19 3.65h.23a1.5 1.5 0 0 1 1.48 1.75l-.68 4.1h4.53a2.25 2.25 0 0 1 2.18 2.8l-1.35 5.4a2.25 2.25 0 0 1-2.18 1.7H7.5"
+                        />
+                      </svg>
+                      <span>
+                        {video.likedByCurrentUser
+                          ? t("videoLibraryUnlike")
+                          : t("videoLibraryLike")}
+                      </span>
+                    </button>
+                    <span className="text-sm font-medium text-slate-600" aria-live="polite">
+                      {t("videoLibraryLikesCount", {
+                        count:
+                          typeof video.likesCount === "number"
+                            ? Math.max(0, Math.floor(video.likesCount))
+                            : 0,
+                      })}
+                    </span>
+                    {likeError ? (
+                      <span className="text-sm text-red-700" role="alert">
+                        {likeError}
+                      </span>
+                    ) : null}
+                  </div>
+
                   {availableLocales.length > 1 ? (
                     <div className="mt-4 flex max-w-full flex-col gap-2 sm:max-w-xs">
                       <label htmlFor="video-playback-locale" className="text-sm font-medium text-slate-700">
@@ -371,6 +496,13 @@ export default function VideoDetailPage() {
                   ) : null}
 
                   <AdPlacementShell placementId="banner2" className="!my-4" />
+                  <VideoComments
+                    videoId={video.id}
+                    initialCount={video.commentsCount}
+                    currentUser={currentUser}
+                    isGuestUser={isGuestUser}
+                    userData={userData}
+                  />
                 </div>
 
                 <aside className="mt-10 min-w-0 xl:mt-0 xl:border-l xl:border-slate-200 xl:pl-8">

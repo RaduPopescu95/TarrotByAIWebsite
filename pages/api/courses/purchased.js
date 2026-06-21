@@ -114,6 +114,12 @@ async function handler(req, res) {
           status: typeof data.status === "string" ? data.status : "paid",
           amountPaid: typeof data.amountPaid === "number" ? data.amountPaid : 0,
           currency: typeof data.currency === "string" ? data.currency : "RON",
+          accessSource:
+            data.accessSource === "bundle" ? "bundle" : "purchase",
+          bundleId:
+            typeof data.bundleId === "string" && data.bundleId.trim()
+              ? data.bundleId.trim()
+              : null,
           purchasedAt: data.purchasedAt || null,
           updatedAt: data.updatedAt || null,
         };
@@ -144,6 +150,8 @@ async function handler(req, res) {
         purchasedAt: toIsoString(purchasedAt),
         amountPaid: purchase.amountPaid,
         currency: purchase.currency,
+        accessSource: purchase.accessSource,
+        bundleId: purchase.bundleId,
         courseMissing,
         course: courseData ? toSafeCourse(purchase.courseId, courseData, locale) : null,
       };

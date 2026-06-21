@@ -35,6 +35,8 @@ export type VideoDoc = {
   createdAt: Timestamp | null;
   updatedAt?: Timestamp;
   publishAt?: Timestamp | null;
+  publicReleaseAt?: Timestamp | null;
+  notificationAt?: Timestamp | null;
   isPublished: boolean;
   notificationState?: VideoNotificationState;
   notificationSentAt?: Timestamp | null;
@@ -62,6 +64,8 @@ export type VideoCreateInput = {
   thumbnailUrl?: string;
   category?: string;
   publishAt?: Timestamp | null;
+  publicReleaseAt?: Timestamp | null;
+  notificationAt?: Timestamp | null;
   isPublished?: boolean;
   isPremium?: boolean;
   order?: number;

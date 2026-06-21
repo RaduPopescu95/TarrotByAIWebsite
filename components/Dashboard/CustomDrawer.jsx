@@ -38,6 +38,7 @@ import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AdsClickIcon from "@mui/icons-material/AdsClick";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -117,6 +118,7 @@ const dashboardPrefetchScreens = [
 const administrarePrefetchScreens = [
   "abonati",
   "user-tokens",
+  "comentarii-video",
   "analytics",
   "astrograme-pdf",
   "setari",
@@ -126,6 +128,7 @@ const administrarePrefetchScreens = [
 const ADMIN_MENU_ITEMS = [
   { screen: "abonati", text: "Abonați Premium", Icon: PeopleAltIcon },
   { screen: "user-tokens", text: "Tokenuri push", Icon: NotificationsIcon },
+  { screen: "comentarii-video", text: "Comentarii video", Icon: ChatBubbleOutlineIcon },
   { screen: "analytics", text: "Firestore Analytics", Icon: BarChartIcon },
   { screen: "astrograme-pdf", text: "Astrograme PDF", Icon: PictureAsPdfIcon },
   { screen: "setari", text: "Setări", Icon: SettingsIcon },

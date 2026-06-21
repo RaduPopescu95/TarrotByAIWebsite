@@ -3,9 +3,9 @@ import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../../lib/httpCache";
 import {
   firestoreTsToMillis,
-  isVideoPublishScheduled,
   rowHasValidEmbedForLocale,
 } from "../../../../lib/videoLibraryPublic";
+import { canViewerSeeVideo } from "../../../../lib/videoReleaseSchedule";
 import {
   loadPremiumVideoLibraryRowById,
   loadPremiumVideoRelatedRows,
@@ -21,6 +21,8 @@ import {
 } from "../../../../lib/premiumVideoAccessAudit";
 import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { withFirestoreReadTelemetry } from "../../../../lib/firestoreCostLogger";
+import { getVideoLikeSummary } from "../../../../lib/videoLikes";
+import { getVideoCommentCount } from "../../../../lib/videoComments";
 
 function buildRequestId() {
   return `vld_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -93,7 +95,7 @@ async function handler(req, res) {
 
     const nowMs = Date.now();
     const targetRow = await loadPremiumVideoLibraryRowById(rawId);
-    if (!targetRow || isVideoPublishScheduled(targetRow.publishAt, nowMs)) {
+    if (!targetRow || !canViewerSeeVideo(targetRow, premiumActive, nowMs)) {
       return res.status(404).json({ error: "Not found" });
     }
 
@@ -104,7 +106,16 @@ async function handler(req, res) {
     }
 
     const ctx = { locale, premiumActive, webClient };
-    const video = mapVideoRowToPublicDto(targetRow, ctx);
+    const [videoLikeSummary, commentsCount] = await Promise.all([
+      getVideoLikeSummary(rawId, uid),
+      getVideoCommentCount(rawId),
+    ]);
+    const video = {
+      ...mapVideoRowToPublicDto(targetRow, ctx),
+      likesCount: videoLikeSummary.likesCount,
+      likedByCurrentUser: videoLikeSummary.likedByCurrentUser,
+      commentsCount,
+    };
 
     const catTrim = typeof video.category === "string" ? video.category.trim() : "";
     const relatedRows = catTrim
@@ -114,6 +125,7 @@ async function handler(req, res) {
           locale,
           limit: RELATED_LIMIT,
           nowMs,
+          premiumActive,
         })
       : [];
     const related = relatedRows.map((row) => mapVideoRowToPublicDto(row, ctx));
@@ -128,8 +140,8 @@ async function handler(req, res) {
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
         nextPublishAtMs,
-        maxAgeSeconds: 300,
-        staleWhileRevalidateSeconds: 600,
+        maxAgeSeconds: 30,
+        staleWhileRevalidateSeconds: 30,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }

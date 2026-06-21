@@ -3,6 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 import CourseSheet from "../../../components/Courses/CourseSheet";
+import BundleForm from "../../../components/Courses/BundleForm";
 import CategorySheet from "../../../components/Courses/CategorySheet";
 import CoursesOverview from "../../../components/Courses/CoursesOverview";
 import CoursesTable from "../../../components/Courses/CoursesTable";
@@ -17,6 +18,10 @@ import {
   createCourseCategory,
   updateCourseCategory,
   deleteCourseCategory,
+  fetchAdminCourseBundles,
+  createAdminCourseBundle,
+  updateAdminCourseBundle,
+  deleteAdminCourseBundle,
 } from "../../../utils/coursesApi";
 import { Button } from "../../../components/ui/button";
 import {
@@ -134,6 +139,12 @@ export default function CoursesDashboardPage() {
 
   // Tab state
   const [viewTab, setViewTab] = useState("courses");
+  const [bundles, setBundles] = useState([]);
+  const [bundlesLoading, setBundlesLoading] = useState(true);
+  const [bundleDialogOpen, setBundleDialogOpen] = useState(false);
+  const [editingBundle, setEditingBundle] = useState(null);
+  const [bundleSaving, setBundleSaving] = useState(false);
+  const [bundleError, setBundleError] = useState("");
 
   // Subtitles tab state
   const [subtitleFile, setSubtitleFile] = useState(null);
@@ -216,6 +227,22 @@ export default function CoursesDashboardPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  const refreshBundles = async () => {
+    setBundlesLoading(true);
+    setBundleError("");
+    try {
+      setBundles(await fetchAdminCourseBundles());
+    } catch (err) {
+      setBundleError(err.message || "Nu am putut încărca trilogiile.");
+    } finally {
+      setBundlesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshBundles();
   }, []);
 
   // Load categories
@@ -423,6 +450,48 @@ export default function CoursesDashboardPage() {
         message: err?.message || "unknown_error",
       });
       setError(err.message || "Nu am putut duplica cursul.");
+    }
+  };
+
+  const openCreateBundle = () => {
+    setEditingBundle(null);
+    setBundleError("");
+    setBundleDialogOpen(true);
+  };
+
+  const openEditBundle = (bundle) => {
+    setEditingBundle(bundle);
+    setBundleError("");
+    setBundleDialogOpen(true);
+  };
+
+  const handleSaveBundle = async (payload) => {
+    setBundleSaving(true);
+    setBundleError("");
+    try {
+      if (editingBundle) {
+        await updateAdminCourseBundle(editingBundle.id, payload);
+      } else {
+        await createAdminCourseBundle(payload);
+      }
+      await refreshBundles();
+      setBundleDialogOpen(false);
+      setEditingBundle(null);
+    } catch (err) {
+      setBundleError(err.message || "Nu am putut salva trilogia.");
+    } finally {
+      setBundleSaving(false);
+    }
+  };
+
+  const handleDeleteBundle = async (bundle) => {
+    if (!window.confirm(`Ștergi sau arhivezi trilogia "${bundle.title}"?`)) return;
+    setBundleError("");
+    try {
+      await deleteAdminCourseBundle(bundle.id);
+      await refreshBundles();
+    } catch (err) {
+      setBundleError(err.message || "Nu am putut elimina trilogia.");
     }
   };
 
@@ -835,6 +904,7 @@ export default function CoursesDashboardPage() {
                 <Tabs value={viewTab} onValueChange={setViewTab}>
                   <TabsList>
                     <TabsTrigger value="courses">Cursuri</TabsTrigger>
+                    <TabsTrigger value="bundles">Trilogii</TabsTrigger>
                     <TabsTrigger value="categories">Categorii</TabsTrigger>
                     {/* <TabsTrigger value="subtitles">Subtitrări SRT</TabsTrigger> */}
                     <TabsTrigger value="subtitle-translations">Traduceri SRT</TabsTrigger>
@@ -974,6 +1044,94 @@ export default function CoursesDashboardPage() {
                   <CoursesOverview stats={stats} />
                 </div>
               </div>
+            ) : viewTab === "bundles" ? (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-lg">Trilogii de mini-cursuri</CardTitle>
+                      <CardDescription>
+                        Fiecare ofertă conține exact 3 cursuri și are un preț unic.
+                      </CardDescription>
+                    </div>
+                    <Button onClick={openCreateBundle} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adaugă trilogie
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {bundleError ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {bundleError}
+                    </div>
+                  ) : null}
+                  {bundlesLoading ? (
+                    <div className="py-10 text-center text-sm text-gray-600">Se încarcă...</div>
+                  ) : bundles.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-8 text-center text-sm text-gray-600">
+                      Nu există trilogii configurate.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Titlu</TableHead>
+                          <TableHead>Cursuri</TableHead>
+                          <TableHead>Preț</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Achiziții</TableHead>
+                          <TableHead className="text-right">Acțiuni</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bundles.map((bundle) => (
+                          <TableRow key={bundle.id}>
+                            <TableCell className="font-medium">{bundle.title}</TableCell>
+                            <TableCell>
+                              <div className="max-w-xs text-xs text-gray-600">
+                                {(bundle.courses || []).map((course) => course.title).join(" • ")}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {formatPrice(bundle.price)} {bundle.currency}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={bundle.status === "published" ? "default" : "secondary"}>
+                                {bundle.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{bundle.purchaseCount || 0}</TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => openEditBundle(bundle)}>
+                                    <Edit2 className="mr-2 h-4 w-4" />
+                                    Editează
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleDeleteBundle(bundle)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {Number(bundle.purchaseCount || 0) > 0 ? "Arhivează" : "Șterge"}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
             ) : viewTab === "categories" ? (
               // Categories Tab
               <Card className="shadow-sm">
@@ -1333,6 +1491,26 @@ export default function CoursesDashboardPage() {
           loading={categorySaving}
           error={categorySheetError}
         />
+
+        <Dialog open={bundleDialogOpen} onOpenChange={setBundleDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingBundle ? "Editează trilogia" : "Adaugă trilogie"}
+              </DialogTitle>
+              <DialogDescription>
+                Selectează exact trei cursuri existente și setează prețul ofertei.
+              </DialogDescription>
+            </DialogHeader>
+            <BundleForm
+              initialValue={editingBundle}
+              courses={courses}
+              loading={bundleSaving}
+              onSubmit={handleSaveBundle}
+              onCancel={() => setBundleDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
