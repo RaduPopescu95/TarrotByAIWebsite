@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../firebase";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
+
+const PLACEHOLDER_NAMES = ["Utilizator", "Guest"];
 
 const PAGE_SIZE = 3;
 const MAX_LENGTH = 500;
@@ -38,15 +42,41 @@ export default function VideoComments({
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState("");
   const [error, setError] = useState("");
+  const [nameValue, setNameValue] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameCollected, setNameCollected] = useState(false);
+
+  const needsName = useMemo(() => {
+    if (nameCollected) return false;
+    const name = typeof userData?.first_name === "string" ? userData.first_name.trim() : "";
+    return !name || PLACEHOLDER_NAMES.includes(name);
+  }, [nameCollected, userData?.first_name]);
+
+  const handleSaveName = useCallback(async (event) => {
+    event.preventDefault();
+    const trimmed = nameValue.trim();
+    if (trimmed.length < 2 || trimmed.length > 30 || nameSaving) return;
+    if (!currentUser?.uid) return;
+    setNameSaving(true);
+    try {
+      await updateDoc(doc(db, "Users", currentUser.uid), { first_name: trimmed });
+      setNameCollected(true);
+    } catch (err) {
+      console.error("[video-comments.saveName]", err);
+    } finally {
+      setNameSaving(false);
+    }
+  }, [currentUser?.uid, nameSaving, nameValue]);
 
   const authorFirstName = useMemo(() => {
+    if (nameCollected && nameValue.trim()) return nameValue.trim();
     const candidates = [
       userData?.first_name,
       currentUser?.displayName?.split(" ")?.[0],
       t("videoCommentsUserFallback"),
     ];
-    return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || "Utilizator";
-  }, [currentUser?.displayName, t, userData?.first_name]);
+    return candidates.find((value) => typeof value === "string" && value.trim() && !PLACEHOLDER_NAMES.includes(value.trim()))?.trim() || "Utilizator";
+  }, [currentUser?.displayName, nameCollected, nameValue, t, userData?.first_name]);
 
   const loadComments = useCallback(async ({ append = false } = {}) => {
     if (!videoId) return;
@@ -178,7 +208,29 @@ export default function VideoComments({
         {t("videoCommentsTitle", { count: visibleCount })}
       </h2>
 
-      {signedIn ? (
+      {signedIn && needsName ? (
+        <form onSubmit={handleSaveName} className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-slate-800">{t("videoCommentsNamePrompt", "What is your first name?")}</p>
+          <p className="mt-1 text-xs text-slate-500">{t("videoCommentsNamePromptHint", "Your name will appear on your comments.")}</p>
+          <div className="mt-3 flex items-center gap-3">
+            <input
+              type="text"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value.slice(0, 30))}
+              placeholder={t("videoCommentsNamePlaceholder", "First name")}
+              maxLength={30}
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              type="submit"
+              disabled={nameSaving || nameValue.trim().length < 2}
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {nameSaving ? "..." : t("videoCommentsNameSave", "Save")}
+            </button>
+          </div>
+        </form>
+      ) : signedIn ? (
         <form onSubmit={handleSubmit} className="mt-4">
           <textarea
             value={text}
