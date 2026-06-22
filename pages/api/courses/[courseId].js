@@ -3,7 +3,7 @@ import { getOptionalAuth } from "../../../lib/requireAuth";
 import {
   isCourseVisible,
   toSafeCourse,
-  applyCoursePreviewAccessGate,
+  applyCourseDetailContentGate,
   resolveCourseAvailableLocales,
 } from "../../../lib/courses";
 import { resolveCourseEntitlement } from "../../../lib/courseSubscriptionAccess";
@@ -131,7 +131,7 @@ async function handler(req, res) {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    const safeCourse = applyCoursePreviewAccessGate(
+    const safeCourse = applyCourseDetailContentGate(
       toSafeCourse(courseId, courseData, locale, {
         includeDetailContent: true,
       }),

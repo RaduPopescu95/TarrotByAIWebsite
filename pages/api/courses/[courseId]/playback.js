@@ -14,6 +14,7 @@ import {
   withFirestoreCostLog,
   withFirestoreReadTelemetry,
 } from "../../../../lib/firestoreCostLogger";
+import { resolveCourseMediaClientBlock } from "../../../../lib/courseMobileClientGuard";
 
 const COURSE_MEDIA_COLLECTION = "courseMedia";
 
@@ -51,6 +52,17 @@ async function handler(req, res) {
   });
 
   try {
+    const clientBlock = await resolveCourseMediaClientBlock(req);
+    if (clientBlock) {
+      console.info("[courses.entitlement] playback_client_blocked", {
+        courseId,
+        uid: maskUid(uid),
+        minAppVersion: clientBlock.body?.minAppVersion || null,
+        platform: clientBlock.body?.platform || null,
+      });
+      return res.status(clientBlock.status).json(clientBlock.body);
+    }
+
     const db = getAdminDb();
 
     const courseSnap = await withFirestoreCostLog(

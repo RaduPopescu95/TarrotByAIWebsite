@@ -2,6 +2,7 @@ import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
 import { isCourseVisible, normalizeLocale, resolveDate, toSafeCourse } from "../../../../lib/courses";
 import { requireAuth } from "../../../../lib/requireAuth";
 import { resolveCourseEntitlement } from "../../../../lib/courseSubscriptionAccess";
+import { resolveCourseMediaClientBlock } from "../../../../lib/courseMobileClientGuard";
 import { getCertificateLocaleCopy, resolveCertificateLocale } from "../../../../lib/certificateLocale";
 import { buildCourseCertificatePdf } from "../../../../lib/certificatePdf";
 
@@ -98,6 +99,17 @@ export default async function handler(req, res) {
   });
 
   try {
+    const clientBlock = await resolveCourseMediaClientBlock(req);
+    if (clientBlock) {
+      console.info("[courses.certificate] client_blocked", {
+        courseId,
+        uid: maskUid(authUser.uid),
+        minAppVersion: clientBlock.body?.minAppVersion || null,
+        platform: clientBlock.body?.platform || null,
+      });
+      return res.status(clientBlock.status).json(clientBlock.body);
+    }
+
     const db = getAdminDb();
 
     const courseSnap = await db.collection("courses").doc(courseId).get();

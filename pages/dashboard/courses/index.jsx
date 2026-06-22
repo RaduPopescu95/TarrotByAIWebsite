@@ -879,7 +879,7 @@ export default function CoursesDashboardPage() {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
           {/* Header */}
           <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div className="px-3 py-6 sm:px-4">
               {/* Breadcrumb */}
               <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
                 <Link
@@ -922,12 +922,12 @@ export default function CoursesDashboardPage() {
           </div>
 
           {/* Main Content */}
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="px-3 py-6 sm:px-4">
             {viewTab === "courses" ? (
-              <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-                {/* Main Column */}
-                <div className="space-y-6">
-                  <Card className="shadow-sm">
+              <div className="space-y-4">
+                <CoursesOverview stats={stats} />
+
+                <Card className="shadow-sm">
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -1045,12 +1045,6 @@ export default function CoursesDashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                </div>
-
-                {/* Sidebar */}
-                <div className="lg:sticky lg:top-6 lg:self-start">
-                  <CoursesOverview stats={stats} />
-                </div>
               </div>
             ) : viewTab === "bundles" ? (
               <Card className="shadow-sm">
