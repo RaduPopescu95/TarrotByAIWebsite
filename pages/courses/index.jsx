@@ -8,6 +8,7 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import CourseCard from "../../components/Courses/CourseCard";
 import BundleCard from "../../components/Courses/BundleCard";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 
 function getCourseGridClass(courseCount = 0) {
   if (courseCount <= 1) {
@@ -111,64 +112,84 @@ export default function CoursesPage() {
           </section>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {!loading && bundles.length > 0 ? (
-            <section className="mb-12">
+          <Tabs defaultValue="courses">
+            <TabsList className="mb-6 h-auto">
+              <TabsTrigger value="courses" className="px-4 py-2">
+                {t("coursesTabCourses")}
+              </TabsTrigger>
+              <TabsTrigger value="bundles" className="px-4 py-2">
+                {t("coursesTabBundles")}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="courses">
+              {loading ? (
+                <div className="text-sm text-gray-600">{t("coursesLoading")}</div>
+              ) : courses.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
+                  {t("coursesEmpty")}
+                </div>
+              ) : (
+                <div className={coursesCardsGridClass}>
+                  {courses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      noImageLabel={t("coursesCardNoImage")}
+                      openLabel={t("coursesHomeOpenCourse")}
+                      priceLocale={router.locale || "ro-RO"}
+                      freePriceLabel={t("coursesPriceFree")}
+                      bundleLabel={
+                        bundles.some((bundle) => bundle.courseIds?.includes(course.id))
+                          ? t("courseBundlesCourseBadge", "Disponibil în trilogie")
+                          : ""
+                      }
+                      onClick={() => router.push(`/courses/${course.id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="bundles">
               <div className="mb-5">
                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
                   {t("courseBundlesBadge", "Trilogii")}
                 </span>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                  {t("courseBundlesHeading", "Pachete de 3 mini-cursuri")}
+                  {t("courseBundlesHeading", "Trilogii de mini-cursuri")}
                 </h2>
               </div>
-              <div className="grid gap-7 lg:grid-cols-2">
-                {bundles.map((bundle) => (
-                  <BundleCard
-                    key={bundle.id}
-                    bundle={bundle}
-                    locale={router.locale || "ro-RO"}
-                    labels={{
-                      badge: t("courseBundlesBadge", "Trilogie"),
-                      open: t("courseBundlesOpen", "Vezi trilogia"),
-                    }}
-                    onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
 
-          {loading ? (
-            <div className="text-sm text-gray-600">{t("coursesLoading")}</div>
-          ) : courses.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
-              {t("coursesEmpty")}
-            </div>
-          ) : (
-            <div className={coursesCardsGridClass}>
-              {courses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  noImageLabel={t("coursesCardNoImage")}
-                  openLabel={t("coursesHomeOpenCourse")}
-                  priceLocale={router.locale || "ro-RO"}
-                  freePriceLabel={t("coursesPriceFree")}
-                  bundleLabel={
-                    bundles.some((bundle) => bundle.courseIds?.includes(course.id))
-                      ? t("courseBundlesCourseBadge", "Disponibil în trilogie")
-                      : ""
-                  }
-                  onClick={() => router.push(`/courses/${course.id}`)}
-                />
-              ))}
-            </div>
-          )}
+              {loading ? (
+                <div className="text-sm text-gray-600">{t("coursesLoading")}</div>
+              ) : bundles.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
+                  {t("courseBundlesEmpty")}
+                </div>
+              ) : (
+                <div className="grid gap-7 lg:grid-cols-2">
+                  {bundles.map((bundle) => (
+                    <BundleCard
+                      key={bundle.id}
+                      bundle={bundle}
+                      locale={router.locale || "ro-RO"}
+                      labels={{
+                        badge: t("courseBundlesBadge", "Trilogie"),
+                        open: t("courseBundlesOpen", "Vezi trilogia"),
+                      }}
+                      onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       <Footer />
