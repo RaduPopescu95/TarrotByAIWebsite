@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 3;
 const MAX_LENGTH = 500;
 
 function formatCommentDate(value, locale) {
@@ -215,8 +215,16 @@ export default function VideoComments({
         <div className="mt-6 space-y-4">
           {[1, 2, 3].map((item) => (
             <div key={item} className="animate-pulse rounded-xl border border-slate-100 p-4">
-              <div className="h-4 w-28 rounded bg-slate-200" />
-              <div className="mt-3 h-4 w-full rounded bg-slate-100" />
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="h-4 w-24 rounded bg-slate-200" />
+                  <div className="mt-1.5 h-3 w-16 rounded bg-slate-100" />
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <div className="h-3.5 w-full rounded bg-slate-100" />
+                <div className="h-3.5 w-3/4 rounded bg-slate-100" />
+              </div>
             </div>
           ))}
         </div>
@@ -252,14 +260,30 @@ export default function VideoComments({
         </ul>
       )}
 
-      {hasMore ? (
+      {loadingMore ? (
+        <div className="mt-4 space-y-4">
+          {[1, 2].map((item) => (
+            <div key={item} className="animate-pulse rounded-xl border border-slate-100 p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="h-4 w-24 rounded bg-slate-200" />
+                  <div className="mt-1.5 h-3 w-16 rounded bg-slate-100" />
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <div className="h-3.5 w-full rounded bg-slate-100" />
+                <div className="h-3.5 w-3/4 rounded bg-slate-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : hasMore ? (
         <button
           type="button"
-          disabled={loadingMore}
           onClick={() => loadComments({ append: true })}
-          className="mt-5 rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+          className="mt-5 rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
         >
-          {loadingMore ? t("videoCommentsLoadingMore") : t("videoCommentsLoadMore")}
+          {t("videoCommentsLoadMore")}
         </button>
       ) : null}
     </section>

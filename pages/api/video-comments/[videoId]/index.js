@@ -67,7 +67,8 @@ export default async function handler(req, res) {
     if ([400, 401, 403, 404, 429].includes(status)) {
       return res.status(status).json({ error: error.message });
     }
-    console.error("[video-comments]", error);
+    const code = error?.code || error?.details || "";
+    console.error("[video-comments]", { videoId, method: req.method, code, message: error?.message }, error);
     return res.status(500).json({ error: "Failed to process comments" });
   }
 }
