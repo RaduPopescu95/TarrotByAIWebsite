@@ -3,7 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 import CourseSheet from "../../../components/Courses/CourseSheet";
-import BundleForm from "../../../components/Courses/BundleForm";
+import BundleSheet from "../../../components/Courses/BundleSheet";
 import CategorySheet from "../../../components/Courses/CategorySheet";
 import CoursesOverview from "../../../components/Courses/CoursesOverview";
 import CoursesTable from "../../../components/Courses/CoursesTable";
@@ -141,7 +141,7 @@ export default function CoursesDashboardPage() {
   const [viewTab, setViewTab] = useState("courses");
   const [bundles, setBundles] = useState([]);
   const [bundlesLoading, setBundlesLoading] = useState(true);
-  const [bundleDialogOpen, setBundleDialogOpen] = useState(false);
+  const [bundleSheetOpen, setBundleSheetOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState(null);
   const [bundleSaving, setBundleSaving] = useState(false);
   const [bundleError, setBundleError] = useState("");
@@ -463,13 +463,13 @@ export default function CoursesDashboardPage() {
   const openCreateBundle = () => {
     setEditingBundle(null);
     setBundleError("");
-    setBundleDialogOpen(true);
+    setBundleSheetOpen(true);
   };
 
   const openEditBundle = (bundle) => {
     setEditingBundle(bundle);
     setBundleError("");
-    setBundleDialogOpen(true);
+    setBundleSheetOpen(true);
   };
 
   const handleSaveBundle = async (payload) => {
@@ -482,7 +482,7 @@ export default function CoursesDashboardPage() {
         await createAdminCourseBundle(payload);
       }
       await refreshBundles();
-      setBundleDialogOpen(false);
+      setBundleSheetOpen(false);
       setEditingBundle(null);
     } catch (err) {
       setBundleError(err.message || "Nu am putut salva trilogia.");
@@ -1494,25 +1494,15 @@ export default function CoursesDashboardPage() {
           error={categorySheetError}
         />
 
-        <Dialog open={bundleDialogOpen} onOpenChange={setBundleDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingBundle ? "Editează trilogia" : "Adaugă trilogie"}
-              </DialogTitle>
-              <DialogDescription>
-                Selectează exact trei cursuri existente și setează prețul ofertei.
-              </DialogDescription>
-            </DialogHeader>
-            <BundleForm
-              initialValue={editingBundle}
-              courses={courses}
-              loading={bundleSaving}
-              onSubmit={handleSaveBundle}
-              onCancel={() => setBundleDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <BundleSheet
+          open={bundleSheetOpen}
+          onOpenChange={setBundleSheetOpen}
+          editingBundle={editingBundle}
+          courses={courses}
+          onSubmit={handleSaveBundle}
+          loading={bundleSaving}
+          error={bundleError}
+        />
 
         {/* Delete / Archive Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
