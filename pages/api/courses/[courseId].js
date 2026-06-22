@@ -150,6 +150,7 @@ async function handler(req, res) {
     const availableLocales = resolveCourseAvailableLocales(courseData, mediaData);
 
     if (
+      hasAccess &&
       Array.isArray(safeCourse.curriculumLessons) &&
       safeCourse.curriculumLessons.length === 0 &&
       !safeCourse.notesContent &&
@@ -158,6 +159,19 @@ async function handler(req, res) {
       console.warn("[courses.entitlement] detail_content_missing", {
         courseId,
         uid: uidLabel,
+      });
+    }
+
+    if (
+      !safeCourse.hasCustomThumbnail &&
+      !safeCourse.thumbnailUrl &&
+      !safeCourse.previewVimeoId
+    ) {
+      console.warn("[courses.entitlement] thumbnail_missing", {
+        courseId,
+        uid: uidLabel,
+        hasAccess,
+        price: typeof safeCourse.price === "number" ? safeCourse.price : null,
       });
     }
 
