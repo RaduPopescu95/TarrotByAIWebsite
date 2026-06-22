@@ -3,6 +3,7 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
 import {
   COURSE_BUNDLE_COLLECTION,
+  COURSE_BUNDLE_COVER_SOURCES,
   COURSE_BUNDLE_STATUSES,
   hasValidBundleCourseIds,
   loadBundleCourses,
@@ -47,6 +48,29 @@ function validateInput(input) {
   ) {
     errors.push("thumbnailUrl");
   }
+
+  const coverSource =
+    input.coverSource === undefined || input.coverSource === null
+      ? "none"
+      : input.coverSource;
+  if (!COURSE_BUNDLE_COVER_SOURCES.includes(coverSource)) {
+    errors.push("coverSource");
+  } else {
+    const courseIds = normalizeBundleCourseIds(input.courseIds);
+    if (coverSource === "course") {
+      const coverCourseId =
+        typeof input.coverCourseId === "string" ? input.coverCourseId.trim() : "";
+      if (!coverCourseId || !courseIds.includes(coverCourseId)) {
+        errors.push("coverCourseId");
+      }
+    }
+    if (coverSource === "custom") {
+      const thumb =
+        typeof input.thumbnailUrl === "string" ? input.thumbnailUrl.trim() : "";
+      if (!thumb) errors.push("thumbnailUrl");
+    }
+  }
+
   if (!validateLocales(input.locales)) errors.push("locales");
   return errors;
 }
@@ -105,6 +129,19 @@ export default async function handler(req, res) {
       }
     }
 
+    const coverSource =
+      input.coverSource === undefined || input.coverSource === null
+        ? "none"
+        : input.coverSource;
+    const coverCourseId =
+      coverSource === "course" && typeof input.coverCourseId === "string"
+        ? input.coverCourseId.trim() || null
+        : null;
+    const persistedThumbnailUrl =
+      coverSource === "custom"
+        ? (typeof input.thumbnailUrl === "string" && input.thumbnailUrl.trim()) || null
+        : null;
+
     try {
       const ref = db.collection(COURSE_BUNDLE_COLLECTION).doc();
       await ref.set({
@@ -114,7 +151,9 @@ export default async function handler(req, res) {
         price: input.price,
         currency: input.currency,
         status: input.status,
-        thumbnailUrl: input.thumbnailUrl?.trim() || null,
+        thumbnailUrl: persistedThumbnailUrl,
+        coverSource,
+        coverCourseId,
         locales: input.locales || {},
         purchaseCount: 0,
         createdAt: FieldValue.serverTimestamp(),

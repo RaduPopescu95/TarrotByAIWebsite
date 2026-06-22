@@ -274,6 +274,63 @@ export const uploadMultipleImages = async (
   return { imgs }; // Returnează array-uri cu URI-urile și numele fișierelor
 };
 
+export const uploadBundleCover = async (file) => {
+  const authInstance = authentication;
+  const currentUser = authInstance.currentUser;
+
+  if (!file) {
+    throw new Error("Nu a fost selectat niciun fișier.");
+  }
+
+  if (!currentUser?.uid) {
+    throw new Error("Trebuie să fii autentificat pentru a încărca coperta.");
+  }
+
+  const startedAt =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
+
+  const options = {
+    maxSizeMB: 0.4,
+    maxWidthOrHeight: 1600,
+    initialQuality: 0.85,
+    useWebWorker: true,
+    fileType: "image/jpeg",
+  };
+
+  console.info("[BundleCoverUpload] compress:start", {
+    uid: currentUser.uid,
+    originalSize: file.size || null,
+    originalType: file.type || null,
+  });
+
+  const compressedFile = await imageCompression(file, options);
+
+  console.info("[BundleCoverUpload] compress:done", {
+    compressedSize: compressedFile?.size || null,
+  });
+
+  const randomSuffix = Math.random().toString(36).slice(2, 10);
+  const fileName = `${new Date().getTime()}-${randomSuffix}.jpg`;
+  const storagePath = `images/CourseBundles/${currentUser.uid}/${fileName}`;
+  const imageRef = ref(storage, storagePath);
+  const metadata = { contentType: "image/jpeg" };
+
+  console.info("[BundleCoverUpload] upload:start", { storagePath });
+  const snapshot = await uploadBytes(imageRef, compressedFile, metadata);
+  const finalUri = await getDownloadURL(snapshot.ref);
+
+  console.info("[BundleCoverUpload] upload:done", {
+    finalUri,
+    fileName,
+    elapsedMs: Math.round(
+      (typeof performance !== "undefined" ? performance.now() : Date.now()) -
+        startedAt
+    ),
+  });
+
+  return { finalUri, fileName, storagePath };
+};
+
 export const deleteMultipleImages = async (
   firstLocation,
   oldFileNames // Acesta va fi acum un array de nume de fișiere

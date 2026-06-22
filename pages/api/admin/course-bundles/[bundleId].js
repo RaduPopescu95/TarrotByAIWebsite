@@ -3,6 +3,7 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireDashboardAccess } from "../../../../lib/requireAuth";
 import {
   COURSE_BUNDLE_COLLECTION,
+  COURSE_BUNDLE_COVER_SOURCES,
   COURSE_BUNDLE_STATUSES,
   hasValidBundleCourseIds,
   loadBundleCourses,
@@ -42,6 +43,27 @@ function validateUpdate(input) {
     (!input.locales || typeof input.locales !== "object" || Array.isArray(input.locales))
   ) {
     errors.push("locales");
+  }
+  if (
+    input.thumbnailUrl !== undefined &&
+    input.thumbnailUrl !== null &&
+    typeof input.thumbnailUrl !== "string"
+  ) {
+    errors.push("thumbnailUrl");
+  }
+  if (
+    input.coverSource !== undefined &&
+    input.coverSource !== null &&
+    !COURSE_BUNDLE_COVER_SOURCES.includes(input.coverSource)
+  ) {
+    errors.push("coverSource");
+  }
+  if (
+    input.coverCourseId !== undefined &&
+    input.coverCourseId !== null &&
+    typeof input.coverCourseId !== "string"
+  ) {
+    errors.push("coverCourseId");
   }
   return errors;
 }
@@ -111,6 +133,71 @@ export default async function handler(req, res) {
       }
     }
 
+    const coverFieldsTouched =
+      input.coverSource !== undefined ||
+      input.coverCourseId !== undefined ||
+      input.thumbnailUrl !== undefined;
+    const coverPayload = {};
+
+    if (!coverFieldsTouched && input.courseIds !== undefined) {
+      const currentCoverSource = current.coverSource || "none";
+      const currentCoverCourseId =
+        typeof current.coverCourseId === "string" ? current.coverCourseId : null;
+      const effectiveCourseIds = normalizeBundleCourseIds(nextCourseIds);
+      if (
+        currentCoverSource === "course" &&
+        (!currentCoverCourseId || !effectiveCourseIds.includes(currentCoverCourseId))
+      ) {
+        coverPayload.coverSource = "none";
+        coverPayload.coverCourseId = null;
+        coverPayload.thumbnailUrl = null;
+      }
+    }
+
+    if (coverFieldsTouched) {
+      const nextCoverSource =
+        input.coverSource !== undefined && input.coverSource !== null
+          ? input.coverSource
+          : current.coverSource || "none";
+      const effectiveCourseIds = normalizeBundleCourseIds(nextCourseIds);
+      if (nextCoverSource === "course") {
+        const candidate =
+          input.coverCourseId !== undefined
+            ? input.coverCourseId
+            : current.coverCourseId;
+        const coverCourseId =
+          typeof candidate === "string" ? candidate.trim() : "";
+        if (!coverCourseId || !effectiveCourseIds.includes(coverCourseId)) {
+          return res.status(400).json({
+            error: "Invalid fields",
+            fields: ["coverCourseId"],
+          });
+        }
+        coverPayload.coverSource = "course";
+        coverPayload.coverCourseId = coverCourseId;
+        coverPayload.thumbnailUrl = null;
+      } else if (nextCoverSource === "custom") {
+        const candidate =
+          input.thumbnailUrl !== undefined
+            ? input.thumbnailUrl
+            : current.thumbnailUrl;
+        const thumb = typeof candidate === "string" ? candidate.trim() : "";
+        if (!thumb) {
+          return res.status(400).json({
+            error: "Invalid fields",
+            fields: ["thumbnailUrl"],
+          });
+        }
+        coverPayload.coverSource = "custom";
+        coverPayload.coverCourseId = null;
+        coverPayload.thumbnailUrl = thumb;
+      } else {
+        coverPayload.coverSource = "none";
+        coverPayload.coverCourseId = null;
+        coverPayload.thumbnailUrl = null;
+      }
+    }
+
     const payload = {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.description !== undefined
@@ -122,9 +209,7 @@ export default async function handler(req, res) {
       ...(input.price !== undefined ? { price: input.price } : {}),
       ...(input.currency !== undefined ? { currency: input.currency } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(input.thumbnailUrl !== undefined
-        ? { thumbnailUrl: input.thumbnailUrl?.trim() || null }
-        : {}),
+      ...coverPayload,
       ...(input.locales !== undefined ? { locales: input.locales } : {}),
       updatedAt: FieldValue.serverTimestamp(),
     };

@@ -2,6 +2,11 @@ import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
 import { resolveDate, toSafeCourse } from "../../../lib/courses";
 import {
+  COURSE_BUNDLE_COLLECTION,
+  loadBundleCourses,
+  toSafeCourseBundle,
+} from "../../../lib/courseBundles";
+import {
   withFirestoreCostLog,
   withFirestoreReadTelemetry,
 } from "../../../lib/firestoreCostLogger";
@@ -157,12 +162,55 @@ async function handler(req, res) {
       };
     });
 
+    const bundlePurchasesSnap = await withFirestoreCostLog(
+      { page: "api.courses.purchased", queryName: "users.bundlePurchases.paid" },
+      () =>
+        db
+          .collection("users")
+          .doc(authUser.uid)
+          .collection("bundlePurchases")
+          .where("status", "==", "paid")
+          .get()
+    );
+
+    const purchasedBundles = await Promise.all(
+      bundlePurchasesSnap.docs.map(async (docSnap) => {
+        const data = docSnap.data() || {};
+        const bundleId = docSnap.id;
+        const bundleSnap = await withFirestoreCostLog(
+          { page: "api.courses.purchased", queryName: "courseBundles.by_purchased_id", operationType: "document" },
+          () => db.collection(COURSE_BUNDLE_COLLECTION).doc(bundleId).get()
+        );
+        const bundleMissing = !bundleSnap.exists;
+        const bundleData = bundleMissing ? null : bundleSnap.data() || {};
+        let bundle = null;
+        if (bundleData) {
+          const courses = await loadBundleCourses(db, bundleData.courseIds, locale);
+          bundle = toSafeCourseBundle(bundleId, bundleData, locale, courses);
+        }
+        return {
+          bundleId,
+          status: typeof data.status === "string" ? data.status : "paid",
+          purchasedAt: toIsoString(data.purchasedAt || data.updatedAt),
+          amountPaid: typeof data.amountPaid === "number" ? data.amountPaid : 0,
+          currency: typeof data.currency === "string" ? data.currency : "RON",
+          bundleMissing,
+          bundle,
+        };
+      })
+    );
+
+    purchasedBundles.sort(
+      (left, right) => getPurchaseSortMs(right) - getPurchaseSortMs(left)
+    );
+
     console.info("[courses.purchased] success", {
       uid: maskUid(authUser?.uid),
       count: payload.length,
+      bundleCount: purchasedBundles.length,
     });
 
-    return res.status(200).json({ purchases: payload });
+    return res.status(200).json({ purchases: payload, purchasedBundles });
   } catch (error) {
     console.error("[courses.purchased] fail", {
       uid: maskUid(authUser?.uid),

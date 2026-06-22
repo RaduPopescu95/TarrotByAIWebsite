@@ -22,6 +22,7 @@ import {
   loadBundleCourses,
   normalizeBundleCourseIds,
   resolveBundleAccess,
+  resolveBundleThumbnailUrl,
 } from "../../../../lib/courseBundles";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -331,11 +332,12 @@ export default async function handler(req, res) {
     if (purchaseType === "bundle" && bundleCourseIds.length < 2) {
       return res.status(400).json({ error: "Course bundle is invalid" });
     }
+    let bundleVisibleCourses = [];
     if (purchaseType === "bundle") {
-      const visibleCourses = await loadBundleCourses(db, bundleCourseIds, "ro", {
+      bundleVisibleCourses = await loadBundleCourses(db, bundleCourseIds, "ro", {
         visibleOnly: true,
       });
-      if (visibleCourses.length !== bundleCourseIds.length) {
+      if (bundleVisibleCourses.length !== bundleCourseIds.length) {
         return res.status(400).json({
           error: "All courses in this bundle must be published",
         });
@@ -458,6 +460,15 @@ export default async function handler(req, res) {
             currency,
             product_data: {
               name: item.title,
+              ...(purchaseType === "bundle"
+                ? (() => {
+                    const resolvedThumb = resolveBundleThumbnailUrl(
+                      item,
+                      bundleVisibleCourses
+                    );
+                    return resolvedThumb ? { images: [resolvedThumb] } : {};
+                  })()
+                : {}),
             },
             unit_amount: unitAmount,
           },

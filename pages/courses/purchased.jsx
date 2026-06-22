@@ -49,6 +49,7 @@ export default function PurchasedCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [purchases, setPurchases] = useState([]);
+  const [purchasedBundles, setPurchasedBundles] = useState([]);
 
   useEffect(() => {
     if (authLoading || currentUser) return;
@@ -89,6 +90,7 @@ export default function PurchasedCoursesPage() {
 
         if (mounted) {
           setPurchases(Array.isArray(data?.purchases) ? data.purchases : []);
+          setPurchasedBundles(Array.isArray(data?.purchasedBundles) ? data.purchasedBundles : []);
         }
       } catch (err) {
         console.error("[courses.purchased.page] load_fail", {
@@ -99,6 +101,7 @@ export default function PurchasedCoursesPage() {
         if (mounted) {
           setError(err.message || t("coursesErrorsLoadPurchased"));
           setPurchases([]);
+          setPurchasedBundles([]);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -140,7 +143,7 @@ export default function PurchasedCoursesPage() {
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
-          ) : purchases.length === 0 ? (
+          ) : purchases.length === 0 && purchasedBundles.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
               <h2 className="text-lg font-semibold text-gray-900">{t("coursesPurchasedEmptyTitle")}</h2>
               <p className="mt-2 text-sm text-gray-600">{t("coursesPurchasedEmptyDescription")}</p>
@@ -152,8 +155,82 @@ export default function PurchasedCoursesPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {purchases.map((purchase, index) => {
+            <>
+              {purchasedBundles.length > 0 ? (
+                <div className="mb-8">
+                  <h2 className="mb-4 text-xl font-bold text-gray-900">Trilogii cumpărate</h2>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {purchasedBundles.map((bp) => {
+                      const bundle = bp.bundle;
+                      const purchasedAt = formatDate(bp.purchasedAt, resolvedLocale, t("coursesPurchasedUnknownDate"));
+                      const amountPaid = formatAmount(bp.amountPaid, bp.currency, resolvedLocale, t("coursesPurchasedUnknownAmount"));
+
+                      return (
+                        <div
+                          key={bp.bundleId}
+                          className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-indigo-50 shadow-sm"
+                        >
+                          <div className="relative h-44 bg-gradient-to-br from-amber-200 to-indigo-200">
+                            {bundle?.thumbnailUrl ? (
+                              <img src={bundle.thumbnailUrl} alt={bundle.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-5xl font-bold text-amber-700/60">
+                                {bundle?.courses?.length || ""}
+                              </div>
+                            )}
+                            <span className="absolute left-4 top-4 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
+                              Trilogie
+                            </span>
+                          </div>
+                          <div className="space-y-3 p-5">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {bundle?.title || "Trilogie indisponibilă"}
+                            </h3>
+                            {bundle?.description ? (
+                              <p className="line-clamp-2 text-sm text-gray-600">{bundle.description}</p>
+                            ) : null}
+                            {bundle?.courses?.length > 0 ? (
+                              <ol className="space-y-1 text-sm text-slate-700">
+                                {bundle.courses.map((course, idx) => (
+                                  <li key={course.id}>
+                                    <span className="font-semibold">{idx + 1}.</span> {course.title}
+                                  </li>
+                                ))}
+                              </ol>
+                            ) : null}
+                            <div className="space-y-1 text-xs text-gray-500">
+                              <p>
+                                <span className="font-semibold text-gray-700">{t("coursesPurchasedPurchasedAtLabel")}:</span>{" "}
+                                {purchasedAt}
+                              </p>
+                              <p>
+                                <span className="font-semibold text-gray-700">{t("coursesPurchasedAmountLabel")}:</span>{" "}
+                                {amountPaid}
+                              </p>
+                            </div>
+                            {bundle ? (
+                              <button
+                                onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
+                                className="mt-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                              >
+                                Vezi trilogia
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {purchases.length > 0 ? (
+                <div>
+                  {purchasedBundles.length > 0 ? (
+                    <h2 className="mb-4 text-xl font-bold text-gray-900">Cursuri cumpărate</h2>
+                  ) : null}
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {purchases.map((purchase, index) => {
                 const hasCourse = !!purchase?.course && !purchase?.courseMissing;
                 const course = purchase?.course || null;
                 const title = hasCourse ? course.title : t("coursesPurchasedMissingTitle");
@@ -237,7 +314,10 @@ export default function PurchasedCoursesPage() {
                   </div>
                 );
               })}
-            </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>
