@@ -37,9 +37,7 @@ export default function BundleForm({
     setForm((current) => {
       const selected = current.courseIds.includes(courseId)
         ? current.courseIds.filter((id) => id !== courseId)
-        : current.courseIds.length < 3
-        ? [...current.courseIds, courseId]
-        : current.courseIds;
+        : [...current.courseIds, courseId];
       return { ...current, courseIds: selected };
     });
     setError("");
@@ -89,8 +87,8 @@ export default function BundleForm({
       setError("Titlul și descrierea sunt obligatorii.");
       return;
     }
-    if (form.courseIds.length !== 3) {
-      setError("Selectează exact 3 cursuri.");
+    if (form.courseIds.length < 2) {
+      setError("Selectează minim 2 cursuri.");
       return;
     }
     if (!Number.isFinite(price) || price <= 0) {
@@ -211,7 +209,7 @@ export default function BundleForm({
       <div>
         <div className="flex items-center justify-between gap-3">
           <label className="text-sm font-medium text-gray-900">
-            Cursuri selectate ({form.courseIds.length}/3)
+            Cursuri selectate ({form.courseIds.length} selectate, minim 2)
           </label>
           {compositionLocked ? (
             <span className="text-xs font-medium text-amber-700">

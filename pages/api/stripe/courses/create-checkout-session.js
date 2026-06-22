@@ -328,14 +328,14 @@ export default async function handler(req, res) {
     const item = snap.data() || {};
     const bundleCourseIds =
       purchaseType === "bundle" ? normalizeBundleCourseIds(item.courseIds) : [];
-    if (purchaseType === "bundle" && bundleCourseIds.length !== 3) {
+    if (purchaseType === "bundle" && bundleCourseIds.length < 2) {
       return res.status(400).json({ error: "Course bundle is invalid" });
     }
     if (purchaseType === "bundle") {
       const visibleCourses = await loadBundleCourses(db, bundleCourseIds, "ro", {
         visibleOnly: true,
       });
-      if (visibleCourses.length !== 3) {
+      if (visibleCourses.length !== bundleCourseIds.length) {
         return res.status(400).json({
           error: "All courses in this bundle must be published",
         });

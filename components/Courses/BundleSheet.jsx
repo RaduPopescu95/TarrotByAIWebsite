@@ -29,7 +29,7 @@ export default function BundleSheet({
                 {editingBundle ? "Editează trilogia" : "Adaugă trilogie"}
               </SheetTitle>
               <SheetDescription>
-                Selectează exact trei cursuri existente și setează prețul ofertei.
+                Selectează minim două cursuri existente și setează prețul ofertei.
               </SheetDescription>
             </div>
             <Button

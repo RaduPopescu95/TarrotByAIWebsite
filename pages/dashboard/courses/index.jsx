@@ -1053,7 +1053,7 @@ export default function CoursesDashboardPage() {
                     <div>
                       <CardTitle className="text-lg">Trilogii de mini-cursuri</CardTitle>
                       <CardDescription>
-                        Fiecare ofertă conține exact 3 cursuri și are un preț unic.
+                        Fiecare ofertă conține minim 2 cursuri și are un preț unic.
                       </CardDescription>
                     </div>
                     <Button onClick={openCreateBundle} className="gap-2">

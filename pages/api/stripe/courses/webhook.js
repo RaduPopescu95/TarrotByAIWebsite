@@ -556,7 +556,7 @@ async function createCourseOblioInvoice(db, event, session) {
         name: courseTitle,
         description:
           purchaseType === "bundle"
-            ? `Acces trilogie de 3 cursuri online (${courseId})`
+            ? `Acces trilogie de ${context.courseIds?.length || ""} cursuri online (${courseId})`
             : `Acces curs online (${courseId})`,
         price: amountPaid,
         measuringUnit: "bucata",
@@ -689,7 +689,7 @@ async function processBundleCheckoutSessionEvent(db, event, session, context) {
   const courseIds = context.courseIds;
   const checkoutSessionId = sanitizeString(session?.id, 128);
 
-  if (!uid || !bundleId || courseIds.length !== 3 || !checkoutSessionId) {
+  if (!uid || !bundleId || courseIds.length < 2 || !checkoutSessionId) {
     return {
       skipped: true,
       reason: "missing_bundle_metadata",

@@ -225,7 +225,7 @@ export default function CourseBundleDetailPage() {
                   </div>
                   <div className="space-y-5 p-7">
                     <span className="inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
-                      Trilogie • 3 mini-cursuri
+                      Trilogie • {bundle.courses?.length || bundle.courseIds?.length || 0} mini-cursuri
                     </span>
                     <h1 className="text-3xl font-bold text-slate-900">{bundle.title}</h1>
                     <p className="leading-relaxed text-slate-600">{bundle.description}</p>
@@ -234,7 +234,7 @@ export default function CourseBundleDetailPage() {
                     </p>
                     {hasAccess ? (
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-800">
-                        Ai acces la toate cele trei cursuri.
+                        Ai acces la toate cursurile incluse.
                       </div>
                     ) : null}
                   </div>
@@ -243,7 +243,7 @@ export default function CourseBundleDetailPage() {
 
               <section>
                 <h2 className="mb-4 text-2xl font-bold text-slate-900">Cursurile incluse</h2>
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className={`grid gap-6 ${(bundle.courses?.length || 0) <= 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
                   {(bundle.courses || []).map((course) => (
                     <CourseCard
                       key={course.id}

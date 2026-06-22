@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     const courses = await loadBundleCourses(db, data.courseIds, locale, {
       visibleOnly: true,
     });
-    if (courses.length !== 3) {
+    if (courses.length < 2) {
       return res.status(404).json({ error: "Course bundle not available" });
     }
 

@@ -91,14 +91,14 @@ export default async function handler(req, res) {
     }
     const courseIds = normalizeBundleCourseIds(input.courseIds);
     const courses = await loadBundleCourses(db, courseIds, "ro");
-    if (courses.length !== 3) {
+    if (courses.length !== courseIds.length) {
       return res.status(400).json({ error: "All selected courses must exist" });
     }
     if (input.status === "published") {
       const visibleCourses = await loadBundleCourses(db, courseIds, "ro", {
         visibleOnly: true,
       });
-      if (visibleCourses.length !== 3) {
+      if (visibleCourses.length !== courseIds.length) {
         return res.status(400).json({
           error: "All selected courses must be published before publishing the bundle",
         });

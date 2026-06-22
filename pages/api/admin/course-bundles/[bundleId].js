@@ -90,8 +90,9 @@ export default async function handler(req, res) {
     }
 
     if (input.courseIds !== undefined) {
+      const normalizedInputIds = normalizeBundleCourseIds(input.courseIds);
       const courses = await loadBundleCourses(db, input.courseIds, "ro");
-      if (courses.length !== 3) {
+      if (courses.length !== normalizedInputIds.length) {
         return res.status(400).json({ error: "All selected courses must exist" });
       }
     }
@@ -99,10 +100,11 @@ export default async function handler(req, res) {
     const nextCourseIds =
       input.courseIds !== undefined ? input.courseIds : current.courseIds;
     if (nextStatus === "published") {
+      const normalizedNextIds = normalizeBundleCourseIds(nextCourseIds);
       const visibleCourses = await loadBundleCourses(db, nextCourseIds, "ro", {
         visibleOnly: true,
       });
-      if (visibleCourses.length !== 3) {
+      if (visibleCourses.length !== normalizedNextIds.length) {
         return res.status(400).json({
           error: "All selected courses must be published before publishing the bundle",
         });

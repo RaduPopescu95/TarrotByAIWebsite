@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         const courses = await loadBundleCourses(db, data.courseIds, locale, {
           visibleOnly: true,
         });
-        if (courses.length !== 3) return null;
+        if (courses.length < 2) return null;
         return toSafeCourseBundle(docSnap.id, data, locale, courses);
       })
     );

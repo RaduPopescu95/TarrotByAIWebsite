@@ -24,7 +24,7 @@ export default function BundleCard({ bundle, locale, onClick, labels = {} }) {
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-amber-200 to-indigo-200 text-5xl">
-            3
+            {bundle.courses?.length || bundle.courseIds?.length || ""}
           </div>
         )}
         <span className="absolute left-4 top-4 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
