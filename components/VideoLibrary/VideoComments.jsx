@@ -9,6 +9,7 @@ const PLACEHOLDER_NAMES = ["Utilizator", "Guest"];
 
 const PAGE_SIZE = 3;
 const MAX_LENGTH = 500;
+const syncedAuthorNamePerUid = new Set();
 
 function formatCommentDate(value, locale) {
   if (!value) return "";
@@ -119,6 +120,41 @@ export default function VideoComments({
   // loadComments includes cursor, but this reset must only follow identity/auth changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId, currentUser?.uid]);
+
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid || isGuestUser) return;
+    const realName =
+      typeof userData?.first_name === "string" ? userData.first_name.trim() : "";
+    if (!realName || PLACEHOLDER_NAMES.includes(realName)) return;
+    const cacheKey = `${uid}:${realName}`;
+    if (syncedAuthorNamePerUid.has(cacheKey)) return;
+    syncedAuthorNamePerUid.add(cacheKey);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const headers = await getFirebaseBearerHeader({ required: true });
+        const response = await fetch("/api/video-comments/sync-author-name", {
+          method: "POST",
+          headers: { Accept: "application/json", ...headers },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error || "sync_failed");
+        if (!cancelled && Number(data?.updated) > 0) {
+          void loadComments();
+        }
+      } catch (syncError) {
+        syncedAuthorNamePerUid.delete(cacheKey);
+        console.warn("[video-comments.sync-author-name]", syncError);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  // loadComments depends on cursor; we intentionally only re-run on identity/name changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, isGuestUser, userData?.first_name]);
 
   const redirectToLogin = useCallback(() => {
     const returnPath = router.asPath || `/videouri/${videoId}`;
