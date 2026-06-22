@@ -5,7 +5,20 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 
-const PLACEHOLDER_NAMES = ["Utilizator", "Guest"];
+const PLACEHOLDER_NAMES = ["Utilizator", "Guest", "User"];
+
+const mergeServerComment = (optimistic, serverComment) => {
+  if (!serverComment) return optimistic;
+  const localName = optimistic.authorFirstName?.trim() || "";
+  const serverName = serverComment.authorFirstName?.trim() || "";
+  const keepLocalName =
+    localName &&
+    !PLACEHOLDER_NAMES.includes(localName) &&
+    (!serverName || PLACEHOLDER_NAMES.includes(serverName));
+  return keepLocalName
+    ? { ...serverComment, authorFirstName: localName }
+    : serverComment;
+};
 
 const PAGE_SIZE = 3;
 const MAX_LENGTH = 500;
@@ -46,6 +59,8 @@ export default function VideoComments({
   const [nameValue, setNameValue] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
   const [nameCollected, setNameCollected] = useState(false);
+  const [composeVisible, setComposeVisible] = useState(false);
+  const [composeError, setComposeError] = useState("");
 
   const needsName = useMemo(() => {
     if (nameCollected) return false;
@@ -161,8 +176,23 @@ export default function VideoComments({
     router.push(`/login/videoteca?returnUrl=${encodeURIComponent(returnPath)}`);
   }, [router, videoId]);
 
-  const handleSubmit = useCallback(async (event) => {
-    event.preventDefault();
+  const openCompose = useCallback(() => {
+    if (!signedIn) {
+      redirectToLogin();
+      return;
+    }
+    if (needsName) return;
+    setComposeError("");
+    setComposeVisible(true);
+  }, [needsName, redirectToLogin, signedIn]);
+
+  const closeCompose = useCallback(() => {
+    if (submitting) return;
+    setComposeVisible(false);
+    setComposeError("");
+  }, [submitting]);
+
+  const handleSubmit = useCallback(async () => {
     if (!signedIn) {
       redirectToLogin();
       return;
@@ -183,20 +213,30 @@ export default function VideoComments({
     const previousCount = visibleCount;
     setSubmitting(true);
     setError("");
+    setComposeError("");
     setText("");
+    setComposeVisible(false);
     setComments((current) => [optimistic, ...current]);
     setVisibleCount((count) => count + 1);
     try {
       const headers = await getFirebaseBearerHeader({ required: true });
+      const sendAuthorName = PLACEHOLDER_NAMES.includes(authorFirstName)
+        ? undefined
+        : authorFirstName;
       const response = await fetch(`/api/video-comments/${encodeURIComponent(videoId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
-        body: JSON.stringify({ text: normalized }),
+        body: JSON.stringify({
+          text: normalized,
+          ...(sendAuthorName ? { authorFirstName: sendAuthorName } : {}),
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.error || "comment_create_failed");
       setComments((current) =>
-        current.map((item) => (item.id === tempId ? data.comment : item))
+        current.map((item) =>
+          item.id === tempId ? mergeServerComment(optimistic, data.comment) : item
+        )
       );
       setVisibleCount(Math.max(0, Number(data?.visibleCount) || previousCount + 1));
     } catch (submitError) {
@@ -204,7 +244,8 @@ export default function VideoComments({
       setComments((current) => current.filter((item) => item.id !== tempId));
       setVisibleCount(previousCount);
       setText(normalized);
-      setError(t("videoCommentsError"));
+      setComposeVisible(true);
+      setComposeError(t("videoCommentsError"));
     } finally {
       setSubmitting(false);
     }
@@ -267,26 +308,13 @@ export default function VideoComments({
           </div>
         </form>
       ) : signedIn ? (
-        <form onSubmit={handleSubmit} className="mt-4">
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value.slice(0, MAX_LENGTH))}
-            placeholder={t("videoCommentsPlaceholder")}
-            rows={3}
-            maxLength={MAX_LENGTH}
-            className="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <span className="text-xs text-slate-500">{text.length}/{MAX_LENGTH}</span>
-            <button
-              type="submit"
-              disabled={submitting || text.replace(/\s+/g, " ").trim().length < 2}
-              className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? t("videoCommentsSubmitting") : t("videoCommentsSubmit")}
-            </button>
-          </div>
-        </form>
+        <button
+          type="button"
+          onClick={openCompose}
+          className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+        >
+          {t("videoCommentsAdd", "Adaugă comentariu")}
+        </button>
       ) : (
         <button
           type="button"
@@ -373,6 +401,72 @@ export default function VideoComments({
         >
           {t("videoCommentsLoadMore")}
         </button>
+      ) : null}
+
+      {composeVisible ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="video-comment-compose-title"
+          onClick={closeCompose}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 id="video-comment-compose-title" className="text-lg font-semibold text-slate-900">
+                {t("videoCommentsAdd", "Adaugă comentariu")}
+              </h3>
+              <button
+                type="button"
+                onClick={closeCompose}
+                disabled={submitting}
+                className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50"
+                aria-label={t("videoCommentsCancel")}
+              >
+                ×
+              </button>
+            </div>
+
+            <textarea
+              value={text}
+              onChange={(event) => setText(event.target.value.slice(0, MAX_LENGTH))}
+              placeholder={t("videoCommentsPlaceholder")}
+              rows={4}
+              maxLength={MAX_LENGTH}
+              autoFocus
+              className="mt-4 w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-xs text-slate-500">{text.length}/{MAX_LENGTH}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeCompose}
+                  disabled={submitting}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  {t("videoCommentsCancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={submitting || text.replace(/\s+/g, " ").trim().length < 2}
+                  className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? t("videoCommentsSubmitting") : t("videoCommentsSubmit")}
+                </button>
+              </div>
+            </div>
+
+            {composeError ? (
+              <p className="mt-3 text-sm text-red-700" role="alert">{composeError}</p>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </section>
   );

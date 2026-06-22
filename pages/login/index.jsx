@@ -111,7 +111,7 @@ export default function SignInSide() {
     }
   };
 
-  const isActionLoading = isLoading || isGoogleLoading || !authBootstrapReady;
+  const isGoogleActionLoading = isGoogleLoading || !authBootstrapReady;
   const registerHref = `/register?returnUrl=${encodeURIComponent(safeReturnUrl)}`;
 
   return (
@@ -166,7 +166,7 @@ export default function SignInSide() {
                     required
                     autoComplete="email"
                     autoFocus
-                    disabled={isActionLoading}
+                    disabled={isLoading}
                     className={inputClassName}
                     placeholder="exemplu@email.com"
                   />
@@ -185,7 +185,7 @@ export default function SignInSide() {
                     name="password"
                     required
                     autoComplete="current-password"
-                    disabled={isActionLoading}
+                    disabled={isLoading}
                     className={inputClassName}
                     placeholder="••••••••"
                   />
@@ -194,7 +194,7 @@ export default function SignInSide() {
                 <button
                   type="button"
                   onClick={handleLoginAsGuest}
-                  disabled={isActionLoading}
+                  disabled={isLoading}
                   className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 bg-transparent py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {t("loginNowNoAccount")}
@@ -202,7 +202,7 @@ export default function SignInSide() {
 
                 <button
                   type="submit"
-                  disabled={isActionLoading}
+                  disabled={isLoading}
                   className="flex w-full items-center justify-center rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isLoading ? (
@@ -218,7 +218,7 @@ export default function SignInSide() {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isActionLoading}
+                  disabled={isGoogleActionLoading}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isGoogleLoading ? (

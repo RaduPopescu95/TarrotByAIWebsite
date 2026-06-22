@@ -2,7 +2,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { authentication } from "../firebase";
 import { handleGetUserInfoJobs } from "../utils/handleFirebaseQuery";
-import { signInWithGooglePopupOrRedirect, resolvePendingGoogleRedirectResult } from "../utils/googleAuthWeb";
+import { signInWithGooglePopupOrRedirect, resolvePendingGoogleRedirectResult, resetGoogleRedirectResultCache } from "../utils/googleAuthWeb";
 import { deriveNameParts, upsertGoogleUserProfile } from "../utils/googleUserProfileSync";
 
 const AuthContext = createContext();
@@ -83,6 +83,8 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(null);
       setUserData(null);
       setIsGuestUser(false);
+
+      resetGoogleRedirectResultCache();
       
       // Sign out from Firebase (if signed in)
       if (authentication.currentUser) {
@@ -91,7 +93,6 @@ export const AuthProvider = ({ children }) => {
         console.log("✅ [AUTH] Firebase sign-out successful");
       }
       
-      // 🚀 REMOVED: No more anonymous auth - just clear cache
       console.log("✅ [AUTH] Cache cleared successfully");
       
     } catch (error) {
@@ -140,6 +141,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("userData");
     localStorage.removeItem("isGuestUser");
+    resetGoogleRedirectResultCache();
     setLoading(false);
   }, []);
 

@@ -59,6 +59,7 @@ export default async function handler(req, res) {
       uid,
       decoded,
       text: body.text,
+      clientAuthorFirstName: body.authorFirstName,
       viewerPremiumActive: premiumActive,
     });
     return res.status(201).json(result);

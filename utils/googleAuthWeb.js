@@ -14,6 +14,8 @@ const POPUP_FALLBACK_CODES = new Set([
 
 let googleRedirectResultPromise = null;
 
+const REDIRECT_RESOLVE_TIMEOUT_MS = 5000;
+
 function buildProvider() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
@@ -112,7 +114,15 @@ export function resolvePendingGoogleRedirectResult(auth = authentication) {
       let result = null;
 
       try {
-        result = await getRedirectResult(auth);
+        result = await Promise.race([
+          getRedirectResult(auth),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("getRedirectResult timed out")),
+              REDIRECT_RESOLVE_TIMEOUT_MS
+            )
+          ),
+        ]);
       } catch (error) {
         redirectError = error;
         console.error("❌ [GOOGLE_AUTH] getRedirectResult threw", {
@@ -155,6 +165,14 @@ export function resolvePendingGoogleRedirectResult(auth = authentication) {
   }
 
   return googleRedirectResultPromise;
+}
+
+/**
+ * Reset the singleton so the next call to resolvePendingGoogleRedirectResult
+ * creates a fresh promise.  Call this on sign-out to avoid stale results.
+ */
+export function resetGoogleRedirectResultCache() {
+  googleRedirectResultPromise = null;
 }
 
 /** @deprecated Use resolvePendingGoogleRedirectResult */

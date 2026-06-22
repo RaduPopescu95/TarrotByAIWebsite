@@ -91,7 +91,7 @@ export default function VideotecaLoginPage() {
     }
   };
 
-  const isActionBusy = isLoading || isGoogleLoading || !authBootstrapReady;
+  const isGoogleBusy = isGoogleLoading || !authBootstrapReady;
 
   const googleBtn = t("loginGoogleButton", { defaultValue: "Continue with Google" });
   const googleLoading = t("loginGoogleLoading", { defaultValue: "Starting Google sign-in…" });
@@ -158,7 +158,7 @@ export default function VideotecaLoginPage() {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isActionBusy}
+                  disabled={isGoogleBusy}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isGoogleLoading ? (
@@ -212,7 +212,7 @@ export default function VideotecaLoginPage() {
                       required
                       autoComplete="email"
                       placeholder={t("email")}
-                      disabled={isActionBusy}
+                      disabled={isLoading}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:opacity-60"
                     />
                   </div>
@@ -227,13 +227,13 @@ export default function VideotecaLoginPage() {
                       required
                       autoComplete="current-password"
                       placeholder={t("password")}
-                      disabled={isActionBusy}
+                      disabled={isLoading}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:opacity-60"
                     />
                   </div>
                   <button
                     type="submit"
-                    disabled={isActionBusy}
+                    disabled={isLoading}
                     className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isLoading ? (
