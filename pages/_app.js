@@ -50,6 +50,10 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
       "[AfirmatiiPozitive]",
       "[NotificariManuale]",
       "[DatabaseContext]",
+      "[AUTH",
+      "[GOOGLE_AUTH]",
+      "[AUTH UTILS]",
+      "[AUTH CONTEXT]",
     ];
     const originalLog = console.log;
     const originalInfo = console.info;
