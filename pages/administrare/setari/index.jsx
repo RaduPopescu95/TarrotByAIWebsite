@@ -476,7 +476,7 @@ function SettingsScreen() {
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     {settings.mobileForceUpdateEnabled === true
-                      ? "Utilizatorii cu versiunea sub minimul setat nu pot închide modalul până fac update. Cei deja la versiunea minimă sau mai nouă nu sunt afectați."
+                      ? "Utilizatorii cu versiunea sub minimul setat pe platforma lor (iOS sau Android) nu pot închide modalul până fac update. Cei deja la versiunea minimă sau mai nouă pe platforma lor nu văd modalul."
                       : "Modalul poate rămâne soft (închidere permisă), în funcție de toggle-ul de prompt."}
                   </p>
                 </div>
@@ -518,7 +518,9 @@ function SettingsScreen() {
                 Versiuni minime necesare
               </h3>
               <p className="mt-1 text-sm text-slate-600">
-                Utilizatorii la această versiune sau mai nouă{" "}
+                Compară versiunea instalată cu minimul de pe fiecare platformă
+                (iOS folosește minim iOS, Android folosește minim Android).
+                Utilizatorii la versiunea minimă sau mai nouă pe platforma lor{" "}
                 <strong>nu</strong> văd modalul, chiar dacă force update rămâne
                 activ. Setează versiunea publicată pe App Store / Google Play
                 (ex. 2.3.0).

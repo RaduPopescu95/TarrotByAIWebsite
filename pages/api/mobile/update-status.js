@@ -34,19 +34,15 @@ export default async function handler(req, res) {
     const normalizedShow = resolved.showUpdatePrompt;
     const normalizedForce = resolved.forceUpdate;
 
-    if (normalizedForce) {
-      res.setHeader("Cache-Control", "public, max-age=60");
-    } else if (normalizedShow) {
-      res.setHeader("Cache-Control", "public, max-age=120");
-    } else {
-      res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
-    }
+    res.setHeader("Cache-Control", "private, no-store, max-age=0");
 
     return res.status(200).json({
       showUpdatePrompt: normalizedShow,
       forceUpdate: normalizedForce,
       minAppVersionIos: status.minAppVersionIos,
       minAppVersionAndroid: status.minAppVersionAndroid,
+      platform,
+      appVersion,
       source: "firestore:ShouldUpdate/unicde",
     });
   } catch (error) {

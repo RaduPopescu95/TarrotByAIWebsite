@@ -49,12 +49,14 @@ describe("/api/mobile/update-status", () => {
     await handler(req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.headers["Cache-Control"]).toBe("public, max-age=60");
+    expect(res.headers["Cache-Control"]).toBe("private, no-store, max-age=0");
     expect(res.body).toEqual({
       showUpdatePrompt: true,
       forceUpdate: true,
       minAppVersionIos: null,
       minAppVersionAndroid: null,
+      platform: null,
+      appVersion: null,
       source: "firestore:ShouldUpdate/unicde",
     });
     expect(loadMobileUpdateStatus).toHaveBeenCalledTimes(1);
@@ -80,6 +82,54 @@ describe("/api/mobile/update-status", () => {
       forceUpdate: false,
       minAppVersionIos: "2.3.0",
       minAppVersionAndroid: "2.3.0",
+      platform: "ios",
+      appVersion: "2.3.0",
+      source: "firestore:ShouldUpdate/unicde",
+    });
+  });
+
+  it("hides prompt when android app version is above minimum", async () => {
+    loadMobileUpdateStatus.mockResolvedValueOnce({
+      update: true,
+      forceUpdate: true,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+    });
+    const req = {
+      method: "GET",
+      query: { platform: "android", appVersion: "2.4.0" },
+    };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    expect(res.body.showUpdatePrompt).toBe(false);
+    expect(res.body.forceUpdate).toBe(false);
+    expect(res.headers["Cache-Control"]).toBe("private, no-store, max-age=0");
+  });
+
+  it("shows soft update when below minimum and force is off", async () => {
+    loadMobileUpdateStatus.mockResolvedValueOnce({
+      update: true,
+      forceUpdate: false,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+    });
+    const req = {
+      method: "GET",
+      query: { platform: "ios", appVersion: "2.2.9" },
+    };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    expect(res.body).toEqual({
+      showUpdatePrompt: true,
+      forceUpdate: false,
+      minAppVersionIos: "2.3.0",
+      minAppVersionAndroid: "2.3.0",
+      platform: "ios",
+      appVersion: "2.2.9",
       source: "firestore:ShouldUpdate/unicde",
     });
   });
