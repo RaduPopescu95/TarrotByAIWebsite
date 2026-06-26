@@ -59,7 +59,7 @@ describe("/api/mobile/update-status", () => {
       appVersion: null,
       source: "firestore:ShouldUpdate/unicde",
     });
-    expect(loadMobileUpdateStatus).toHaveBeenCalledTimes(1);
+    expect(loadMobileUpdateStatus).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it("filters prompt when app version meets minimum", async () => {

@@ -139,7 +139,7 @@ function SettingsScreen() {
     if (pendingMobileForceToggle === null) return;
     if (pendingMobileForceToggle && !canEnableForceUpdate()) {
       setError(
-        "Setează versiunile minime iOS și Android (ex. 2.3.0) înainte de a activa force update."
+        "Setează versiunile minime iOS și Android (ex. 4 — număr build) înainte de a activa force update."
       );
       setPendingMobileForceToggle(null);
       return;
@@ -522,8 +522,11 @@ function SettingsScreen() {
                 (iOS folosește minim iOS, Android folosește minim Android).
                 Utilizatorii la versiunea minimă sau mai nouă pe platforma lor{" "}
                 <strong>nu</strong> văd modalul, chiar dacă force update rămâne
-                activ. Setează versiunea publicată pe App Store / Google Play
-                (ex. 2.3.0).
+                activ. Setează numărul din{" "}
+                <code className="rounded bg-slate-100 px-1 text-xs">
+                  EXPO_PUBLIC_APP_UPDATE_VERSION
+                </code>{" "}
+                al build-ului publicat (ex. 4).
               </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm text-slate-700">
@@ -531,7 +534,7 @@ function SettingsScreen() {
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="2.3.0"
+                    placeholder="4"
                     value={settings.mobileMinAppVersionIos || ""}
                     onChange={(event) =>
                       handleMinVersionChange(
@@ -550,7 +553,7 @@ function SettingsScreen() {
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="2.3.0"
+                    placeholder="4"
                     value={settings.mobileMinAppVersionAndroid || ""}
                     onChange={(event) =>
                       handleMinVersionChange(

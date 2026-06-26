@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const status = await loadMobileUpdateStatus();
+    const status = await loadMobileUpdateStatus({ bypassCache: true });
     const platform = normalizeMobilePlatform(readSingleQueryValue(req.query?.platform));
     const appVersion = readSingleQueryValue(req.query?.appVersion).trim() || null;
 

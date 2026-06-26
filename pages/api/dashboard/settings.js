@@ -124,12 +124,12 @@ export default async function handler(req, res) {
     } catch (err) {
       if (err?.message === "invalid_min_app_version_ios") {
         return res.status(400).json({
-          error: "Versiunea minimă iOS este invalidă. Folosește formatul 2.3.0.",
+          error: "Versiunea minimă iOS este invalidă. Folosește un număr întreg (ex. 4).",
         });
       }
       if (err?.message === "invalid_min_app_version_android") {
         return res.status(400).json({
-          error: "Versiunea minimă Android este invalidă. Folosește formatul 2.3.0.",
+          error: "Versiunea minimă Android este invalidă. Folosește un număr întreg (ex. 4).",
         });
       }
       console.error("[dashboard/settings] POST error", err?.message || err);
