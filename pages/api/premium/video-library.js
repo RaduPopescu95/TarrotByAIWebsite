@@ -1,6 +1,6 @@
 import { normalizeLocale, readSingleQueryValue } from "../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../lib/httpCache";
-import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos } from "../../../lib/loadPremiumVideoLibrary";
+import { loadPremiumVideoLibraryRows, loadPremiumVideoLibraryVideos, loadPremiumVideoLibraryVideosByCategory, CATEGORY_VIDEOS_INITIAL_LIMIT, CATEGORY_VIDEOS_LOAD_MORE_LIMIT } from "../../../lib/loadPremiumVideoLibrary";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { getNextVideoTransitionAtMs } from "../../../lib/videoReleaseSchedule";
 import {
@@ -44,6 +44,28 @@ async function handler(req, res) {
     const webClient =
       typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
 
+    const categorySlugRaw = readSingleQueryValue(req.query.categorySlug);
+    const categoryNameRaw = readSingleQueryValue(req.query.category);
+    const categorySlug =
+      typeof categorySlugRaw === "string" && categorySlugRaw.trim()
+        ? categorySlugRaw.trim().toLowerCase()
+        : null;
+    const categoryName =
+      typeof categoryNameRaw === "string" && categoryNameRaw.trim()
+        ? categoryNameRaw.trim()
+        : null;
+    const categoryFilterActive = Boolean(categorySlug || categoryName);
+
+    const cursorRaw = readSingleQueryValue(req.query.cursor);
+    const cursor =
+      typeof cursorRaw === "string" && cursorRaw.trim() ? cursorRaw.trim() : null;
+
+    const limitRaw = readSingleQueryValue(req.query.limit);
+    const parsedLimit = Number.parseInt(String(limitRaw || ""), 10);
+    const defaultCategoryLimit = cursor ? CATEGORY_VIDEOS_LOAD_MORE_LIMIT : CATEGORY_VIDEOS_INITIAL_LIMIT;
+    const categoryLimit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : defaultCategoryLimit;
+
     const hasAuthHeader =
       typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
     const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
@@ -72,15 +94,28 @@ async function handler(req, res) {
       }
     }
 
-    const [videos, rowsForMeta] = await Promise.all([
-      loadPremiumVideoLibraryVideos({
-        locale,
-        premiumActive,
-        premiumSpotlightOnly,
-        webClient,
-      }),
+    const [videosResult, rowsForMeta] = await Promise.all([
+      categoryFilterActive
+        ? loadPremiumVideoLibraryVideosByCategory({
+            locale,
+            premiumActive,
+            premiumSpotlightOnly,
+            webClient,
+            categorySlug,
+            categoryName,
+            limit: categoryLimit,
+            cursor,
+          })
+        : loadPremiumVideoLibraryVideos({
+            locale,
+            premiumActive,
+            premiumSpotlightOnly,
+            webClient,
+          }).then((videos) => ({ videos, nextCursor: null, hasMore: false, totalCount: videos.length })),
       loadPremiumVideoLibraryRows(),
     ]);
+
+    const videos = videosResult.videos;
 
     const nowMs = Date.now();
     let cacheMeta = { cacheTtlSec: 0 };
@@ -125,6 +160,15 @@ async function handler(req, res) {
       generatedAt: new Date(nowMs).toISOString(),
       cacheTtlSec: cacheMeta.cacheTtlSec,
       requestId,
+      ...(categoryFilterActive
+        ? {
+            nextCursor: videosResult.nextCursor,
+            hasMore: videosResult.hasMore,
+            totalCount: videosResult.totalCount,
+            categorySlug,
+            category: categoryName,
+          }
+        : {}),
       accessDebug: uid
         ? buildClientAccessDebug(accessExplain, {
             userDocExists,

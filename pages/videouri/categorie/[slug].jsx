@@ -17,7 +17,6 @@ import GoogleAdSenseBanner from "../../../components/Ads/GoogleAdSenseBanner";
 import VideoLibraryFiltersToolbar from "../../../components/VideoLibrary/VideoLibraryFiltersToolbar";
 import { buildVideoLibraryCategoryNavItems } from "../../../lib/videoLibraryCategoryNav";
 import { loadVideoCategories } from "../../../lib/mobilePublicData";
-import { slugify } from "../../../lib/slugify";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.cristinazurba.com";
 const SOCIAL_IMAGE = `${SITE_URL}/images/social-share.jpg`;
@@ -75,10 +74,11 @@ function formatDuration(seconds, fallback) {
 }
 
 const skeletonBg = "bg-skeleton-shine bg-[length:200%_100%] animate-skeleton-shine";
-const VIDEO_LIBRARY_PAGE_SIZE = 15;
+const CATEGORY_VIDEOS_INITIAL_LIMIT = 4;
+const CATEGORY_VIDEOS_LOAD_MORE_LIMIT = 2;
 
 function VideoLibrarySkeletonGrid({ loadingLabel }) {
-  const placeholders = Array.from({ length: VIDEO_LIBRARY_PAGE_SIZE }, (_, i) => `sk-${i}`);
+  const placeholders = Array.from({ length: CATEGORY_VIDEOS_INITIAL_LIMIT }, (_, i) => `sk-${i}`);
   return (
     <div
       className="mx-auto grid w-full max-w-[1920px] grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -178,10 +178,15 @@ export default function VideoCategoryPage({ category }) {
   const [videos, setVideos] = useState([]);
   const [categoryDocs, setCategoryDocs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [accessFilter, setAccessFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [paginationPage, setPaginationPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const loadMoreRef = useRef(null);
+  const loadingMoreRef = useRef(false);
   const listTopRef = useRef(null);
 
   const categoryName = category?.name || "";
@@ -192,20 +197,22 @@ export default function VideoCategoryPage({ category }) {
   const pageDesc = `${t("videoCategoryMetaDesc")} ${localizedCategoryName}`;
   const shareMsg = t("shareCategoryMessage").replace("{category}", localizedCategoryName);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const fetchCategoryPage = useCallback(
+    async ({ cursor = null, limit = CATEGORY_VIDEOS_INITIAL_LIMIT, append = false } = {}) => {
       const locale = router.locale || "ro";
-      const [res, categoriesRes] = await Promise.all([
-        fetch(
-          `/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`,
-          { headers: { Accept: "application/json" } }
-        ),
-        fetch("/api/public/video-categories", {
-          headers: { Accept: "application/json" },
-        }).catch(() => null),
-      ]);
+      const params = new URLSearchParams({
+        locale,
+        client: "web",
+        categorySlug,
+        limit: String(limit),
+      });
+      if (cursor) {
+        params.set("cursor", cursor);
+      }
+
+      const res = await fetch(`/api/premium/video-library?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+      });
       const requestId = res.headers.get("x-request-id");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -213,26 +220,81 @@ export default function VideoCategoryPage({ category }) {
         err.requestId = data?.requestId || requestId || null;
         throw err;
       }
+
+      const pageVideos = Array.isArray(data?.videos) ? data.videos : [];
+      setVideos((current) => {
+        if (!append) {
+          return pageVideos;
+        }
+        const seen = new Set(current.map((video) => video.id));
+        const merged = [...current];
+        pageVideos.forEach((video) => {
+          if (!seen.has(video.id)) {
+            merged.push(video);
+          }
+        });
+        return merged;
+      });
+      setNextCursor(typeof data?.nextCursor === "string" ? data.nextCursor : null);
+      setHasMore(data?.hasMore === true);
+      setTotalCount(
+        typeof data?.totalCount === "number" && Number.isFinite(data.totalCount)
+          ? data.totalCount
+          : pageVideos.length
+      );
+    },
+    [categorySlug, router.locale]
+  );
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const categoriesRes = await fetch("/api/public/video-categories", {
+        headers: { Accept: "application/json" },
+      }).catch(() => null);
       if (categoriesRes?.ok) {
         const categoriesData = await categoriesRes.json().catch(() => ({}));
         setCategoryDocs(Array.isArray(categoriesData?.categories) ? categoriesData.categories : []);
       } else {
         setCategoryDocs([]);
       }
-      const allVideos = Array.isArray(data?.videos) ? data.videos : [];
-      const categoryVideos = allVideos.filter((v) => {
-        const cat = typeof v.category === "string" ? v.category.trim() : "";
-        return cat === categoryName || (categorySlug && slugify(cat) === categorySlug);
+      await fetchCategoryPage({
+        cursor: null,
+        limit: CATEGORY_VIDEOS_INITIAL_LIMIT,
+        append: false,
       });
-      setVideos(categoryVideos);
     } catch (e) {
       const requestLabel = e?.requestId ? ` (ref: ${e.requestId})` : "";
       setError(`${t("videoLibraryLoadError")}${requestLabel}`);
       setVideos([]);
+      setNextCursor(null);
+      setHasMore(false);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [router.locale, t, categoryName, categorySlug]);
+  }, [fetchCategoryPage, t]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loading || loadingMoreRef.current || !nextCursor) {
+      return;
+    }
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      await fetchCategoryPage({
+        cursor: nextCursor,
+        limit: CATEGORY_VIDEOS_LOAD_MORE_LIMIT,
+        append: true,
+      });
+    } catch (e) {
+      console.error("[videouri/categorie] loadMore failed", e);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [fetchCategoryPage, hasMore, loading, nextCursor]);
 
   useEffect(() => {
     if (categoryName) {
@@ -262,33 +324,27 @@ export default function VideoCategoryPage({ category }) {
     });
   }, [accessFilteredVideos, normalizedSearch]);
 
-  const filteredTotal = filteredVideos.length;
-  const totalPages = Math.max(1, Math.ceil(filteredTotal / VIDEO_LIBRARY_PAGE_SIZE));
+  const loadedCount = filteredVideos.length;
 
   useEffect(() => {
-    setPaginationPage(1);
-  }, [normalizedSearch, accessFilter]);
-
-  useEffect(() => {
-    setPaginationPage((p) => Math.min(Math.max(1, p), totalPages));
-  }, [totalPages, filteredTotal]);
-
-  const paginationPageSafe = Math.min(Math.max(1, paginationPage), totalPages);
-
-  const paginatedVideos = useMemo(() => {
-    const start = (paginationPageSafe - 1) * VIDEO_LIBRARY_PAGE_SIZE;
-    return filteredVideos.slice(start, start + VIDEO_LIBRARY_PAGE_SIZE);
-  }, [filteredVideos, paginationPageSafe]);
-
-  const showPagination = filteredTotal > VIDEO_LIBRARY_PAGE_SIZE;
-  const rangeFrom = filteredTotal === 0 ? 0 : (paginationPageSafe - 1) * VIDEO_LIBRARY_PAGE_SIZE + 1;
-  const rangeTo = filteredTotal === 0 ? 0 : Math.min(paginationPageSafe * VIDEO_LIBRARY_PAGE_SIZE, filteredTotal);
-
-  const scrollListTop = useCallback(() => {
-    const el = listTopRef.current;
-    if (!el || typeof el.scrollIntoView !== "function") return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+    if (!hasMore || loading || loadingMore || normalizedSearch) {
+      return undefined;
+    }
+    const node = loadMoreRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMore();
+        }
+      },
+      { rootMargin: "240px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, loading, loadingMore, normalizedSearch]);
 
   const gridClass = "mx-auto grid w-full max-w-[1920px] grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
@@ -413,9 +469,20 @@ export default function VideoCategoryPage({ category }) {
               ) : (
                 <>
                   <div className="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-6 lg:mb-7">
-                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                      {localizedCategoryName}
-                    </h1>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                        {localizedCategoryName}
+                      </h1>
+                      {totalCount > 0 ? (
+                        <p className="text-sm tabular-nums text-slate-600">
+                          {t("videoLibraryPaginationRange", {
+                            from: loadedCount > 0 ? 1 : 0,
+                            to: loadedCount,
+                            total: totalCount,
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
                     {filtersToolbar}
                   </div>
                   <CategoryAdBanner />
@@ -427,7 +494,7 @@ export default function VideoCategoryPage({ category }) {
                     <>
                       <div ref={listTopRef} className="-mt-px h-px w-px shrink-0 scroll-mt-28" aria-hidden />
                       <div className={gridClass}>
-                        {paginatedVideos.map((v) => {
+                        {filteredVideos.map((v) => {
                           const durationLabel =
                             typeof v.durationSeconds === "number"
                               ? formatDuration(v.durationSeconds, "")
@@ -543,40 +610,13 @@ export default function VideoCategoryPage({ category }) {
                           );
                         })}
                       </div>
-                      {showPagination && (
-                        <nav
-                          aria-label={t("videoLibraryPaginationAria", { current: paginationPageSafe, total: totalPages })}
-                          className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-8 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <p className="text-sm tabular-nums text-slate-600">
-                            {t("videoLibraryPaginationRange", { from: rangeFrom, to: rangeTo, total: filteredTotal })}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={paginationPageSafe <= 1}
-                              onClick={() => {
-                                setPaginationPage((p) => Math.max(1, p - 1));
-                                requestAnimationFrame(() => scrollListTop());
-                              }}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {t("videoLibraryPaginationPrev")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={paginationPageSafe >= totalPages}
-                              onClick={() => {
-                                setPaginationPage((p) => Math.min(totalPages, p + 1));
-                                requestAnimationFrame(() => scrollListTop());
-                              }}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {t("videoLibraryPaginationNext")}
-                            </button>
-                          </div>
-                        </nav>
-                      )}
+                      {!normalizedSearch && hasMore ? (
+                        <div ref={loadMoreRef} className="mt-8 flex justify-center py-4" aria-hidden={!loadingMore}>
+                          {loadingMore ? (
+                            <p className="text-sm text-slate-600">{t("videoLibraryLoading")}</p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </>
                   )}
                 </>
