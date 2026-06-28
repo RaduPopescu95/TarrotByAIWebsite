@@ -24,6 +24,7 @@ import type {
 } from "../types/video";
 import { sortVideos } from "../utils/videoSorting";
 import { resolveVideoNotificationAt } from "../../../../lib/videoReleaseSchedule";
+import { normalizeVideoChapters } from "../../../../lib/videoChapters";
 
 const COLLECTION_NAME = "videosVideoModule";
 const CATEGORY_COLLECTION_NAME = "videoCategories";
@@ -247,6 +248,7 @@ export async function createVideo(input: VideoCreateInput): Promise<VideoDoc> {
   const notificationAt = resolveVideoNotificationAt(input);
   const payload = {
     ...input,
+    chapters: normalizeVideoChapters(input.chapters, { locale: "ro", includeLocales: true }),
     isPublished,
     notificationAt,
     notificationState:
@@ -282,6 +284,9 @@ export async function updateVideo(id: string, data: VideoUpdateInput): Promise<v
   }
   const updatePayload: Record<string, unknown> = {
     ...data,
+    ...(hasOwn(data, "chapters")
+      ? { chapters: normalizeVideoChapters(data.chapters, { locale: "ro", includeLocales: true }) }
+      : {}),
     notificationAt,
     updatedAt: serverTimestamp(),
   };

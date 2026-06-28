@@ -1,11 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import type { VideoCreateInput, VideoDoc, VideoLocales, VideoPlatform } from "../types/video";
-import { validateVideoInput, type VideoValidationErrors } from "../utils/videoValidation";
+import {
+  RO_VIDEO_URL_REQUIRED_MESSAGE,
+  validateVideoInput,
+  type VideoValidationErrors,
+} from "../utils/videoValidation";
 import { listVideoCategories } from "../services/videos.service";
 import { LANGUAGE_LABELS } from "../../../../data/constants";
 import { gTranslateFetch } from "../../../../utils/apiUtils";
-import { deriveRootVideoUrlFromLocales, hasAnyLocalizedVideoUrl } from "../../../../lib/videoLibraryPublic";
+import {
+  deriveRootVideoUrlFromLocales,
+  hasAnyLocalizedVideoUrl,
+  resolveLibraryEmbedSrc,
+} from "../../../../lib/videoLibraryPublic";
 import { SITE_LOCALES } from "../utils/siteLocales";
 import { mergeLocalesWithVideoUrls, siteLocalesRootPreferredOrder } from "../utils/localeVideoMerge";
 import { sortLocalesForVideoAdmin } from "../utils/videoAdminLocaleOrder";
@@ -18,6 +26,11 @@ import {
   VIDEO_ACCESS_MODE_PREMIUM,
   VIDEO_RELEASE_TIMEZONE,
 } from "../../../../lib/videoReleaseSchedule";
+import {
+  formatChapterTime,
+  normalizeVideoChapters,
+  parseChapterTime,
+} from "../../../../lib/videoChapters";
 
 type Props = {
   initialValue?: VideoDoc | null;
@@ -47,6 +60,67 @@ const platformOptions: Array<{ value: VideoPlatform; label: string }> = [
   { value: "bunny", label: "Bunny Stream" },
 ];
 
+type ChapterDraft = {
+  id: string;
+  title: string;
+  titles: Record<string, string>;
+  startInput: string;
+  endInput: string;
+};
+
+function buildChapterDrafts(chapters: unknown): ChapterDraft[] {
+  return normalizeVideoChapters(chapters, { locale: "ro", includeLocales: true }).map(
+    (chapter: any, index: number) => {
+      const titles: Record<string, string> = {};
+      if (chapter.locales && typeof chapter.locales === "object") {
+        for (const [locale, entry] of Object.entries(chapter.locales)) {
+          const title =
+            entry && typeof entry === "object" && typeof (entry as any).title === "string"
+              ? (entry as any).title.trim()
+              : "";
+          if (title) titles[locale] = title;
+        }
+      }
+      const title = chapter.title || titles.ro || "";
+      if (title && !titles.ro) titles.ro = title;
+      return {
+        id: `${Date.now()}-${index}-${chapter.startSeconds}`,
+        title,
+        titles,
+        startInput: formatChapterTime(chapter.startSeconds),
+        endInput:
+          typeof chapter.endSeconds === "number" ? formatChapterTime(chapter.endSeconds) : "",
+      };
+    }
+  );
+}
+
+function buildChaptersFromDrafts(drafts: ChapterDraft[]) {
+  return drafts
+    .map((draft) => {
+      const titles: Record<string, string> = {};
+      for (const [locale, value] of Object.entries(draft.titles || {})) {
+        const title = value.trim();
+        if (title) titles[locale] = title;
+      }
+      const title = (titles.ro || draft.title || "").trim();
+      const startSeconds = parseChapterTime(draft.startInput);
+      const endSeconds = draft.endInput.trim() ? parseChapterTime(draft.endInput) : null;
+      if (!title || startSeconds == null) return null;
+      if (!titles.ro) titles.ro = title;
+      return {
+        title,
+        startSeconds,
+        endSeconds,
+        locales: Object.fromEntries(
+          Object.entries(titles).map(([locale, localeTitle]) => [locale, { title: localeTitle }])
+        ),
+      };
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => a.startSeconds - b.startSeconds);
+}
+
 export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const isEditing = !!initialValue;
   const [form, setForm] = useState<VideoCreateInput>({
@@ -69,6 +143,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [locales, setLocales] = useState<VideoLocales | undefined>(initialValue?.locales);
+  const [chapterDrafts, setChapterDrafts] = useState<ChapterDraft[]>(() =>
+    buildChapterDrafts(initialValue?.chapters)
+  );
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateMessage, setTranslateMessage] = useState("");
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
@@ -76,7 +153,18 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [publishAtInput, setPublishAtInput] = useState("");
   const [publicReleaseDateInput, setPublicReleaseDateInput] = useState("");
   const [accessMode, setAccessMode] = useState<string>(VIDEO_ACCESS_MODE_PREMIUM);
+  const roCardRef = useRef<HTMLDivElement>(null);
   const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
+  const chapterLocaleIds = useMemo(() => {
+    const ids = new Set<string>(["ro"]);
+    if (locales && typeof locales === "object") {
+      Object.keys(locales).forEach((locale) => ids.add(locale));
+    }
+    Object.entries(localeVideoUrls).forEach(([locale, value]) => {
+      if (value.trim()) ids.add(locale);
+    });
+    return sortLocalesForVideoAdmin(Array.from(ids));
+  }, [localeVideoUrls, locales]);
 
   const hasLocalePreview = Boolean(locales && Object.keys(locales).length > 0);
 
@@ -130,7 +218,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         featuredOnHome: initialValue.featuredOnHome === true,
         publishAt: initialValue.publishAt ?? null,
         publicReleaseAt: initialValue.publicReleaseAt ?? null,
+        chapters: initialValue.chapters ?? [],
       });
+      setChapterDrafts(buildChapterDrafts(initialValue.chapters));
       setAccessMode(resolveVideoAccessMode(initialValue));
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(initialValue));
       setErrors({});
@@ -157,7 +247,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         featuredOnHome: false,
         publishAt: null,
         publicReleaseAt: null,
+        chapters: [],
       });
+      setChapterDrafts([]);
       setAccessMode(VIDEO_ACCESS_MODE_PREMIUM);
       setPublicReleaseDateInput("");
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(null));
@@ -284,11 +376,128 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const buildMergedLocales = (localesDraft?: VideoLocales) =>
     mergeLocalesWithVideoUrls(localesDraft, localeVideoUrls, SITE_LOCALES, form.title.trim());
 
+  const buildValidationInput = (
+    mergedLocales: VideoLocales,
+    denormUrl: string
+  ): VideoCreateInput => ({
+    ...form,
+    isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
+    publicReleaseAt:
+      accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
+    videoUrl: denormUrl || "",
+    locales: mergedLocales,
+    chapters: buildChaptersFromDrafts(chapterDrafts),
+    thumbnailUrl:
+      form.platform === "bunny"
+        ? typeof form.thumbnailUrl === "string"
+          ? form.thumbnailUrl.trim()
+          : ""
+        : "",
+  });
+
+  const runFormValidation = (
+    mergedLocales: VideoLocales,
+    denormUrl: string
+  ): VideoValidationErrors => {
+    const validation = validateVideoInput(buildValidationInput(mergedLocales, denormUrl));
+    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
+      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
+    }
+    return validation;
+  };
+
+  const applyValidationResult = (validation: VideoValidationErrors): boolean => {
+    setErrors(validation);
+    if (Object.keys(validation).length === 0) {
+      return true;
+    }
+    if (validation.localeVideos?.ro) {
+      roCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    return false;
+  };
+
+  const handleLocaleVideoUrlChange = (lc: string, value: string) => {
+    setLocaleVideoUrls((prev) => ({
+      ...prev,
+      [lc]: value,
+    }));
+    if (lc !== "ro") return;
+    const platform =
+      form.platform === "bunny" || form.platform === "vimeo" || form.platform === "youtube"
+        ? form.platform
+        : "youtube";
+    const trimmed = value.trim();
+    if (!trimmed || !resolveLibraryEmbedSrc(platform, trimmed)) {
+      return;
+    }
+    setErrors((prev) => {
+      if (!prev.localeVideos?.ro && prev.localizedVideo !== RO_VIDEO_URL_REQUIRED_MESSAGE) {
+        return prev;
+      }
+      const next: VideoValidationErrors = { ...prev };
+      if (next.localeVideos?.ro) {
+        const localeVideos = { ...next.localeVideos };
+        delete localeVideos.ro;
+        next.localeVideos = Object.keys(localeVideos).length > 0 ? localeVideos : undefined;
+      }
+      if (
+        next.localizedVideo === RO_VIDEO_URL_REQUIRED_MESSAGE ||
+        next.localizedVideo?.includes("RO")
+      ) {
+        delete next.localizedVideo;
+      }
+      return next;
+    });
+  };
+
+  const handleAddChapter = () => {
+    setChapterDrafts((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${prev.length}`,
+        title: "",
+        titles: { ro: "" },
+        startInput: prev.length === 0 ? "0:00" : "",
+        endInput: "",
+      },
+    ]);
+  };
+
+  const handleChapterChange = (
+    id: string,
+    key: keyof Omit<ChapterDraft, "id">,
+    value: string
+  ) => {
+    setChapterDrafts((prev) =>
+      prev.map((chapter) => (chapter.id === id ? { ...chapter, [key]: value } : chapter))
+    );
+  };
+
+  const handleRemoveChapter = (id: string) => {
+    setChapterDrafts((prev) => prev.filter((chapter) => chapter.id !== id));
+  };
+
+  const handleChapterTitleChange = (id: string, locale: string, value: string) => {
+    setChapterDrafts((prev) =>
+      prev.map((chapter) => {
+        if (chapter.id !== id) return chapter;
+        const titles = { ...(chapter.titles || {}), [locale]: value };
+        return {
+          ...chapter,
+          titles,
+          title: locale === "ro" ? value : chapter.title,
+        };
+      })
+    );
+  };
+
   const submitForm = async (localesToSubmit?: VideoLocales) => {
     setSubmitting(true);
     try {
       const mergedLocales = buildMergedLocales(localesToSubmit);
       const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
+      const chapters = buildChaptersFromDrafts(chapterDrafts);
 
       console.log("[VideoForm] Submitting payload", {
         ...form,
@@ -306,6 +515,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         thumbnailUrl:
           form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
         locales: mergedLocales,
+        chapters,
       });
       console.log("[VideoForm] Submit resolved");
     } catch (error) {
@@ -337,22 +547,8 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     }
     const mergedLocales = mergeLocalesWithVideoUrls(baseBare, localeVideoUrls, SITE_LOCALES, form.title.trim());
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
-    const validation = validateVideoInput({
-      ...form,
-      isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
-      publicReleaseAt:
-        accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
-      videoUrl: denormUrl || "",
-      locales: mergedLocales,
-      thumbnailUrl:
-        form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
-    });
-    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
-      validation.publicReleaseAt =
-        "Alege data publicării generale la ora 18:00.";
-    }
-    setErrors(validation);
-    if (Object.keys(validation).length > 0) return;
+    const validation = runFormValidation(mergedLocales, denormUrl);
+    if (!applyValidationResult(validation)) return;
     setLocales(baseBare);
     await submitForm(baseBare);
   };
@@ -368,21 +564,13 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     const mergedLocales = buildMergedLocales(locales);
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
     const validation = validateVideoInput({
-      ...form,
-      isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
-      publicReleaseAt:
-        accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
-      videoUrl: denormUrl || "",
-      locales: mergedLocales,
-      thumbnailUrl:
-        form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
+      ...buildValidationInput(mergedLocales, denormUrl),
+      chapters: buildChaptersFromDrafts(chapterDrafts),
     });
     if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
-      validation.publicReleaseAt =
-        "Alege data publicării generale la ora 18:00.";
+      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
     }
-    setErrors(validation);
-    if (Object.keys(validation).length > 0) {
+    if (!applyValidationResult(validation)) {
       console.warn("[VideoForm] Validation failed", validation);
       return;
     }
@@ -558,6 +746,104 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
             </div>
           ) : null}
 
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <label className="text-sm font-semibold text-gray-800">Capitole video</label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Timpi acceptați: secunde, mm:ss sau hh:mm:ss. Click-ul pe capitol va face seek în playerul Bunny.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddChapter}
+                disabled={uiLocked}
+                className="rounded-lg border border-blue-600 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                + Capitol
+              </button>
+            </div>
+            {errors.chapters ? (
+              <p className="mt-2 text-xs font-medium text-red-600">{errors.chapters}</p>
+            ) : null}
+            <div className="mt-3 space-y-3">
+              {chapterDrafts.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                  Nu există capitole setate pentru acest video.
+                </p>
+              ) : (
+                chapterDrafts.map((chapter, index) => (
+                  <div
+                    key={chapter.id}
+                    className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-[90px_90px_1fr_auto]"
+                  >
+                    <div>
+                      <label className="text-[11px] font-semibold uppercase text-gray-500">
+                        Start
+                      </label>
+                      <input
+                        value={chapter.startInput}
+                        onChange={(e) =>
+                          handleChapterChange(chapter.id, "startInput", e.target.value)
+                        }
+                        disabled={uiLocked}
+                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
+                        placeholder={index === 0 ? "0:00" : "mm:ss"}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold uppercase text-gray-500">
+                        Final
+                      </label>
+                      <input
+                        value={chapter.endInput}
+                        onChange={(e) =>
+                          handleChapterChange(chapter.id, "endInput", e.target.value)
+                        }
+                        disabled={uiLocked}
+                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
+                        placeholder="opțional"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold uppercase text-gray-500">
+                        Titluri
+                      </label>
+                      <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {chapterLocaleIds.map((locale) => (
+                          <label key={locale} className="block">
+                            <span className="mb-1 block text-[10px] font-semibold uppercase text-gray-400">
+                              {LANGUAGE_LABELS[locale]?.denumire || locale.toUpperCase()}
+                            </span>
+                            <input
+                              value={chapter.titles?.[locale] ?? (locale === "ro" ? chapter.title : "")}
+                              onChange={(e) =>
+                                handleChapterTitleChange(chapter.id, locale, e.target.value)
+                              }
+                              disabled={uiLocked}
+                              className="w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
+                              placeholder={locale === "ro" ? "Ex. Introducere" : "Titlu localizat"}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveChapter(chapter.id)}
+                        disabled={uiLocked}
+                        className="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           <div className="flex min-h-0 flex-1 flex-col lg:min-h-[280px]">
             <label className="text-sm font-medium text-gray-700">Descriere</label>
             <textarea
@@ -722,35 +1008,66 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
                 const lbl =
                   (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??
                   lc.toUpperCase();
+                const isRo = lc === "ro";
+                const hasLink = Boolean(localeVideoUrls[lc]?.trim());
                 const rowErr = errors.localeVideos?.[lc];
+                const roMissing = isRo && !hasLink;
                 return (
-                  <div key={lc} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+                  <div
+                    key={lc}
+                    ref={isRo ? roCardRef : undefined}
+                    className={`rounded-md border bg-white p-4 shadow-sm ${
+                      isRo
+                        ? rowErr
+                          ? "border-red-300 ring-1 ring-red-100"
+                          : roMissing
+                            ? "border-amber-300 ring-1 ring-amber-100"
+                            : "border-emerald-200"
+                        : "border-gray-200"
+                    }`}
+                  >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <label className="text-sm font-semibold text-gray-700">
                         {lbl}{" "}
                         <span className="font-mono text-xs font-normal text-gray-500">({lc})</span>
                       </label>
                       <span
-                        className={`text-xs font-medium ${localeVideoUrls[lc]?.trim() ? "text-emerald-600" : "text-gray-400"}`}
+                        className={`text-xs font-medium ${
+                          hasLink
+                            ? "text-emerald-600"
+                            : isRo
+                              ? "text-amber-700"
+                              : "text-gray-400"
+                        }`}
                       >
-                        {localeVideoUrls[lc]?.trim() ? "link setat" : "opțional · lipsește"}
+                        {hasLink
+                          ? "link setat"
+                          : isRo
+                            ? "obligatoriu · lipsește"
+                            : "opțional · lipsește"}
                       </span>
                     </div>
+                    {isRo && roMissing && !rowErr ? (
+                      <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        {RO_VIDEO_URL_REQUIRED_MESSAGE}
+                      </p>
+                    ) : null}
                     <input
                       value={localeVideoUrls[lc] ?? ""}
-                      onChange={(e) =>
-                        setLocaleVideoUrls((prev) => ({
-                          ...prev,
-                          [lc]: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => handleLocaleVideoUrlChange(lc, e.target.value)}
                       disabled={uiLocked}
                       className={`mt-2.5 w-full rounded-md border px-3 py-3 text-sm text-gray-900 shadow-inner focus:outline-none focus:ring-2 ${
                         rowErr
                           ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
+                          : isRo && roMissing
+                            ? "border-amber-300 focus:border-amber-500 focus:ring-amber-500/20"
+                            : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
                       } disabled:bg-gray-50 disabled:text-gray-500`}
-                      placeholder={`URL sau id clip — ${lc}`}
+                      placeholder={
+                        isRo
+                          ? "URL Bunny obligatoriu — ro (ex. player.mediadelivery.net/...)"
+                          : `URL sau id clip — ${lc}`
+                      }
                       autoComplete="off"
                     />
                     {rowErr ? <p className="mt-1.5 text-xs text-red-600">{rowErr}</p> : null}

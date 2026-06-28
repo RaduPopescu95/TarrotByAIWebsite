@@ -101,6 +101,7 @@
     "get-stream": "^9.0.1",
     "googleapis": "^146.0.0",
     "graceful-fs": "^4.2.11",
+    "hls.js": "^1.6.16",
     "i18next": "^23.7.16",
     "jotai": "^2.13.0",
     "jquery": "^3.7.1",

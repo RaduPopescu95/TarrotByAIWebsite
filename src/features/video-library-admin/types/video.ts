@@ -11,6 +11,13 @@ export type VideoLocaleFields = {
 };
 
 export type VideoLocales = Record<string, VideoLocaleFields>;
+export type VideoChapterLocales = Record<string, { title: string }>;
+export type VideoChapter = {
+  startSeconds: number;
+  endSeconds?: number | null;
+  title?: string;
+  locales?: VideoChapterLocales;
+};
 export type VideoCategoryLocales = Record<string, string>;
 export type VideoSortField =
   | "createdAt"
@@ -43,6 +50,7 @@ export type VideoDoc = {
   isPremium?: boolean;
   order?: number | null;
   durationSeconds?: number | null;
+  chapters?: VideoChapter[];
   locales?: VideoLocales;
   featuredOnHome?: boolean;
 };
@@ -70,6 +78,7 @@ export type VideoCreateInput = {
   isPremium?: boolean;
   order?: number;
   durationSeconds?: number;
+  chapters?: VideoChapter[];
   locales?: VideoLocales;
   featuredOnHome?: boolean;
 };

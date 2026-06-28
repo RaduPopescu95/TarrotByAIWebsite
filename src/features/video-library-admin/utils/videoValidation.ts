@@ -1,5 +1,12 @@
-import { resolveLibraryEmbedSrc } from "../../../../lib/videoLibraryPublic";
+import {
+  hasAnyLocalizedVideoUrl,
+  resolveLibraryEmbedSrc,
+} from "../../../../lib/videoLibraryPublic";
+import { validateVideoChapters } from "../../../../lib/videoChapters";
 import type { VideoCreateInput } from "../types/video";
+
+export const RO_VIDEO_URL_REQUIRED_MESSAGE =
+  "Linkul video RO este obligatoriu — fără el videoclipul nu apare în app și pe site.";
 
 export type VideoValidationErrors = {
   title?: string;
@@ -9,6 +16,7 @@ export type VideoValidationErrors = {
   thumbnailUrl?: string;
   isPublished?: string;
   publicReleaseAt?: string;
+  chapters?: string;
 };
 
 const toMillis = (value: unknown): number | null => {
@@ -29,6 +37,16 @@ function embedHintForPlatform(platform: string | undefined): string {
     return "Introdu link play/embed Bunny (player.mediadelivery.net), bibliotecă/id-video sau UUID video dacă NEXT_PUBLIC_BUNNY_STREAM_LIBRARY_ID e setat în mediu.";
   }
   return "Link invalid pentru platforma aleasă.";
+}
+
+/** Mirrors `resolveRowVideoSource(row, "ro")` used by the public video library API. */
+export function resolveRoVideoUrlForValidation(input: VideoCreateInput): string {
+  const root = typeof input.videoUrl === "string" ? input.videoUrl.trim() : "";
+  if (!hasAnyLocalizedVideoUrl(input)) {
+    return root;
+  }
+  const roBlob = input.locales?.ro;
+  return typeof roBlob?.videoUrl === "string" ? roBlob.videoUrl.trim() : "";
 }
 
 export function validateVideoInput(input: VideoCreateInput): VideoValidationErrors {
@@ -69,6 +87,22 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
     }
   }
 
+  const localeVideos: Partial<Record<string, string>> = {};
+  const roUrl = resolveRoVideoUrlForValidation(input);
+  if (!roUrl) {
+    localeVideos.ro = RO_VIDEO_URL_REQUIRED_MESSAGE;
+    errors.localizedVideo = RO_VIDEO_URL_REQUIRED_MESSAGE;
+  } else {
+    const roEmbed = resolveLibraryEmbedSrc(platform, roUrl);
+    if (!roEmbed) {
+      localeVideos.ro = embedHintForPlatform(platform);
+      errors.localizedVideo =
+        platform === "bunny"
+          ? "Linkul Bunny pentru RO este invalid. Verifică câmpul marcat mai jos."
+          : "Linkul video pentru RO este invalid. Verifică câmpul marcat mai jos.";
+    }
+  }
+
   const pairs: Array<{ lc: string; url: string }> = [];
   if (input.locales && typeof input.locales === "object") {
     for (const [lc, blob] of Object.entries(input.locales)) {
@@ -77,23 +111,35 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
     }
   }
 
-  if (pairs.length === 0) {
-    errors.localizedVideo = "Completează cel puțin un link video pentru o limbă a site‑ului.";
+  if (pairs.length === 0 && !roUrl) {
+    if (!errors.localizedVideo) {
+      errors.localizedVideo = "Completează cel puțin un link video pentru o limbă a site‑ului.";
+    }
   } else {
-    const localeVideos: Partial<Record<string, string>> = {};
     for (const { lc, url } of pairs) {
+      if (lc === "ro" && localeVideos.ro) continue;
       const embed = resolveLibraryEmbedSrc(platform, url);
       if (!embed) {
         localeVideos[lc] = embedHintForPlatform(platform);
       }
     }
     if (Object.keys(localeVideos).length > 0) {
-      errors.localeVideos = localeVideos;
-      errors.localizedVideo =
-        platform === "bunny"
-          ? "Un sau mai multe linkuri Bunny sunt invalide. Verifică câmpurile marcate mai jos."
-          : "Un sau mai multe linkuri video sunt invalide. Verifică câmpurile marcate mai jos.";
+      if (!errors.localizedVideo) {
+        errors.localizedVideo =
+          platform === "bunny"
+            ? "Un sau mai multe linkuri Bunny sunt invalide. Verifică câmpurile marcate mai jos."
+            : "Un sau mai multe linkuri video sunt invalide. Verifică câmpurile marcate mai jos.";
+      }
     }
+  }
+
+  if (Object.keys(localeVideos).length > 0) {
+    errors.localeVideos = localeVideos;
+  }
+
+  const chapterError = validateVideoChapters(input.chapters);
+  if (chapterError) {
+    errors.chapters = chapterError;
   }
 
   const bunnyThumb =

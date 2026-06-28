@@ -8,6 +8,8 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import PublicVideoThumbnail from "../../components/VideoLibrary/PublicVideoThumbnail";
 import VideoPremiumThumbBadge from "../../components/VideoLibrary/VideoPremiumThumbBadge";
+import BunnyHlsPlayer from "../../components/VideoLibrary/BunnyHlsPlayer";
+import VideoChapters from "../../components/VideoLibrary/VideoChapters";
 import { useAuth } from "../../context/AuthContext";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../lib/videoLibraryClientUtils";
@@ -80,6 +82,8 @@ export default function VideoDetailPage() {
   const [availableLocales, setAvailableLocales] = useState([]);
   const [likePending, setLikePending] = useState(false);
   const [likeError, setLikeError] = useState("");
+  const [chapterSeekRequest, setChapterSeekRequest] = useState(null);
+  const [chapterMessage, setChapterMessage] = useState("");
   const {
     consentGranted,
     modalVisible,
@@ -105,7 +109,9 @@ export default function VideoDetailPage() {
     setLoadError("");
     setVideo(null);
     setRelated([]);
-    setAvailableLocales([]);
+      setAvailableLocales([]);
+      setChapterSeekRequest(null);
+      setChapterMessage("");
     try {
       const locale = router.locale || "ro";
       const headers = await getFirebaseBearerHeader({ required: false });
@@ -144,6 +150,11 @@ export default function VideoDetailPage() {
   }, [load, router.isReady, videoId, currentUser?.uid]);
 
   const videoIsPlayable = isVideoPlayableForUser(video, userData);
+  const bunnyHlsPlayable =
+    videoIsPlayable &&
+    video?.platform === "bunny" &&
+    typeof video?.hlsSrc === "string" &&
+    video.hlsSrc.trim();
 
   useEffect(() => {
     if (!video?.id || !videoIsPlayable) return;
@@ -185,6 +196,22 @@ export default function VideoDetailPage() {
       /* noop */
     }
   }, []);
+
+  const handleChapterSelect = useCallback(
+    (chapter) => {
+      const seconds = Number(chapter?.startSeconds);
+      if (!Number.isFinite(seconds) || seconds < 0) return;
+      if (!videoIsPlayable) return;
+      if (!bunnyHlsPlayable) {
+        setChapterMessage("Saltul este disponibil pentru Bunny după configurarea sursei HLS.");
+        return;
+      }
+      setChapterMessage("");
+      setChapterSeekRequest({ seconds, nonce: Date.now() });
+      playerWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    [bunnyHlsPlayable, videoIsPlayable]
+  );
 
   const handleLockedIntent = useCallback(() => {
     const returnPath = router.asPath || `/videouri/${videoId}`;
@@ -321,14 +348,28 @@ export default function VideoDetailPage() {
                     {videoIsPlayable ? (
                       consentGranted ? (
                       <>
-                        <iframe
-                          key={video.embedSrc || video.id}
-                          title={video.title}
-                          src={video.embedSrc}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                          allowFullScreen
-                          className="h-full w-full"
-                        />
+                        {bunnyHlsPlayable ? (
+                          <BunnyHlsPlayer
+                            key={video.hlsSrc || video.id}
+                            src={video.hlsSrc}
+                            title={video.title}
+                            poster={video.thumbnailUrl}
+                            seekRequest={chapterSeekRequest}
+                            className="h-full w-full bg-black"
+                            onError={(error) => {
+                              console.error("[video-detail] Bunny HLS error", error?.message || error);
+                            }}
+                          />
+                        ) : (
+                          <iframe
+                            key={video.embedSrc || video.id}
+                            title={video.title}
+                            src={video.embedSrc}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                            allowFullScreen
+                            className="h-full w-full"
+                          />
+                        )}
                         {video.isPremium ? (
                           <VideoPremiumThumbBadge label={t("videoLibraryPremiumCornerBadge")} />
                         ) : null}
@@ -467,6 +508,13 @@ export default function VideoDetailPage() {
                       </select>
                     </div>
                   ) : null}
+
+                  <VideoChapters
+                    chapters={video.chapters}
+                    disabled={!videoIsPlayable}
+                    message={chapterMessage}
+                    onSelect={handleChapterSelect}
+                  />
 
                   <AdPlacementShell placementId="banner1" className="!my-6" />
 
