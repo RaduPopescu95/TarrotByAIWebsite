@@ -909,10 +909,11 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
               <div>
                 <label className="text-sm font-medium text-gray-700">Descriere</label>
                 <textarea
+                  rows={20}
                   value={form.description}
                   onChange={(e) => handleChange("description", e.target.value)}
                   disabled={uiLocked}
-                  className="mt-1.5 min-h-[200px] w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                  className="mt-1.5 min-h-[480px] max-h-[min(70vh,720px)] w-full resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm leading-relaxed text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
                   placeholder="Scurtă descriere..."
                 />
               </div>
