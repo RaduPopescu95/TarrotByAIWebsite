@@ -129,18 +129,19 @@ export default function ChapterEditorDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
-        className="relative z-[101] max-h-[85vh] w-full max-w-[min(50vw,640px)] overflow-y-auto sm:mx-0"
+        className="relative z-[101] flex max-h-[min(72vh,520px)] w-full max-w-md flex-col overflow-hidden p-0 sm:mx-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <DialogHeader>
-          <DialogTitle>{initialChapter ? "Editează capitol" : "Adaugă capitol"}</DialogTitle>
-          <DialogDescription>
-            Timpi acceptați: secunde, mm:ss sau hh:mm:ss. Titlurile pot fi localizate separat pentru
-            fiecare limbă.
+        <DialogHeader className="shrink-0 border-b border-gray-100 px-5 py-4">
+          <DialogTitle className="text-base">
+            {initialChapter ? "Editează capitol" : "Adaugă capitol"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Timpi: secunde, mm:ss sau hh:mm:ss. Localizează titlurile per limbă.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 px-6 pb-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-gray-700">Start *</label>
@@ -202,7 +203,8 @@ export default function ChapterEditorDialog({
               Traduce titlul RO în celelalte limbi ale site-ului. Poți edita manual după generare.
             </p>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-3 max-h-[220px] overflow-y-auto overscroll-contain pr-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {sortedLocales.map((locale) => (
                 <label key={locale} className="block">
                   <span className="mb-1 block text-xs font-semibold uppercase text-gray-500">
@@ -218,13 +220,14 @@ export default function ChapterEditorDialog({
                   />
                 </label>
               ))}
+              </div>
             </div>
           </div>
 
           {localError ? <p className="text-sm text-red-600">{localError}</p> : null}
         </div>
 
-        <DialogFooter className="border-t border-gray-200">
+        <DialogFooter className="shrink-0 border-t border-gray-200 bg-gray-50 px-5 py-3">
           <Button type="button" variant="outline" onClick={onClose} disabled={uiLocked}>
             Anulează
           </Button>
