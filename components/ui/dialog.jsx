@@ -1,29 +1,36 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
 
 const Dialog = ({ open, onOpenChange, children }) => {
+  const [mounted, setMounted] = React.useState(false);
+
   React.useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         className="fixed inset-0 bg-black/50"
         onClick={() => onOpenChange?.(false)}
+        aria-hidden="true"
       />
       {children}
-    </div>
+    </div>,
+    document.body
   );
 };
 

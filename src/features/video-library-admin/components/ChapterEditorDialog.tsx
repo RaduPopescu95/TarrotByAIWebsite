@@ -128,7 +128,10 @@ export default function ChapterEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[85vh] w-full max-w-[min(50vw,640px)] overflow-y-auto">
+      <DialogContent
+        className="relative z-[101] max-h-[85vh] w-full max-w-[min(50vw,640px)] overflow-y-auto sm:mx-0"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>{initialChapter ? "Editează capitol" : "Adaugă capitol"}</DialogTitle>
           <DialogDescription>

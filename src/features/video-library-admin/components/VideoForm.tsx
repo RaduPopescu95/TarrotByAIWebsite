@@ -650,14 +650,14 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
   };
 
   const renderLocaleLinks = () => (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0">
         <label className="text-sm font-medium text-gray-700">Link video pe limbă (site) *</label>
         {errors.localizedVideo ? (
           <p className="mt-2 text-xs font-medium text-red-600">{errors.localizedVideo}</p>
         ) : null}
       </div>
-      <div className="mt-3 max-h-[min(60vh,520px)] min-h-[240px] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3 [-webkit-overflow-scrolling:touch]">
         <div className="space-y-4">
           {videoFormLocales.map((lc) => {
             const lbl =
@@ -751,7 +751,13 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
           ))}
         </div>
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div
+          className={`mt-5 min-h-0 flex-1 pr-1 ${
+            activeTab === "links"
+              ? "flex flex-col overflow-hidden"
+              : "overflow-y-auto"
+          }`}
+        >
           {activeTab === "general" ? (
             <div className="space-y-5">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
