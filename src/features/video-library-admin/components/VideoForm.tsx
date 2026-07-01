@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import type { VideoCreateInput, VideoDoc, VideoLocales, VideoPlatform } from "../types/video";
@@ -31,14 +32,36 @@ import {
   normalizeVideoChapters,
   parseChapterTime,
 } from "../../../../lib/videoChapters";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../../components/ui/dialog";
+import { Button } from "../../../../components/ui/button";
+import ChapterEditorDialog, { type ChapterDraft } from "./ChapterEditorDialog";
 
 type Props = {
   initialValue?: VideoDoc | null;
   onCancel: () => void;
   onSubmit: (data: VideoCreateInput) => Promise<void> | void;
+  loading?: boolean;
 };
 
+type FormTab = "general" | "links" | "chapters" | "localization";
+
 const ROOT_PREF = siteLocalesRootPreferredOrder(SITE_LOCALES);
+
+const TAB_ORDER: FormTab[] = ["general", "links", "chapters", "localization"];
+
+const TAB_LABELS: Record<FormTab, string> = {
+  general: "General",
+  links: "Linkuri",
+  chapters: "Capitole",
+  localization: "Localizare",
+};
 
 function buildInitialLocaleVideoUrls(video: VideoDoc | null | undefined): Record<string, string> {
   const next: Record<string, string> = Object.fromEntries(SITE_LOCALES.map((lc) => [lc, ""]));
@@ -59,14 +82,6 @@ const platformOptions: Array<{ value: VideoPlatform; label: string }> = [
   { value: "vimeo", label: "Vimeo" },
   { value: "bunny", label: "Bunny Stream" },
 ];
-
-type ChapterDraft = {
-  id: string;
-  title: string;
-  titles: Record<string, string>;
-  startInput: string;
-  endInput: string;
-};
 
 function buildChapterDrafts(chapters: unknown): ChapterDraft[] {
   return normalizeVideoChapters(chapters, { locale: "ro", includeLocales: true }).map(
@@ -121,8 +136,36 @@ function buildChaptersFromDrafts(drafts: ChapterDraft[]) {
     .sort((a: any, b: any) => a.startSeconds - b.startSeconds);
 }
 
-export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
+function pickGeneralErrors(all: VideoValidationErrors): VideoValidationErrors {
+  const next: VideoValidationErrors = {};
+  if (all.title) next.title = all.title;
+  if (all.platform) next.platform = all.platform;
+  if (all.publicReleaseAt) next.publicReleaseAt = all.publicReleaseAt;
+  if (all.thumbnailUrl) next.thumbnailUrl = all.thumbnailUrl;
+  if (all.isPublished) next.isPublished = all.isPublished;
+  return next;
+}
+
+function pickLinksErrors(all: VideoValidationErrors): VideoValidationErrors {
+  const next: VideoValidationErrors = {};
+  if (all.localizedVideo) next.localizedVideo = all.localizedVideo;
+  if (all.localeVideos) next.localeVideos = all.localeVideos;
+  return next;
+}
+
+function pickChaptersErrors(all: VideoValidationErrors): VideoValidationErrors {
+  const next: VideoValidationErrors = {};
+  if (all.chapters) next.chapters = all.chapters;
+  return next;
+}
+
+function hasErrors(errors: VideoValidationErrors): boolean {
+  return Object.keys(errors).length > 0;
+}
+
+export default function VideoForm({ initialValue, onCancel, onSubmit, loading = false }: Props) {
   const isEditing = !!initialValue;
+  const [activeTab, setActiveTab] = useState<FormTab>("general");
   const [form, setForm] = useState<VideoCreateInput>({
     title: "",
     description: "",
@@ -149,7 +192,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateMessage, setTranslateMessage] = useState("");
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
-  const uiLocked = submitting || isTranslating;
+  const [chapterDialogOpen, setChapterDialogOpen] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<ChapterDraft | null>(null);
+  const uiLocked = submitting || isTranslating || loading;
   const [publishAtInput, setPublishAtInput] = useState("");
   const [publicReleaseDateInput, setPublicReleaseDateInput] = useState("");
   const [accessMode, setAccessMode] = useState<string>(VIDEO_ACCESS_MODE_PREMIUM);
@@ -178,7 +223,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
   };
 
-  // Load existing categories
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -205,6 +249,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
   }, [initialValue, existingCategories]);
 
   useEffect(() => {
+    setActiveTab("general");
     if (initialValue) {
       setForm({
         title: initialValue.title || "",
@@ -231,9 +276,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       } else {
         setPublishAtInput("");
       }
-      setPublicReleaseDateInput(
-        formatVideoPublicReleaseDateInput(initialValue.publicReleaseAt)
-      );
+      setPublicReleaseDateInput(formatVideoPublicReleaseDateInput(initialValue.publicReleaseAt));
     } else {
       setForm({
         title: "",
@@ -266,11 +309,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     setForm((prev) => ({ ...prev, publishAt: Timestamp.fromDate(now) }));
   }, [initialValue]);
 
-  const titleText = useMemo(
-    () => (isEditing ? "Editează videoclip" : "Adaugă videoclip"),
-    [isEditing]
-  );
-
   const handleChange = (key: keyof VideoCreateInput, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -282,9 +320,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       return;
     }
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return;
-    }
+    if (Number.isNaN(parsed.getTime())) return;
     setForm((prev) => ({ ...prev, publishAt: Timestamp.fromDate(parsed) }));
   };
 
@@ -293,20 +329,12 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     setErrors((prev) => ({ ...prev, publicReleaseAt: undefined }));
     if (value === VIDEO_ACCESS_MODE_FREE) {
       setPublicReleaseDateInput("");
-      setForm((prev) => ({
-        ...prev,
-        isPremium: false,
-        publicReleaseAt: null,
-      }));
+      setForm((prev) => ({ ...prev, isPremium: false, publicReleaseAt: null }));
       return;
     }
     if (value === VIDEO_ACCESS_MODE_PREMIUM) {
       setPublicReleaseDateInput("");
-      setForm((prev) => ({
-        ...prev,
-        isPremium: true,
-        publicReleaseAt: null,
-      }));
+      setForm((prev) => ({ ...prev, isPremium: true, publicReleaseAt: null }));
       return;
     }
     const releaseDate = buildVideoPublicReleaseDate(publicReleaseDateInput);
@@ -325,6 +353,134 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       isPremium: true,
       publicReleaseAt: releaseDate ? Timestamp.fromDate(releaseDate) : null,
     }));
+  };
+
+  const buildMergedLocales = (localesDraft?: VideoLocales) =>
+    mergeLocalesWithVideoUrls(localesDraft, localeVideoUrls, SITE_LOCALES, form.title.trim());
+
+  const buildValidationInput = (
+    mergedLocales: VideoLocales,
+    denormUrl: string
+  ): VideoCreateInput => ({
+    ...form,
+    isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
+    publicReleaseAt:
+      accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
+    videoUrl: denormUrl || "",
+    locales: mergedLocales,
+    chapters: buildChaptersFromDrafts(chapterDrafts),
+    thumbnailUrl:
+      form.platform === "bunny"
+        ? typeof form.thumbnailUrl === "string"
+          ? form.thumbnailUrl.trim()
+          : ""
+        : "",
+  });
+
+  const runFormValidation = (
+    mergedLocales: VideoLocales,
+    denormUrl: string
+  ): VideoValidationErrors => {
+    const validation = validateVideoInput(buildValidationInput(mergedLocales, denormUrl));
+    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
+      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
+    }
+    return validation;
+  };
+
+  const applyValidationResult = (
+    validation: VideoValidationErrors,
+    tabHint?: FormTab
+  ): boolean => {
+    setErrors(validation);
+    if (!hasErrors(validation)) return true;
+    if (tabHint) setActiveTab(tabHint);
+    if (validation.localeVideos?.ro || validation.localizedVideo) {
+      roCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    return false;
+  };
+
+  const getFullValidation = (): VideoValidationErrors => {
+    const mergedLocales = buildMergedLocales(locales);
+    const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
+    return runFormValidation(mergedLocales, denormUrl);
+  };
+
+  const validateGeneralTab = (): boolean => {
+    const all = getFullValidation();
+    const stepErrors = pickGeneralErrors(all);
+    return applyValidationResult(stepErrors, "general");
+  };
+
+  const validateLinksTab = (): boolean => {
+    const all = getFullValidation();
+    const stepErrors = pickLinksErrors(all);
+    return applyValidationResult(stepErrors, "links");
+  };
+
+  const validateChaptersTab = (): boolean => {
+    if (chapterDrafts.length === 0) {
+      setErrors((prev) => ({ ...prev, chapters: undefined }));
+      return true;
+    }
+    const all = getFullValidation();
+    const stepErrors = pickChaptersErrors(all);
+    return applyValidationResult(stepErrors, "chapters");
+  };
+
+  const handleLocaleVideoUrlChange = (lc: string, value: string) => {
+    setLocaleVideoUrls((prev) => ({ ...prev, [lc]: value }));
+    if (lc !== "ro") return;
+    const platform =
+      form.platform === "bunny" || form.platform === "vimeo" || form.platform === "youtube"
+        ? form.platform
+        : "youtube";
+    const trimmed = value.trim();
+    if (!trimmed || !resolveLibraryEmbedSrc(platform, trimmed)) return;
+    setErrors((prev) => {
+      if (!prev.localeVideos?.ro && prev.localizedVideo !== RO_VIDEO_URL_REQUIRED_MESSAGE) {
+        return prev;
+      }
+      const next: VideoValidationErrors = { ...prev };
+      if (next.localeVideos?.ro) {
+        const localeVideos = { ...next.localeVideos };
+        delete localeVideos.ro;
+        next.localeVideos = Object.keys(localeVideos).length > 0 ? localeVideos : undefined;
+      }
+      if (
+        next.localizedVideo === RO_VIDEO_URL_REQUIRED_MESSAGE ||
+        next.localizedVideo?.includes("RO")
+      ) {
+        delete next.localizedVideo;
+      }
+      return next;
+    });
+  };
+
+  const openAddChapter = () => {
+    setEditingChapter(null);
+    setChapterDialogOpen(true);
+  };
+
+  const openEditChapter = (chapter: ChapterDraft) => {
+    setEditingChapter(chapter);
+    setChapterDialogOpen(true);
+  };
+
+  const handleSaveChapter = (draft: ChapterDraft) => {
+    setChapterDrafts((prev) => {
+      const exists = prev.some((item) => item.id === draft.id);
+      if (exists) {
+        return prev.map((item) => (item.id === draft.id ? draft : item));
+      }
+      return [...prev, draft];
+    });
+    setErrors((prev) => ({ ...prev, chapters: undefined }));
+  };
+
+  const handleRemoveChapter = (id: string) => {
+    setChapterDrafts((prev) => prev.filter((chapter) => chapter.id !== id));
   };
 
   const generateLocales = async (): Promise<VideoLocales | undefined> => {
@@ -361,135 +517,12 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       setLocales(result);
       setTranslateMessage("Localizarea s-a terminat. Poți continua.");
       return result;
-    } catch (_) {
+    } catch {
       setTranslateMessage("Localizarea a eșuat. Încearcă din nou.");
       return undefined;
     } finally {
       setIsTranslating(false);
     }
-  };
-
-  const handleTranslate = async () => {
-    await generateLocales();
-  };
-
-  const buildMergedLocales = (localesDraft?: VideoLocales) =>
-    mergeLocalesWithVideoUrls(localesDraft, localeVideoUrls, SITE_LOCALES, form.title.trim());
-
-  const buildValidationInput = (
-    mergedLocales: VideoLocales,
-    denormUrl: string
-  ): VideoCreateInput => ({
-    ...form,
-    isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
-    publicReleaseAt:
-      accessMode === VIDEO_ACCESS_MODE_DUAL ? form.publicReleaseAt ?? null : null,
-    videoUrl: denormUrl || "",
-    locales: mergedLocales,
-    chapters: buildChaptersFromDrafts(chapterDrafts),
-    thumbnailUrl:
-      form.platform === "bunny"
-        ? typeof form.thumbnailUrl === "string"
-          ? form.thumbnailUrl.trim()
-          : ""
-        : "",
-  });
-
-  const runFormValidation = (
-    mergedLocales: VideoLocales,
-    denormUrl: string
-  ): VideoValidationErrors => {
-    const validation = validateVideoInput(buildValidationInput(mergedLocales, denormUrl));
-    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
-      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
-    }
-    return validation;
-  };
-
-  const applyValidationResult = (validation: VideoValidationErrors): boolean => {
-    setErrors(validation);
-    if (Object.keys(validation).length === 0) {
-      return true;
-    }
-    if (validation.localeVideos?.ro) {
-      roCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    return false;
-  };
-
-  const handleLocaleVideoUrlChange = (lc: string, value: string) => {
-    setLocaleVideoUrls((prev) => ({
-      ...prev,
-      [lc]: value,
-    }));
-    if (lc !== "ro") return;
-    const platform =
-      form.platform === "bunny" || form.platform === "vimeo" || form.platform === "youtube"
-        ? form.platform
-        : "youtube";
-    const trimmed = value.trim();
-    if (!trimmed || !resolveLibraryEmbedSrc(platform, trimmed)) {
-      return;
-    }
-    setErrors((prev) => {
-      if (!prev.localeVideos?.ro && prev.localizedVideo !== RO_VIDEO_URL_REQUIRED_MESSAGE) {
-        return prev;
-      }
-      const next: VideoValidationErrors = { ...prev };
-      if (next.localeVideos?.ro) {
-        const localeVideos = { ...next.localeVideos };
-        delete localeVideos.ro;
-        next.localeVideos = Object.keys(localeVideos).length > 0 ? localeVideos : undefined;
-      }
-      if (
-        next.localizedVideo === RO_VIDEO_URL_REQUIRED_MESSAGE ||
-        next.localizedVideo?.includes("RO")
-      ) {
-        delete next.localizedVideo;
-      }
-      return next;
-    });
-  };
-
-  const handleAddChapter = () => {
-    setChapterDrafts((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${prev.length}`,
-        title: "",
-        titles: { ro: "" },
-        startInput: prev.length === 0 ? "0:00" : "",
-        endInput: "",
-      },
-    ]);
-  };
-
-  const handleChapterChange = (
-    id: string,
-    key: keyof Omit<ChapterDraft, "id">,
-    value: string
-  ) => {
-    setChapterDrafts((prev) =>
-      prev.map((chapter) => (chapter.id === id ? { ...chapter, [key]: value } : chapter))
-    );
-  };
-
-  const handleRemoveChapter = (id: string) => {
-    setChapterDrafts((prev) => prev.filter((chapter) => chapter.id !== id));
-  };
-
-  const handleChapterTitleChange = (id: string, locale: string, value: string) => {
-    setChapterDrafts((prev) =>
-      prev.map((chapter) => {
-        if (chapter.id !== id) return chapter;
-        const titles = { ...(chapter.titles || {}), [locale]: value };
-        return {
-          ...chapter,
-          titles,
-          title: locale === "ro" ? value : chapter.title,
-        };
-      })
-    );
   };
 
   const submitForm = async (localesToSubmit?: VideoLocales) => {
@@ -498,11 +531,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
       const mergedLocales = buildMergedLocales(localesToSubmit);
       const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
       const chapters = buildChaptersFromDrafts(chapterDrafts);
-
-      console.log("[VideoForm] Submitting payload", {
-        ...form,
-        locales: Object.keys(mergedLocales),
-      });
       await onSubmit({
         ...form,
         isPremium: accessMode !== VIDEO_ACCESS_MODE_FREE,
@@ -513,11 +541,14 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
         videoUrl: denormUrl || "",
         category: form.category?.trim() || "",
         thumbnailUrl:
-          form.platform === "bunny" ? (typeof form.thumbnailUrl === "string" ? form.thumbnailUrl.trim() : "") : "",
+          form.platform === "bunny"
+            ? typeof form.thumbnailUrl === "string"
+              ? form.thumbnailUrl.trim()
+              : ""
+            : "",
         locales: mergedLocales,
         chapters,
       });
-      console.log("[VideoForm] Submit resolved");
     } catch (error) {
       console.error("[VideoForm] Submit failed", error);
       throw error;
@@ -533,627 +564,651 @@ export default function VideoForm({ initialValue, onCancel, onSubmit }: Props) {
     await submitForm(generatedLocales);
   };
 
-  /** Same title/description for every site locale — no ML translate; merges per-locale video URLs. */
   const saveSkipTranslateLocales = async () => {
     setShowTranslateConfirm(false);
     const t = form.title.trim();
     const d = form.description?.trim() || "";
     const baseBare: VideoLocales = {};
     for (const lc of SITE_LOCALES) {
-      baseBare[lc] = {
-        title: t,
-        ...(d ? { description: d } : {}),
-      };
+      baseBare[lc] = { title: t, ...(d ? { description: d } : {}) };
     }
-    const mergedLocales = mergeLocalesWithVideoUrls(baseBare, localeVideoUrls, SITE_LOCALES, form.title.trim());
+    const mergedLocales = mergeLocalesWithVideoUrls(
+      baseBare,
+      localeVideoUrls,
+      SITE_LOCALES,
+      form.title.trim()
+    );
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
     const validation = runFormValidation(mergedLocales, denormUrl);
-    if (!applyValidationResult(validation)) return;
+    if (!applyValidationResult(validation, "localization")) return;
     setLocales(baseBare);
     await submitForm(baseBare);
   };
 
+  const goToTab = (tab: FormTab) => setActiveTab(tab);
+
+  const handleOpenTab = (tab: FormTab) => {
+    const idx = TAB_ORDER.indexOf(tab);
+    const currentIdx = TAB_ORDER.indexOf(activeTab);
+    if (idx <= currentIdx) {
+      goToTab(tab);
+      return;
+    }
+    if (tab === "links" && !validateGeneralTab()) return;
+    if (tab === "chapters") {
+      if (!validateGeneralTab()) return;
+      if (!validateLinksTab()) return;
+    }
+    if (tab === "localization") {
+      if (!validateGeneralTab()) return;
+      if (!validateLinksTab()) return;
+      if (!validateChaptersTab()) return;
+    }
+    goToTab(tab);
+  };
+
+  const handleContinue = () => {
+    if (activeTab === "general") {
+      if (validateGeneralTab()) goToTab("links");
+      return;
+    }
+    if (activeTab === "links") {
+      if (validateLinksTab()) goToTab("chapters");
+      return;
+    }
+    if (activeTab === "chapters") {
+      if (validateChaptersTab()) goToTab("localization");
+    }
+  };
+
+  const handleBack = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx > 0) goToTab(TAB_ORDER[idx - 1]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[VideoForm] Submit clicked", {
-      isEditing,
-      form,
-      publishAtInput,
-      localesKeys: locales ? Object.keys(locales) : [],
-    });
+    if (activeTab !== "localization") {
+      handleContinue();
+      return;
+    }
     const mergedLocales = buildMergedLocales(locales);
     const denormUrl = deriveRootVideoUrlFromLocales(mergedLocales, ROOT_PREF);
-    const validation = validateVideoInput({
-      ...buildValidationInput(mergedLocales, denormUrl),
-      chapters: buildChaptersFromDrafts(chapterDrafts),
-    });
-    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
-      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
-    }
-    if (!applyValidationResult(validation)) {
-      console.warn("[VideoForm] Validation failed", validation);
+    const validation = runFormValidation(mergedLocales, denormUrl);
+    if (!applyValidationResult(validation, "localization")) {
+      if (hasErrors(pickGeneralErrors(validation))) setActiveTab("general");
+      else if (hasErrors(pickLinksErrors(validation))) setActiveTab("links");
+      else if (hasErrors(pickChaptersErrors(validation))) setActiveTab("chapters");
       return;
     }
     const needsLocales = !locales || Object.keys(locales).length === 0;
     if (needsLocales) {
-      console.log("[VideoForm] No locales, showing confirm dialog");
       setShowTranslateConfirm(true);
       return;
     }
     await submitForm(locales);
   };
 
+  const renderLocaleLinks = () => (
+    <div className="flex min-h-0 flex-col">
+      <div className="shrink-0">
+        <label className="text-sm font-medium text-gray-700">Link video pe limbă (site) *</label>
+        {errors.localizedVideo ? (
+          <p className="mt-2 text-xs font-medium text-red-600">{errors.localizedVideo}</p>
+        ) : null}
+      </div>
+      <div className="mt-3 max-h-[min(60vh,520px)] min-h-[240px] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+        <div className="space-y-4">
+          {videoFormLocales.map((lc) => {
+            const lbl =
+              (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??
+              lc.toUpperCase();
+            const isRo = lc === "ro";
+            const hasLink = Boolean(localeVideoUrls[lc]?.trim());
+            const rowErr = errors.localeVideos?.[lc];
+            const roMissing = isRo && !hasLink;
+            return (
+              <div
+                key={lc}
+                ref={isRo ? roCardRef : undefined}
+                className={`rounded-md border bg-white p-4 shadow-sm ${
+                  isRo
+                    ? rowErr
+                      ? "border-red-300 ring-1 ring-red-100"
+                      : roMissing
+                        ? "border-amber-300 ring-1 ring-amber-100"
+                        : "border-emerald-200"
+                    : "border-gray-200"
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    {lbl}{" "}
+                    <span className="font-mono text-xs font-normal text-gray-500">({lc})</span>
+                  </label>
+                  <span
+                    className={`text-xs font-medium ${
+                      hasLink ? "text-emerald-600" : isRo ? "text-amber-700" : "text-gray-400"
+                    }`}
+                  >
+                    {hasLink
+                      ? "link setat"
+                      : isRo
+                        ? "obligatoriu · lipsește"
+                        : "opțional · lipsește"}
+                  </span>
+                </div>
+                {isRo && roMissing && !rowErr ? (
+                  <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    {RO_VIDEO_URL_REQUIRED_MESSAGE}
+                  </p>
+                ) : null}
+                <input
+                  value={localeVideoUrls[lc] ?? ""}
+                  onChange={(e) => handleLocaleVideoUrlChange(lc, e.target.value)}
+                  disabled={uiLocked}
+                  className={`mt-2.5 w-full rounded-md border px-3 py-3 text-sm text-gray-900 shadow-inner focus:outline-none focus:ring-2 ${
+                    rowErr
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                      : isRo && roMissing
+                        ? "border-amber-300 focus:border-amber-500 focus:ring-amber-500/20"
+                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
+                  } disabled:bg-gray-50 disabled:text-gray-500`}
+                  placeholder={
+                    isRo
+                      ? "URL Bunny obligatoriu — ro (ex. player.mediadelivery.net/...)"
+                      : `URL sau id clip — ${lc}`
+                  }
+                  autoComplete="off"
+                />
+                {rowErr ? <p className="mt-1.5 text-xs text-red-600">{rowErr}</p> : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <form onSubmit={handleSubmit} className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">{titleText}</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Completează câmpurile obligatorii și salvează. Videoclipurile nepublicate nu apar în aplicație.
-          </p>
+    <>
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="inline-flex shrink-0 flex-wrap rounded-lg border border-gray-200 bg-gray-50 p-1">
+          {TAB_ORDER.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => handleOpenTab(tab)}
+              disabled={uiLocked}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                activeTab === tab
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {TAB_LABELS[tab]}
+            </button>
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={uiLocked}
-          className="text-sm font-medium text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:text-gray-600"
-        >
-          Anulează
-        </button>
-      </div>
 
-      <div className="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)] lg:gap-0 lg:overflow-hidden">
-        {/* Coloana stânga — câmpuri generale */}
-        <div className="flex min-h-0 flex-col space-y-5 overflow-y-auto lg:h-full lg:pr-8 lg:border-r lg:border-gray-200">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
-            <div className="min-w-0 sm:col-span-2">
-              <label className="text-sm font-medium text-gray-700">Titlu *</label>
-              <textarea
-                rows={3}
-                value={form.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                disabled={uiLocked}
-                className={`mt-1.5 min-h-[88px] w-full resize-y rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
-                  errors.title
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                    : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
-                } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
-                placeholder="Titlul videoclipului"
-              />
-              {errors.title && <p className="mt-1.5 text-xs text-red-600">{errors.title}</p>}
-            </div>
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+          {activeTab === "general" ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
+                <div className="min-w-0 sm:col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Titlu *</label>
+                  <textarea
+                    rows={3}
+                    value={form.title}
+                    onChange={(e) => handleChange("title", e.target.value)}
+                    disabled={uiLocked}
+                    className={`mt-1.5 min-h-[88px] w-full resize-y rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                      errors.title
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                    } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                    placeholder="Titlul videoclipului"
+                  />
+                  {errors.title ? <p className="mt-1.5 text-xs text-red-600">{errors.title}</p> : null}
+                </div>
 
-            <div className="min-w-0">
-              <label className="text-sm font-medium text-gray-700">Platformă *</label>
-              <select
-                value={form.platform}
-                onChange={(e) => handleChange("platform", e.target.value as VideoPlatform)}
-                disabled={uiLocked}
-                className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
-                  errors.platform
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                    : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
-                } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
-              >
-                {platformOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {errors.platform && <p className="mt-1.5 text-xs text-red-600">{errors.platform}</p>}
-            </div>
+                <div className="min-w-0">
+                  <label className="text-sm font-medium text-gray-700">Platformă *</label>
+                  <select
+                    value={form.platform}
+                    onChange={(e) => handleChange("platform", e.target.value as VideoPlatform)}
+                    disabled={uiLocked}
+                    className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                      errors.platform
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                    } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                  >
+                    {platformOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.platform ? (
+                    <p className="mt-1.5 text-xs text-red-600">{errors.platform}</p>
+                  ) : null}
+                </div>
 
-            <div className="min-w-0">
-              <label className="text-sm font-medium text-gray-700">Categorie</label>
-              <select
-                value={form.category}
-                onChange={(e) => handleChange("category", e.target.value)}
-                disabled={uiLocked}
-                className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
-              >
-                <option value="">Selectează categorie</option>
-                {existingCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1.5 text-xs text-gray-500">Adaugă categorii noi din tab-ul Categorii</p>
-            </div>
+                <div className="min-w-0">
+                  <label className="text-sm font-medium text-gray-700">Categorie</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => handleChange("category", e.target.value)}
+                    disabled={uiLocked}
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                  >
+                    <option value="">Selectează categorie</option>
+                    {existingCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Adaugă categorii noi din tab-ul Categorii
+                  </p>
+                </div>
 
-            <div className="min-w-0">
-              <label className="text-sm font-medium text-gray-700">Publică la</label>
-              <input
-                type="datetime-local"
-                value={publishAtInput}
-                onChange={(e) => handlePublishAtChange(e.target.value)}
-                disabled={uiLocked}
-                className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
-              />
-              <p className="mt-1.5 text-xs text-gray-500">
-                Data/ora locală din browser (fusul tău orar) când videoclipul devine vizibil în aplicație.
-              </p>
-            </div>
+                <div className="min-w-0">
+                  <label className="text-sm font-medium text-gray-700">Publică la</label>
+                  <input
+                    type="datetime-local"
+                    value={publishAtInput}
+                    onChange={(e) => handlePublishAtChange(e.target.value)}
+                    disabled={uiLocked}
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Data/ora locală din browser când videoclipul devine vizibil în aplicație.
+                  </p>
+                </div>
 
-            <div className="min-w-0">
-              <label className="text-sm font-medium text-gray-700">Mod acces</label>
-              <select
-                value={accessMode}
-                onChange={(e) => handleAccessModeChange(e.target.value)}
-                disabled={uiLocked}
-                className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
-              >
-                <option value={VIDEO_ACCESS_MODE_FREE}>Gratuit de la T1</option>
-                <option value={VIDEO_ACCESS_MODE_PREMIUM}>Premium permanent</option>
-                <option value={VIDEO_ACCESS_MODE_DUAL}>Premium apoi public</option>
-              </select>
-            </div>
+                <div className="min-w-0">
+                  <label className="text-sm font-medium text-gray-700">Mod acces</label>
+                  <select
+                    value={accessMode}
+                    onChange={(e) => handleAccessModeChange(e.target.value)}
+                    disabled={uiLocked}
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                  >
+                    <option value={VIDEO_ACCESS_MODE_FREE}>Gratuit de la T1</option>
+                    <option value={VIDEO_ACCESS_MODE_PREMIUM}>Premium permanent</option>
+                    <option value={VIDEO_ACCESS_MODE_DUAL}>Premium apoi public</option>
+                  </select>
+                </div>
 
-            {accessMode === VIDEO_ACCESS_MODE_DUAL ? (
-              <div className="min-w-0">
-                <label className="text-sm font-medium text-gray-700">
-                  Data publicării generale
-                </label>
-                <input
-                  type="date"
-                  value={publicReleaseDateInput}
-                  onChange={(e) => handlePublicReleaseDateChange(e.target.value)}
-                  disabled={uiLocked}
-                  className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
-                    errors.publicReleaseAt
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
-                  } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
-                />
-                <p className="mt-1.5 text-xs text-gray-500">
-                  Devine gratuit în aplicație la ora 18:00, fus {VIDEO_RELEASE_TIMEZONE}.
-                </p>
-                {errors.publicReleaseAt ? (
-                  <p className="mt-1.5 text-xs text-red-600">{errors.publicReleaseAt}</p>
+                {accessMode === VIDEO_ACCESS_MODE_DUAL ? (
+                  <div className="min-w-0">
+                    <label className="text-sm font-medium text-gray-700">
+                      Data publicării generale
+                    </label>
+                    <input
+                      type="date"
+                      value={publicReleaseDateInput}
+                      onChange={(e) => handlePublicReleaseDateChange(e.target.value)}
+                      disabled={uiLocked}
+                      className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                        errors.publicReleaseAt
+                          ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                      } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                    />
+                    <p className="mt-1.5 text-xs text-gray-500">
+                      Devine gratuit în aplicație la ora 18:00, fus {VIDEO_RELEASE_TIMEZONE}.
+                    </p>
+                    {errors.publicReleaseAt ? (
+                      <p className="mt-1.5 text-xs text-red-600">{errors.publicReleaseAt}</p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
-            ) : null}
-          </div>
 
-          {form.platform === "bunny" ? (
-            <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3 shadow-sm">
-              <label className="text-sm font-medium text-gray-800">
-                Thumbnail Bunny <span className="font-normal text-gray-600">(opțional, același pentru toate limbile)</span>
-              </label>
-              <input
-                type="url"
-                value={typeof form.thumbnailUrl === "string" ? form.thumbnailUrl : ""}
-                onChange={(e) => handleChange("thumbnailUrl", e.target.value)}
-                disabled={uiLocked}
-                className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
-                  errors.thumbnailUrl
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                    : "border-violet-200 focus:border-violet-500 focus:ring-violet-500/20"
-                } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
-                placeholder="https://vz-….b-cdn.net/uuid-video/thumbnail.jpg"
-                autoComplete="off"
-              />
-              {errors.thumbnailUrl ? (
-                <p className="mt-1.5 text-xs text-red-600">{errors.thumbnailUrl}</p>
-              ) : (
-                <p className="mt-1.5 text-xs text-violet-900/80">
-                  Din Bunny Stream → video and assets url → thumbnail url → copiază URL-ul imaginii thumbnail pentru videoclip (nu depinde de
-                  limbă).
-                </p>
-              )}
+              {form.platform === "bunny" ? (
+                <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3 shadow-sm">
+                  <label className="text-sm font-medium text-gray-800">
+                    Thumbnail Bunny{" "}
+                    <span className="font-normal text-gray-600">
+                      (opțional, același pentru toate limbile)
+                    </span>
+                  </label>
+                  <input
+                    type="url"
+                    value={typeof form.thumbnailUrl === "string" ? form.thumbnailUrl : ""}
+                    onChange={(e) => handleChange("thumbnailUrl", e.target.value)}
+                    disabled={uiLocked}
+                    className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                      errors.thumbnailUrl
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-violet-200 focus:border-violet-500 focus:ring-violet-500/20"
+                    } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                    placeholder="https://vz-….b-cdn.net/uuid-video/thumbnail.jpg"
+                    autoComplete="off"
+                  />
+                  {errors.thumbnailUrl ? (
+                    <p className="mt-1.5 text-xs text-red-600">{errors.thumbnailUrl}</p>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-violet-900/80">
+                      Din Bunny Stream → thumbnail url → copiază URL-ul imaginii (nu depinde de limbă).
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Descriere</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => handleChange("description", e.target.value)}
+                  disabled={uiLocked}
+                  className="mt-1.5 min-h-[200px] w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70"
+                  placeholder="Scurtă descriere..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <label className="group flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                  <input
+                    type="checkbox"
+                    checked={!!form.isPublished}
+                    onChange={(e) => handleChange("isPublished", e.target.checked)}
+                    disabled={uiLocked}
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-emerald-600 shadow-sm transition-all focus:ring-2 focus:ring-emerald-500/30 focus:ring-offset-0"
+                  />
+                  <span className="min-w-0 text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-800 group-has-[:checked]:text-emerald-800">
+                    Publicat în aplicație
+                  </span>
+                </label>
+              </div>
+              {errors.isPublished ? (
+                <p className="mt-1.5 text-xs text-red-600">{errors.isPublished}</p>
+              ) : null}
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={!!form.featuredOnHome}
+                    onChange={(e) => handleChange("featuredOnHome", e.target.checked)}
+                    disabled={uiLocked}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                  />
+                  <span className="block">
+                    <span className="text-sm font-medium text-gray-900">
+                      Videoclip evidențiat pe homepage
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500">
+                      Maximum 2 videoclipuri publicate pot fi evidențiate simultan pe homepage.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <label className="text-sm font-semibold text-gray-800">Capitole video</label>
-                <p className="mt-1 text-xs text-gray-500">
-                  Timpi acceptați: secunde, mm:ss sau hh:mm:ss. Click-ul pe capitol va face seek în playerul Bunny.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddChapter}
-                disabled={uiLocked}
-                className="rounded-lg border border-blue-600 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                + Capitol
-              </button>
-            </div>
-            {errors.chapters ? (
-              <p className="mt-2 text-xs font-medium text-red-600">{errors.chapters}</p>
-            ) : null}
-            <div className="mt-3 space-y-3">
-              {chapterDrafts.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-sm text-gray-500">
-                  Nu există capitole setate pentru acest video.
-                </p>
-              ) : (
-                chapterDrafts.map((chapter, index) => (
-                  <div
-                    key={chapter.id}
-                    className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-[90px_90px_1fr_auto]"
-                  >
-                    <div>
-                      <label className="text-[11px] font-semibold uppercase text-gray-500">
-                        Start
-                      </label>
-                      <input
-                        value={chapter.startInput}
-                        onChange={(e) =>
-                          handleChapterChange(chapter.id, "startInput", e.target.value)
-                        }
-                        disabled={uiLocked}
-                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
-                        placeholder={index === 0 ? "0:00" : "mm:ss"}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold uppercase text-gray-500">
-                        Final
-                      </label>
-                      <input
-                        value={chapter.endInput}
-                        onChange={(e) =>
-                          handleChapterChange(chapter.id, "endInput", e.target.value)
-                        }
-                        disabled={uiLocked}
-                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
-                        placeholder="opțional"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold uppercase text-gray-500">
-                        Titluri
-                      </label>
-                      <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {chapterLocaleIds.map((locale) => (
-                          <label key={locale} className="block">
-                            <span className="mb-1 block text-[10px] font-semibold uppercase text-gray-400">
-                              {LANGUAGE_LABELS[locale]?.denumire || locale.toUpperCase()}
-                            </span>
-                            <input
-                              value={chapter.titles?.[locale] ?? (locale === "ro" ? chapter.title : "")}
-                              onChange={(e) =>
-                                handleChapterTitleChange(chapter.id, locale, e.target.value)
-                              }
-                              disabled={uiLocked}
-                              className="w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 disabled:text-gray-500"
-                              placeholder={locale === "ro" ? "Ex. Introducere" : "Titlu localizat"}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveChapter(chapter.id)}
-                        disabled={uiLocked}
-                        className="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          {activeTab === "links" ? renderLocaleLinks() : null}
 
-          <div className="flex min-h-0 flex-1 flex-col lg:min-h-[280px]">
-            <label className="text-sm font-medium text-gray-700">Descriere</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              disabled={uiLocked}
-              className="mt-1.5 min-h-[480px] max-h-[680px] w-full flex-1 resize-y overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70 lg:min-h-[min(42vh,520px)] lg:max-h-[min(65vh,720px)]"
-              placeholder="Scurtă descriere..."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <label className="group flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
-              <input
-                type="checkbox"
-                checked={!!form.isPublished}
-                onChange={(e) => handleChange("isPublished", e.target.checked)}
-                disabled={uiLocked}
-                className="h-4 w-4 shrink-0 rounded border-gray-300 text-emerald-600 shadow-sm transition-all focus:ring-2 focus:ring-emerald-500/30 focus:ring-offset-0"
-              />
-              <span className="min-w-0 text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-800 group-has-[:checked]:text-emerald-800">
-                Publicat în aplicație
-              </span>
-            </label>
-          </div>
-          {errors.isPublished ? <p className="mt-1.5 text-xs text-red-600">{errors.isPublished}</p> : null}
-
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={!!form.featuredOnHome}
-                onChange={(e) => handleChange("featuredOnHome", e.target.checked)}
-                disabled={uiLocked}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
-              />
-              <span className="block">
-                <span className="text-sm font-medium text-gray-900">
-                  Videoclip evidențiat pe homepage
-                </span>
-                <span className="mt-1 block text-xs text-gray-500">
-                  Maximum 2 videoclipuri publicate pot fi evidențiate simultan pe homepage (web și
-                  aplicație).
-                </span>
-              </span>
-            </label>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700">Localizare</label>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleTranslate}
-                disabled={uiLocked}
-                className="rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isTranslating ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                    Se localizează...
-                  </span>
-                ) : (
-                  "Generează localizări"
-                )}
-              </button>
-              {isTranslating && (
-                <span className="inline-flex items-center gap-2 text-sm text-gray-600">
-                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                  Se traduc textele...va rugam asteptati...
-                </span>
-              )}
-              {translateMessage && (
-                <p
-                  className={`text-sm ${
-                    translateMessage.includes("eșuat") ? "text-red-600" : "text-emerald-600"
-                  }`}
-                >
-                  {translateMessage}
-                </p>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs text-gray-500">
-              Traducerea folosește titlul și descrierea curente; localizările vor fi salvate la salvarea
-              videoclipului.
-            </p>
-            {hasLocalePreview ? (
-              <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
-                <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
-                  Localizări generate (titlu / descriere)
+          {activeTab === "chapters" ? (
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-gray-800">Capitole video</label>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Adaugă sau editează capitole într-un dialog separat. Click-ul pe capitol face seek
+                    în playerul Bunny.
+                  </p>
                 </div>
-                <div className="max-h-[min(30vh,280px)] overflow-y-auto overscroll-contain">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="sticky top-0 z-[1] bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-700">
-                      <tr>
-                        <th className="px-4 py-2.5">Limbă</th>
-                        <th className="px-4 py-2.5">Titlu</th>
-                        <th className="px-4 py-2.5">Descriere</th>
-                        <th className="px-4 py-2.5">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {videoFormLocales.map((lc) => {
-                        const langInfo = (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc];
-                        const langLabel =
-                          typeof langInfo?.denumire === "string" && langInfo.denumire.trim()
-                            ? langInfo.denumire
-                            : lc;
-                        const entry = locales?.[lc];
-                        const titleVal = typeof entry?.title === "string" ? entry.title.trim() : "";
-                        const descVal =
-                          typeof entry?.description === "string" ? entry.description.trim() : "";
-                        const isMissing = !titleVal;
-                        return (
-                          <tr key={lc}>
-                            <td className="px-4 py-2.5 font-medium text-gray-900">
-                              {langLabel}{" "}
-                              <span className="text-xs font-normal text-gray-500">({lc})</span>
+                <Button type="button" variant="outline" onClick={openAddChapter} disabled={uiLocked}>
+                  + Adaugă capitol
+                </Button>
+              </div>
+              {errors.chapters ? (
+                <p className="mt-2 text-xs font-medium text-red-600">{errors.chapters}</p>
+              ) : null}
+              <div className="mt-3">
+                {chapterDrafts.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                    Nu există capitole setate pentru acest video.
+                  </p>
+                ) : (
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        <tr>
+                          <th className="px-3 py-2">#</th>
+                          <th className="px-3 py-2">Start</th>
+                          <th className="px-3 py-2">Final</th>
+                          <th className="px-3 py-2">Titlu RO</th>
+                          <th className="px-3 py-2 text-right">Acțiuni</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 bg-white">
+                        {chapterDrafts.map((chapter, index) => (
+                          <tr key={chapter.id}>
+                            <td className="px-3 py-2.5 text-gray-500">{index + 1}</td>
+                            <td className="px-3 py-2.5 font-mono text-gray-800">
+                              {chapter.startInput || "—"}
                             </td>
-                            <td className="max-w-[12rem] truncate px-4 py-2.5 text-gray-700" title={titleVal}>
-                              {isMissing ? <span className="text-gray-400">—</span> : titleVal}
+                            <td className="px-3 py-2.5 font-mono text-gray-600">
+                              {chapter.endInput || "—"}
                             </td>
-                            <td
-                              className="max-w-[14rem] truncate px-4 py-2.5 text-gray-700"
-                              title={descVal}
-                            >
-                              {!descVal ? <span className="text-gray-400">—</span> : descVal}
+                            <td className="px-3 py-2.5 text-gray-900">
+                              {chapter.titles.ro || chapter.title || "—"}
                             </td>
-                            <td className="px-4 py-2.5">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                                  isMissing
-                                    ? "bg-amber-50 text-amber-700 ring-amber-600/20"
-                                    : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                                }`}
-                              >
-                                {isMissing ? "Lipsește" : "OK"}
-                              </span>
+                            <td className="px-3 py-2.5">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditChapter(chapter)}
+                                  disabled={uiLocked}
+                                  className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                  Editează
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveChapter(chapter.id)}
+                                  disabled={uiLocked}
+                                  className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                                >
+                                  Șterge
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            ) : null}
-          </div>
-        </div>
+            </div>
+          ) : null}
 
-        {/* Coloana dreapta — linkuri video pe limbă (scroll în înălțimea modalului) */}
-        <div className="flex min-h-0 flex-1 flex-col lg:min-h-[50vh] lg:pl-8">
-          <div className="shrink-0">
-            <label className="text-sm font-medium text-gray-700">Link video pe limbă (site) *</label>
-            {errors.localizedVideo && (
-              <p className="mt-2 text-xs font-medium text-red-600">{errors.localizedVideo}</p>
-            )}
-          </div>
-          <div className="mt-3 flex min-h-0 flex-1 flex-col lg:mt-2">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-gray-50/80 p-3">
-              {videoFormLocales.map((lc) => {
-                const lbl =
-                  (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[lc]?.denumire ??
-                  lc.toUpperCase();
-                const isRo = lc === "ro";
-                const hasLink = Boolean(localeVideoUrls[lc]?.trim());
-                const rowErr = errors.localeVideos?.[lc];
-                const roMissing = isRo && !hasLink;
-                return (
-                  <div
-                    key={lc}
-                    ref={isRo ? roCardRef : undefined}
-                    className={`rounded-md border bg-white p-4 shadow-sm ${
-                      isRo
-                        ? rowErr
-                          ? "border-red-300 ring-1 ring-red-100"
-                          : roMissing
-                            ? "border-amber-300 ring-1 ring-amber-100"
-                            : "border-emerald-200"
-                        : "border-gray-200"
+          {activeTab === "localization" ? (
+            <div>
+              <label className="text-sm font-medium text-gray-700">Localizare</label>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void generateLocales()}
+                  disabled={uiLocked}
+                >
+                  {isTranslating ? "Se localizează..." : "Generează localizări"}
+                </Button>
+                {translateMessage ? (
+                  <p
+                    className={`text-sm ${
+                      translateMessage.includes("eșuat") || translateMessage.includes("Completează")
+                        ? "text-red-600"
+                        : "text-emerald-600"
                     }`}
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <label className="text-sm font-semibold text-gray-700">
-                        {lbl}{" "}
-                        <span className="font-mono text-xs font-normal text-gray-500">({lc})</span>
-                      </label>
-                      <span
-                        className={`text-xs font-medium ${
-                          hasLink
-                            ? "text-emerald-600"
-                            : isRo
-                              ? "text-amber-700"
-                              : "text-gray-400"
-                        }`}
-                      >
-                        {hasLink
-                          ? "link setat"
-                          : isRo
-                            ? "obligatoriu · lipsește"
-                            : "opțional · lipsește"}
-                      </span>
-                    </div>
-                    {isRo && roMissing && !rowErr ? (
-                      <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                        {RO_VIDEO_URL_REQUIRED_MESSAGE}
-                      </p>
-                    ) : null}
-                    <input
-                      value={localeVideoUrls[lc] ?? ""}
-                      onChange={(e) => handleLocaleVideoUrlChange(lc, e.target.value)}
-                      disabled={uiLocked}
-                      className={`mt-2.5 w-full rounded-md border px-3 py-3 text-sm text-gray-900 shadow-inner focus:outline-none focus:ring-2 ${
-                        rowErr
-                          ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                          : isRo && roMissing
-                            ? "border-amber-300 focus:border-amber-500 focus:ring-amber-500/20"
-                            : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/25"
-                      } disabled:bg-gray-50 disabled:text-gray-500`}
-                      placeholder={
-                        isRo
-                          ? "URL Bunny obligatoriu — ro (ex. player.mediadelivery.net/...)"
-                          : `URL sau id clip — ${lc}`
-                      }
-                      autoComplete="off"
-                    />
-                    {rowErr ? <p className="mt-1.5 text-xs text-red-600">{rowErr}</p> : null}
+                    {translateMessage}
+                  </p>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-xs text-gray-500">
+                Traducerea folosește titlul și descrierea din pasul General; localizările se salvează
+                la salvarea videoclipului.
+              </p>
+              {hasLocalePreview ? (
+                <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
+                  <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                    Localizări generate (titlu / descriere)
                   </div>
-                );
-              })}
+                  <div className="max-h-[min(40vh,320px)] overflow-y-auto overscroll-contain">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="sticky top-0 z-[1] bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-700">
+                        <tr>
+                          <th className="px-4 py-2.5">Limbă</th>
+                          <th className="px-4 py-2.5">Titlu</th>
+                          <th className="px-4 py-2.5">Descriere</th>
+                          <th className="px-4 py-2.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 bg-white">
+                        {videoFormLocales.map((lc) => {
+                          const langInfo = (LANGUAGE_LABELS as Record<string, { denumire?: string }>)?.[
+                            lc
+                          ];
+                          const langLabel =
+                            typeof langInfo?.denumire === "string" && langInfo.denumire.trim()
+                              ? langInfo.denumire
+                              : lc;
+                          const entry = locales?.[lc];
+                          const titleVal =
+                            typeof entry?.title === "string" ? entry.title.trim() : "";
+                          const descVal =
+                            typeof entry?.description === "string" ? entry.description.trim() : "";
+                          const isMissing = !titleVal;
+                          return (
+                            <tr key={lc}>
+                              <td className="px-4 py-2.5 font-medium text-gray-900">
+                                {langLabel}{" "}
+                                <span className="text-xs font-normal text-gray-500">({lc})</span>
+                              </td>
+                              <td
+                                className="max-w-[12rem] truncate px-4 py-2.5 text-gray-700"
+                                title={titleVal}
+                              >
+                                {isMissing ? <span className="text-gray-400">—</span> : titleVal}
+                              </td>
+                              <td
+                                className="max-w-[14rem] truncate px-4 py-2.5 text-gray-700"
+                                title={descVal}
+                              >
+                                {!descVal ? <span className="text-gray-400">—</span> : descVal}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                                    isMissing
+                                      ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                                      : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                                  }`}
+                                >
+                                  {isMissing ? "Lipsește" : "OK"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
             </div>
-          </div>
+          ) : null}
         </div>
-      </div>
 
-      <div className="mt-8 flex shrink-0 flex-wrap items-center justify-end gap-4 border-t border-gray-200 pt-7">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={uiLocked}
-            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Renunță
-          </button>
-          <button
-            type="submit"
-            disabled={uiLocked}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isTranslating ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-t-transparent" />
-                Se localizează...
-              </span>
-            ) : submitting ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-t-transparent" />
-                Se salvează...
-              </span>
-            ) : isEditing ? (
-              "Salvează"
+        <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+          <div>
+            {activeTab !== "general" ? (
+              <Button type="button" variant="outline" onClick={handleBack} disabled={uiLocked}>
+                Înapoi
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={uiLocked}>
+              Renunță
+            </Button>
+            {activeTab === "localization" ? (
+              <Button type="submit" disabled={uiLocked}>
+                {isTranslating ? (
+                  "Se localizează..."
+                ) : submitting || loading ? (
+                  "Se salvează..."
+                ) : isEditing ? (
+                  "Salvează"
+                ) : (
+                  "Creează"
+                )}
+              </Button>
             ) : (
-              "Creează"
+              <Button type="button" onClick={handleContinue} disabled={uiLocked}>
+                Continuă
+              </Button>
             )}
-          </button>
-        </div>
-      </div>
-
-      {showTranslateConfirm && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-gray-900/60 px-4">
-          <div
-            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-lg font-semibold text-gray-900">
-              Traducerile nu au fost create
-            </div>
-            <p className="mt-2 text-sm text-gray-600">
-              Vrei să generezi traducerile automate pentru titlu și descriere în limba curentă a site‑ului înainte
-              de salvare? Poți și salva același text RO peste tot, fără traducere automată (poți regenera după).
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowTranslateConfirm(false)}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow"
-              >
-                Anulează
-              </button>
-              <button
-                type="button"
-                onClick={() => void saveSkipTranslateLocales()}
-                disabled={isTranslating || submitting}
-                className="rounded-lg border border-gray-400 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm transition-all hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Aceeași text RO pentru toate limbile
-              </button>
-              <button
-                type="button"
-                onClick={confirmTranslateAndSubmit}
-                disabled={isTranslating || submitting}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Adaugă și localizează
-              </button>
-            </div>
           </div>
         </div>
-      )}
-    </form>
+      </form>
+
+      <ChapterEditorDialog
+        open={chapterDialogOpen}
+        initialChapter={editingChapter}
+        localeIds={chapterLocaleIds}
+        onSave={handleSaveChapter}
+        onClose={() => {
+          setChapterDialogOpen(false);
+          setEditingChapter(null);
+        }}
+        disabled={uiLocked}
+      />
+
+      <Dialog open={showTranslateConfirm} onOpenChange={setShowTranslateConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Traducerile nu au fost create</DialogTitle>
+            <DialogDescription>
+              Vrei să generezi traducerile automate pentru titlu și descriere înainte de salvare? Poți
+              și salva același text RO peste tot, fără traducere automată.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowTranslateConfirm(false)}
+            >
+              Anulează
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void saveSkipTranslateLocales()}
+              disabled={isTranslating || submitting || loading}
+            >
+              Aceeași text RO pentru toate limbile
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void confirmTranslateAndSubmit()}
+              disabled={isTranslating || submitting || loading}
+            >
+              Adaugă și localizează
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -20,8 +20,8 @@ import {
   updateVideo,
 } from "../services/videos.service";
 import { flushAdminUiLogQueue, logAdminUiEvent } from "../services/adminUiLogs.client";
-import VideoForm from "./VideoForm";
 import VideoTable from "./VideoTable";
+import VideoSheet from "./VideoSheet";
 import Modal from "./Modal";
 import { LANGUAGE_LABELS } from "../../../../data/constants";
 import {
@@ -856,13 +856,16 @@ export default function VideoLibraryAdminScreen() {
               </div>
             )}
 
-            <Modal
+            <VideoSheet
               open={showForm}
-              onClose={closeForm}
-              title={editingVideo ? "Editează videoclip" : "Adaugă videoclip"}
-            >
-              <VideoForm initialValue={editingVideo} onCancel={closeForm} onSubmit={handleFormSubmit} />
-            </Modal>
+              onOpenChange={(open) => {
+                if (!open) closeForm();
+              }}
+              editingVideo={editingVideo}
+              onSubmit={handleFormSubmit}
+              loading={loading}
+              error={errorMessage || undefined}
+            />
 
       <Modal
         open={!!previewVideo}
