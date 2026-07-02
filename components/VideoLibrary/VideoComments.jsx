@@ -101,6 +101,7 @@ export default function VideoComments({
     try {
       const headers = await getFirebaseBearerHeader({ required: false });
       const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      query.set("client", "web");
       if (append && cursor) query.set("cursor", cursor);
       const response = await fetch(
         `/api/video-comments/${encodeURIComponent(videoId)}?${query.toString()}`,
@@ -223,7 +224,7 @@ export default function VideoComments({
       const sendAuthorName = PLACEHOLDER_NAMES.includes(authorFirstName)
         ? undefined
         : authorFirstName;
-      const response = await fetch(`/api/video-comments/${encodeURIComponent(videoId)}`, {
+      const response = await fetch(`/api/video-comments/${encodeURIComponent(videoId)}?client=web`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
         body: JSON.stringify({
@@ -263,7 +264,7 @@ export default function VideoComments({
     try {
       const headers = await getFirebaseBearerHeader({ required: true });
       const response = await fetch(
-        `/api/video-comments/${encodeURIComponent(videoId)}/${encodeURIComponent(comment.id)}`,
+        `/api/video-comments/${encodeURIComponent(videoId)}/${encodeURIComponent(comment.id)}?client=web`,
         { method: "DELETE", headers: { Accept: "application/json", ...headers } }
       );
       const data = await response.json().catch(() => ({}));

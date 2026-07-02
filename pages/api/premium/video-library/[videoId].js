@@ -77,6 +77,7 @@ async function handler(req, res) {
         stage: "video_library_detail",
         requestId,
         videoId: rawId,
+        webClient,
       });
       premiumActive = resolved.premiumActive;
       accessExplain = resolved.accessExplain;
@@ -90,7 +91,7 @@ async function handler(req, res) {
         now: new Date().toISOString(),
       };
     } else {
-      premiumActive = await resolvePublicVideoLibraryPremiumActive();
+      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient });
     }
 
     const nowMs = Date.now();

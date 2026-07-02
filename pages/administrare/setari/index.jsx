@@ -76,8 +76,8 @@ function SettingsScreen() {
       setSettings(data.settings);
       setSuccess(
         pendingToggle
-          ? "Sistemul de abonament a fost activat. Videourile premium necesită acum abonament."
-          : "Sistemul de abonament a fost dezactivat. Toate videourile sunt acum gratuite."
+          ? "Sistemul de abonament a fost activat pentru clienții non-web. Pe site, abonamentele rămân active normal."
+          : "Sistemul de abonament a fost dezactivat pentru clienții non-web. Pe site, abonamentele continuă să funcționeze normal."
       );
       setPendingToggle(null);
     } catch (e) {
@@ -308,8 +308,8 @@ function SettingsScreen() {
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     {settings.subscriptionSystemEnabled
-                      ? "Videourile marcate ca premium necesită un abonament activ pentru a fi vizualizate."
-                      : "Toate videourile sunt gratuite, indiferent de marcarea premium."}
+                      ? "Pentru clienții non-web, videourile marcate ca premium necesită un abonament activ. Pe site, abonamentele funcționează normal indiferent de acest toggle."
+                      : "Pentru clienții non-web, videourile premium sunt deblocate. Pe site, abonamentele și accesul premium funcționează normal în continuare."}
                   </p>
                 </div>
 
@@ -354,9 +354,9 @@ function SettingsScreen() {
                     Când este activat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• Utilizatorii trebuie să plătească abonament</li>
+                    <li>• Clienții non-web verifică statusul premium</li>
                     <li>• Videourile premium sunt blocate fără abonament</li>
-                    <li>• Funcționează normal pe web și în aplicația mobilă</li>
+                    <li>• Site-ul web rămâne neschimbat</li>
                   </ul>
                 </div>
 
@@ -371,9 +371,9 @@ function SettingsScreen() {
                     Când este dezactivat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• Toate videourile sunt gratuite</li>
-                    <li>• Nu se verifică statusul de premium</li>
-                    <li>• Util pentru promoții sau testare</li>
+                    <li>• Clienții non-web primesc acces liber la video-uri premium</li>
+                    <li>• Site-ul web verifică în continuare abonamentul</li>
+                    <li>• Checkout-ul și portalul Stripe web rămân active</li>
                   </ul>
                 </div>
               </div>

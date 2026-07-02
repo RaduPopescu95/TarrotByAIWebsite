@@ -4,6 +4,11 @@ import { loadPremiumVideoLibraryRowById } from "../../../../lib/loadPremiumVideo
 import { canViewerSeeVideo } from "../../../../lib/videoReleaseSchedule";
 import { resolveVideoLibraryPremiumAccessForUser } from "../../../../lib/videoLibraryAccess";
 
+function isWebClientRequest(req) {
+  const raw = Array.isArray(req.query?.client) ? req.query.client[0] : req.query?.client;
+  return typeof raw === "string" && raw.trim().toLowerCase() === "web";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "DELETE") {
     res.setHeader("Allow", "DELETE");
@@ -17,6 +22,7 @@ export default async function handler(req, res) {
       resolveVideoLibraryPremiumAccessForUser(decoded.uid, {
         stage: "video_comment_delete",
         videoId,
+        webClient: isWebClientRequest(req),
       }),
     ]);
     if (!video || !canViewerSeeVideo(video, access.premiumActive === true, Date.now())) {

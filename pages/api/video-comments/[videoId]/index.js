@@ -10,10 +10,17 @@ import {
   listPublicVideoComments,
 } from "../../../../lib/videoComments";
 
-async function resolvePremium(uid) {
-  if (!uid) return resolvePublicVideoLibraryPremiumActive();
+function isWebClientRequest(req) {
+  const raw = Array.isArray(req.query?.client) ? req.query.client[0] : req.query?.client;
+  return typeof raw === "string" && raw.trim().toLowerCase() === "web";
+}
+
+async function resolvePremium(uid, req) {
+  const webClient = isWebClientRequest(req);
+  if (!uid) return resolvePublicVideoLibraryPremiumActive({ webClient });
   const result = await resolveVideoLibraryPremiumAccessForUser(uid, {
     stage: "video_comments",
+    webClient,
   });
   return result.premiumActive === true;
 }
@@ -31,7 +38,7 @@ export default async function handler(req, res) {
     const uid = decoded?.uid || null;
     const [video, premiumActive] = await Promise.all([
       loadPremiumVideoLibraryRowById(videoId),
-      resolvePremium(uid),
+      resolvePremium(uid, req),
     ]);
     if (!video || !canViewerSeeVideo(video, premiumActive, Date.now())) {
       return res.status(404).json({ error: "Not found" });

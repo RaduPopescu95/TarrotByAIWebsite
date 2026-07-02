@@ -78,12 +78,13 @@ async function handler(req, res) {
       const resolved = await resolveVideoLibraryPremiumAccessForUser(uid, {
         stage: "video_library_list",
         requestId,
+        webClient,
       });
       premiumActive = resolved.premiumActive;
       accessExplain = resolved.accessExplain;
       userDocExists = resolved.userDocExists;
     } else {
-      premiumActive = await resolvePublicVideoLibraryPremiumActive();
+      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient });
       if (hasAuthHeader && !uid) {
         accessExplain = {
           hasAccess: false,

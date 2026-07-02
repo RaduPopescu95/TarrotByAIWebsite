@@ -20,12 +20,19 @@ async function resolveViewer(req, method) {
   return requireAuth(req);
 }
 
-async function resolvePremiumActive(uid) {
+function isWebClientRequest(req) {
+  const raw = Array.isArray(req.query?.client) ? req.query.client[0] : req.query?.client;
+  return typeof raw === "string" && raw.trim().toLowerCase() === "web";
+}
+
+async function resolvePremiumActive(uid, req) {
+  const webClient = isWebClientRequest(req);
   if (!uid) {
-    return resolvePublicVideoLibraryPremiumActive();
+    return resolvePublicVideoLibraryPremiumActive({ webClient });
   }
   const resolved = await resolveVideoLibraryPremiumAccessForUser(uid, {
     stage: "video_like",
+    webClient,
   });
   return resolved.premiumActive === true;
 }
@@ -60,7 +67,7 @@ export default async function handler(req, res) {
 
     const [video, premiumActive] = await Promise.all([
       loadPremiumVideoLibraryRowById(videoId),
-      resolvePremiumActive(uid),
+      resolvePremiumActive(uid, req),
     ]);
     if (!video || !canViewerSeeVideo(video, premiumActive, Date.now())) {
       return res.status(404).json({ error: "Not found", requestId });

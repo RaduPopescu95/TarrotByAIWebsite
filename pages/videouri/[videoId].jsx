@@ -255,7 +255,7 @@ export default function VideoDetailPage() {
     try {
       const headers = await getFirebaseBearerHeader({ required: true });
       const response = await fetch(
-        `/api/video-likes/${encodeURIComponent(video.id)}`,
+        `/api/video-likes/${encodeURIComponent(video.id)}?client=web`,
         {
           method: nextLiked ? "PUT" : "DELETE",
           headers: {
