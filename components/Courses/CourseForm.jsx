@@ -233,7 +233,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
     categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
     featuredOnHome: initialValue?.featuredOnHome === true,
-    sitePremiumAccess: initialValue?.sitePremiumAccess === true,
     notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
     contactContent:
       typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -262,7 +261,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
       categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
       featuredOnHome: initialValue?.featuredOnHome === true,
-      sitePremiumAccess: initialValue?.sitePremiumAccess === true,
       notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
       contactContent:
         typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -317,16 +315,11 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     setForm((prev) => ({ ...prev, featuredOnHome: event.target.checked }));
   };
 
-  const handleToggleSitePremium = (event) => {
-    setForm((prev) => ({ ...prev, sitePremiumAccess: event.target.checked }));
-  };
-
   const handleToggleFreeCourse = (event) => {
     const checked = event.target.checked;
     setForm((prev) => ({
       ...prev,
       price: checked ? 0 : prev.price === 0 ? "" : prev.price,
-      sitePremiumAccess: checked ? false : prev.sitePremiumAccess,
     }));
   };
 
@@ -598,7 +591,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       currency: form.currency,
       status: form.status,
       featuredOnHome: !!form.featuredOnHome,
-      sitePremiumAccess: Number(form.price) === 0 ? false : !!form.sitePremiumAccess,
+      sitePremiumAccess: false,
       scheduledAt:
         form.status === "scheduled" && form.scheduledAt
           ? new Date(form.scheduledAt).toISOString()
@@ -952,27 +945,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               </span>
             </label>
           </div>
-
-          {Number(form.price) !== 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={!!form.sitePremiumAccess}
-                  onChange={handleToggleSitePremium}
-                  disabled={uiLocked}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
-                />
-                <span className="block">
-                  <span className="text-sm font-medium text-gray-900">Metadată „inclus în abonament” (neutilizată)</span>
-                  <span className="mt-1 block text-xs text-gray-500">
-                    Accesul la cursuri este doar prin achiziție sau curs gratuit. Bifarea nu deschide conținutul pentru
-                    abonați; poți ignora sau debifa.
-                  </span>
-                </span>
-              </label>
-            </div>
-          ) : null}
 
           {form.status === "scheduled" && (
             <div>

@@ -7,6 +7,7 @@ export default function BunnyHlsPlayer({
   poster,
   seekRequest,
   className = "",
+  autoPlay = true,
   onReady,
   onError,
 }) {
@@ -38,6 +39,12 @@ export default function BunnyHlsPlayer({
     const handleReady = () => {
       setReady(true);
       onReady?.(video);
+      if (autoPlay) {
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {});
+        }
+      }
     };
     const handleError = () => onError?.(new Error("video_error"));
 
@@ -53,7 +60,7 @@ export default function BunnyHlsPlayer({
       video.removeAttribute("src");
       video.load();
     };
-  }, [onError, onReady, src]);
+  }, [autoPlay, onError, onReady, src]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -73,6 +80,7 @@ export default function BunnyHlsPlayer({
       ref={videoRef}
       title={title}
       poster={poster || undefined}
+      autoPlay={autoPlay}
       controls
       playsInline
       preload="metadata"

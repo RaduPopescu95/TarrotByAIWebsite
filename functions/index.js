@@ -11,6 +11,11 @@
  *    - cleanupOldRecordings (cleanup automat înregistrări vechi)
  */
 
+const buffer = require("buffer");
+if (!buffer.SlowBuffer) {
+  buffer.SlowBuffer = buffer.Buffer;
+}
+
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
@@ -22,8 +27,9 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// Import new recording functions
-const { uploadLargeRecording, cleanupOldRecordings } = require('./uploadLargeRecording');
+// Recording functions (uploadLargeRecording.js) are not in this repo branch.
+// Keep them commented out so deploy targets only consultation notifications.
+// const { uploadLargeRecording, cleanupOldRecordings } = require('./uploadLargeRecording');
 
 // Configurații Twilio (pentru funcțiile existente)
 const aS = "AC6cf01717a74bbf7cc02d4a723db53232";
@@ -35,7 +41,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "webdynamicx@gmail.com",
-    pass: "nnbf ezyh jgnx hlxv",
+    pass: "rpocvvzavzvkebak",
   },
 });
 
@@ -149,20 +155,8 @@ exports.sendNotificationOnNewReservation = functions.firestore
  * Timeout: 540 seconds (9 minutes)
  * Memory: 2GB
  */
-exports.uploadLargeRecording = uploadLargeRecording;
+// exports.uploadLargeRecording = uploadLargeRecording;
+// exports.cleanupOldRecordings = cleanupOldRecordings;
 
-/**
- * FUNCȚIE NOUĂ: Cleanup automat pentru înregistrări vechi
- * Scheduled function - runs daily at 2:00 AM
- * Deletes recordings older than 30 days
- */
-exports.cleanupOldRecordings = cleanupOldRecordings;
-
-// ===========================================
-// LOGS PENTRU DEPLOYMENT
-// ===========================================
-
-console.log("🚀 Firebase Functions Index loaded:");
-console.log("📋 EXISTING Functions: sendNotificationOnNewReservation");
-console.log("🎥 NEW Functions: uploadLargeRecording, cleanupOldRecordings");
-console.log("✅ All functions ready for deployment!");
+console.log("🚀 Firebase Functions (consultations codebase) loaded:");
+console.log("📋 Active: sendNotificationOnNewReservation");

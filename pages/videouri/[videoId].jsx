@@ -22,6 +22,7 @@ import {
   resolveLibraryPlatform,
   useVideoPlaybackConsentGate,
 } from "../../lib/videoPlaybackConsent";
+import { appendLibraryAutoplayParams } from "../../lib/videoLibraryPublic";
 import VideoComments from "../../components/VideoLibrary/VideoComments";
 
 export async function getServerSideProps({ locale }) {
@@ -305,6 +306,15 @@ export default function VideoDetailPage() {
     typeof video?.description === "string" && video.description.trim()
       ? video.description.trim().slice(0, 160)
       : t("videoLibrarySeoDesc");
+  const playbackEmbedSrc = useMemo(() => {
+    if (!video?.embedSrc) return null;
+    return appendLibraryAutoplayParams(
+      video.embedSrc,
+      resolveLibraryPlatform(video),
+      router.locale || "ro"
+    );
+  }, [router.locale, video]);
+
   return (
     <>
       <Head>
@@ -362,9 +372,9 @@ export default function VideoDetailPage() {
                           />
                         ) : (
                           <iframe
-                            key={video.embedSrc || video.id}
+                            key={playbackEmbedSrc || video.embedSrc || video.id}
                             title={video.title}
-                            src={video.embedSrc}
+                            src={playbackEmbedSrc || video.embedSrc}
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                             allowFullScreen
                             className="h-full w-full"
