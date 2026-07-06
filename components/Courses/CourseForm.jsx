@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CheckCircle2 } from "lucide-react";
@@ -15,6 +15,12 @@ import { SITE_LOCALES } from "../../lib/siteLocales";
 import { gTranslateFetch } from "../../utils/apiUtils";
 
 const DEFAULT_CURRENCY = "RON";
+
+function isFreeCoursePrice(price) {
+  if (price === "" || price === null || price === undefined) return false;
+  const numeric = Number(price);
+  return Number.isFinite(numeric) && numeric === 0;
+}
 
 const PLATFORM_OPTIONS = [
   { value: "youtube", label: "YouTube" },
@@ -246,6 +252,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateMessage, setTranslateMessage] = useState("");
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
+  const priceBeforeFreeRef = useRef("");
   const uiLocked = loading || isTranslating;
 
   useEffect(() => {
@@ -306,9 +313,16 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     }
   };
 
-  const handleCategorySelect = (event) => {
-    const selected = Array.from(event.target.selectedOptions, (option) => option.value);
-    setForm((prev) => ({ ...prev, categoryIds: selected }));
+  const toggleCategoryId = (categoryId) => {
+    setForm((prev) => {
+      const isSelected = prev.categoryIds.includes(categoryId);
+      return {
+        ...prev,
+        categoryIds: isSelected
+          ? prev.categoryIds.filter((id) => id !== categoryId)
+          : [...prev.categoryIds, categoryId],
+      };
+    });
   };
 
   const handleToggleFeatured = (event) => {
@@ -317,10 +331,18 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
 
   const handleToggleFreeCourse = (event) => {
     const checked = event.target.checked;
-    setForm((prev) => ({
-      ...prev,
-      price: checked ? 0 : prev.price === 0 ? "" : prev.price,
-    }));
+    setForm((prev) => {
+      if (checked) {
+        if (!isFreeCoursePrice(prev.price)) {
+          priceBeforeFreeRef.current = prev.price;
+        }
+        return { ...prev, price: 0 };
+      }
+      if (isFreeCoursePrice(prev.price)) {
+        return { ...prev, price: priceBeforeFreeRef.current || "" };
+      }
+      return prev;
+    });
   };
 
   const updateLessonField = (index, field, value) => {
@@ -819,25 +841,45 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">Categorii</label>
             {Array.isArray(categories) && categories.length > 0 ? (
-              <div>
-                <select
-                  multiple
-                  value={form.categoryIds}
-                  onChange={handleCategorySelect}
-                  className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-                  disabled={loading}
-                  size={Math.min(6, categories.length)}
-                >
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {resolveCategoryLabel(category)}
-                    </option>
-                  ))}
-                </select>
+              <>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+                  <div className="max-h-56 overflow-y-auto overscroll-contain p-2 space-y-1">
+                    {[...categories]
+                      .sort((a, b) =>
+                        resolveCategoryLabel(a).localeCompare(resolveCategoryLabel(b), "ro", {
+                          sensitivity: "base",
+                        })
+                      )
+                      .map((category) => {
+                        const checked = form.categoryIds.includes(category.id);
+                        return (
+                          <label
+                            key={category.id}
+                            className={`flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors ${
+                              checked ? "bg-white ring-1 ring-indigo-100" : "hover:bg-white/80"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCategoryId(category.id)}
+                              disabled={uiLocked}
+                              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                            />
+                            <span className="text-sm text-gray-900">{resolveCategoryLabel(category)}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Poți selecta mai multe categorii (Ctrl/Cmd + click).
+                  {form.categoryIds.length === 0
+                    ? "Nicio categorie selectată — bifează una sau mai multe."
+                    : `${form.categoryIds.length} ${
+                        form.categoryIds.length === 1 ? "categorie selectată" : "categorii selectate"
+                      }.`}
                 </p>
-              </div>
+              </>
             ) : (
               <p className="text-xs text-gray-500">
                 Nu există categorii disponibile. Creează categorii în tabul "Categorii".
@@ -886,7 +928,7 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
             <label className="flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
-                checked={Number(form.price) === 0}
+                checked={isFreeCoursePrice(form.price)}
                 onChange={handleToggleFreeCourse}
                 disabled={uiLocked}
                 className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
