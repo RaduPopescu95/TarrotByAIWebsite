@@ -162,7 +162,7 @@ export default function CoursesPage() {
                   {t("courseBundlesBadge", "Trilogii")}
                 </span>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                  {t("courseBundlesHeading", "trilogii cu 🔮 Pachete Premium")}
+                  {t("courseBundlesHeading", "🔮 Pachete Premium")}
                 </h2>
               </div>
 

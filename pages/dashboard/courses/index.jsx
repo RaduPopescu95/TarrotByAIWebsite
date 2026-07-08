@@ -1051,7 +1051,7 @@ export default function CoursesDashboardPage() {
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <CardTitle className="text-lg">trilogii cu 🔮 Pachete Premium</CardTitle>
+                      <CardTitle className="text-lg">🔮 Pachete Premium</CardTitle>
                       <CardDescription>
                         Fiecare ofertă conține minim 2 cursuri și are un preț unic.
                       </CardDescription>
