@@ -85,7 +85,7 @@ export default function CoursesTable({
                 </div>
               </TableCell>
               <TableCell className="font-medium text-gray-700">
-                {formatPrice(course.price)} lei
+                {formatPrice(course.price, course.currency)}
               </TableCell>
               <TableCell>
                 <Badge variant={statusVariant(course.status)}>

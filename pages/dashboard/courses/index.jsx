@@ -23,6 +23,7 @@ import {
   updateAdminCourseBundle,
   deleteAdminCourseBundle,
 } from "../../../utils/coursesApi";
+import { formatCoursePrice } from "../../../lib/courses";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -823,8 +824,7 @@ export default function CoursesDashboardPage() {
   };
 
   // Utility functions
-  const formatPrice = (price) =>
-    new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(price);
+  const formatPrice = (price, currency = "RON") => formatCoursePrice(price, currency);
 
   const formatUpdated = (iso) => {
     const date =
@@ -1051,7 +1051,7 @@ export default function CoursesDashboardPage() {
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <CardTitle className="text-lg">Trilogii de mini-cursuri</CardTitle>
+                      <CardTitle className="text-lg">trilogii cu 🔮 Pachete Premium</CardTitle>
                       <CardDescription>
                         Fiecare ofertă conține minim 2 cursuri și are un preț unic.
                       </CardDescription>
@@ -1096,7 +1096,7 @@ export default function CoursesDashboardPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {formatPrice(bundle.price)} {bundle.currency}
+                              {formatPrice(bundle.price, bundle.currency)}
                             </TableCell>
                             <TableCell>
                               <Badge variant={bundle.status === "published" ? "default" : "secondary"}>
