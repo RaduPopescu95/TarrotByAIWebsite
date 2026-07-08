@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}} 的筆記區。觀看時請加入您的關鍵想法。\n",
   "coursesDetailContactPlaceholder": "需要幫助？請透過控制面板聯繫支援團隊，以取得課程協助。\n",
   "coursesDetailSidebarTitle": "\n課程內容",
-  "coursesDetailSidebarProgress": "\n已完成{{completed}}/{{total}}堂課\n",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "\n期末測試\n",
   "coursesDetailFinalTestHint": "\n完成所有課程後即可解鎖測驗。\n",
   "coursesDetailDownloadCertificate": "\n下載證書\n",

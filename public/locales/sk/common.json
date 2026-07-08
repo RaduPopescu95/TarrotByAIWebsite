@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Priestor na poznámky pre {{lesson}}. Pri sledovaní pridajte svoje kľúčové myšlienky.",
   "coursesDetailContactPlaceholder": "Potrebujete pomoc? Kontaktujte podporu z ovládacieho panela a požiadajte o pomoc s kurzom.",
   "coursesDetailSidebarTitle": "Obsah lekcie",
-  "coursesDetailSidebarProgress": "Dokončené hodiny {{completed}}/{{total}}",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Záverečný test",
   "coursesDetailFinalTestHint": "Odomknite test po dokončení všetkých lekcií.",
   "coursesDetailDownloadCertificate": "Stiahnuť certifikát",

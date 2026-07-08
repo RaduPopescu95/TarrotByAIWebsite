@@ -480,7 +480,6 @@ export default function CourseDetailPage() {
               ? t("coursesDetailLessonDurationTemplate", { minutes: durationMinutes })
               : t("coursesDetailLessonDurationUnknown"),
           summary: typeof lesson.summary === "string" ? lesson.summary.trim() : "",
-          completed: lesson.isCompleted === true,
           order:
             typeof lesson.order === "number" && Number.isFinite(lesson.order)
               ? Math.trunc(lesson.order)
@@ -499,7 +498,6 @@ export default function CourseDetailPage() {
         durationMinutes: lesson.durationMinutes,
         durationLabel: lesson.durationLabel,
         summary: lesson.summary,
-        completed: lesson.completed,
         order: index,
       }));
 
@@ -543,11 +541,6 @@ export default function CourseDetailPage() {
       curriculumData.lessons[0]
     );
   }, [curriculumData.lessons, activeLessonId]);
-
-  const completedLessonsCount = useMemo(
-    () => curriculumData.lessons.filter((lesson) => lesson.completed).length,
-    [curriculumData.lessons]
-  );
 
   const notesContent =
     typeof course?.notesContent === "string" && course.notesContent.trim().length > 0
@@ -1186,12 +1179,9 @@ export default function CourseDetailPage() {
                   lessons={curriculumData.lessons}
                   activeLessonId={activeLessonId}
                   onSelectLesson={setActiveLessonId}
-                  progressLabel={t("coursesDetailSidebarProgress", {
-                    completed: completedLessonsCount,
+                  progressLabel={t("coursesDetailSidebarLessonsCount", {
                     total: curriculumData.lessons.length,
                   })}
-                  finalTestLabel={t("coursesDetailFinalTest")}
-                  finalTestHint={t("coursesDetailFinalTestHint")}
                   downloadCertificateLabel={
                     certificateLoading
                       ? t("coursesDetailCertificateDownloading")

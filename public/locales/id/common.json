@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Area catatan untuk {{lesson}}. Tambahkan ide-ide utama Anda sambil menonton.",
   "coursesDetailContactPlaceholder": "Butuh bantuan? Hubungi dukungan dari dasbor Anda untuk mendapatkan bantuan terkait kursus.",
   "coursesDetailSidebarTitle": "Isi Pelajaran",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} pelajaran selesai",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Ujian Akhir",
   "coursesDetailFinalTestHint": "Buka kunci ujian setelah menyelesaikan semua pelajaran.",
   "coursesDetailDownloadCertificate": "Unduh sertifikat",

@@ -24,7 +24,6 @@ export interface CourseCurriculumLesson {
   title: string;
   durationMinutes: number | null;
   summary: string;
-  isCompleted: boolean;
   order: number;
 }
 

@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Поле для заметок к {{lesson}}. Добавьте свои основные идеи во время просмотра.",
   "coursesDetailContactPlaceholder": "Нужна помощь? Обратитесь в службу поддержки через панель управления, чтобы получить помощь по курсу.",
   "coursesDetailSidebarTitle": "Содержание урока",
-  "coursesDetailSidebarProgress": "Уроки {{completed}}/{{total}} завершены",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Итоговый тест",
   "coursesDetailFinalTestHint": "Тест станет доступен после завершения всех уроков.",
   "coursesDetailDownloadCertificate": "Скачать сертификат",

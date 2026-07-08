@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Зона за бележки за {{lesson}}. Добавете ключовите си идеи, докато гледате.",
   "coursesDetailContactPlaceholder": "Нуждаете се от помощ? Свържете се с поддръжката от таблото си за управление за съдействие за курса.",
   "coursesDetailSidebarTitle": "Съдържание на урока",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} уроци завършени",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Финален тест",
   "coursesDetailFinalTestHint": "Отключете теста след завършване на всички уроци.",
   "coursesDetailDownloadCertificate": "Изтеглете сертификата",

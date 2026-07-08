@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}} için notlar alanı. İzlerken önemli fikirlerinizi ekleyin.\n",
   "coursesDetailContactPlaceholder": "Yardıma mı ihtiyacınız var? Kurs desteği için kontrol panelinizden destek ekibiyle iletişime geçin.\n",
   "coursesDetailSidebarTitle": "Ders içeriği",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} ders tamamlandı",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Final testi",
   "coursesDetailFinalTestHint": "Tüm dersleri tamamladıktan sonra testin kilidini açın.\n",
   "coursesDetailDownloadCertificate": "Sertifikayı indir",

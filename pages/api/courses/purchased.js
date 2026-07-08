@@ -1,8 +1,9 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
-import { resolveDate, toSafeCourse } from "../../../lib/courses";
+import { isCourseVisible, resolveDate, toSafeCourse } from "../../../lib/courses";
 import {
   COURSE_BUNDLE_COLLECTION,
+  isCourseBundleVisible,
   loadBundleCourses,
   toSafeCourseBundle,
 } from "../../../lib/courseBundles";
@@ -26,6 +27,16 @@ function getPurchaseSortMs(purchase) {
   const purchasedAtMs = resolveDate(purchase?.purchasedAt)?.getTime() || 0;
   if (purchasedAtMs > 0) return purchasedAtMs;
   return resolveDate(purchase?.updatedAt)?.getTime() || 0;
+}
+
+export function shouldExposePurchasedCourse(courseMissing, courseData, nowMs = Date.now()) {
+  if (courseMissing) return true;
+  return isCourseVisible(courseData, nowMs);
+}
+
+export function shouldExposePurchasedBundle(bundleMissing, bundleData) {
+  if (bundleMissing) return true;
+  return isCourseBundleVisible(bundleData);
 }
 
 async function handler(req, res) {
@@ -143,24 +154,30 @@ async function handler(req, res) {
         )
       )
     );
-    const payload = purchases.map((purchase, index) => {
-      const courseSnap = courseSnaps[index];
-      const purchasedAt = purchase.purchasedAt || purchase.updatedAt;
-      const courseMissing = !courseSnap.exists;
-      const courseData = courseMissing ? null : courseSnap.data() || {};
+    const payload = purchases
+      .map((purchase, index) => {
+        const courseSnap = courseSnaps[index];
+        const purchasedAt = purchase.purchasedAt || purchase.updatedAt;
+        const courseMissing = !courseSnap.exists;
+        const courseData = courseMissing ? null : courseSnap.data() || {};
 
-      return {
-        courseId: purchase.courseId,
-        status: purchase.status,
-        purchasedAt: toIsoString(purchasedAt),
-        amountPaid: purchase.amountPaid,
-        currency: purchase.currency,
-        accessSource: purchase.accessSource,
-        bundleId: purchase.bundleId,
-        courseMissing,
-        course: courseData ? toSafeCourse(purchase.courseId, courseData, locale) : null,
-      };
-    });
+        if (!shouldExposePurchasedCourse(courseMissing, courseData)) {
+          return null;
+        }
+
+        return {
+          courseId: purchase.courseId,
+          status: purchase.status,
+          purchasedAt: toIsoString(purchasedAt),
+          amountPaid: purchase.amountPaid,
+          currency: purchase.currency,
+          accessSource: purchase.accessSource,
+          bundleId: purchase.bundleId,
+          courseMissing,
+          course: courseData ? toSafeCourse(purchase.courseId, courseData, locale) : null,
+        };
+      })
+      .filter(Boolean);
 
     const bundlePurchasesSnap = await withFirestoreCostLog(
       { page: "api.courses.purchased", queryName: "users.bundlePurchases.paid" },
@@ -183,9 +200,14 @@ async function handler(req, res) {
         );
         const bundleMissing = !bundleSnap.exists;
         const bundleData = bundleMissing ? null : bundleSnap.data() || {};
+        if (!shouldExposePurchasedBundle(bundleMissing, bundleData)) {
+          return null;
+        }
         let bundle = null;
         if (bundleData) {
-          const courses = await loadBundleCourses(db, bundleData.courseIds, locale);
+          const courses = await loadBundleCourses(db, bundleData.courseIds, locale, {
+            visibleOnly: true,
+          });
           bundle = toSafeCourseBundle(bundleId, bundleData, locale, courses);
         }
         return {
@@ -199,18 +221,19 @@ async function handler(req, res) {
         };
       })
     );
+    const visiblePurchasedBundles = purchasedBundles.filter(Boolean);
 
-    purchasedBundles.sort(
+    visiblePurchasedBundles.sort(
       (left, right) => getPurchaseSortMs(right) - getPurchaseSortMs(left)
     );
 
     console.info("[courses.purchased] success", {
       uid: maskUid(authUser?.uid),
       count: payload.length,
-      bundleCount: purchasedBundles.length,
+      bundleCount: visiblePurchasedBundles.length,
     });
 
-    return res.status(200).json({ purchases: payload, purchasedBundles });
+    return res.status(200).json({ purchases: payload, purchasedBundles: visiblePurchasedBundles });
   } catch (error) {
     console.error("[courses.purchased] fail", {
       uid: maskUid(authUser?.uid),

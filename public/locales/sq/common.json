@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Zona e shënimeve për {{lesson}}. Shtoni idetë tuaja kryesore gjatë shikimit.",
   "coursesDetailContactPlaceholder": "Keni nevojë për ndihmë? Kontaktoni mbështetjen nga paneli juaj i kontrollit për ndihmë në kurs.",
   "coursesDetailSidebarTitle": "Përmbajtja e mësimit",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} mësime të përfunduara",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Testi përfundimtar",
   "coursesDetailFinalTestHint": "Zhbllokoni testin pasi të keni përfunduar të gjitha mësimet.",
   "coursesDetailDownloadCertificate": "Shkarkoni certifikatën",

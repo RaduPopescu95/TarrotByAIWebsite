@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}}-н тэмдэглэлийн хэсэг. Үзэж байхдаа гол санаануудаа нэмээрэй.",
   "coursesDetailContactPlaceholder": "Тусламж хэрэгтэй байна уу? Сургалтын тусламж авахын тулд хяналтын самбараасаа дэмжлэг аваарай.",
   "coursesDetailSidebarTitle": "Хичээлийн агуулга",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} хичээлүүд дууслаа",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Эцсийн шалгалт",
   "coursesDetailFinalTestHint": "Бүх хичээлийг дуусгасны дараа тестийг тайл.",
   "coursesDetailDownloadCertificate": "Сертификат татаж авах",

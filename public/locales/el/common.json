@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Περιοχή σημειώσεων για {{lesson}}. Προσθέστε τις βασικές σας ιδέες ενώ παρακολουθείτε.",
   "coursesDetailContactPlaceholder": "Χρειάζεστε βοήθεια; Επικοινωνήστε με την υποστήριξη από τον πίνακα ελέγχου σας για βοήθεια σχετικά με το μάθημα.",
   "coursesDetailSidebarTitle": "Περιεχόμενο μαθήματος",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} μαθήματα ολοκληρώθηκαν",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Τελικό τεστ",
   "coursesDetailFinalTestHint": "Ξεκλειδώστε το τεστ αφού ολοκληρώσετε όλα τα μαθήματα.",
   "coursesDetailDownloadCertificate": "Λήψη πιστοποιητικού",

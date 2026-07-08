@@ -69,7 +69,6 @@ function hasValidCurriculumLessons(value) {
       }
     }
     if (lesson.summary !== undefined && typeof lesson.summary !== "string") return false;
-    if (typeof lesson.isCompleted !== "boolean") return false;
     if (typeof lesson.order !== "number" || !Number.isFinite(lesson.order)) return false;
     return true;
   });

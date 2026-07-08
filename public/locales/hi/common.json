@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}} के लिए नोट्स क्षेत्र। वीडियो देखते समय अपने मुख्य विचार लिखें।",
   "coursesDetailContactPlaceholder": "सहायता चाहिए? कोर्स संबंधी सहायता के लिए अपने डैशबोर्ड से सहायता टीम से संपर्क करें।",
   "coursesDetailSidebarTitle": "पाठ की सामग्री",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} पाठ पूरे हुए",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "अंतिम परीक्षा",
   "coursesDetailFinalTestHint": "सभी पाठ पूरे करने के बाद परीक्षा अनलॉक हो जाएगी।",
   "coursesDetailDownloadCertificate": "प्रमाणपत्र डाउनलोड करें",

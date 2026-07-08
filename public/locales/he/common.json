@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "אזור הערות עבור {{lesson}}. הוסף את הרעיונות המרכזיים שלך בזמן הצפייה.",
   "coursesDetailContactPlaceholder": "זקוק לעזרה? צור קשר עם התמיכה מלוח המחוונים שלך לקבלת סיוע בקורס.",
   "coursesDetailSidebarTitle": "תוכן השיעור",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} שיעורים הושלמו",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "מבחן סופי",
   "coursesDetailFinalTestHint": "בטל את נעילת המבחן לאחר השלמת כל השיעורים.",
   "coursesDetailDownloadCertificate": "הורדת תעודה",

@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Zone de notes pour {{lesson}}. Ajoutez vos idées principales pendant le visionnage.",
   "coursesDetailContactPlaceholder": "Besoin d'aide ? Contactez le support depuis votre tableau de bord pour obtenir de l'aide concernant le cours.",
   "coursesDetailSidebarTitle": "Contenu de la leçon",
-  "coursesDetailSidebarProgress": "Leçons {{completed}}/{{total}} terminées",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Test final",
   "coursesDetailFinalTestHint": "Débloquez le test après avoir terminé toutes les leçons.",
   "coursesDetailDownloadCertificate": "Télécharger le certificat",

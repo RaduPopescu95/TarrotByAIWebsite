@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Área de notas para {{lesson}}. Añada sus ideas principales mientras ve el vídeo.",
   "coursesDetailContactPlaceholder": "¿Necesitas ayuda? Ponte en contacto con el servicio de asistencia desde tu panel de control para obtener ayuda con el curso.",
   "coursesDetailSidebarTitle": "Contenido de la lección",
-  "coursesDetailSidebarProgress": "Lecciones {{completed}}/{{total}} completadas",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Examen final",
   "coursesDetailFinalTestHint": "Desbloquea el examen tras completar todas las lecciones.\n",
   "coursesDetailDownloadCertificate": "Descargar certificado",

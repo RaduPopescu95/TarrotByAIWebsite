@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}} 강의를 시청하면서 주요 내용을 메모하세요.\n",
   "coursesDetailContactPlaceholder": "도움이 필요하신가요? 강좌 관련 문의는 대시보드에서 지원팀에 문의하세요.\n",
   "coursesDetailSidebarTitle": "수업 내용",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}}개 수업 완료",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "최종 시험",
   "coursesDetailFinalTestHint": "모든 수업을 완료하면 시험이 잠금 해제됩니다.\n",
   "coursesDetailDownloadCertificate": "수료증 다운로드",

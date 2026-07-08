@@ -15,6 +15,10 @@ import {
   processBundleCheckoutSessionEvent,
   resolvePurchaseContext,
 } from "../../pages/api/stripe/courses/webhook";
+import {
+  shouldExposePurchasedBundle,
+  shouldExposePurchasedCourse,
+} from "../../pages/api/courses/purchased";
 
 function createRef(path) {
   return {
@@ -126,6 +130,18 @@ describe("course archive policy", () => {
   test("isCourseVisible returns false for archived courses", () => {
     expect(isCourseVisible({ status: "archived" })).toBe(false);
     expect(isCourseVisible({ status: "published" })).toBe(true);
+  });
+
+  test("purchased courses API hides archived courses from mobile payloads", () => {
+    expect(shouldExposePurchasedCourse(false, { status: "archived" })).toBe(false);
+    expect(shouldExposePurchasedCourse(false, { status: "published" })).toBe(true);
+    expect(shouldExposePurchasedCourse(true, null)).toBe(true);
+  });
+
+  test("purchased courses API hides archived bundles from mobile payloads", () => {
+    expect(shouldExposePurchasedBundle(false, { status: "archived" })).toBe(false);
+    expect(shouldExposePurchasedBundle(false, { status: "published" })).toBe(true);
+    expect(shouldExposePurchasedBundle(true, null)).toBe(true);
   });
 
   test("normalizePurchaseCount clamps invalid values", () => {

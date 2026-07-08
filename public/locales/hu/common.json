@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Jegyzetek a {{lesson}}-hoz. Írd le a legfontosabb ötleteidet nézés közben.",
   "coursesDetailContactPlaceholder": "Segítségre van szüksége? A kurzussal kapcsolatos segítségért forduljon az irányítópulton keresztül az ügyfélszolgálathoz.",
   "coursesDetailSidebarTitle": "Lecke tartalma",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} lecke elvégezve",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Záró teszt",
   "coursesDetailFinalTestHint": "Oldd fel a tesztet az összes lecke elvégzése után.",
   "coursesDetailDownloadCertificate": "Tanúsítvány letöltése",

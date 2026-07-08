@@ -572,7 +572,7 @@
   "coursesDetailNotesPlaceholder": "Notes area for {{lesson}}. Add your key ideas while watching.",
   "coursesDetailContactPlaceholder": "Need help? Contact support from your dashboard for course assistance.",
   "coursesDetailSidebarTitle": "Lesson content",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} lessons completed",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Final test",
   "coursesDetailFinalTestHint": "Unlock the test after completing all lessons.",
   "coursesDetailDownloadCertificate": "Download certificate",

@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "مساحة الملاحظات لـ {{lesson}}. أضف أفكارك الرئيسية أثناء المشاهدة.",
   "coursesDetailContactPlaceholder": "هل تحتاج إلى مساعدة؟ تواصل مع الدعم من لوحة التحكم الخاصة بك للحصول على مساعدة في الدورة.\n",
   "coursesDetailSidebarTitle": "محتوى الدرس",
-  "coursesDetailSidebarProgress": "تم إكمال {{completed}}/{{total}} درسًا",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "الاختبار النهائي",
   "coursesDetailFinalTestHint": "افتح الاختبار بعد إكمال جميع الدروس.\n",
   "coursesDetailDownloadCertificate": "تنزيل الشهادة",

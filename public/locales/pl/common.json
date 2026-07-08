@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Obszar notatek dla {{lesson}}. Dodawaj swoje kluczowe pomysły podczas oglądania.",
   "coursesDetailContactPlaceholder": "Potrzebujesz pomocy? Skontaktuj się z pomocą techniczną z poziomu panelu, aby uzyskać pomoc dotyczącą kursu.",
   "coursesDetailSidebarTitle": "Treść lekcji",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} lekcji ukończonych",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Test końcowy",
   "coursesDetailFinalTestHint": "Odblokuj test po ukończeniu wszystkich lekcji.",
   "coursesDetailDownloadCertificate": "Pobierz certyfikat",

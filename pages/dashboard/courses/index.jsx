@@ -442,7 +442,6 @@ export default function CoursesDashboardPage() {
               durationMinutes:
                 typeof lesson?.durationMinutes === "number" ? lesson.durationMinutes : null,
               summary: lesson?.summary || "",
-              isCompleted: lesson?.isCompleted === true,
               order: typeof lesson?.order === "number" ? lesson.order : index,
             }))
           : [],

@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Područje za bilješke za {{lesson}}. Dodajte svoje ključne ideje dok gledate.",
   "coursesDetailContactPlaceholder": "Trebate pomoć? Za pomoć oko kursa kontaktirajte podršku sa svoje kontrolne ploče.",
   "coursesDetailSidebarTitle": "Sadržaj lekcije",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} lekcije završene",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Završni test",
   "coursesDetailFinalTestHint": "Otključajte test nakon završetka svih lekcija.",
   "coursesDetailDownloadCertificate": "Preuzmite certifikat",

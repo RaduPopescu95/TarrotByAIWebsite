@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "Notizbereich für {{lesson}}. Notieren Sie Ihre wichtigsten Gedanken während des Ansehens.",
   "coursesDetailContactPlaceholder": "Benötigen Sie Hilfe? Kontaktieren Sie den Support über Ihr Dashboard, um Unterstützung beim Kurs zu erhalten.",
   "coursesDetailSidebarTitle": "Lektionsinhalt",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} Lektionen abgeschlossen",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "Abschlusstest",
   "coursesDetailFinalTestHint": "Schalten Sie den Test frei, nachdem Sie alle Lektionen abgeschlossen haben.\n",
   "coursesDetailDownloadCertificate": "Zertifikat herunterladen",

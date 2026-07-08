@@ -572,7 +572,7 @@
   "coursesDetailNotesPlaceholder": "Zona de notite pentru {{lesson}}. Adauga ideile importante in timp ce urmaresti cursul.",
   "coursesDetailContactPlaceholder": "Ai nevoie de ajutor? Contacteaza suportul din dashboard pentru asistenta legata de curs.",
   "coursesDetailSidebarTitle": "Continut lectii",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} lectii finalizate",
+  "coursesDetailSidebarLessonsCount": "{{total}} lectii",
   "coursesDetailFinalTest": "Test final",
   "coursesDetailFinalTestHint": "Deblochezi testul dupa ce finalizezi toate lectiile.",
   "coursesDetailDownloadCertificate": "Descarca certificatul",

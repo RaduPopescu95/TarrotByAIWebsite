@@ -1,32 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-function StatusIcon({ completed }) {
-  return (
-    <span
-      className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-        completed ? "border-red-500 bg-red-500 text-white" : "border-slate-300 bg-white text-transparent"
-      }`}
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-        <path
-          fillRule="evenodd"
-          d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.426-.007L3.29 9.045a1 1 0 1 1 1.42-1.408l4.081 4.115 6.494-6.545a1 1 0 0 1 1.419-.006z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </span>
-  );
-}
-
 export default function SidebarCurriculum({
   title,
   lessons = [],
   activeLessonId,
   onSelectLesson,
   progressLabel,
-  finalTestLabel,
-  finalTestHint,
   downloadCertificateLabel,
   certificateLockedLabel,
   isCertificateEnabled,
@@ -65,7 +44,7 @@ export default function SidebarCurriculum({
           </p>
         ) : (
           <ul className="space-y-2">
-            {lessons.map((lesson) => {
+            {lessons.map((lesson, index) => {
               const isOpen = lesson.id === openLessonId;
               const isActive = lesson.id === activeLessonId;
               const panelId = `lesson-panel-${lesson.id}`;
@@ -86,7 +65,9 @@ export default function SidebarCurriculum({
                     aria-expanded={isOpen}
                     aria-controls={panelId}
                   >
-                    <StatusIcon completed={lesson.completed} />
+                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center text-xs font-semibold text-slate-500">
+                      {index + 1}.
+                    </span>
 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-slate-800">
@@ -120,8 +101,6 @@ export default function SidebarCurriculum({
           </ul>
         )}
       </section>
-
-      
 
       <button
         type="button"

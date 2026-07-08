@@ -552,7 +552,7 @@
   "coursesDetailNotesPlaceholder": "{{lesson}} のメモ欄です。視聴中に重要なポイントをメモしてください。\n",
   "coursesDetailContactPlaceholder": "ヘルプが必要ですか？コースに関するサポートについては、ダッシュボードからお問い合わせください。\n",
   "coursesDetailSidebarTitle": "レッスン内容",
-  "coursesDetailSidebarProgress": "{{completed}}/{{total}} レッスン完了",
+  "coursesDetailSidebarLessonsCount": "{{total}} lessons",
   "coursesDetailFinalTest": "最終テスト",
   "coursesDetailFinalTestHint": "すべてのレッスンを完了すると、テストがアンロックされます。",
   "coursesDetailDownloadCertificate": "証明書のダウンロード",

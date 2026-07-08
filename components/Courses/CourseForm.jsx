@@ -134,7 +134,6 @@ function createEmptyLesson(order = 0) {
     title: "",
     durationMinutes: "",
     summary: "",
-    isCompleted: false,
     order,
   };
 }
@@ -152,7 +151,6 @@ function normalizeLessonForForm(lesson, index) {
         ? String(lesson.durationMinutes)
         : "",
     summary: typeof lesson.summary === "string" ? lesson.summary : "",
-    isCompleted: lesson.isCompleted === true,
     order: typeof lesson.order === "number" ? lesson.order : index,
   };
 }
@@ -456,7 +454,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
           ? null
           : Number(lesson.durationMinutes),
       summary: lesson.summary?.trim() || "",
-      isCompleted: lesson.isCompleted === true,
       order: index,
     }));
 
@@ -1298,19 +1295,6 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
                         disabled={uiLocked}
                       />
                     </div>
-
-                    <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={lesson.isCompleted}
-                        onChange={(event) =>
-                          updateLessonField(index, "isCompleted", event.target.checked)
-                        }
-                        disabled={uiLocked}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      Marcată ca finalizată (status icon în sidebar)
-                    </label>
                   </div>
                 ))}
               </div>
