@@ -2,6 +2,7 @@ import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import {
   COURSE_BUNDLE_COLLECTION,
+  isCourseBundleVisibleOnChannel,
   isCourseBundleVisible,
   loadBundleCourses,
   normalizeBundleCourseIds,
@@ -41,6 +42,9 @@ export default async function handler(req, res) {
     const data = snap.data() || {};
     const authUser = await getOptionalAuth(req);
     const access = await resolveBundleAccess(db, authUser?.uid || null, bundleId, data);
+    if (!access.hasAccess && !isCourseBundleVisibleOnChannel(data, channel)) {
+      return res.status(404).json({ error: "Course bundle not available" });
+    }
     const courses = await loadBundleCourses(db, data.courseIds, locale, {
       visibleOnly: true,
       ...(access.hasAccess ? {} : { channel }),

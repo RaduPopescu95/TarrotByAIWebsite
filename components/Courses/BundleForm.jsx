@@ -4,6 +4,7 @@ import { Input } from "../ui/input";
 import { SITE_LOCALES } from "../../lib/siteLocales";
 import { gTranslateFetch } from "../../utils/apiUtils";
 import { uploadBundleCover } from "../../utils/storageUtils";
+import { isCourseVisibleOnChannel } from "../../lib/courses";
 
 const ALLOWED_COVER_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_COVER_INPUT_SIZE_BYTES = 10 * 1024 * 1024;
@@ -26,6 +27,8 @@ const initialForm = (value) => ({
   price: value?.price ?? "",
   currency: value?.currency || "RON",
   status: value?.status || "draft",
+  availableOnWebsite: value?.availableOnWebsite !== false,
+  availableOnMobile: value?.availableOnMobile !== false,
   thumbnailUrl: value?.thumbnailUrl || "",
   coverSource: resolveInitialCoverSource(value),
   coverCourseId: typeof value?.coverCourseId === "string" ? value.coverCourseId : "",
@@ -68,6 +71,15 @@ export default function BundleForm({
         .filter(Boolean),
     [form.courseIds, courseById]
   );
+  const incompatibleCourses = useMemo(() => {
+    const website = form.availableOnWebsite
+      ? selectedCourses.filter((course) => !isCourseVisibleOnChannel(course, "website", Date.now()))
+      : [];
+    const mobile = form.availableOnMobile
+      ? selectedCourses.filter((course) => !isCourseVisibleOnChannel(course, "mobile", Date.now()))
+      : [];
+    return { website, mobile };
+  }, [form.availableOnMobile, form.availableOnWebsite, selectedCourses]);
 
   useEffect(() => {
     if (form.coverSource !== "course") return;
@@ -205,6 +217,25 @@ export default function BundleForm({
       setError("Prețul trebuie să fie mai mare ca 0.");
       return;
     }
+    if (form.status === "published" && !form.availableOnWebsite && !form.availableOnMobile) {
+      setError("Un pachet publicat trebuie să fie disponibil pe Website sau în Aplicația mobilă.");
+      return;
+    }
+    if (
+      form.status === "published" &&
+      (incompatibleCourses.website.length > 0 || incompatibleCourses.mobile.length > 0)
+    ) {
+      const details = [
+        incompatibleCourses.website.length
+          ? `Website: ${incompatibleCourses.website.map((course) => course.title || course.id).join(", ")}`
+          : null,
+        incompatibleCourses.mobile.length
+          ? `Aplicație mobilă: ${incompatibleCourses.mobile.map((course) => course.title || course.id).join(", ")}`
+          : null,
+      ].filter(Boolean);
+      setError(`Cursuri incompatibile cu canalele pachetului — ${details.join("; ")}.`);
+      return;
+    }
     if (form.coverSource === "course") {
       if (!form.coverCourseId || !form.courseIds.includes(form.coverCourseId)) {
         setError("Alege cursul din care să fie folosită coperta.");
@@ -231,6 +262,8 @@ export default function BundleForm({
       price,
       currency: form.currency,
       status: form.status,
+      availableOnWebsite: !!form.availableOnWebsite,
+      availableOnMobile: !!form.availableOnMobile,
       coverSource: form.coverSource,
       coverCourseId: form.coverSource === "course" ? form.coverCourseId : null,
       thumbnailUrl:
@@ -313,6 +346,60 @@ export default function BundleForm({
           <option value="published">Publicat</option>
           <option value="archived">Arhivat</option>
         </select>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <h3 className="text-sm font-semibold text-gray-900">Disponibilitate pachet</h3>
+        <p className="mt-1 text-xs text-gray-600">
+          Pachetul apare numai pe canalele bifate și numai dacă toate cursurile incluse sunt disponibile acolo.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+            <input
+              type="checkbox"
+              checked={!!form.availableOnWebsite}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, availableOnWebsite: event.target.checked }))
+              }
+              disabled={loading}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-medium text-gray-900">Website</span>
+              <span className="block text-xs text-gray-600">Afișare și achiziție pe site.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+            <input
+              type="checkbox"
+              checked={!!form.availableOnMobile}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, availableOnMobile: event.target.checked }))
+              }
+              disabled={loading}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-medium text-gray-900">Aplicație mobilă</span>
+              <span className="block text-xs text-gray-600">Afișare și achiziție în aplicațiile instalate.</span>
+            </span>
+          </label>
+        </div>
+        {form.status === "published" &&
+        (incompatibleCourses.website.length > 0 || incompatibleCourses.mobile.length > 0) ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {incompatibleCourses.website.length > 0 ? (
+              <p>
+                Website: {incompatibleCourses.website.map((course) => course.title || course.id).join(", ")}
+              </p>
+            ) : null}
+            {incompatibleCourses.mobile.length > 0 ? (
+              <p>
+                Aplicație mobilă: {incompatibleCourses.mobile.map((course) => course.title || course.id).join(", ")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">

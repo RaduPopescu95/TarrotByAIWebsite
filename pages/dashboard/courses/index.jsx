@@ -1083,6 +1083,7 @@ export default function CoursesDashboardPage() {
                           <TableHead>Cursuri</TableHead>
                           <TableHead>Preț</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Canale</TableHead>
                           <TableHead>Achiziții</TableHead>
                           <TableHead className="text-right">Acțiuni</TableHead>
                         </TableRow>
@@ -1103,6 +1104,19 @@ export default function CoursesDashboardPage() {
                               <Badge variant={bundle.status === "published" ? "default" : "secondary"}>
                                 {bundle.status}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {bundle.availableOnWebsite !== false ? (
+                                  <Badge variant="outline">Website</Badge>
+                                ) : null}
+                                {bundle.availableOnMobile !== false ? (
+                                  <Badge variant="outline">Mobile</Badge>
+                                ) : null}
+                                {bundle.availableOnWebsite === false && bundle.availableOnMobile === false ? (
+                                  <Badge variant="secondary">Niciun canal</Badge>
+                                ) : null}
+                              </div>
                             </TableCell>
                             <TableCell>{bundle.purchaseCount || 0}</TableCell>
                             <TableCell className="text-right">

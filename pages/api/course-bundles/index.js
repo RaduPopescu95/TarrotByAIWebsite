@@ -2,7 +2,7 @@ import { buildPublicCacheControl } from "../../../lib/httpCache";
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import {
   COURSE_BUNDLE_COLLECTION,
-  isCourseBundleVisible,
+  isCourseBundleVisibleOnChannel,
   loadBundleCourses,
   normalizeBundleCourseIds,
   toSafeCourseBundle,
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     const rows = await Promise.all(
       snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data() || {};
-        if (!isCourseBundleVisible(data)) return null;
+        if (!isCourseBundleVisibleOnChannel(data, channel)) return null;
         const courses = await loadBundleCourses(db, data.courseIds, locale, {
           visibleOnly: true,
           channel,

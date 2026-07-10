@@ -154,6 +154,16 @@ describe("course archive policy", () => {
     expect(shouldExposePurchasedBundle(true, null)).toBe(true);
   });
 
+  test("purchased bundles remain exposed when their catalog channel changes", () => {
+    expect(
+      shouldExposePurchasedBundle(false, {
+        status: "published",
+        availableOnWebsite: true,
+        availableOnMobile: false,
+      })
+    ).toBe(true);
+  });
+
   test("normalizePurchaseCount clamps invalid values", () => {
     expect(normalizePurchaseCount({ purchaseCount: 3.8 })).toBe(3);
     expect(normalizePurchaseCount({ purchaseCount: -2 })).toBe(0);

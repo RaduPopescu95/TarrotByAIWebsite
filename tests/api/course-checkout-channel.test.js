@@ -114,6 +114,77 @@ function requestFor(platform) {
   };
 }
 
+function createBundleDb(bundle, courses) {
+  const checkoutWrites = [];
+  return {
+    checkoutWrites,
+    collection(name) {
+      if (name === "courseBundles") {
+        return {
+          doc(id) {
+            return { id, get: async () => ({ exists: true, data: () => bundle }) };
+          },
+        };
+      }
+      if (name === "courses") {
+        return {
+          doc(id) {
+            const course = courses[id];
+            return {
+              id,
+              get: async () => ({ exists: Boolean(course), data: () => course }),
+            };
+          },
+        };
+      }
+      if (name === "users") {
+        return {
+          doc() {
+            return {
+              collection() {
+                return {
+                  doc(id) {
+                    return {
+                      id,
+                      get: async () => ({ exists: false, data: () => undefined }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      }
+      if (name === "courseCheckoutSessions") {
+        return {
+          doc(id) {
+            return {
+              id,
+              async set(payload) {
+                checkoutWrites.push(payload);
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`Unexpected collection ${name}`);
+    },
+  };
+}
+
+function bundleRequestFor(platform) {
+  return {
+    method: "POST",
+    headers: { host: "localhost:3000" },
+    body: {
+      purchaseType: "bundle",
+      bundleId: "bundle-web",
+      platform,
+      billingDetails: {},
+    },
+  };
+}
+
 describe("course checkout channel enforcement", () => {
   const websiteOnlyCourse = {
     title: "Curs Website",
@@ -166,5 +237,67 @@ describe("course checkout channel enforcement", () => {
       },
     });
     expect(db.checkoutWrites).toHaveLength(1);
+  });
+
+  test("enforces the bundle channel independently of its included courses", async () => {
+    const courses = {
+      a: { title: "A", status: "published", availableOnWebsite: true, availableOnMobile: true },
+      b: { title: "B", status: "published", availableOnWebsite: true, availableOnMobile: true },
+    };
+    const bundle = {
+      title: "Pachet Website",
+      status: "published",
+      price: 149,
+      currency: "RON",
+      courseIds: ["a", "b"],
+      availableOnWebsite: true,
+      availableOnMobile: false,
+    };
+    getAdminDb.mockReturnValue(createBundleDb(bundle, courses));
+    const mobileRes = createResponse();
+
+    await checkoutHandler(bundleRequestFor("expo"), mobileRes);
+
+    expect(mobileRes.statusCode).toBe(400);
+    expect(mobileRes.body.error).toBe("Course bundle not available for purchase");
+    expect(mockStripeCreate).not.toHaveBeenCalled();
+
+    mockStripeCreate.mockResolvedValue({
+      id: "cs_bundle_website",
+      url: "https://checkout.stripe.test/cs_bundle_website",
+    });
+    const websiteRes = createResponse();
+    await checkoutHandler(bundleRequestFor("web"), websiteRes);
+
+    expect(websiteRes.statusCode).toBe(200);
+    expect(mockStripeCreate).toHaveBeenCalledTimes(1);
+    expect(mockStripeCreate.mock.calls[0][0].metadata).toMatchObject({
+      purchaseType: "bundle",
+      bundleId: "bundle-web",
+      sourcePlatform: "web",
+    });
+  });
+
+  test("blocks bundle checkout when an included course is unavailable on that platform", async () => {
+    const courses = {
+      a: { title: "A", status: "published", availableOnWebsite: true, availableOnMobile: true },
+      b: { title: "B", status: "published", availableOnWebsite: false, availableOnMobile: true },
+    };
+    const bundle = {
+      title: "Pachet mixt",
+      status: "published",
+      price: 149,
+      currency: "RON",
+      courseIds: ["a", "b"],
+      availableOnWebsite: true,
+      availableOnMobile: true,
+    };
+    getAdminDb.mockReturnValue(createBundleDb(bundle, courses));
+    const res = createResponse();
+
+    await checkoutHandler(bundleRequestFor("web"), res);
+
+    expect(res.statusCode).toBe(400);
+    expect(mockStripeCreate).not.toHaveBeenCalled();
   });
 });

@@ -21,7 +21,7 @@ import {
 } from "../../../../lib/stripeBillingDetails";
 import {
   COURSE_BUNDLE_COLLECTION,
-  isCourseBundleVisible,
+  isCourseBundleVisibleOnChannel,
   loadBundleCourses,
   normalizeBundleCourseIds,
   resolveBundleAccess,
@@ -336,7 +336,7 @@ export default async function handler(req, res) {
     }
     const isPurchasable =
       purchaseType === "bundle"
-        ? isCourseBundleVisible(item)
+        ? isCourseBundleVisibleOnChannel(item, courseChannel)
         : isCourseVisibleOnChannel(item, courseChannel, Date.now());
     if (!isPurchasable) {
       console.warn("[courses.checkout] course_not_purchasable", {

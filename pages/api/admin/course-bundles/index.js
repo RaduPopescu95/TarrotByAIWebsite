@@ -8,6 +8,7 @@ import {
   hasValidBundleCourseIds,
   loadBundleCourses,
   normalizeBundleCourseIds,
+  resolveBundleCourseChannelCompatibility,
 } from "../../../../lib/courseBundles";
 
 const ALLOWED_CURRENCIES = ["RON", "EUR"];
@@ -41,6 +42,19 @@ function validateInput(input) {
   }
   if (!ALLOWED_CURRENCIES.includes(input.currency)) errors.push("currency");
   if (!COURSE_BUNDLE_STATUSES.includes(input.status)) errors.push("status");
+  if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
+    errors.push("availableOnWebsite");
+  }
+  if (input.availableOnMobile !== undefined && typeof input.availableOnMobile !== "boolean") {
+    errors.push("availableOnMobile");
+  }
+  if (
+    input.status === "published" &&
+    input.availableOnWebsite === false &&
+    input.availableOnMobile === false
+  ) {
+    errors.push("availability");
+  }
   if (
     input.thumbnailUrl !== undefined &&
     input.thumbnailUrl !== null &&
@@ -114,17 +128,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid fields", fields: errors });
     }
     const courseIds = normalizeBundleCourseIds(input.courseIds);
+    const availableOnWebsite = input.availableOnWebsite !== false;
+    const availableOnMobile = input.availableOnMobile !== false;
     const courses = await loadBundleCourses(db, courseIds, "ro");
     if (courses.length !== courseIds.length) {
       return res.status(400).json({ error: "All selected courses must exist" });
     }
     if (input.status === "published") {
-      const visibleCourses = await loadBundleCourses(db, courseIds, "ro", {
-        visibleOnly: true,
+      const compatibility = await resolveBundleCourseChannelCompatibility(db, courseIds, {
+        availableOnWebsite,
+        availableOnMobile,
       });
-      if (visibleCourses.length !== courseIds.length) {
+      if (!compatibility.compatible) {
         return res.status(400).json({
-          error: "All selected courses must be published before publishing the bundle",
+          error: "Selected courses are not available on all enabled bundle channels",
+          fields: ["availability"],
+          ...compatibility,
         });
       }
     }
@@ -151,6 +170,8 @@ export default async function handler(req, res) {
         price: input.price,
         currency: input.currency,
         status: input.status,
+        availableOnWebsite,
+        availableOnMobile,
         thumbnailUrl: persistedThumbnailUrl,
         coverSource,
         coverCourseId,
