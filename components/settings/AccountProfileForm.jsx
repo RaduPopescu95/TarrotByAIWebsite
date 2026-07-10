@@ -4,7 +4,9 @@ import { useTranslation } from "next-i18next";
 import { handleChangeEmail, handleChangePassword, handleLogout } from "../../utils/authUtils";
 import { useAuth } from "../../context/AuthContext";
 import PasswordDialog from "../PasswordDialog/PasswordDialog";
+import DeleteAccountDialog from "./DeleteAccountDialog";
 import { handleUpdateFirestore } from "../../utils/firestoreUtils";
+import { deleteAccountWithReauth } from "../../utils/accountDeletionClient";
 
 const formStyles = {
   settingsForm: {
@@ -73,6 +75,37 @@ const formStyles = {
     textDecoration: "underline",
     padding: "0.5rem",
   },
+  dangerZone: {
+    marginTop: "1rem",
+    marginBottom: "2rem",
+    padding: "1rem",
+    borderRadius: "12px",
+    border: "1px solid #fecaca",
+    backgroundColor: "#fff5f5",
+  },
+  dangerTitle: {
+    margin: 0,
+    fontSize: "15px",
+    fontWeight: 700,
+    color: "#991b1b",
+  },
+  dangerText: {
+    marginTop: "0.5rem",
+    marginBottom: "1rem",
+    fontSize: "14px",
+    color: "#7f1d1d",
+    lineHeight: 1.5,
+  },
+  deleteButton: {
+    background: "#dc2626",
+    border: "none",
+    color: "#fff",
+    fontSize: "15px",
+    fontWeight: 600,
+    cursor: "pointer",
+    borderRadius: "10px",
+    padding: "10px 16px",
+  },
   snackbar: {
     position: "fixed",
     bottom: "20px",
@@ -104,6 +137,8 @@ export default function AccountProfileForm({
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [modalVisible, setModalVisible] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -132,6 +167,25 @@ export default function AccountProfileForm({
   const showToast = (msg) => {
     setMessage(msg);
     setShowSnackback(true);
+  };
+
+  const handleDeleteAccount = async ({ currentPassword }) => {
+    setDeleteLoading(true);
+    try {
+      await deleteAccountWithReauth(currentPassword);
+      showToast(t("deleteAccountSuccess"));
+      await handleLogout();
+      setCurrentUser(null);
+      setUserData(null);
+      setAsGuestUser(false);
+      router.push("/login");
+    } catch (error) {
+      console.error("[settings] delete_account_failed", error);
+      showToast(t("deleteAccountError"));
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
+    }
   };
 
   const handleSubmit = (event) => {
@@ -287,9 +341,29 @@ export default function AccountProfileForm({
             {t("logOut")}
           </button>
         </div>
+
+        <div style={formStyles.dangerZone}>
+          <p style={formStyles.dangerTitle}>{t("deleteAccountDangerZoneTitle")}</p>
+          <p style={formStyles.dangerText}>{t("deleteAccountDangerZoneBody")}</p>
+          <button
+            type="button"
+            onClick={() => setDeleteDialogOpen(true)}
+            style={formStyles.deleteButton}
+            disabled={deleteLoading}
+          >
+            {t("deleteAccount")}
+          </button>
+        </div>
       </form>
 
       {footerSlot ? <div>{footerSlot}</div> : null}
+
+      <DeleteAccountDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteAccount}
+        loading={deleteLoading}
+      />
 
       <PasswordDialog
         setModalVisible={setModalVisible}

@@ -4,9 +4,11 @@ import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisible,
   loadBundleCourses,
+  normalizeBundleCourseIds,
   resolveBundleAccess,
   toSafeCourseBundle,
 } from "../../../lib/courseBundles";
+import { resolveCourseRequestChannel } from "../../../lib/courses";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -27,6 +29,7 @@ export default async function handler(req, res) {
       : Array.isArray(req.query?.locale)
       ? req.query.locale[0]
       : "ro";
+  const channel = resolveCourseRequestChannel(req);
 
   try {
     const db = getAdminDb();
@@ -36,15 +39,16 @@ export default async function handler(req, res) {
     }
 
     const data = snap.data() || {};
-    const courses = await loadBundleCourses(db, data.courseIds, locale, {
-      visibleOnly: true,
-    });
-    if (courses.length < 2) {
-      return res.status(404).json({ error: "Course bundle not available" });
-    }
-
     const authUser = await getOptionalAuth(req);
     const access = await resolveBundleAccess(db, authUser?.uid || null, bundleId, data);
+    const courses = await loadBundleCourses(db, data.courseIds, locale, {
+      visibleOnly: true,
+      ...(access.hasAccess ? {} : { channel }),
+    });
+    const courseIds = normalizeBundleCourseIds(data.courseIds);
+    if (courses.length < 2 || (!access.hasAccess && courses.length !== courseIds.length)) {
+      return res.status(404).json({ error: "Course bundle not available" });
+    }
     res.setHeader("Cache-Control", "private, no-store, max-age=0");
     return res.status(200).json({
       bundle: toSafeCourseBundle(bundleId, data, locale, courses),

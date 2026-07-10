@@ -432,6 +432,8 @@ export default function CoursesDashboardPage() {
         currency: course.currency || "RON",
         status: "draft",
         featuredOnHome: false,
+        availableOnWebsite: course.availableOnWebsite !== false,
+        availableOnMobile: course.availableOnMobile !== false,
         sitePremiumAccess: course.sitePremiumAccess === true,
         scheduledAt: null,
         thumbnailUrl: null,

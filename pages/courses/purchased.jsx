@@ -73,7 +73,7 @@ export default function PurchasedCoursesPage() {
         }
         const locale = router.locale || "ro";
         const response = await fetch(
-          `/api/courses/purchased?locale=${encodeURIComponent(locale)}`,
+          `/api/courses/purchased?locale=${encodeURIComponent(locale)}&channel=website`,
           {
             method: "GET",
             headers: {

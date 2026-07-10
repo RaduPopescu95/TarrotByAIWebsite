@@ -48,13 +48,14 @@ export default function CoursesTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[26%]">Titlu</TableHead>
+          <TableHead className="w-[20%]">Titlu</TableHead>
           <TableHead className="w-[10%]">Preț</TableHead>
           <TableHead className="w-[10%]">Status</TableHead>
+          <TableHead className="w-[12%]">Canale</TableHead>
           <TableHead className="w-[8%]">Achiziții</TableHead>
           <TableHead className="w-[10%]">Evidențiat</TableHead>
-          <TableHead className="w-[14%]">Programare</TableHead>
-          <TableHead className="w-[14%]">Actualizat</TableHead>
+          <TableHead className="w-[10%]">Programare</TableHead>
+          <TableHead className="w-[10%]">Actualizat</TableHead>
           <TableHead className="w-[8%] text-right">Acțiuni</TableHead>
         </TableRow>
       </TableHeader>
@@ -91,6 +92,19 @@ export default function CoursesTable({
                 <Badge variant={statusVariant(course.status)}>
                   {statusLabel(course.status)}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {course.availableOnWebsite !== false && (
+                    <Badge variant="outline" className="text-xs">Website</Badge>
+                  )}
+                  {course.availableOnMobile !== false && (
+                    <Badge variant="outline" className="text-xs">Mobil</Badge>
+                  )}
+                  {course.availableOnWebsite === false && course.availableOnMobile === false && (
+                    <span className="text-xs text-gray-400">Niciunul</span>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="text-sm text-gray-700">{purchaseCount}</TableCell>
               <TableCell>

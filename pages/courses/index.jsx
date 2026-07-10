@@ -49,8 +49,8 @@ export default function CoursesPage() {
       try {
         const locale = router.locale || "ro";
         const [response, bundlesResponse] = await Promise.all([
-          fetch(`/api/courses?locale=${encodeURIComponent(locale)}`),
-          fetch(`/api/course-bundles?locale=${encodeURIComponent(locale)}`),
+          fetch(`/api/courses?locale=${encodeURIComponent(locale)}&channel=website`),
+          fetch(`/api/course-bundles?locale=${encodeURIComponent(locale)}&channel=website`),
         ]);
         const [data, bundlesData] = await Promise.all([
           response.json().catch(() => ({})),

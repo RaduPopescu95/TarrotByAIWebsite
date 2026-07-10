@@ -138,6 +138,16 @@ describe("course archive policy", () => {
     expect(shouldExposePurchasedCourse(true, null)).toBe(true);
   });
 
+  test("purchased courses remain exposed when their catalog channel changes", () => {
+    expect(
+      shouldExposePurchasedCourse(false, {
+        status: "published",
+        availableOnWebsite: true,
+        availableOnMobile: false,
+      })
+    ).toBe(true);
+  });
+
   test("purchased courses API hides archived bundles from mobile payloads", () => {
     expect(shouldExposePurchasedBundle(false, { status: "archived" })).toBe(false);
     expect(shouldExposePurchasedBundle(false, { status: "published" })).toBe(true);

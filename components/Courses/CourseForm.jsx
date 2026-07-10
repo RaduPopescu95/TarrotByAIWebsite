@@ -185,6 +185,7 @@ const GENERAL_ERROR_FIELDS = [
   "currency",
   "status",
   "scheduledAt",
+  "availability",
 ];
 
 function normalizeLessonIdForPayload(lesson, index) {
@@ -237,6 +238,8 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
     scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
     categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
     featuredOnHome: initialValue?.featuredOnHome === true,
+    availableOnWebsite: initialValue?.availableOnWebsite !== false,
+    availableOnMobile: initialValue?.availableOnMobile !== false,
     notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
     contactContent:
       typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -266,6 +269,8 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       scheduledAt: toDateTimeLocal(initialValue?.scheduledAt),
       categoryIds: Array.isArray(initialValue?.categoryIds) ? initialValue.categoryIds : [],
       featuredOnHome: initialValue?.featuredOnHome === true,
+      availableOnWebsite: initialValue?.availableOnWebsite !== false,
+      availableOnMobile: initialValue?.availableOnMobile !== false,
       notesContent: typeof initialValue?.notesContent === "string" ? initialValue.notesContent : "",
       contactContent:
         typeof initialValue?.contactContent === "string" ? initialValue.contactContent : "",
@@ -325,6 +330,17 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
 
   const handleToggleFeatured = (event) => {
     setForm((prev) => ({ ...prev, featuredOnHome: event.target.checked }));
+  };
+
+  const handleToggleAvailability = (field) => (event) => {
+    setForm((prev) => ({ ...prev, [field]: event.target.checked }));
+    if (errors.availability) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.availability;
+        return next;
+      });
+    }
   };
 
   const handleToggleFreeCourse = (event) => {
@@ -408,6 +424,13 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
 
     if (!form.currency) nextErrors.currency = "Moneda este obligatorie.";
     if (!form.status) nextErrors.status = "Statusul este obligatoriu.";
+    if (
+      (form.status === "published" || form.status === "scheduled") &&
+      !form.availableOnWebsite &&
+      !form.availableOnMobile
+    ) {
+      nextErrors.availability = "Selectează Website, Aplicație mobilă sau ambele.";
+    }
 
     if (form.status === "scheduled") {
       if (!form.scheduledAt) {
@@ -610,6 +633,8 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
       currency: form.currency,
       status: form.status,
       featuredOnHome: !!form.featuredOnHome,
+      availableOnWebsite: !!form.availableOnWebsite,
+      availableOnMobile: !!form.availableOnMobile,
       sitePremiumAccess: false,
       scheduledAt:
         form.status === "scheduled" && form.scheduledAt
@@ -919,6 +944,44 @@ export default function CourseForm({ initialValue, onSubmit, onCancel, loading, 
               </select>
               {errors.currency && <p className="mt-1.5 text-xs text-red-600">{errors.currency}</p>}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="text-sm font-medium text-gray-900">Disponibil pe</div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!form.availableOnWebsite}
+                  onChange={handleToggleAvailability("availableOnWebsite")}
+                  disabled={uiLocked}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">Website</span>
+                  <span className="mt-1 block text-xs text-gray-500">Apare pe site.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!form.availableOnMobile}
+                  onChange={handleToggleAvailability("availableOnMobile")}
+                  disabled={uiLocked}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">Aplicație mobilă</span>
+                  <span className="mt-1 block text-xs text-gray-500">Apare în aplicația instalată.</span>
+                </span>
+              </label>
+            </div>
+            {errors.availability && (
+              <p className="mt-2 text-xs text-red-600">{errors.availability}</p>
+            )}
+            <p className="mt-2 text-xs text-gray-500">
+              Pentru un curs publicat sau programat trebuie selectat cel puțin un canal.
+            </p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">

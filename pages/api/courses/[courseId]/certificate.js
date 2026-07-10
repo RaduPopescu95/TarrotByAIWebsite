@@ -1,5 +1,11 @@
 import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
-import { isCourseVisible, normalizeLocale, resolveDate, toSafeCourse } from "../../../../lib/courses";
+import {
+  isCourseVisibleOnChannel,
+  normalizeLocale,
+  resolveCourseRequestChannel,
+  resolveDate,
+  toSafeCourse,
+} from "../../../../lib/courses";
 import { requireAuth } from "../../../../lib/requireAuth";
 import { resolveCourseEntitlement } from "../../../../lib/courseSubscriptionAccess";
 import { resolveCourseMediaClientBlock } from "../../../../lib/courseMobileClientGuard";
@@ -123,7 +129,8 @@ export default async function handler(req, res) {
     }
 
     const courseData = courseSnap.data() || {};
-    const courseVisible = isCourseVisible(courseData, Date.now());
+    const channel = resolveCourseRequestChannel(req);
+    const courseVisible = isCourseVisibleOnChannel(courseData, channel, Date.now());
     const entitlement = await resolveCourseEntitlement(db, authUser.uid, courseId, courseData, {
       courseVisible,
     });

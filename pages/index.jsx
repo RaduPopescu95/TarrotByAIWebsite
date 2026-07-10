@@ -353,7 +353,7 @@ function Landing(props) {
       setHomeCoursesError("");
       try {
         const locale = router.locale || "ro";
-        const response = await fetch(`/api/courses/home?locale=${encodeURIComponent(locale)}`, {
+        const response = await fetch(`/api/courses/home?locale=${encodeURIComponent(locale)}&channel=website`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

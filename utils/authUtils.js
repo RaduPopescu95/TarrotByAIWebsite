@@ -17,7 +17,6 @@ import {
 import { authentication } from "../firebase";
 import { FirebaseError } from "firebase/app";
 
-import { deleteUserData } from "./deleteFirebaseData";
 import { emailWithoutSpace } from "./strintText";
 
 // 🚀 Authentication utilities for handling account switches and permission errors

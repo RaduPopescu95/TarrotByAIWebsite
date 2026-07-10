@@ -4,8 +4,10 @@ import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisible,
   loadBundleCourses,
+  normalizeBundleCourseIds,
   toSafeCourseBundle,
 } from "../../../lib/courseBundles";
+import { resolveCourseRequestChannel } from "../../../lib/courses";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -19,6 +21,7 @@ export default async function handler(req, res) {
       : Array.isArray(req.query?.locale)
       ? req.query.locale[0]
       : "ro";
+  const channel = resolveCourseRequestChannel(req);
 
   try {
     const db = getAdminDb();
@@ -32,8 +35,10 @@ export default async function handler(req, res) {
         if (!isCourseBundleVisible(data)) return null;
         const courses = await loadBundleCourses(db, data.courseIds, locale, {
           visibleOnly: true,
+          channel,
         });
-        if (courses.length < 2) return null;
+        const courseIds = normalizeBundleCourseIds(data.courseIds);
+        if (courses.length < 2 || courses.length !== courseIds.length) return null;
         return toSafeCourseBundle(docSnap.id, data, locale, courses);
       })
     );

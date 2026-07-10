@@ -1,7 +1,8 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import {
-  isCourseVisible,
+  isCourseVisibleOnChannel,
+  resolveCourseRequestChannel,
   toSafeCourse,
   applyCourseDetailContentGate,
   resolveCourseAvailableLocales,
@@ -64,7 +65,8 @@ async function handler(req, res) {
 
     const rawCourseData = courseSnap.data() || {};
     const courseData = rawCourseData;
-    const isVisible = isCourseVisible(courseData, Date.now());
+    const channel = resolveCourseRequestChannel(req);
+    const isVisible = isCourseVisibleOnChannel(courseData, channel, Date.now());
 
     let purchaseStatus = "none";
     const decoded = await getOptionalAuth(req);

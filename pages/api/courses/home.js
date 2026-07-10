@@ -5,8 +5,9 @@ import {
 } from "../../../lib/firestoreCostLogger";
 import { loadVisibleCourseCandidates } from "../../../lib/coursesCache";
 import {
-  isCourseVisible,
+  isCourseVisibleOnChannel,
   readSingleQueryValue,
+  resolveCourseRequestChannel,
   toSafeCourseForPublicCatalog,
 } from "../../../lib/courses";
 
@@ -19,8 +20,10 @@ async function handler(req, res) {
   }
 
   const locale = readSingleQueryValue(req.query?.locale);
+  const channel = resolveCourseRequestChannel(req);
   console.info("[courses.home] start", {
     locale: locale || "default",
+    channel,
   });
 
   try {
@@ -38,7 +41,9 @@ async function handler(req, res) {
       queryName: "courses.featured_visible",
     });
 
-    const visibleCandidates = candidates.filter((course) => isCourseVisible(course, nowMs));
+    const visibleCandidates = candidates.filter((course) =>
+      isCourseVisibleOnChannel(course, channel, nowMs)
+    );
     const latestCourses = visibleCandidates
       .slice(0, LATEST_LIMIT)
       .map((course) => toSafeCourseForPublicCatalog(course.id, course, locale));

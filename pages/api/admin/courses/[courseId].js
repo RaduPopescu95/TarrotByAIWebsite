@@ -134,6 +134,12 @@ function validateUpdate(input) {
   if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
     errors.push("sitePremiumAccess");
   }
+  if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
+    errors.push("availableOnWebsite");
+  }
+  if (input.availableOnMobile !== undefined && typeof input.availableOnMobile !== "boolean") {
+    errors.push("availableOnMobile");
+  }
   if (input.curriculumLessons !== undefined && !hasValidCurriculumLessons(input.curriculumLessons)) {
     errors.push("curriculumLessons");
   }
@@ -210,6 +216,18 @@ export default async function handler(req, res) {
     }
 
     const existingData = existing.data() || {};
+    const nextStatus = input.status ?? existingData.status;
+    const nextAvailableOnWebsite =
+      input.availableOnWebsite ?? existingData.availableOnWebsite ?? true;
+    const nextAvailableOnMobile =
+      input.availableOnMobile ?? existingData.availableOnMobile ?? true;
+    if (
+      (nextStatus === "published" || nextStatus === "scheduled") &&
+      nextAvailableOnWebsite === false &&
+      nextAvailableOnMobile === false
+    ) {
+      return res.status(400).json({ error: "Invalid fields", fields: ["availability"] });
+    }
     if (input.status === "draft") {
       const purchaseCount = await resolveCoursePurchaseCount(db, courseId, existingData);
       if (purchaseCount > 0) {
@@ -253,6 +271,12 @@ export default async function handler(req, res) {
         : {}),
       ...(input.sitePremiumAccess !== undefined
         ? { sitePremiumAccess: input.sitePremiumAccess === true }
+        : {}),
+      ...(input.availableOnWebsite !== undefined
+        ? { availableOnWebsite: input.availableOnWebsite === true }
+        : {}),
+      ...(input.availableOnMobile !== undefined
+        ? { availableOnMobile: input.availableOnMobile === true }
         : {}),
       ...(input.scheduledAt !== undefined
         ? { scheduledAt: parseScheduledAt(input.scheduledAt) }

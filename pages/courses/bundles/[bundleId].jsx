@@ -66,7 +66,7 @@ export default function CourseBundleDetailPage() {
     const response = await fetch(
       `/api/course-bundles/${encodeURIComponent(bundleId)}?locale=${encodeURIComponent(
         router.locale || "ro"
-      )}`,
+      )}&channel=website`,
       { headers }
     );
     const data = await response.json().catch(() => ({}));
@@ -178,6 +178,7 @@ export default function CourseBundleDetailPage() {
         body: JSON.stringify({
           purchaseType: "bundle",
           bundleId,
+          platform: "web",
           billingDetails,
         }),
       });

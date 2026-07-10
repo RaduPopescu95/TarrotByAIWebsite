@@ -192,7 +192,7 @@ export default function CourseDetailPage() {
         const authHeaders = await getAuthHeaders({ required: false });
         const locale = router.locale || "ro";
         const response = await fetch(
-          `/api/courses/${normalizedCourseId}?locale=${encodeURIComponent(locale)}`,
+          `/api/courses/${normalizedCourseId}?locale=${encodeURIComponent(locale)}&channel=website`,
           {
             method: "GET",
             headers: {
@@ -331,7 +331,7 @@ export default function CourseDetailPage() {
       }
       const playbackLocale = router.locale || "ro";
       const response = await fetch(
-        `/api/courses/${normalizedCourseId}/playback?locale=${encodeURIComponent(playbackLocale)}`,
+        `/api/courses/${normalizedCourseId}/playback?locale=${encodeURIComponent(playbackLocale)}&channel=website`,
         {
         method: "GET",
         headers: {
@@ -670,6 +670,7 @@ export default function CourseDetailPage() {
         },
         body: JSON.stringify({
           courseId: normalizedCourseId,
+          platform: "web",
           billingDetails,
         }),
       });
@@ -773,7 +774,7 @@ export default function CourseDetailPage() {
       const authHeaders = await getAuthHeaders({ required: true });
       const locale = router.locale || "ro";
       const response = await fetch(
-        `/api/courses/${normalizedCourseId}/certificate?locale=${encodeURIComponent(locale)}`,
+        `/api/courses/${normalizedCourseId}/certificate?locale=${encodeURIComponent(locale)}&channel=website`,
         {
           method: "GET",
           headers: authHeaders,

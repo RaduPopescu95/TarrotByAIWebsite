@@ -1,10 +1,11 @@
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { getOptionalAuth } from "../../../../lib/requireAuth";
 import {
-  isCourseVisible,
+  isCourseVisibleOnChannel,
   normalizeLocale,
   readSingleQueryValue,
   resolveCoursePlaybackSource,
+  resolveCourseRequestChannel,
 } from "../../../../lib/courses";
 import {
   isCourseFreeFullAccess,
@@ -82,7 +83,8 @@ async function handler(req, res) {
     }
 
     const courseData = courseSnap.data() || {};
-    const courseVisible = isCourseVisible(courseData, Date.now());
+    const channel = resolveCourseRequestChannel(req);
+    const courseVisible = isCourseVisibleOnChannel(courseData, channel, Date.now());
     const entitlement = await resolveCourseEntitlement(db, uid, courseId, courseData, {
       courseVisible,
     });

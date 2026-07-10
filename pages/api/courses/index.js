@@ -2,9 +2,10 @@ import { buildPublicCacheControl } from "../../../lib/httpCache";
 import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 import { loadVisibleCourseCandidates } from "../../../lib/coursesCache";
 import {
-  isCourseVisible,
+  isCourseVisibleOnChannel,
   parseQueryBoolean,
   readSingleQueryValue,
+  resolveCourseRequestChannel,
   toSafeCourseForPublicCatalog,
 } from "../../../lib/courses";
 
@@ -16,6 +17,7 @@ async function handler(req, res) {
 
   try {
     const locale = readSingleQueryValue(req.query?.locale);
+    const channel = resolveCourseRequestChannel(req);
     const featuredOnly = parseQueryBoolean(req.query?.featuredOnly);
 
     const nowMs = Date.now();
@@ -24,7 +26,7 @@ async function handler(req, res) {
       queryName: "courses.visible_by_updated",
     });
     const filteredCourses = candidates
-      .filter((course) => isCourseVisible(course, nowMs))
+      .filter((course) => isCourseVisibleOnChannel(course, channel, nowMs))
       .filter((course) => {
         if (featuredOnly === null) return true;
         return (course.featuredOnHome === true) === featuredOnly;
@@ -46,6 +48,7 @@ async function handler(req, res) {
   } catch (error) {
     console.error("[courses.list] fail", {
       locale: req.query?.locale,
+      channel: req.query?.channel,
       featuredOnly: req.query?.featuredOnly,
       message: error?.message || "unknown_error",
     });

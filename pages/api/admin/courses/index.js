@@ -129,6 +129,19 @@ function validateCourseInput(input) {
   if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
     errors.push("sitePremiumAccess");
   }
+  if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
+    errors.push("availableOnWebsite");
+  }
+  if (input.availableOnMobile !== undefined && typeof input.availableOnMobile !== "boolean") {
+    errors.push("availableOnMobile");
+  }
+  if (
+    (input.status === "published" || input.status === "scheduled") &&
+    input.availableOnWebsite === false &&
+    input.availableOnMobile === false
+  ) {
+    errors.push("availability");
+  }
   if (input.curriculumLessons !== undefined && !hasValidCurriculumLessons(input.curriculumLessons)) {
     errors.push("curriculumLessons");
   }
@@ -196,6 +209,8 @@ export default async function handler(req, res) {
       status: input.status,
       featuredOnHome: input.featuredOnHome === true,
       sitePremiumAccess: input.sitePremiumAccess === true,
+      availableOnWebsite: input.availableOnWebsite !== false,
+      availableOnMobile: input.availableOnMobile !== false,
       scheduledAt: input.status === "scheduled" ? parseScheduledAt(input.scheduledAt) : null,
       ...(input.locales ? { locales: input.locales } : {}),
       thumbnailUrl: input.thumbnailUrl?.trim() || null,

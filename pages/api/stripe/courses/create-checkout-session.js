@@ -2,7 +2,10 @@ import Stripe from "stripe";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../../lib/requireAuth";
-import { isCourseVisible } from "../../../../lib/courses";
+import {
+  isCourseVisibleOnChannel,
+  resolveCourseChannelFromPlatform,
+} from "../../../../lib/courses";
 import {
   isCourseFreeFullAccess,
   resolveCourseEntitlement,
@@ -33,27 +36,6 @@ function maskUid(value) {
   if (typeof value !== "string" || !value) return "unknown";
   if (value.length <= 6) return value;
   return `${value.slice(0, 3)}...${value.slice(-3)}`;
-}
-
-function resolveDate(value) {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === "string") {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-  if (value?.toDate) return value.toDate();
-  if (value?.seconds) return new Date(value.seconds * 1000);
-  return null;
-}
-
-function isCoursePurchasable(course) {
-  if (course?.status === "published") return true;
-  if (course?.status === "scheduled") {
-    const scheduledAt = resolveDate(course.scheduledAt);
-    return scheduledAt ? scheduledAt.getTime() <= Date.now() : false;
-  }
-  return false;
 }
 
 function resolveBaseUrl(req) {
@@ -277,6 +259,7 @@ export default async function handler(req, res) {
       .json({ error: purchaseType === "bundle" ? "Missing bundleId" : "Missing courseId" });
   }
   const sourcePlatform = sanitizeString(rawPlatform, 32).toLowerCase() || "web";
+  const courseChannel = resolveCourseChannelFromPlatform(sourcePlatform);
 
   console.info("[courses.checkout] start", {
     uid: maskUid(authUser.uid),
@@ -336,6 +319,7 @@ export default async function handler(req, res) {
     if (purchaseType === "bundle") {
       bundleVisibleCourses = await loadBundleCourses(db, bundleCourseIds, "ro", {
         visibleOnly: true,
+        channel: courseChannel,
       });
       if (bundleVisibleCourses.length !== bundleCourseIds.length) {
         return res.status(400).json({
@@ -353,7 +337,7 @@ export default async function handler(req, res) {
     const isPurchasable =
       purchaseType === "bundle"
         ? isCourseBundleVisible(item)
-        : isCoursePurchasable(item);
+        : isCourseVisibleOnChannel(item, courseChannel, Date.now());
     if (!isPurchasable) {
       console.warn("[courses.checkout] course_not_purchasable", {
         uid: maskUid(authUser.uid),
@@ -374,7 +358,7 @@ export default async function handler(req, res) {
       purchaseType === "bundle"
         ? await resolveBundleAccess(db, authUser.uid, bundleId, item)
         : await resolveCourseEntitlement(db, authUser.uid, courseId, item, {
-            courseVisible: isCourseVisible(item, Date.now()),
+            courseVisible: isCourseVisibleOnChannel(item, courseChannel, Date.now()),
           });
     if (entitlement.hasAccess) {
       console.info("[courses.checkout] already_has_access", {
