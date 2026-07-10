@@ -28,7 +28,7 @@ export default function BundleCard({ bundle, locale, onClick, labels = {} }) {
           </div>
         )}
         <span className="absolute left-4 top-4 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
-          {labels.badge || "Trilogie"}
+          {labels.badge || "Pachet premium"}
         </span>
       </div>
       <div className="space-y-3 p-5">
@@ -48,7 +48,7 @@ export default function BundleCard({ bundle, locale, onClick, labels = {} }) {
             {formatPrice(bundle.price, bundle.currency, locale)}
           </span>
           <span className="text-sm font-semibold text-slate-900">
-            {labels.open || "Vezi trilogia"} →
+            {labels.open || "Vezi pachetul premium"} →
           </span>
         </div>
       </div>

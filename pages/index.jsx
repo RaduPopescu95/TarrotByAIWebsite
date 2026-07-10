@@ -353,7 +353,9 @@ function Landing(props) {
       setHomeCoursesError("");
       try {
         const locale = router.locale || "ro";
-        const response = await fetch(`/api/courses/home?locale=${encodeURIComponent(locale)}&channel=website`, {
+        // Use the exact same catalog URL as /courses so both pages share one
+        // CDN cache entry and can never display different prices after edits.
+        const response = await fetch(`/api/courses?locale=${encodeURIComponent(locale)}&channel=website`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -364,8 +366,9 @@ function Landing(props) {
           throw new Error(data?.error || "home_courses_failed");
         }
 
-        const latestCourses = Array.isArray(data?.latestCourses) ? data.latestCourses : [];
-        const featuredCourses = Array.isArray(data?.featuredCourses) ? data.featuredCourses : [];
+        const courses = Array.isArray(data?.courses) ? data.courses : [];
+        const latestCourses = courses.slice(0, 4);
+        const featuredCourses = courses.filter((course) => course?.featuredOnHome === true);
 
         if (mounted) {
           setHomeCourses({ latestCourses, featuredCourses });

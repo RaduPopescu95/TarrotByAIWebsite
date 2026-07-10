@@ -70,7 +70,7 @@ export default function CourseBundleDetailPage() {
       { headers }
     );
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data?.error || "Nu am putut încărca trilogia.");
+    if (!response.ok) throw new Error(data?.error || "Nu am putut încărca pachetul premium.");
     setBundle(data.bundle || null);
     setHasAccess(Boolean(data.hasAccess));
     setOwnedCourseIds(Array.isArray(data.ownedCourseIds) ? data.ownedCourseIds : []);
@@ -82,7 +82,7 @@ export default function CourseBundleDetailPage() {
     setLoading(true);
     loadBundle()
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Nu am putut încărca trilogia.");
+        if (active) setError(loadError.message || "Nu am putut încărca pachetul premium.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -196,7 +196,7 @@ export default function CourseBundleDetailPage() {
   return (
     <>
       <Head>
-        <title>{bundle?.title || "Trilogie de cursuri"}</title>
+        <title>{bundle?.title || "Pachet premium de cursuri"}</title>
       </Head>
       <Header />
       <main className="min-h-screen bg-slate-100 pt-24">
@@ -209,7 +209,7 @@ export default function CourseBundleDetailPage() {
             <p className="mt-8 text-slate-600">{t("coursesLoading")}</p>
           ) : !bundle ? (
             <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-              {error || "Trilogia nu este disponibilă."}
+              {error || "Pachetul premium nu este disponibil."}
             </div>
           ) : (
             <div className="mt-6 space-y-8">
@@ -226,7 +226,7 @@ export default function CourseBundleDetailPage() {
                   </div>
                   <div className="space-y-5 p-7">
                     <span className="inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
-                      Trilogie • {bundle.courses?.length || bundle.courseIds?.length || 0} mini-cursuri
+                      Pachet premium • {bundle.courses?.length || bundle.courseIds?.length || 0} mini-cursuri
                     </span>
                     <h1 className="text-3xl font-bold text-slate-900">{bundle.title}</h1>
                     <p className="leading-relaxed text-slate-600">{bundle.description}</p>
@@ -327,7 +327,7 @@ export default function CourseBundleDetailPage() {
                       >
                         {checkoutLoading
                           ? "Se deschide plata..."
-                          : `Cumpără trilogia — ${formatPrice(
+                          : `Cumpără pachetul premium — ${formatPrice(
                               bundle.price,
                               bundle.currency,
                               router.locale

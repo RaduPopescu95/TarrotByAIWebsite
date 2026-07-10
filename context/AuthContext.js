@@ -154,14 +154,41 @@ export const AuthProvider = ({ children }) => {
       displayName: signedUser.displayName,
     });
 
-    const syncResult = await upsertGoogleUserProfile(signedUser);
-    console.log("✅ [GOOGLE_AUTH] Firestore profile upsert", {
-      uid: signedUser.uid,
-      created: syncResult.created,
-      updatedFields: syncResult.updatedFields,
-      role: syncResult.role,
-    });
-    const profile = await handleGetUserInfoJobs();
+    // Firebase Authentication has already succeeded at this point. Publish the
+    // authenticated user immediately; profile synchronization is auxiliary and
+    // must never turn a valid Google login into a failed login screen.
+    setCurrentUser(signedUser);
+    setIsGuestUser(false);
+    setLoading(false);
+    localStorage.setItem("isGuestUser", "false");
+
+    try {
+      const syncResult = await upsertGoogleUserProfile(signedUser);
+      console.log("✅ [GOOGLE_AUTH] Firestore profile upsert", {
+        uid: signedUser.uid,
+        created: syncResult.created,
+        updatedFields: syncResult.updatedFields,
+        role: syncResult.role,
+      });
+    } catch (syncError) {
+      console.error("❌ [GOOGLE_AUTH] Firestore profile upsert failed after successful login", {
+        uid: signedUser.uid,
+        code: syncError?.code || "unknown_code",
+        message: syncError?.message || "unknown_error",
+      });
+    }
+
+    let profile = null;
+    try {
+      profile = await handleGetUserInfoJobs();
+    } catch (profileError) {
+      console.error("❌ [GOOGLE_AUTH] Profile read failed after successful login", {
+        uid: signedUser.uid,
+        code: profileError?.code || "unknown_code",
+        message: profileError?.message || "unknown_error",
+      });
+    }
+
     if (profile) {
       persistAuthSnapshot(signedUser, profile);
     } else {
@@ -179,10 +206,6 @@ export const AuthProvider = ({ children }) => {
       };
       persistAuthSnapshot(signedUser, fallbackProfile);
     }
-
-    setCurrentUser(signedUser);
-    setIsGuestUser(false);
-    localStorage.setItem("isGuestUser", "false");
     return signedUser;
   }, []);
 

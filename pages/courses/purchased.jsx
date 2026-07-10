@@ -65,23 +65,37 @@ export default function PurchasedCoursesPage() {
       setLoading(true);
       setError("");
       try {
-        let authHeaders = {};
-        try {
-          authHeaders = await getFirebaseBearerHeader({ required: true });
-        } catch (_) {
-          throw new Error(t("coursesErrorsAuthRequired"));
-        }
         const locale = router.locale || "ro";
-        const response = await fetch(
-          `/api/courses/purchased?locale=${encodeURIComponent(locale)}&channel=website`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              ...authHeaders,
-            },
+        const requestPurchasedCourses = async (forceRefresh = false) => {
+          let authHeaders = {};
+          try {
+            authHeaders = await getFirebaseBearerHeader({
+              required: true,
+              forceRefresh,
+            });
+          } catch (_) {
+            throw new Error(t("coursesErrorsAuthRequired"));
           }
-        );
+
+          return fetch(
+            `/api/courses/purchased?locale=${encodeURIComponent(locale)}&channel=website`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                ...authHeaders,
+              },
+            }
+          );
+        };
+
+        let response = await requestPurchasedCourses(false);
+        if (response.status === 401) {
+          console.warn("[courses.purchased.page] retry_after_unauthorized", {
+            uid: currentUser?.uid || "unknown",
+          });
+          response = await requestPurchasedCourses(true);
+        }
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -158,7 +172,7 @@ export default function PurchasedCoursesPage() {
             <>
               {purchasedBundles.length > 0 ? (
                 <div className="mb-8">
-                  <h2 className="mb-4 text-xl font-bold text-gray-900">Trilogii cumpărate</h2>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900">Pachete premium cumpărate</h2>
                   <div className="grid gap-6 md:grid-cols-2">
                     {purchasedBundles.map((bp) => {
                       const bundle = bp.bundle;
@@ -179,12 +193,12 @@ export default function PurchasedCoursesPage() {
                               </div>
                             )}
                             <span className="absolute left-4 top-4 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-200">
-                              Trilogie
+                              Pachet premium
                             </span>
                           </div>
                           <div className="space-y-3 p-5">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {bundle?.title || "Trilogie indisponibilă"}
+                              {bundle?.title || "Pachet premium indisponibil"}
                             </h3>
                             {bundle?.description ? (
                               <p className="line-clamp-2 text-sm text-gray-600">{bundle.description}</p>
@@ -213,7 +227,7 @@ export default function PurchasedCoursesPage() {
                                 onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
                                 className="mt-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
                               >
-                                Vezi trilogia
+                                Vezi pachetul premium
                               </button>
                             ) : null}
                           </div>
@@ -293,7 +307,7 @@ export default function PurchasedCoursesPage() {
                             {t("coursesPurchasedAmountLabel")}:
                           </span>{" "}
                           {grantedByBundle
-                            ? t("courseBundlesAccessLabel", "Acces acordat prin trilogie")
+                            ? t("courseBundlesAccessLabel", "Acces acordat prin pachet premium")
                             : amountPaid}
                         </p>
                       </div>

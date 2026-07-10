@@ -146,7 +146,7 @@ export default function CoursesPage() {
                       freePriceLabel={t("coursesPriceFree")}
                       bundleLabel={
                         bundles.some((bundle) => bundle.courseIds?.includes(course.id))
-                          ? t("courseBundlesCourseBadge", "Disponibil în trilogie")
+                          ? t("courseBundlesCourseBadge", "Disponibil într-un pachet premium")
                           : ""
                       }
                       onClick={() => router.push(`/courses/${course.id}`)}
@@ -159,7 +159,7 @@ export default function CoursesPage() {
             <TabsContent value="bundles">
               <div className="mb-5">
                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
-                  {t("courseBundlesBadge", "Trilogii")}
+                  {t("courseBundlesBadge", "Pachet premium")}
                 </span>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
                   {t("courseBundlesHeading", "🔮 Pachete Premium")}
@@ -180,8 +180,8 @@ export default function CoursesPage() {
                       bundle={bundle}
                       locale={router.locale || "ro-RO"}
                       labels={{
-                        badge: t("courseBundlesBadge", "Trilogie"),
-                        open: t("courseBundlesOpen", "Vezi trilogia"),
+                        badge: t("courseBundlesBadge", "Pachet premium"),
+                        open: t("courseBundlesOpen", "Vezi pachetul premium"),
                       }}
                       onClick={() => router.push(`/courses/bundles/${bundle.id}`)}
                     />
