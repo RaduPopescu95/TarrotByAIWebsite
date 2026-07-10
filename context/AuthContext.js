@@ -28,11 +28,10 @@ export const AuthProvider = ({ children }) => {
   const googleRedirectPendingRef = useRef(typeof window !== "undefined");
 
   const persistAuthSnapshot = (user, profile) => {
-    if (user) {
-      localStorage.setItem("currentUser", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("currentUser");
-    }
+    // Firebase persists and restores the real authenticated session. Keeping a
+    // second serialized Firebase User in localStorage created stale identities
+    // and could also retain obsolete token data.
+    localStorage.removeItem("currentUser");
 
     if (profile) {
       setUserData(profile);
@@ -40,23 +39,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Acces la localStorage doar pe client
+  // Firebase Auth is the source of truth for the authenticated user. The old
+  // implementation restored `currentUser` from localStorage before Firebase
+  // had validated its own persisted session. A stale/corrupt snapshot could
+  // therefore keep the login funnel in a contradictory state (most visibly in
+  // a normal browser profile while Incognito worked).
   useEffect(() => {
-    const storedCurrentUser = localStorage.getItem("currentUser");
     const storedUserData = localStorage.getItem("userData");
     const storedIsGuestUser = localStorage.getItem("isGuestUser");
 
-    if (storedCurrentUser) {
-      setCurrentUser(JSON.parse(storedCurrentUser));
-    }
-
     if (storedUserData && storedUserData !== "undefined") {
-      setUserData(JSON.parse(storedUserData));
+      try {
+        setUserData(JSON.parse(storedUserData));
+      } catch (error) {
+        console.warn("[AUTH] Removing invalid cached user profile", {
+          message: error?.message || "invalid_json",
+        });
+        localStorage.removeItem("userData");
+      }
     }
 
     if (storedIsGuestUser) {
       setIsGuestUser(storedIsGuestUser === "true");
     }
+
+    // Remove the obsolete snapshot left by previous deployments. Firebase's
+    // own persistence remains untouched and will emit the authoritative user.
+    localStorage.removeItem("currentUser");
   }, []);
 
   const setAsGuestUser = (isGuest) => {
@@ -104,17 +113,18 @@ export const AuthProvider = ({ children }) => {
   const handleAccountSwitch = async (newUser) => {
     if (!newUser?.uid) return false;
 
-    const storedUser = localStorage.getItem("currentUser");
-    if (!storedUser) return false;
+    const storedProfile = localStorage.getItem("userData");
+    if (!storedProfile) return false;
 
     try {
-      const parsedStoredUser = JSON.parse(storedUser);
-      if (!parsedStoredUser?.uid || parsedStoredUser.uid === newUser.uid) {
+      const parsedStoredProfile = JSON.parse(storedProfile);
+      const cachedUid = parsedStoredProfile?.owner_uid || parsedStoredProfile?.uid;
+      if (!cachedUid || cachedUid === newUser.uid) {
         return false;
       }
 
       console.log("🔄 [AUTH] Account switch detected – clearing stale cached profile", {
-        previous: parsedStoredUser.uid,
+        previous: cachedUid,
         current: newUser.uid,
       });
 
@@ -125,7 +135,7 @@ export const AuthProvider = ({ children }) => {
       setIsGuestUser(false);
       return false;
     } catch (error) {
-      console.error("❌ [AUTH] Failed to parse stored user during account switch check:", error);
+      console.error("❌ [AUTH] Failed to parse stored profile during account switch check:", error);
       localStorage.removeItem("currentUser");
       localStorage.removeItem("userData");
       localStorage.removeItem("isGuestUser");
@@ -340,6 +350,10 @@ export const AuthProvider = ({ children }) => {
       // 🚀 NEW: Check for account switch first
       if (user && !user.isAnonymous) {
         await handleAccountSwitch(user);
+        // A real Firebase session always overrides an old local guest flag.
+        // Do this before profile/Firestore calls, which may be slow or fail.
+        setIsGuestUser(false);
+        localStorage.setItem("isGuestUser", "false");
       }
       
       // Wait for getRedirectResult() before treating null as logged out (redirect race).
@@ -494,15 +508,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("userData");
     }
   }, [userData]);
-
-  // Salvarea currentUser în localStorage
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem("currentUser");
-    }
-  }, [currentUser]);
 
   const value = {
     currentUser,

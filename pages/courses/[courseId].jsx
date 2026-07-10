@@ -173,7 +173,7 @@ export default function CourseDetailPage() {
   }, [normalizedCourseId, router.asPath]);
 
   const handleLogin = useCallback(() => {
-    router.push(`/login?returnUrl=${encodeURIComponent(toCourseReturnUrl())}`);
+    router.push(`/login/cursuri?returnUrl=${encodeURIComponent(toCourseReturnUrl())}`);
   }, [router, toCourseReturnUrl]);
 
   const handleRegister = useCallback(() => {

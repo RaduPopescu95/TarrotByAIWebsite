@@ -35,10 +35,11 @@ export default function VideotecaLoginPage() {
   const rawReturnUrl = Array.isArray(router.query?.returnUrl)
     ? router.query.returnUrl[0]
     : router.query?.returnUrl;
+  const isCoursesLogin = router.pathname === "/login/cursuri";
 
   const safeReturnUrl = React.useMemo(
-    () => sanitizeInternalReturnUrl(rawReturnUrl || "/"),
-    [rawReturnUrl],
+    () => sanitizeInternalReturnUrl(rawReturnUrl || (isCoursesLogin ? "/courses" : "/videouri")),
+    [isCoursesLogin, rawReturnUrl],
   );
   const { authBootstrapReady } = useAuthFunnelRedirect(safeReturnUrl);
 
@@ -73,7 +74,7 @@ export default function VideotecaLoginPage() {
     try {
       persistAuthReturnUrl(safeReturnUrl);
       const authResult = await loginWithGoogle({ returnUrl: safeReturnUrl });
-      console.log("[login/videoteca] google_sign_in_result", {
+      console.log(isCoursesLogin ? "[login/cursuri] google_sign_in_result" : "[login/videoteca] google_sign_in_result", {
         status: authResult?.status,
         uid: authResult?.user?.uid || null,
       });
@@ -81,7 +82,7 @@ export default function VideotecaLoginPage() {
         setIsGoogleLoading(false);
       }
     } catch (error) {
-      console.error("[login/videoteca] google_sign_in_fail", {
+      console.error(isCoursesLogin ? "[login/cursuri] google_sign_in_fail" : "[login/videoteca] google_sign_in_fail", {
         message: error?.message || "unknown_error",
         code: error?.code || "unknown_code",
       });
@@ -95,23 +96,50 @@ export default function VideotecaLoginPage() {
 
   const googleBtn = t("loginGoogleButton", { defaultValue: "Continue with Google" });
   const googleLoading = t("loginGoogleLoading", { defaultValue: "Starting Google sign-in…" });
+  const pageCopy = isCoursesLogin
+    ? {
+        title: t("courseLoginTitle", { defaultValue: "Autentificare cursuri | Cristina Zurba" }),
+        description: t("courseLoginDescription", { defaultValue: "Autentifică-te pentru a cumpăra și accesa cursurile tale." }),
+        backHref: "/courses",
+        backLabel: t("courseLoginBackToCourses", { defaultValue: "Înapoi la cursuri" }),
+        headline: t("courseLoginHeadline", { defaultValue: "Intră în cont pentru cursurile tale" }),
+        subhead: t("courseLoginSubhead", { defaultValue: "Autentifică-te cu Google sau e-mail pentru a cumpăra cursuri și a vedea accesul deja achiziționat." }),
+        points: [
+          t("courseLoginPoint1", { defaultValue: "Revii direct la cursul pe care l-ai deschis." }),
+          t("courseLoginPoint2", { defaultValue: "Vezi cursurile și pachetele premium cumpărate." }),
+          t("courseLoginPoint3", { defaultValue: "Accesezi lecțiile video și certificatele asociate contului." }),
+        ],
+        divider: t("courseLoginOrDivider", { defaultValue: "sau continuă cu e-mail" }),
+        footnote: t("courseLoginFootnote", { defaultValue: "Autentificarea este necesară pentru achiziții și pentru protejarea accesului la cursurile tale." }),
+      }
+    : {
+        title: t("videoLoginTitle"),
+        description: t("videoLoginDescription"),
+        backHref: "/videouri",
+        backLabel: t("videoLoginBackToVideoteca"),
+        headline: t("videoLoginHeadline"),
+        subhead: t("videoLoginSubhead"),
+        points: [t("videoLoginPoint1"), t("videoLoginPoint2"), t("videoLoginPoint3")],
+        divider: t("videoLoginOrDivider"),
+        footnote: t("videoLoginFootnote"),
+      };
 
   return (
     <>
       <Head>
-        <title>{t("videoLoginTitle")}</title>
-        <meta name="description" content={t("videoLoginDescription")} />
+        <title>{pageCopy.title}</title>
+        <meta name="description" content={pageCopy.description} />
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <AuthFunnelShell
         topSlot={
           <Link
-            href="/videouri"
+            href={pageCopy.backHref}
             className="mx-auto mb-4 inline-flex w-full max-w-6xl shrink-0 items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 lg:mb-4 xl:max-w-7xl"
           >
             <span aria-hidden>←</span>
-            {t("videoLoginBackToVideoteca")}
+            {pageCopy.backLabel}
           </Link>
         }
       >
@@ -126,15 +154,15 @@ export default function VideotecaLoginPage() {
                   priority
                 />
                 <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl lg:text-2xl">
-                  {t("videoLoginHeadline")}
+                  {pageCopy.headline}
                 </h1>
                 <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600 lg:mt-2 lg:max-w-none lg:text-sm lg:leading-snug">
-                  {t("videoLoginSubhead")}
+                  {pageCopy.subhead}
                 </p>
               </div>
 
               <ul className="mt-6 space-y-2.5 text-left text-sm text-slate-600 lg:col-start-1 lg:row-start-2 lg:mt-0 lg:space-y-2 lg:self-start lg:text-sm">
-                {[t("videoLoginPoint1"), t("videoLoginPoint2"), t("videoLoginPoint3")].map((line, i) => (
+                {pageCopy.points.map((line, i) => (
                   <li key={i} className="flex gap-2">
                     <span
                       className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500 lg:mt-2"
@@ -196,7 +224,7 @@ export default function VideotecaLoginPage() {
                     <div className="w-full border-t border-slate-200" />
                   </div>
                   <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:text-xs">
-                    <span className="bg-white px-3">{t("videoLoginOrDivider")}</span>
+                    <span className="bg-white px-3">{pageCopy.divider}</span>
                   </div>
                 </div>
 
@@ -272,7 +300,7 @@ export default function VideotecaLoginPage() {
         </section>
 
         <p className="mx-auto mt-6 text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs lg:mt-4 lg:leading-snug">
-          {t("videoLoginFootnote")}
+          {pageCopy.footnote}
         </p>
       </AuthFunnelShell>
     </>

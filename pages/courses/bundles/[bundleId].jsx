@@ -123,7 +123,7 @@ export default function CourseBundleDetailPage() {
   const handleCheckout = async () => {
     if (!bundleId || !bundle) return;
     if (!currentUser) {
-      router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+      router.push(`/login/cursuri?returnUrl=${encodeURIComponent(router.asPath)}`);
       return;
     }
 

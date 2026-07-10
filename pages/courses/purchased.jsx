@@ -54,7 +54,7 @@ export default function PurchasedCoursesPage() {
   useEffect(() => {
     if (authLoading || currentUser) return;
     const returnUrl = encodeURIComponent(router.asPath || "/courses/purchased");
-    router.push(`/login?returnUrl=${returnUrl}`);
+    router.push(`/login/cursuri?returnUrl=${returnUrl}`);
   }, [authLoading, currentUser, router]);
 
   useEffect(() => {
