@@ -13,6 +13,12 @@ import {
 } from "../../../lib/premiumVideoAccessAudit";
 import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
 import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
+import { resolveRowVideoSourceWithMeta } from "../../../lib/videoLibraryPublic";
+import {
+  auditVideoPlayback,
+  buildVideoRequestTelemetry,
+  summarizeVideoPlaybackDtos,
+} from "../../../lib/videoLibraryPlaybackAudit";
 
 function buildRequestId() {
   return `vl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -20,6 +26,7 @@ function buildRequestId() {
 
 async function handler(req, res) {
   const requestId = buildRequestId();
+  const requestTelemetry = buildVideoRequestTelemetry(req);
   res.setHeader("X-Request-Id", requestId);
 
   if (req.method !== "GET") {
@@ -117,6 +124,25 @@ async function handler(req, res) {
     ]);
 
     const videos = videosResult.videos;
+    const playbackSummary = summarizeVideoPlaybackDtos(videos);
+    const returnedVideoIds = new Set(videos.map((video) => video?.id).filter(Boolean));
+    const sourceResolution = {
+      requestedLocale: 0,
+      root: 0,
+      roFallback: 0,
+      firstLocaleFallback: 0,
+      missing: 0,
+    };
+    rowsForMeta.forEach((row) => {
+      if (!returnedVideoIds.has(row?.id)) return;
+      const resolved = resolveRowVideoSourceWithMeta(row, locale);
+      if (resolved.strategy === "requested_locale") sourceResolution.requestedLocale += 1;
+      else if (resolved.strategy === "root") sourceResolution.root += 1;
+      else if (resolved.strategy === "ro_fallback") sourceResolution.roFallback += 1;
+      else if (resolved.strategy === "first_locale_fallback") {
+        sourceResolution.firstLocaleFallback += 1;
+      } else sourceResolution.missing += 1;
+    });
 
     const nowMs = Date.now();
     let cacheMeta = { cacheTtlSec: 0 };
@@ -152,6 +178,32 @@ async function handler(req, res) {
         loggedIn: Boolean(uid),
       },
     });
+
+    const hasPlaybackWarning =
+      playbackSummary.invalidSource > 0 ||
+      playbackSummary.bunnyMissingEmbed > 0 ||
+      playbackSummary.bunnyMissingHls > 0 ||
+      sourceResolution.missing > 0;
+    auditVideoPlayback(
+      "list_response",
+      {
+        requestId,
+        uid: uid || null,
+        locale,
+        scope: scopeRaw || null,
+        webClient,
+        categorySlug,
+        category: categoryName,
+        cursorPresent: Boolean(cursor),
+        requestedLimit: categoryFilterActive ? categoryLimit : null,
+        premiumActive,
+        loggedIn: Boolean(uid),
+        client: requestTelemetry,
+        playbackSummary,
+        sourceResolution,
+      },
+      hasPlaybackWarning ? "warn" : "info"
+    );
 
     const responsePayload = {
       videos,
@@ -191,6 +243,7 @@ async function handler(req, res) {
       stackTop: typeof error?.stack === "string" ? error.stack.split("\n").slice(0, 3).join(" | ") : null,
       uid: uid || null,
       query: req.query || {},
+      client: requestTelemetry,
     });
     return res.status(500).json({ error: "Failed to load video library", requestId });
   }

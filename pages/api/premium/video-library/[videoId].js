@@ -3,6 +3,8 @@ import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../../lib/httpCache";
 import {
   firestoreTsToMillis,
+  resolveRowVideoSourceWithMeta,
+  rowHasDirectValidEmbedForLocale,
   rowHasValidEmbedForLocale,
 } from "../../../../lib/videoLibraryPublic";
 import { canViewerSeeVideo } from "../../../../lib/videoReleaseSchedule";
@@ -23,6 +25,10 @@ import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { withFirestoreReadTelemetry } from "../../../../lib/firestoreCostLogger";
 import { getVideoLikeSummary } from "../../../../lib/videoLikes";
 import { getVideoCommentCount } from "../../../../lib/videoComments";
+import {
+  auditVideoPlayback,
+  buildVideoRequestTelemetry,
+} from "../../../../lib/videoLibraryPlaybackAudit";
 
 function buildRequestId() {
   return `vld_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -40,6 +46,7 @@ const SITE_LOCALES =
 
 async function handler(req, res) {
   const requestId = buildRequestId();
+  const requestTelemetry = buildVideoRequestTelemetry(req);
   res.setHeader("X-Request-Id", requestId);
 
   if (req.method !== "GET") {
@@ -49,7 +56,17 @@ async function handler(req, res) {
 
   const rawId = typeof req.query.videoId === "string" ? req.query.videoId.trim() : "";
   if (!rawId || INTERNAL_VIDEO_DOC_IDS.has(rawId)) {
-    return res.status(404).json({ error: "Not found" });
+    auditVideoPlayback(
+      "detail_rejected",
+      {
+        requestId,
+        videoId: rawId || null,
+        reason: "invalid_video_id",
+        client: requestTelemetry,
+      },
+      "warn"
+    );
+    return res.status(404).json({ error: "Not found", requestId });
   }
 
   const hasAuthHeader = typeof req.headers?.authorization === "string" && req.headers.authorization.trim() !== "";
@@ -96,14 +113,54 @@ async function handler(req, res) {
 
     const nowMs = Date.now();
     const targetRow = await loadPremiumVideoLibraryRowById(rawId);
-    if (!targetRow || !canViewerSeeVideo(targetRow, premiumActive, nowMs)) {
-      return res.status(404).json({ error: "Not found" });
+    const viewerCanSeeVideo =
+      Boolean(targetRow) && canViewerSeeVideo(targetRow, premiumActive, nowMs);
+    if (!targetRow || !viewerCanSeeVideo) {
+      auditVideoPlayback(
+        "detail_not_found",
+        {
+          requestId,
+          videoId: rawId,
+          reason: targetRow ? "not_visible_for_viewer" : "video_missing",
+          premiumActive,
+          loggedIn: Boolean(uid),
+          locale,
+          client: requestTelemetry,
+        },
+        "warn"
+      );
+      return res.status(404).json({ error: "Not found", requestId });
     }
 
-    const availableLocales = SITE_LOCALES.filter((lc) => rowHasValidEmbedForLocale(targetRow, lc));
+    const availableLocales = SITE_LOCALES.filter((lc) =>
+      rowHasDirectValidEmbedForLocale(targetRow, lc)
+    );
+    const sourceResolution = resolveRowVideoSourceWithMeta(targetRow, locale);
 
     if (!rowHasValidEmbedForLocale(targetRow, locale)) {
-      return res.status(404).json({ error: "Not found" });
+      auditVideoPlayback(
+        "detail_source_invalid",
+        {
+          requestId,
+          videoId: rawId,
+          locale,
+          availableLocales,
+          sourceStrategy: sourceResolution.strategy,
+          sourceLocale: sourceResolution.sourceLocale,
+          platform: targetRow?.platform || null,
+          hasRootVideoUrl: Boolean(
+            typeof targetRow?.videoUrl === "string" && targetRow.videoUrl.trim()
+          ),
+          localizedVideoUrlKeys: Object.keys(targetRow?.locales || {}).filter(
+            (key) =>
+              typeof targetRow?.locales?.[key]?.videoUrl === "string" &&
+              targetRow.locales[key].videoUrl.trim()
+          ),
+          client: requestTelemetry,
+        },
+        "warn"
+      );
+      return res.status(404).json({ error: "Not found", requestId });
     }
 
     const ctx = { locale, premiumActive, webClient };
@@ -172,6 +229,37 @@ async function handler(req, res) {
       locale,
     });
 
+    const playbackWarning =
+      !video?.embedSrc ||
+      (video?.platform === "bunny" && !video?.hlsSrc) ||
+      video?.lockedReason === "source_invalid";
+    auditVideoPlayback(
+      "detail_response",
+      {
+        requestId,
+        uid: uid || null,
+        videoId: rawId,
+        locale,
+        availableLocales,
+        loggedIn: Boolean(uid),
+        premiumActive,
+        platform: video?.platform || null,
+        canPlay: video?.canPlay === true,
+        isPremium: video?.isPremium === true,
+        lockedReason: video?.lockedReason || null,
+        hasEmbedSrc: Boolean(video?.embedSrc),
+        hasHlsSrc: Boolean(video?.hlsSrc),
+        hasVideoUrl: Boolean(video?.videoUrl),
+        sourceStrategy: sourceResolution.strategy,
+        sourceLocale: sourceResolution.sourceLocale,
+        usedCompatibilityFallback:
+          sourceResolution.strategy === "ro_fallback" ||
+          sourceResolution.strategy === "first_locale_fallback",
+        client: requestTelemetry,
+      },
+      playbackWarning ? "warn" : "info"
+    );
+
     return res.status(200).json({
       video,
       related,
@@ -200,6 +288,7 @@ async function handler(req, res) {
       message: error?.message || error,
       videoId: rawId,
       uid: uid || null,
+      client: requestTelemetry,
     });
     return res.status(500).json({ error: "Failed to load video", requestId });
   }

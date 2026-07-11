@@ -591,7 +591,7 @@
   "coursesDetailLessonDurationTemplate": "{{minutes}} min.",
   "coursesDetailLessonSummary": "Aceasta lectie acopera concepte practice pe care le poti aplica imediat.",
   "coursesDetailLessonsEmptyTitle": "Nu exista lectii disponibile momentan",
-  "coursesDetailLessonsEmptyDescription": "Acest curs nu are inca lectii publicate. Revino mai tarziu pentru continut.",
+  "coursesDetailLessonsEmptyDescription": "Acest curs nu are inca lectii publicate.",
   "coursesDetailLessonSummaryTitle": "Rezumat lectie",
   "coursesDetailLessonDurationLabel": "Durata",
   "coursesDetailLessonDurationUnknown": "Durata indisponibila",
