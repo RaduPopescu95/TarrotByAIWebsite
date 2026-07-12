@@ -46,6 +46,15 @@ export default async function handler(req, res) {
         typeof body.subscriptionSystemEnabled === "boolean"
           ? body.subscriptionSystemEnabled
           : undefined;
+      const billingProviderUpdates = {};
+      [
+        "androidBillingPremiumProvider",
+        "androidBillingAnalysesProvider",
+      ].forEach((key) => {
+        if (body[key] === "stripe" || body[key] === "revenuecat") {
+          billingProviderUpdates[key] = body[key];
+        }
+      });
       const mobilePromptUpdate =
         typeof body.mobileUpdatePromptEnabled === "boolean"
           ? body.mobileUpdatePromptEnabled
@@ -65,6 +74,7 @@ export default async function handler(req, res) {
 
       if (
         subscriptionUpdate === undefined &&
+        Object.keys(billingProviderUpdates).length === 0 &&
         mobilePromptUpdate === undefined &&
         mobileForceUpdate === undefined &&
         !mobileMinIosProvided &&
@@ -99,6 +109,9 @@ export default async function handler(req, res) {
           { subscriptionSystemEnabled: subscriptionUpdate },
           "dashboard"
         );
+      }
+      if (Object.keys(billingProviderUpdates).length > 0) {
+        await updateGlobalSettings(billingProviderUpdates, "dashboard");
       }
       if (mobileMinIosProvided || mobileMinAndroidProvided) {
         await setMobileMinAppVersions(

@@ -129,6 +129,13 @@ function validateCourseInput(input) {
   if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
     errors.push("sitePremiumAccess");
   }
+  if (
+    input.revenueCatProductId !== undefined &&
+    input.revenueCatProductId !== null &&
+    typeof input.revenueCatProductId !== "string"
+  ) {
+    errors.push("revenueCatProductId");
+  }
   if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
     errors.push("availableOnWebsite");
   }
@@ -209,6 +216,10 @@ export default async function handler(req, res) {
       status: input.status,
       featuredOnHome: input.featuredOnHome === true,
       sitePremiumAccess: input.sitePremiumAccess === true,
+      revenueCatProductId:
+        typeof input.revenueCatProductId === "string"
+          ? input.revenueCatProductId.trim() || null
+          : null,
       availableOnWebsite: input.availableOnWebsite !== false,
       availableOnMobile: input.availableOnMobile !== false,
       scheduledAt: input.status === "scheduled" ? parseScheduledAt(input.scheduledAt) : null,

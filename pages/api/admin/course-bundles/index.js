@@ -41,6 +41,13 @@ function validateInput(input) {
     errors.push("price");
   }
   if (!ALLOWED_CURRENCIES.includes(input.currency)) errors.push("currency");
+  if (
+    input.revenueCatProductId !== undefined &&
+    input.revenueCatProductId !== null &&
+    typeof input.revenueCatProductId !== "string"
+  ) {
+    errors.push("revenueCatProductId");
+  }
   if (!COURSE_BUNDLE_STATUSES.includes(input.status)) errors.push("status");
   if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
     errors.push("availableOnWebsite");
@@ -169,6 +176,10 @@ export default async function handler(req, res) {
         courseIds,
         price: input.price,
         currency: input.currency,
+        revenueCatProductId:
+          typeof input.revenueCatProductId === "string"
+            ? input.revenueCatProductId.trim() || null
+            : null,
         status: input.status,
         availableOnWebsite,
         availableOnMobile,

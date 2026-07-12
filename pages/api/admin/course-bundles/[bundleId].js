@@ -36,6 +36,13 @@ function validateUpdate(input) {
   if (input.currency !== undefined && !ALLOWED_CURRENCIES.includes(input.currency)) {
     errors.push("currency");
   }
+  if (
+    input.revenueCatProductId !== undefined &&
+    input.revenueCatProductId !== null &&
+    typeof input.revenueCatProductId !== "string"
+  ) {
+    errors.push("revenueCatProductId");
+  }
   if (input.status !== undefined && !COURSE_BUNDLE_STATUSES.includes(input.status)) {
     errors.push("status");
   }
@@ -225,6 +232,14 @@ export default async function handler(req, res) {
         : {}),
       ...(input.price !== undefined ? { price: input.price } : {}),
       ...(input.currency !== undefined ? { currency: input.currency } : {}),
+      ...(input.revenueCatProductId !== undefined
+        ? {
+            revenueCatProductId:
+              typeof input.revenueCatProductId === "string"
+                ? input.revenueCatProductId.trim() || null
+                : null,
+          }
+        : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.availableOnWebsite !== undefined
         ? { availableOnWebsite: input.availableOnWebsite === true }

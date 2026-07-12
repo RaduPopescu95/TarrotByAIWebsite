@@ -13,6 +13,8 @@ function SettingsScreen() {
   const [success, setSuccess] = useState("");
   const [settings, setSettings] = useState({
     subscriptionSystemEnabled: true,
+    androidBillingPremiumProvider: "stripe",
+    androidBillingAnalysesProvider: "stripe",
     mobileUpdatePromptEnabled: false,
     mobileForceUpdateEnabled: false,
     mobileMinAppVersionIos: "",
@@ -34,6 +36,8 @@ function SettingsScreen() {
       setSettings(
         data.settings || {
           subscriptionSystemEnabled: true,
+          androidBillingPremiumProvider: "stripe",
+          androidBillingAnalysesProvider: "stripe",
           mobileUpdatePromptEnabled: false,
           mobileForceUpdateEnabled: false,
           mobileMinAppVersionIos: "",
@@ -89,6 +93,34 @@ function SettingsScreen() {
 
   const cancelToggle = () => {
     setPendingToggle(null);
+  };
+
+  const saveAndroidBillingProvider = async (field, provider) => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dashboard-token": DASHBOARD_SECRET,
+        },
+        body: JSON.stringify({ [field]: provider }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess(
+        provider === "revenuecat"
+          ? "Google Play Billing a fost activat pentru fluxul Android selectat."
+          : "Fluxul Android selectat a revenit la Stripe."
+      );
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleMobileToggleClick = (newValue) => {
@@ -385,6 +417,59 @@ function SettingsScreen() {
                 {new Date(settings.updatedAt).toLocaleString("ro-RO")}
               </p>
             )}
+          </div>
+
+          <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">
+              Plăți Android
+            </h2>
+            <p className="mb-4 text-sm text-slate-600">
+              Comutatoarele afectează doar build-urile Android noi. iOS și web
+              rămân pe Stripe. Activează fiecare flux numai după configurarea
+              produselor în Google Play și RevenueCat.
+            </p>
+            <div className="space-y-3">
+              {[
+                ["androidBillingPremiumProvider", "Abonament premium"],
+                ["androidBillingAnalysesProvider", "Analize astrale"],
+              ].map(([field, label]) => {
+                const revenueCatEnabled = settings[field] === "revenuecat";
+                return (
+                  <div
+                    key={field}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">{label}</p>
+                      <p className="text-sm text-slate-600">
+                        {revenueCatEnabled ? "Google Play Billing" : "Stripe (fallback)"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        saveAndroidBillingProvider(
+                          field,
+                          revenueCatEnabled ? "stripe" : "revenuecat"
+                        )
+                      }
+                      disabled={saving}
+                      className={`relative inline-flex h-7 w-14 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
+                        revenueCatEnabled ? "bg-emerald-500" : "bg-slate-300"
+                      }`}
+                      role="switch"
+                      aria-checked={revenueCatEnabled}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+                          revenueCatEnabled ? "translate-x-7" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

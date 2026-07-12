@@ -130,6 +130,10 @@ async function handler(req, res) {
           status: typeof data.status === "string" ? data.status : "paid",
           amountPaid: typeof data.amountPaid === "number" ? data.amountPaid : 0,
           currency: typeof data.currency === "string" ? data.currency : "RON",
+          provider:
+            typeof data.provider === "string" && data.provider.trim()
+              ? data.provider.trim()
+              : "stripe",
           accessSource:
             data.accessSource === "bundle" ? "bundle" : "purchase",
           bundleId:
@@ -171,6 +175,7 @@ async function handler(req, res) {
           purchasedAt: toIsoString(purchasedAt),
           amountPaid: purchase.amountPaid,
           currency: purchase.currency,
+          provider: purchase.provider,
           accessSource: purchase.accessSource,
           bundleId: purchase.bundleId,
           courseMissing,
@@ -216,6 +221,10 @@ async function handler(req, res) {
           purchasedAt: toIsoString(data.purchasedAt || data.updatedAt),
           amountPaid: typeof data.amountPaid === "number" ? data.amountPaid : 0,
           currency: typeof data.currency === "string" ? data.currency : "RON",
+          provider:
+            typeof data.provider === "string" && data.provider.trim()
+              ? data.provider.trim()
+              : "stripe",
           bundleMissing,
           bundle,
         };

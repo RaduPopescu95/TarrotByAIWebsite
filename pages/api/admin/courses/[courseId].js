@@ -134,6 +134,13 @@ function validateUpdate(input) {
   if (input.sitePremiumAccess !== undefined && typeof input.sitePremiumAccess !== "boolean") {
     errors.push("sitePremiumAccess");
   }
+  if (
+    input.revenueCatProductId !== undefined &&
+    input.revenueCatProductId !== null &&
+    typeof input.revenueCatProductId !== "string"
+  ) {
+    errors.push("revenueCatProductId");
+  }
   if (input.availableOnWebsite !== undefined && typeof input.availableOnWebsite !== "boolean") {
     errors.push("availableOnWebsite");
   }
@@ -271,6 +278,14 @@ export default async function handler(req, res) {
         : {}),
       ...(input.sitePremiumAccess !== undefined
         ? { sitePremiumAccess: input.sitePremiumAccess === true }
+        : {}),
+      ...(input.revenueCatProductId !== undefined
+        ? {
+            revenueCatProductId:
+              typeof input.revenueCatProductId === "string"
+                ? input.revenueCatProductId.trim() || null
+                : null,
+          }
         : {}),
       ...(input.availableOnWebsite !== undefined
         ? { availableOnWebsite: input.availableOnWebsite === true }
