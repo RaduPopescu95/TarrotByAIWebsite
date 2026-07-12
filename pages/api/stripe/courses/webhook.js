@@ -13,6 +13,12 @@ import {
   COURSE_BUNDLE_COLLECTION,
   normalizeBundleCourseIds,
 } from "../../../../lib/courseBundles";
+import {
+  BILLING_ERROR_CODES,
+  getBillingRequestId,
+  logBillingObs,
+  setBillingRequestId,
+} from "../../../../lib/billingObservability";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const HANDLED_EVENTS = new Set([
@@ -1085,8 +1091,17 @@ export {
 };
 
 export default async function handler(req, res) {
+  const requestId = setBillingRequestId(res, getBillingRequestId(req, "scwh"));
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_courses_webhook",
+      stage: "rejected",
+      requestId,
+      result: { httpStatus: 405 },
+      error: { code: BILLING_ERROR_CODES.METHOD_NOT_ALLOWED },
+    });
     return res.status(405).end("Method Not Allowed");
   }
 
@@ -1098,6 +1113,20 @@ export default async function handler(req, res) {
       hasWebhookSecretCoursesTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES_TEST),
       hasWebhookSecretTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_TEST),
     });
+    logBillingObs({
+      level: "error",
+      scope: "stripe_courses_webhook",
+      stage: "config_missing",
+      requestId,
+      result: { httpStatus: 500 },
+      config: {
+        hasStripeSecretKey: Boolean(process.env.STRIPE_SECRET_KEY),
+        hasWebhookSecretCourses: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES),
+        hasWebhookSecretCoursesTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_COURSES_TEST),
+        hasWebhookSecretTest: Boolean(process.env.STRIPE_WEBHOOK_SECRET_TEST),
+      },
+      error: { code: BILLING_ERROR_CODES.FLOW_DISABLED, reason: "missing_stripe_courses_webhook_secret" },
+    });
     return res.status(500).json({ error: "Missing STRIPE_WEBHOOK_SECRET_COURSES" });
   }
 
@@ -1107,6 +1136,14 @@ export default async function handler(req, res) {
     const sig = req.headers["stripe-signature"];
     if (!sig || typeof sig !== "string") {
       console.warn("[courses.webhook] missing_signature");
+      logBillingObs({
+        level: "warn",
+        scope: "stripe_courses_webhook",
+        stage: "signature_missing",
+        requestId,
+        result: { httpStatus: 400 },
+        error: { code: BILLING_ERROR_CODES.AUTH_MISSING },
+      });
       return res.status(400).send("Webhook Error: Missing stripe-signature header");
     }
     console.info("[courses.webhook] secret_source", {

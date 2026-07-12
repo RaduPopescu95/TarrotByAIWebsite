@@ -19,13 +19,29 @@ import {
 } from "../../../../lib/stripePremiumEnv";
 import { assertCanStartPremiumSubscription } from "../../../../lib/premiumSubscriptionGuard";
 import { buildUserIdentityPatch } from "../../../../lib/userIdentitySync";
+import {
+  BILLING_ERROR_CODES,
+  getBillingRequestId,
+  getSafeBillingConfigSnapshot,
+  logBillingObs,
+  setBillingRequestId,
+} from "../../../../lib/billingObservability";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PREMIUM_CHECKOUT_SESSION_COLLECTION = "premiumCheckoutSessions";
 
 export default async function handler(req, res) {
+  const requestId = setBillingRequestId(res, getBillingRequestId(req, "spcheckout"));
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_premium_checkout",
+      stage: "rejected",
+      requestId,
+      result: { httpStatus: 405 },
+      error: { code: BILLING_ERROR_CODES.METHOD_NOT_ALLOWED },
+    });
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -35,6 +51,15 @@ export default async function handler(req, res) {
       "[premium.checkout] missing price id: STRIPE_PREMIUM_PRICE_ID" +
         (process.env.NODE_ENV === "development" ? " or STRIPE_PREMIUM_PRICE_ID_TEST" : ""),
     );
+    logBillingObs({
+      level: "error",
+      scope: "stripe_premium_checkout",
+      stage: "config_missing",
+      requestId,
+      result: { httpStatus: 500 },
+      config: getSafeBillingConfigSnapshot(),
+      error: { code: BILLING_ERROR_CODES.FLOW_DISABLED, reason: "missing_stripe_premium_price_id" },
+    });
     return res.status(500).json({ error: "Premium billing is not configured" });
   }
   if (isStripePremiumUsingLocalOverrides() && process.env.STRIPE_PREMIUM_PRICE_ID_TEST) {
@@ -46,6 +71,14 @@ export default async function handler(req, res) {
     authUser = await requireAuth(req);
   } catch (err) {
     const code = err.statusCode || 401;
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_premium_checkout",
+      stage: "auth_failed",
+      requestId,
+      result: { httpStatus: code },
+      error: { code: BILLING_ERROR_CODES.AUTH_MISSING },
+    });
     return res.status(code).json({ error: err.message || "Unauthorized" });
   }
 

@@ -9,6 +9,13 @@ import {
   syncPremiumSubscription,
   syncPremiumSubscriptionById,
 } from "../../../../lib/stripePremiumSubscriptionSync";
+import {
+  BILLING_ERROR_CODES,
+  getBillingRequestId,
+  getSafeBillingConfigSnapshot,
+  logBillingObs,
+  setBillingRequestId,
+} from "../../../../lib/billingObservability";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_EVENTS_COLLECTION = "stripePremiumWebhookEvents";
@@ -66,8 +73,17 @@ function resolvePremiumWebhookSecret() {
 }
 
 export default async function handler(req, res) {
+  const requestId = setBillingRequestId(res, getBillingRequestId(req, "spwh"));
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_premium_webhook",
+      stage: "rejected",
+      requestId,
+      result: { httpStatus: 405 },
+      error: { code: BILLING_ERROR_CODES.METHOD_NOT_ALLOWED },
+    });
     return res.status(405).end("Method Not Allowed");
   }
 
@@ -76,6 +92,15 @@ export default async function handler(req, res) {
     console.error(
       "[premium.webhook] missing signing secret: set STRIPE_WEBHOOK_SECRET_ABONAMENT_TEST (dev), or STRIPE_WEBHOOK_SECRET_ABONAMENT / STRIPE_WEBHOOK_SECRET",
     );
+    logBillingObs({
+      level: "error",
+      scope: "stripe_premium_webhook",
+      stage: "config_missing",
+      requestId,
+      result: { httpStatus: 500 },
+      config: getSafeBillingConfigSnapshot(),
+      error: { code: BILLING_ERROR_CODES.FLOW_DISABLED, reason: "missing_stripe_webhook_secret" },
+    });
     return res.status(500).json({ error: "Webhook not configured" });
   }
 
@@ -84,11 +109,27 @@ export default async function handler(req, res) {
     const buf = await buffer(req);
     const sig = req.headers["stripe-signature"];
     if (!sig) {
+      logBillingObs({
+        level: "warn",
+        scope: "stripe_premium_webhook",
+        stage: "signature_missing",
+        requestId,
+        result: { httpStatus: 400 },
+        error: { code: BILLING_ERROR_CODES.AUTH_MISSING },
+      });
       return res.status(400).send("Webhook Error: Missing stripe-signature header");
     }
     event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
   } catch (err) {
     console.error("[premium.webhook] signature_failed", err.message);
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_premium_webhook",
+      stage: "signature_failed",
+      requestId,
+      result: { httpStatus: 400 },
+      error: { code: BILLING_ERROR_CODES.AUTH_MISSING, message: err?.message || "unknown_error" },
+    });
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
