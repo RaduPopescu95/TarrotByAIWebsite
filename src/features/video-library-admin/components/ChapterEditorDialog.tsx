@@ -202,7 +202,7 @@ export default function ChapterEditorDialog({
               ) : null}
             </div>
 
-            <div className="mt-1.5 max-h-[140px] overflow-y-auto overscroll-contain pr-0.5">
+            <div className="mt-1.5 max-h-[min(40vh,280px)] overflow-y-auto overscroll-contain pr-0.5">
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {sortedLocales.map((locale) => (
                   <label key={locale} className="block min-w-0">

@@ -200,16 +200,6 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
   const [accessMode, setAccessMode] = useState<string>(VIDEO_ACCESS_MODE_PREMIUM);
   const roCardRef = useRef<HTMLDivElement>(null);
   const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
-  const chapterLocaleIds = useMemo(() => {
-    const ids = new Set<string>(["ro"]);
-    if (locales && typeof locales === "object") {
-      Object.keys(locales).forEach((locale) => ids.add(locale));
-    }
-    Object.entries(localeVideoUrls).forEach(([locale, value]) => {
-      if (value.trim()) ids.add(locale);
-    });
-    return sortLocalesForVideoAdmin(Array.from(ids));
-  }, [localeVideoUrls, locales]);
 
   const hasLocalePreview = Boolean(locales && Object.keys(locales).length > 0);
 
@@ -1172,7 +1162,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
       <ChapterEditorDialog
         open={chapterDialogOpen}
         initialChapter={editingChapter}
-        localeIds={chapterLocaleIds}
+        localeIds={videoFormLocales}
         onSave={handleSaveChapter}
         onClose={() => {
           setChapterDialogOpen(false);
