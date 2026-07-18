@@ -9,8 +9,7 @@ import {
   mapUserTokenDoc,
   normalizeUserTokenFilters,
 } from "../../../lib/userTokensDashboard";
-
-const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
+import { requireDashboardAccess } from "../../../lib/requireAuth";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const BATCH_SIZE = 200;
@@ -354,9 +353,12 @@ export default async function handler(req, res) {
   const requestId = buildRequestId();
   res.setHeader("X-Request-Id", requestId);
 
-  const token = req.headers["x-dashboard-token"] || "";
-  if (token !== DASHBOARD_SECRET) {
-    return res.status(401).json({ error: "Unauthorized", requestId });
+  try {
+    requireDashboardAccess(req);
+  } catch (error) {
+    return res
+      .status(error?.statusCode || 401)
+      .json({ error: "Unauthorized", requestId });
   }
 
   try {

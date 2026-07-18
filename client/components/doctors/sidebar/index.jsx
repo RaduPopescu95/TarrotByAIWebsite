@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { doctorprofileimg } from "../../imagepath";
-import { handleSignIn, handleLogout } from "../../../../utils/authUtils";
 import Select from "react-select";
 import { useRouter } from "next/router";
 // REMOVED: import { useAuth } from "../../../../context/AuthContext";
@@ -12,69 +11,49 @@ import { Box, CircularProgress } from "@mui/material";
 
 const DoctorSidebar = () => {
   const router = useRouter();
-  // REMOVED: const { currentUser, userData, loading, setLoading, setCurrentUser, setUserData } = useAuth();
-  
-  // 🔐 SIMPLE AUTH STATE
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // The shared dashboard session is held only in a signed HttpOnly cookie.
   const [loading, setLoading] = useState(true);
-  
-  const AUTH_STORAGE_KEY = "adminConsultatiiAuth";
 
   const availablity = [
     { value: "Online acum", label: "Online acum" },
     { value: "Offline", label: "Offline" },
   ];
 
-  // 🔐 CHECK SIMPLE AUTH INSTEAD OF FIREBASE
   useEffect(() => {
-    console.log("🔄 [DOCTOR SIDEBAR] Checking simple auth...");
-    
-    try {
-      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-      const storedTime = localStorage.getItem(AUTH_STORAGE_KEY + "_time");
-      
-      if (storedAuth && storedTime) {
-        const authTime = parseInt(storedTime);
-        const currentTime = Date.now();
-        const hoursPassed = (currentTime - authTime) / (1000 * 60 * 60);
-        
-        // Auth expires after 1 week (168 hours)
-        if (hoursPassed < 168) {
-          console.log("✅ [DOCTOR SIDEBAR] Valid simple auth found");
-          setIsAuthenticated(true);
-          setLoading(false);
-          return;
-        } else {
-          console.log("⏰ [DOCTOR SIDEBAR] Simple auth expired, clearing...");
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
-        }
-      }
-      
-      console.log("❌ [DOCTOR SIDEBAR] No valid auth, redirecting to login");
-      router.push("/login-admin-consultatii");
-      setLoading(false);
-      
-    } catch (error) {
-      console.error("💥 [DOCTOR SIDEBAR] Error checking auth:", error);
-      router.push("/login-admin-consultatii");
-      setLoading(false);
-    }
+    let active = true;
+    void fetch("/api/dashboard/auth/session", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then((response) => {
+        if (active && !response.ok) router.replace("/login-admin-consultatii");
+      })
+      .catch(() => {
+        if (active) router.replace("/login-admin-consultatii");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [router]);
 
-  // 🔐 SIMPLE LOGOUT FUNCTION
-  const handleSimpleLogout = () => {
-    console.log("🔐 [DOCTOR SIDEBAR] Simple logout triggered");
+  const handleSimpleLogout = async () => {
     try {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(AUTH_STORAGE_KEY + "_time");
-      console.log("✅ [DOCTOR SIDEBAR] Auth cleared, redirecting to login");
-      router.push("/login-admin-consultatii");
-    } catch (error) {
-      console.error("💥 [DOCTOR SIDEBAR] Error during logout:", error);
-      router.push("/login-admin-consultatii");
+      await fetch("/api/dashboard/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+    } finally {
+      router.replace("/login-admin-consultatii");
     }
   };
+
+  if (loading) return null;
 
   return (
     <>

@@ -3,9 +3,6 @@ import Head from "next/head";
 import CustomDrawer from "../../../components/Dashboard/CustomDrawer";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
-// Mirrors LocalPasswordGate's password so the API guard accepts the request.
-const ADMIN_PASS = "Cristina1994!";
-
 const EMPTY_PERSON = {
   full_name: "",
   day: "",
@@ -158,8 +155,8 @@ function AstrogramePdfTool() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-pass": ADMIN_PASS,
       },
+      credentials: "same-origin",
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => ({}));

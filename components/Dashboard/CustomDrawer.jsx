@@ -176,8 +176,8 @@ export default function CustomDrawer(props) {
     }
   };
 
-  const handleLogout = () => {
-    clearDashboardAccess();
+  const handleLogout = async () => {
+    await clearDashboardAccess();
     router.replace(`${basePath}/login`);
   };
 

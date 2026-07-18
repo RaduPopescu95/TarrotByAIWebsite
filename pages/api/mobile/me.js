@@ -1,8 +1,25 @@
 import { readSingleQueryValue } from "../../../lib/courses";
 import { explainPremiumAccess } from "../../../lib/explainPremiumAccess";
-import { loadMobileUserProfile } from "../../../lib/loadMobileUserProfile";
+import {
+  clearMobileUserProfileCache,
+  loadMobileUserProfile,
+} from "../../../lib/loadMobileUserProfile";
 import { auditUserPremiumFields } from "../../../lib/premiumVideoAccessAudit";
+import { currentPeriodEndToMillis } from "../../../lib/premiumAccess";
+import { hasRevenueCatPurchaseEvidence } from "../../../lib/premiumSources";
+import { reconcileRevenueCatPremium } from "../../../lib/revenueCatBilling";
+import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
+
+const REVENUECAT_STARTUP_RECONCILE_TTL_MS = 6 * 60 * 60 * 1000;
+
+function shouldReconcileRevenueCatProfile(user, nowMs = Date.now()) {
+  if (!hasRevenueCatPurchaseEvidence(user)) return false;
+  const source = user?.premiumSources?.revenuecat || {};
+  if (source.verificationStatus === "pending") return true;
+  const lastVerifiedMs = currentPeriodEndToMillis(source.lastVerifiedAt);
+  return lastVerifiedMs == null || nowMs - lastVerifiedMs >= REVENUECAT_STARTUP_RECONCILE_TTL_MS;
+}
 
 function buildRequestId() {
   return `mobile_me_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -38,7 +55,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", "private, max-age=30");
     }
 
-    const { user, source } = await loadMobileUserProfile(uid, { fresh });
+    let { user, source } = await loadMobileUserProfile(uid, { fresh });
 
     if (!user) {
       return res.status(404).json({
@@ -47,6 +64,27 @@ export default async function handler(req, res) {
         source: null,
         requestId,
       });
+    }
+
+    let revenueCatReconciliation = null;
+    if (shouldReconcileRevenueCatProfile(user)) {
+      try {
+        revenueCatReconciliation = await reconcileRevenueCatPremium(
+          getAdminDb(),
+          uid,
+          { maxAttempts: 1 }
+        );
+        clearMobileUserProfileCache(uid);
+        const reloaded = await loadMobileUserProfile(uid, { fresh: true });
+        user = reloaded.user || user;
+        source = reloaded.source || source;
+      } catch (error) {
+        console.warn("[mobile/me] RevenueCat startup reconciliation skipped", {
+          requestId,
+          uid,
+          message: error?.message || String(error),
+        });
+      }
     }
 
     const accessExplain = explainPremiumAccess(user);
@@ -68,6 +106,13 @@ export default async function handler(req, res) {
         snapshot: accessExplain.snapshot,
         checkedAt: accessExplain.now,
       },
+      revenueCatReconciliation: revenueCatReconciliation
+        ? {
+            premiumActive: revenueCatReconciliation.active === true,
+            pending: revenueCatReconciliation.pending === true,
+            status: revenueCatReconciliation.status,
+          }
+        : null,
     });
   } catch (error) {
     const statusCode = error?.statusCode || 500;

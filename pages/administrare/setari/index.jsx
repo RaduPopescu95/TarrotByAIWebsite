@@ -3,8 +3,6 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
-const DASHBOARD_SECRET = "Cristina1994!";
-
 function SettingsScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -29,9 +27,7 @@ function SettingsScreen() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/dashboard/settings", {
-        headers: { "x-dashboard-token": DASHBOARD_SECRET },
-      });
+      const res = await fetch("/api/dashboard/settings");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "load_failed");
       setSettings(
@@ -71,7 +67,6 @@ function SettingsScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           iosPremiumSubscriptionsEnabled: pendingToggle,
@@ -106,7 +101,6 @@ function SettingsScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({ [field]: provider }),
       });
@@ -139,7 +133,6 @@ function SettingsScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           mobileUpdatePromptEnabled: pendingMobileToggle,
@@ -186,7 +179,6 @@ function SettingsScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           mobileForceUpdateEnabled: pendingMobileForceToggle,
@@ -228,7 +220,6 @@ function SettingsScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           mobileMinAppVersionIos: settings.mobileMinAppVersionIos?.trim() || null,

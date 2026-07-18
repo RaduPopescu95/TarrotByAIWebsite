@@ -9,20 +9,11 @@ import {
   buildAstrologyPdfHtml,
   buildSynastryPdfHtml,
 } from "../../../lib/adminPdf/pdfTemplates";
+import { requireDashboardAccess } from "../../../lib/requireAuth";
 
 // Building a full natal/synastry report fans out to many DivineAPI requests.
 export const config = {
   maxDuration: 60,
-};
-
-// Same shared secret as the dashboard gate. The mobile/web bundle already ships
-// this value, so requiring it here only blocks anonymous API hits.
-const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "Cristina1994!";
-
-const isAuthorized = (req) => {
-  const provided =
-    req.headers["x-admin-pass"] || req.body?.adminPass || "";
-  return String(provided) === DASHBOARD_PASSWORD;
 };
 
 const requiredPersonFields = ["full_name", "day", "month", "year", "lat", "lon"];
@@ -46,8 +37,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: "Neautorizat" });
+  try {
+    requireDashboardAccess(req);
+  } catch (error) {
+    return res.status(error?.statusCode || 401).json({ error: "Neautorizat" });
   }
 
   const { mode, language } = req.body || {};

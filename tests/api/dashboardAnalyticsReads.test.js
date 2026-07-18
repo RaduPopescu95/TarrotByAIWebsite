@@ -1,11 +1,21 @@
 const getAdminDb = jest.fn();
 const loadFirestoreReadAnalytics = jest.fn();
 const parseReadAnalyticsParams = jest.fn();
+const requireDashboardAccess = jest.fn((req) => {
+  if (req?.headers?.cookie !== "dashboard_session=test") {
+    const error = new Error("Unauthorized");
+    error.statusCode = 401;
+    throw error;
+  }
+});
 
 jest.mock("../../lib/firebaseAdmin", () => ({ getAdminDb: (...args) => getAdminDb(...args) }));
 jest.mock("../../lib/firestoreReadAnalytics", () => ({
   loadFirestoreReadAnalytics: (...args) => loadFirestoreReadAnalytics(...args),
   parseReadAnalyticsParams: (...args) => parseReadAnalyticsParams(...args),
+}));
+jest.mock("../../lib/requireAuth", () => ({
+  requireDashboardAccess: (...args) => requireDashboardAccess(...args),
 }));
 
 import handler from "../../pages/api/dashboard/analytics/reads";
@@ -33,7 +43,7 @@ describe("/api/dashboard/analytics/reads", () => {
     parseReadAnalyticsParams.mockReturnValue({ days: 7, source: "all", search: "" });
     loadFirestoreReadAnalytics.mockResolvedValue({ summary: {}, trend: [], next: { routes: [], queries: [] }, expo: { rows: [] }, recommendations: [], meta: { days: 7 } });
     const res = makeRes();
-    await handler({ method: "GET", headers: { "x-dashboard-token": "Cristina1994!" }, query: {} }, res);
+    await handler({ method: "GET", headers: { cookie: "dashboard_session=test" }, query: {} }, res);
     expect(loadFirestoreReadAnalytics).toHaveBeenCalledWith(db, { days: 7, source: "all", search: "" });
     expect(res.statusCode).toBe(200);
     expect(res.body.meta.requestId).toEqual(expect.any(String));
@@ -44,7 +54,7 @@ describe("/api/dashboard/analytics/reads", () => {
     parseReadAnalyticsParams.mockReturnValue({ days: 7, source: "all", search: "" });
     loadFirestoreReadAnalytics.mockRejectedValue(new Error("boom"));
     const res = makeRes();
-    await handler({ method: "GET", headers: { "x-dashboard-token": "Cristina1994!" }, query: {} }, res);
+    await handler({ method: "GET", headers: { cookie: "dashboard_session=test" }, query: {} }, res);
     expect(res.statusCode).toBe(500);
     expect(res.body.error).toBe("Failed to load read analytics");
   });

@@ -8,13 +8,15 @@ import {
 } from "../../../lib/userIdentitySync";
 import {
   buildPremiumSourcePatch,
+  getRevenueCatLifecycle,
+  hasRevenueCatPurchaseEvidence,
   inferLegacyPremiumSources,
   isSourceActive,
 } from "../../../lib/premiumSources";
 import { resolveAdminPremiumRevocation } from "../../../lib/adminPremiumRevocation";
+import { requireDashboardAccess } from "../../../lib/requireAuth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
 
 function tsToIso(value) {
   if (!value) return null;
@@ -32,11 +34,12 @@ function safeStr(v) {
   return typeof v === "string" ? v : "";
 }
 
-function resolveBillingSourceMeta(data) {
+export function resolveBillingSourceMeta(data) {
   const d = data || {};
   const sources = inferLegacyPremiumSources(d);
   const hasStripeSource = Boolean(sources.stripe);
-  const hasRevenueCatSource = Boolean(sources.revenuecat);
+  const revenueCatLifecycle = getRevenueCatLifecycle(d);
+  const hasRevenueCatSource = revenueCatLifecycle.hasPurchaseHistory;
   const hasManualSource = Boolean(sources.manual);
   const hasActiveStripe = isSourceActive(sources.stripe);
   const hasActiveRevenueCat = isSourceActive(sources.revenuecat);
@@ -49,7 +52,6 @@ function resolveBillingSourceMeta(data) {
   else if (hasStripeSource) billingSource = "stripe";
   else if (hasManualSource || provider === "manual") billingSource = "manual";
   else if (provider === "multiple") billingSource = "multiple";
-  else if (provider === "revenuecat") billingSource = "google_play";
   else if (provider === "stripe") billingSource = "stripe";
 
   return {
@@ -60,6 +62,7 @@ function resolveBillingSourceMeta(data) {
     hasActiveStripe,
     hasActiveRevenueCat,
     hasActiveManual,
+    revenueCatLifecycle,
     billingSource,
     canAdminDelete: !(hasActiveStripe || hasActiveRevenueCat),
   };
@@ -81,7 +84,7 @@ function userGrantSnapshot(data, docId) {
   };
 }
 
-function mapDocToSubscriber(docSnap) {
+export function mapDocToSubscriber(docSnap) {
   const d = docSnap.data() || {};
   const isPremium = hasPremiumAccess(d);
   const billing = resolveBillingSourceMeta(d);
@@ -89,14 +92,11 @@ function mapDocToSubscriber(docSnap) {
   const hasEverHadSubscription =
     !!d.stripeSubscriptionId ||
     !!d.subscriptionStatus ||
-    !!d.revenueCatSubscriptionStatus ||
-    !!d.revenueCatCurrentPeriodEnd ||
-    !!d.revenueCatProductId ||
     billing.hasStripeSource ||
-    billing.hasRevenueCatSource ||
+    hasRevenueCatPurchaseEvidence(d) ||
     isManual ||
     d.manualPremiumGrantedAt != null ||
-    ["revenuecat", "multiple", "manual", "stripe"].includes(
+    ["multiple", "manual", "stripe"].includes(
       safeStr(d.subscriptionProvider).toLowerCase()
     );
   if (!isPremium && !hasEverHadSubscription) return null;
@@ -112,8 +112,11 @@ function mapDocToSubscriber(docSnap) {
   const manualEndMs = currentPeriodEndToMillis(d.manualPremiumExpiresAt);
   const displayStatus =
     billing.billingSource === "google_play"
-      ? safeStr(d.revenueCatSubscriptionStatus) || safeStr(d.subscriptionStatus)
+      ? billing.revenueCatLifecycle.status
       : safeStr(d.subscriptionStatus) || safeStr(d.revenueCatSubscriptionStatus);
+  const googlePlayCancelAtPeriodEnd =
+    billing.revenueCatLifecycle.cancelAtPeriodEnd === true;
+  const stripeCancelAtPeriodEnd = d.premiumSubscriptionCancelAtPeriodEnd === true;
 
   return {
     uid: docSnap.id,
@@ -129,10 +132,18 @@ function mapDocToSubscriber(docSnap) {
     hasRevenueCatSource: billing.hasRevenueCatSource,
     hasActiveStripe: billing.hasActiveStripe,
     hasActiveRevenueCat: billing.hasActiveRevenueCat,
+    googlePlayStatus: billing.revenueCatLifecycle.status,
+    googlePlayHasPurchaseHistory: billing.revenueCatLifecycle.hasPurchaseHistory,
+    googlePlayCancelAtPeriodEnd,
     canAdminDelete: billing.canAdminDelete,
     stripeSubscriptionId: safeStr(d.stripeSubscriptionId),
     stripeCustomerId: safeStr(d.stripeCustomerId),
-    cancelAtPeriodEnd: d.premiumSubscriptionCancelAtPeriodEnd === true,
+    cancelAtPeriodEnd:
+      billing.billingSource === "google_play"
+        ? googlePlayCancelAtPeriodEnd
+        : billing.billingSource === "multiple"
+          ? stripeCancelAtPeriodEnd || googlePlayCancelAtPeriodEnd
+          : stripeCancelAtPeriodEnd,
     currentPeriodEnd: preferredEndMs ? new Date(preferredEndMs).toISOString() : null,
     manualPremiumExpiresAt: manualEndMs ? new Date(manualEndMs).toISOString() : null,
     billingType: safeStr(d.premiumBillingProfile?.billing?.billingType),
@@ -316,9 +327,10 @@ async function resolveUserDocument(db, { uid, email }) {
 }
 
 export default async function handler(req, res) {
-  const token = req.headers["x-dashboard-token"] || "";
-  if (token !== DASHBOARD_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
+  try {
+    requireDashboardAccess(req);
+  } catch (error) {
+    return res.status(error?.statusCode || 401).json({ error: "Unauthorized" });
   }
 
   if (req.method === "GET") {

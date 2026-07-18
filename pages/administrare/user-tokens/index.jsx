@@ -7,7 +7,6 @@ import {
   DEFAULT_RECIPIENT_LIMIT_NAMES,
 } from "../../../lib/userTokenRecipientLimit";
 
-const DASHBOARD_SECRET = "Cristina1994!";
 const DELETE_CONFIRM_TEXT = "STERGE TOKENS";
 
 const MODEL_FILTERS = [
@@ -335,9 +334,7 @@ function UserTokensScreen() {
         resetSelectionState();
       }
       try {
-        const res = await fetch(`/api/dashboard/user-tokens?${buildQuery(cursor)}`, {
-          headers: { "x-dashboard-token": DASHBOARD_SECRET },
-        });
+        const res = await fetch(`/api/dashboard/user-tokens?${buildQuery(cursor)}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || "load_failed");
         setTokens((prev) =>
@@ -371,9 +368,7 @@ function UserTokensScreen() {
     }
     try {
       const suffix = includeRecipients ? "?includeRecipients=1" : "";
-      const res = await fetch(`/api/dashboard/user-token-recipient-limit${suffix}`, {
-        headers: { "x-dashboard-token": DASHBOARD_SECRET },
-      });
+      const res = await fetch(`/api/dashboard/user-token-recipient-limit${suffix}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "recipient_limit_load_failed");
       const config = data.config || {};
@@ -423,7 +418,6 @@ function UserTokensScreen() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           enabled: recipientLimitEnabled,
@@ -541,7 +535,6 @@ function UserTokensScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           action: "previewDelete",
@@ -567,7 +560,6 @@ function UserTokensScreen() {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           action: "bulkDelete",

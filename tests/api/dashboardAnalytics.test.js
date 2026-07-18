@@ -1,6 +1,13 @@
 const getAdminDb = jest.fn();
 const loadFirestoreCollectionAnalytics = jest.fn();
 const parseAnalyticsParams = jest.fn();
+const requireDashboardAccess = jest.fn((req) => {
+  if (req?.headers?.cookie !== "dashboard_session=test") {
+    const error = new Error("Unauthorized");
+    error.statusCode = 401;
+    throw error;
+  }
+});
 
 jest.mock("../../lib/firebaseAdmin", () => ({
   getAdminDb: (...args) => getAdminDb(...args),
@@ -9,6 +16,9 @@ jest.mock("../../lib/firebaseAdmin", () => ({
 jest.mock("../../lib/firestoreAnalytics", () => ({
   loadFirestoreCollectionAnalytics: (...args) => loadFirestoreCollectionAnalytics(...args),
   parseAnalyticsParams: (...args) => parseAnalyticsParams(...args),
+}));
+jest.mock("../../lib/requireAuth", () => ({
+  requireDashboardAccess: (...args) => requireDashboardAccess(...args),
 }));
 
 import handler from "../../pages/api/dashboard/analytics";
@@ -40,7 +50,7 @@ describe("/api/dashboard/analytics", () => {
       summary: { collectionCount: 1, totalDocumentCount: 120, totalEstimatedBytes: 36000, largestCollectionName: "Users", largestEstimatedBytes: 36000 },
       meta: { sampleLimit: 25, generatedAt: "2026-06-13T12:00:00.000Z", durationMs: 45, estimationMethod: "count_plus_sample", sortBy: "estimatedBytes", search: "" },
     });
-    const req = { method: "GET", headers: { "x-dashboard-token": "Cristina1994!" }, query: { sampleLimit: "25" } };
+    const req = { method: "GET", headers: { cookie: "dashboard_session=test" }, query: { sampleLimit: "25" } };
     const res = makeRes();
     await handler(req, res);
     expect(loadFirestoreCollectionAnalytics).toHaveBeenCalledWith(db, { sampleLimit: 25, sortBy: "estimatedBytes", search: "" });
@@ -53,7 +63,7 @@ describe("/api/dashboard/analytics", () => {
     parseAnalyticsParams.mockReturnValueOnce({ sampleLimit: 25, sortBy: "estimatedBytes", search: "" });
     loadFirestoreCollectionAnalytics.mockRejectedValueOnce(new Error("boom"));
     const res = makeRes();
-    await handler({ method: "GET", headers: { "x-dashboard-token": "Cristina1994!" }, query: {} }, res);
+    await handler({ method: "GET", headers: { cookie: "dashboard_session=test" }, query: {} }, res);
     expect(res.statusCode).toBe(500);
     expect(res.body.error).toBe("Failed to load analytics");
   });

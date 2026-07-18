@@ -1,7 +1,17 @@
 const getAdminDb = jest.fn();
+const requireDashboardAccess = jest.fn((req) => {
+  if (req?.headers?.cookie !== "dashboard_session=test") {
+    const error = new Error("Unauthorized");
+    error.statusCode = 401;
+    throw error;
+  }
+});
 
 jest.mock("../../../../lib/firebaseAdmin", () => ({
   getAdminDb: (...args) => getAdminDb(...args),
+}));
+jest.mock("../../../../lib/requireAuth", () => ({
+  requireDashboardAccess: (...args) => requireDashboardAccess(...args),
 }));
 
 import handler from "../user-tokens";
@@ -154,7 +164,7 @@ describe("/api/dashboard/user-tokens", () => {
 
     const req = {
       method: "POST",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         action: "previewDelete",
         mode: "delete_all_except_selected",
@@ -185,7 +195,7 @@ describe("/api/dashboard/user-tokens", () => {
 
     const req = {
       method: "POST",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         action: "previewDelete",
         mode: "delete_all_except_selected",
@@ -216,7 +226,7 @@ describe("/api/dashboard/user-tokens", () => {
 
     const req = {
       method: "DELETE",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         action: "bulkDelete",
         mode: "delete_all_except_selected",
@@ -247,7 +257,7 @@ describe("/api/dashboard/user-tokens", () => {
 
     const req = {
       method: "DELETE",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         action: "bulkDelete",
         mode: "delete_selected",
@@ -269,7 +279,7 @@ describe("/api/dashboard/user-tokens", () => {
 
     const req = {
       method: "DELETE",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         action: "bulkDelete",
         mode: "delete_all_except_selected",

@@ -3,14 +3,14 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
-const DASHBOARD_SECRET = "Cristina1994!";
-
 const STATUS_LABEL = {
   active: "Activ",
   past_due: "Restanțier",
   canceled: "Anulat",
   unpaid: "Neplătit",
   expired: "Expirat",
+  no_purchase: "Fără achiziție",
+  cancel_at_period_end: "Anulat la sfârșitul perioadei",
   trialing: "Trial",
   "": "—",
 };
@@ -21,6 +21,8 @@ const STATUS_COLOR = {
   canceled: "bg-slate-100 text-slate-600",
   unpaid: "bg-red-100 text-red-700",
   expired: "bg-slate-100 text-slate-500",
+  no_purchase: "bg-slate-100 text-slate-500",
+  cancel_at_period_end: "bg-amber-100 text-amber-800",
   trialing: "bg-sky-100 text-sky-800",
   "": "bg-slate-100 text-slate-500",
 };
@@ -318,7 +320,6 @@ function SubscribersScreen() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-dashboard-token": DASHBOARD_SECRET,
       },
       body: JSON.stringify(payload),
     });
@@ -452,7 +453,6 @@ function SubscribersScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
           uid: removeTarget.uid,
@@ -485,9 +485,7 @@ function SubscribersScreen() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/dashboard/subscribers", {
-        headers: { "x-dashboard-token": DASHBOARD_SECRET },
-      });
+      const res = await fetch("/api/dashboard/subscribers");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "load_failed");
       setSubscribers(Array.isArray(data.subscribers) ? data.subscribers : []);
@@ -520,7 +518,11 @@ function SubscribersScreen() {
     const multipleActive = subscribers.filter(
       (s) => s.billingSource === "multiple" && s.premium
     ).length;
-    const canceled = subscribers.filter((s) => s.subscriptionStatus === "canceled").length;
+    const canceled = subscribers.filter(
+      (s) =>
+        s.subscriptionStatus === "canceled" ||
+        s.subscriptionStatus === "cancel_at_period_end"
+    ).length;
     const cancelAtEnd = subscribers.filter((s) => s.cancelAtPeriodEnd && s.premium).length;
     return {
       total: subscribers.length,
@@ -541,7 +543,13 @@ function SubscribersScreen() {
   const filtered = useMemo(() => {
     let list = subscribers;
     if (statusFilter === "active") list = list.filter((s) => s.premium);
-    else if (statusFilter === "canceled") list = list.filter((s) => s.subscriptionStatus === "canceled");
+    else if (statusFilter === "canceled") {
+      list = list.filter(
+        (s) =>
+          s.subscriptionStatus === "canceled" ||
+          s.subscriptionStatus === "cancel_at_period_end"
+      );
+    }
     else if (statusFilter === "issues") list = list.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid");
     else if (statusFilter === "manual") list = list.filter((s) => s.isManual || s.billingSource === "manual");
     else if (statusFilter === "stripe") list = list.filter((s) => s.billingSource === "stripe");
@@ -986,7 +994,7 @@ function SubscribersScreen() {
                       <td className={tdCls}>
                         {s.cancelAtPeriodEnd ? (
                           <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                            Da
+                            {s.subscriptionStatus === "cancel_at_period_end" ? "La termen" : "Da"}
                           </span>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>

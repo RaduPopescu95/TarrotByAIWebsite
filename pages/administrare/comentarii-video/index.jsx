@@ -2,16 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
-const ACCESS_STORAGE_KEY = "dashboard_access_token";
-
 function dashboardHeaders(json = false) {
-  let token = "";
-  try {
-    token = localStorage.getItem(ACCESS_STORAGE_KEY) || "";
-  } catch (_) {}
   return {
     Accept: "application/json",
-    "x-dashboard-access": token,
     ...(json ? { "Content-Type": "application/json" } : {}),
   };
 }
@@ -265,4 +258,3 @@ export default function VideoCommentsAdminPage() {
     </>
   );
 }
-

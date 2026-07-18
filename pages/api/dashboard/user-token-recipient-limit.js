@@ -5,8 +5,7 @@ import {
   DEFAULT_RECIPIENT_LIMIT_NAMES,
   normalizeRecipientLimitCriteria,
 } from "../../../lib/userTokenRecipientLimit";
-
-const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
+import { requireDashboardAccess } from "../../../lib/requireAuth";
 const CONFIG_COLLECTION = "notificationSettings";
 const CONFIG_DOC_ID = "userTokenRecipientLimit";
 const TARGET_COLLECTION = "notificationRecipientTargets";
@@ -178,8 +177,12 @@ async function handlePut(req, res, id) {
 export default async function handler(req, res) {
   const id = requestId();
   res.setHeader("X-Request-Id", id);
-  if ((req.headers["x-dashboard-token"] || "") !== DASHBOARD_SECRET) {
-    return res.status(401).json({ error: "Unauthorized", requestId: id });
+  try {
+    requireDashboardAccess(req);
+  } catch (error) {
+    return res
+      .status(error?.statusCode || 401)
+      .json({ error: "Unauthorized", requestId: id });
   }
 
   try {

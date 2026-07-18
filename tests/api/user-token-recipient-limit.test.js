@@ -1,7 +1,17 @@
 const getAdminDb = jest.fn();
+const requireDashboardAccess = jest.fn((req) => {
+  if (req?.headers?.cookie !== "dashboard_session=test") {
+    const error = new Error("Unauthorized");
+    error.statusCode = 401;
+    throw error;
+  }
+});
 
 jest.mock("../../lib/firebaseAdmin", () => ({
   getAdminDb: (...args) => getAdminDb(...args),
+}));
+jest.mock("../../lib/requireAuth", () => ({
+  requireDashboardAccess: (...args) => requireDashboardAccess(...args),
 }));
 
 import handler from "../../pages/api/dashboard/user-token-recipient-limit";
@@ -73,7 +83,7 @@ describe("/api/dashboard/user-token-recipient-limit", () => {
     getAdminDb.mockReturnValueOnce(db);
     const req = {
       method: "GET",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       query: {},
     };
     const res = makeRes();
@@ -96,7 +106,7 @@ describe("/api/dashboard/user-token-recipient-limit", () => {
     getAdminDb.mockReturnValueOnce(db);
     const req = {
       method: "PUT",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       body: {
         enabled: true,
         criteria: {
@@ -150,7 +160,7 @@ describe("/api/dashboard/user-token-recipient-limit", () => {
     getAdminDb.mockReturnValueOnce(db);
     const req = {
       method: "GET",
-      headers: { "x-dashboard-token": "Cristina1994!" },
+      headers: { cookie: "dashboard_session=test" },
       query: { includeRecipients: "1" },
     };
     const res = makeRes();

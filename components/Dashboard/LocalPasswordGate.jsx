@@ -1,45 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 
-const STORAGE_KEY = "dashboard_access_token";
-const DEFAULT_PASSWORD = "Cristina1994!";
-
-function getNowMs() {
-  return new Date().getTime();
-}
-
-function readToken() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    return parsed;
-  } catch (_) {
-    return null;
-  }
-}
-
-function writeToken(minutesValid) {
-  const expiresAt = getNowMs() + minutesValid * 60 * 1000;
-  const value = { granted: true, expiresAt };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-  return value;
-}
-
-function clearToken() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (_) {}
+async function loadDashboardSession() {
+  const response = await fetch("/api/dashboard/auth/session", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  return response.ok;
 }
 
 export default function LocalPasswordGate({
   children,
-  ttlMinutes = 20160,
   onGranted,
   redirectTo,
+  authenticatedRedirectTo = null,
   title = "Acces Dashboard",
   description = "Introduceți parola pentru a accesa dashboard-ul",
 }) {
@@ -48,66 +24,67 @@ export default function LocalPasswordGate({
   const [error, setError] = useState("");
   const [granted, setGranted] = useState(false);
   const [show, setShow] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Check token on mount and on interval
   useEffect(() => {
-    const check = () => {
-      const token = readToken();
-      if (token && token.granted && typeof token.expiresAt === "number") {
-        if (token.expiresAt > getNowMs()) {
-          setGranted(true);
-          setError("");
-          setHasChecked(true);
-          return;
-        }
-      }
-      clearToken();
-      setGranted(false);
-      setHasChecked(true);
+    let active = true;
+    void loadDashboardSession()
+      .then((authenticated) => {
+        if (!active) return;
+        setGranted(authenticated);
+      })
+      .catch(() => {
+        if (active) setGranted(false);
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
+    return () => {
+      active = false;
     };
-    check();
-    const id = setInterval(check, 30 * 1000);
-    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    if (!redirectTo) return;
-    if (!hasChecked) return;
-    if (granted) return;
-    if (router?.pathname === redirectTo) return;
+    if (checking || granted || !redirectTo || router?.pathname === redirectTo) return;
     router.replace(redirectTo);
-  }, [redirectTo, hasChecked, granted, router]);
+  }, [checking, granted, redirectTo, router]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!granted || children) return;
+    if (authenticatedRedirectTo) router.replace(authenticatedRedirectTo);
+    else if (router.pathname === "/administrare/login") router.replace("/administrare");
+    else if (router.pathname === "/dashboard/login") router.replace("/dashboard");
+  }, [authenticatedRedirectTo, children, granted, router]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
     setError("");
-    if (password === DEFAULT_PASSWORD) {
-      writeToken(ttlMinutes);
+    try {
+      const response = await fetch("/api/dashboard/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || "Autentificarea a eșuat");
+      }
       setGranted(true);
       setPassword("");
-      try {
-        if (typeof onGranted === "function") {
-          onGranted();
-        }
-      } catch (_) {}
-    } else {
-      setError("Parolă incorectă");
+      if (typeof onGranted === "function") onGranted();
+    } catch (submitError) {
+      setError(submitError?.message || "Autentificarea a eșuat");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleLogout = () => {
-    clearToken();
-    setGranted(false);
-  };
-
-  if (granted) {
-    return <>{children}</>;
-  }
-
-  if (redirectTo) {
-    return null;
-  }
+  if (checking || (granted && !children)) return null;
+  if (granted) return <>{children}</>;
+  if (redirectTo) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -117,44 +94,52 @@ export default function LocalPasswordGate({
       >
         <h2 className="mb-2 text-2xl font-bold text-gray-900">{title}</h2>
         <p className="mb-6 text-sm text-gray-600">{description}</p>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
-          Parolă
-        </label>
+        <label className="mb-2 block text-sm font-medium text-gray-700">Parolă</label>
         <div className="relative">
           <input
             type={show ? "text" : "password"}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             placeholder="Introduceți parola"
             autoFocus
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 shadow-sm placeholder:text-gray-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            disabled={submitting}
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 shadow-sm placeholder:text-gray-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60"
           />
           <button
             type="button"
-            onClick={() => setShow((s) => !s)}
+            onClick={() => setShow((value) => !value)}
             aria-label={show ? "Ascunde parola" : "Afișează parola"}
             className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-1.5 text-gray-500 transition-colors hover:text-gray-700"
           >
             {show ? <FiEyeOff size={20} /> : <FiEye size={20} />}
           </button>
         </div>
-        {error && (
-          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{error}</div>
-        )}
+        {error ? (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        ) : null}
         <button
           type="submit"
-          className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={submitting || !password}
+          className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirmă
+          {submitting ? "Se verifică…" : "Confirmă"}
         </button>
       </form>
     </div>
   );
 }
 
-// Helper for explicit manual logout from other places
-export function clearDashboardAccess() {
-  clearToken();
+export async function clearDashboardAccess() {
+  try {
+    await fetch("/api/dashboard/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (_) {
+    // Navigation still proceeds; the cookie will expire server-side.
+  }
 }
-
-

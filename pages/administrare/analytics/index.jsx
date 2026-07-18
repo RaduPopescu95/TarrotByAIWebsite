@@ -3,7 +3,6 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 
-const DASHBOARD_SECRET = "Cristina1994!";
 const DEFAULT_SAMPLE_LIMIT = 25;
 
 function formatDateTime(iso) {
@@ -84,9 +83,7 @@ function CollectionsPanel({ refreshSignal }) {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/dashboard/analytics?${queryString}`, {
-        headers: { "x-dashboard-token": DASHBOARD_SECRET },
-      });
+      const response = await fetch(`/api/dashboard/analytics?${queryString}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "load_failed");
       setData({
@@ -196,9 +193,7 @@ function ReadsPanel({ refreshSignal }) {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/dashboard/analytics/reads?${queryString}`, {
-        headers: { "x-dashboard-token": DASHBOARD_SECRET },
-      });
+      const response = await fetch(`/api/dashboard/analytics/reads?${queryString}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "load_failed");
       setData(payload);
