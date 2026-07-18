@@ -159,7 +159,9 @@ export default async function handler(req, res) {
           console.warn("[premium.webhook] checkout missing subscription id");
           break;
         }
-        await syncPremiumSubscriptionById(stripe, subId);
+        await syncPremiumSubscriptionById(stripe, subId, {
+          eventTimestampMs: event.created * 1000,
+        });
         await persistPremiumBillingFromCheckoutSession(db, session);
         break;
       }
@@ -167,7 +169,19 @@ export default async function handler(req, res) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        await syncPremiumSubscription(sub);
+        try {
+          await syncPremiumSubscriptionById(stripe, sub.id, {
+            eventTimestampMs: event.created * 1000,
+          });
+        } catch (retrieveError) {
+          console.warn("[premium.webhook] current subscription retrieval failed", {
+            subscriptionId: sub.id,
+            message: retrieveError?.message,
+          });
+          await syncPremiumSubscription(sub, {
+            eventTimestampMs: event.created * 1000,
+          });
+        }
         break;
       }
       case "invoice.payment_succeeded":
@@ -175,7 +189,9 @@ export default async function handler(req, res) {
         const invoice = event.data.object;
         const subId = invoice.subscription;
         if (!subId || typeof subId !== "string") break;
-        await syncPremiumSubscriptionById(stripe, subId);
+        await syncPremiumSubscriptionById(stripe, subId, {
+          eventTimestampMs: event.created * 1000,
+        });
         if (event.type === "invoice.payment_succeeded") {
           const oblioResult = await emitPremiumSubscriptionOblioInvoice({
             db,
@@ -210,7 +226,9 @@ export default async function handler(req, res) {
                 invoiceId,
                 subId,
               });
-              await syncPremiumSubscriptionById(stripe, subId);
+              await syncPremiumSubscriptionById(stripe, subId, {
+                eventTimestampMs: event.created * 1000,
+              });
             }
           } catch (err) {
             console.error("[premium.webhook] PI → invoice → sub sync failed", {

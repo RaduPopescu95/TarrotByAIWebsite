@@ -26,6 +26,8 @@ import {
   logBillingObs,
   setBillingRequestId,
 } from "../../../../../lib/billingObservability";
+import { isIosPremiumSubscriptionsEnabled } from "../../../../../lib/globalSettings";
+import { resolvePremiumMobileCheckoutPolicy } from "../../../../../lib/premiumMobileCheckoutPolicy";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -81,6 +83,35 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  let authUser;
+  try {
+    authUser = await requireAuth(req);
+  } catch (err) {
+    const code = err.statusCode || 401;
+    logBillingObs({
+      level: "warn",
+      scope: "stripe_premium_payment_sheet",
+      stage: "auth_failed",
+      requestId,
+      result: { httpStatus: code },
+      error: { code: BILLING_ERROR_CODES.AUTH_MISSING },
+    });
+    return res.status(code).json({ error: err.message || "Unauthorized" });
+  }
+
+  const iosPremiumSubscriptionsEnabled = await isIosPremiumSubscriptionsEnabled();
+  const checkoutPolicy = resolvePremiumMobileCheckoutPolicy(
+    req.body?.platform,
+    iosPremiumSubscriptionsEnabled
+  );
+  if (!checkoutPolicy.allowed) {
+    return res.status(409).json({
+      error: checkoutPolicy.error,
+      ...(checkoutPolicy.premiumAccessFree ? { premiumAccessFree: true } : {}),
+    });
+  }
+  const requestedPlatform = checkoutPolicy.platform;
+
   const priceId = resolvePremiumStripePriceId();
   if (!priceId) {
     console.error(
@@ -100,22 +131,6 @@ export default async function handler(req, res) {
   }
   if (isStripePremiumUsingLocalOverrides() && process.env.STRIPE_PREMIUM_PRICE_ID_TEST) {
     console.info("[premium.mobile.payment_sheet] using STRIPE_PREMIUM_PRICE_ID_TEST for development");
-  }
-
-  let authUser;
-  try {
-    authUser = await requireAuth(req);
-  } catch (err) {
-    const code = err.statusCode || 401;
-    logBillingObs({
-      level: "warn",
-      scope: "stripe_premium_payment_sheet",
-      stage: "auth_failed",
-      requestId,
-      result: { httpStatus: code },
-      error: { code: BILLING_ERROR_CODES.AUTH_MISSING },
-    });
-    return res.status(code).json({ error: err.message || "Unauthorized" });
   }
 
   const { billingDetails: rawBillingDetails } = req.body || {};
@@ -195,7 +210,7 @@ export default async function handler(req, res) {
     const metadata = {
       uid,
       flow: PREMIUM_FLOW_METADATA,
-      platform: "expo",
+      platform: requestedPlatform || "expo",
       checkoutSurface: "payment_sheet",
       priceId,
       invoiceSendEmail: String(billingDetails?.invoicePreferences?.sendEmail !== false),

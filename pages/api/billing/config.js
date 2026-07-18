@@ -38,7 +38,8 @@ export default async function handler(req, res) {
     });
     return res.status(200).json({
       ...config,
-      subscriptionSystemEnabled: settings.subscriptionSystemEnabled,
+      iosPremiumSubscriptionsEnabled: settings.iosPremiumSubscriptionsEnabled,
+      subscriptionSystemEnabled: settings.iosPremiumSubscriptionsEnabled,
     });
   } catch (error) {
     logBillingObs({

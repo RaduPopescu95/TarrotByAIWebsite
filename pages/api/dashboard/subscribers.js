@@ -6,6 +6,12 @@ import {
   buildUserIdentityPatch,
   resolveAuthIdentitySources,
 } from "../../../lib/userIdentitySync";
+import {
+  buildPremiumSourcePatch,
+  inferLegacyPremiumSources,
+  isSourceActive,
+} from "../../../lib/premiumSources";
+import { resolveAdminPremiumRevocation } from "../../../lib/adminPremiumRevocation";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || "Cristina1994!";
@@ -24,6 +30,39 @@ function tsToIso(value) {
 
 function safeStr(v) {
   return typeof v === "string" ? v : "";
+}
+
+function resolveBillingSourceMeta(data) {
+  const d = data || {};
+  const sources = inferLegacyPremiumSources(d);
+  const hasStripeSource = Boolean(sources.stripe);
+  const hasRevenueCatSource = Boolean(sources.revenuecat);
+  const hasManualSource = Boolean(sources.manual);
+  const hasActiveStripe = isSourceActive(sources.stripe);
+  const hasActiveRevenueCat = isSourceActive(sources.revenuecat);
+  const hasActiveManual = isSourceActive(sources.manual);
+  const provider = safeStr(d.subscriptionProvider).toLowerCase();
+
+  let billingSource = "unknown";
+  if (hasStripeSource && hasRevenueCatSource) billingSource = "multiple";
+  else if (hasRevenueCatSource) billingSource = "google_play";
+  else if (hasStripeSource) billingSource = "stripe";
+  else if (hasManualSource || provider === "manual") billingSource = "manual";
+  else if (provider === "multiple") billingSource = "multiple";
+  else if (provider === "revenuecat") billingSource = "google_play";
+  else if (provider === "stripe") billingSource = "stripe";
+
+  return {
+    sources,
+    hasStripeSource,
+    hasRevenueCatSource,
+    hasManualSource,
+    hasActiveStripe,
+    hasActiveRevenueCat,
+    hasActiveManual,
+    billingSource,
+    canAdminDelete: !(hasActiveStripe || hasActiveRevenueCat),
+  };
 }
 
 function userGrantSnapshot(data, docId) {
@@ -45,15 +84,37 @@ function userGrantSnapshot(data, docId) {
 function mapDocToSubscriber(docSnap) {
   const d = docSnap.data() || {};
   const isPremium = hasPremiumAccess(d);
-  const isManual = d.subscriptionProvider === "manual";
+  const billing = resolveBillingSourceMeta(d);
+  const isManual = billing.billingSource === "manual";
   const hasEverHadSubscription =
     !!d.stripeSubscriptionId ||
     !!d.subscriptionStatus ||
+    !!d.revenueCatSubscriptionStatus ||
+    !!d.revenueCatCurrentPeriodEnd ||
+    !!d.revenueCatProductId ||
+    billing.hasStripeSource ||
+    billing.hasRevenueCatSource ||
     isManual ||
-    d.manualPremiumGrantedAt != null;
+    d.manualPremiumGrantedAt != null ||
+    ["revenuecat", "multiple", "manual", "stripe"].includes(
+      safeStr(d.subscriptionProvider).toLowerCase()
+    );
   if (!isPremium && !hasEverHadSubscription) return null;
-  const endMs = currentPeriodEndToMillis(d.currentPeriodEnd);
+
+  const stripeEndMs = currentPeriodEndToMillis(d.currentPeriodEnd);
+  const rcEndMs = currentPeriodEndToMillis(d.revenueCatCurrentPeriodEnd);
+  const preferredEndMs =
+    billing.billingSource === "google_play"
+      ? rcEndMs || stripeEndMs
+      : billing.billingSource === "multiple"
+        ? Math.max(stripeEndMs || 0, rcEndMs || 0) || null
+        : stripeEndMs || rcEndMs;
   const manualEndMs = currentPeriodEndToMillis(d.manualPremiumExpiresAt);
+  const displayStatus =
+    billing.billingSource === "google_play"
+      ? safeStr(d.revenueCatSubscriptionStatus) || safeStr(d.subscriptionStatus)
+      : safeStr(d.subscriptionStatus) || safeStr(d.revenueCatSubscriptionStatus);
+
   return {
     uid: docSnap.id,
     email: safeStr(d.email),
@@ -61,12 +122,18 @@ function mapDocToSubscriber(docSnap) {
     lastName: safeStr(d.last_name),
     premium: isPremium,
     isManual,
-    subscriptionStatus: safeStr(d.subscriptionStatus),
+    subscriptionStatus: displayStatus,
     subscriptionProvider: safeStr(d.subscriptionProvider),
+    billingSource: billing.billingSource,
+    hasStripeSource: billing.hasStripeSource,
+    hasRevenueCatSource: billing.hasRevenueCatSource,
+    hasActiveStripe: billing.hasActiveStripe,
+    hasActiveRevenueCat: billing.hasActiveRevenueCat,
+    canAdminDelete: billing.canAdminDelete,
     stripeSubscriptionId: safeStr(d.stripeSubscriptionId),
     stripeCustomerId: safeStr(d.stripeCustomerId),
     cancelAtPeriodEnd: d.premiumSubscriptionCancelAtPeriodEnd === true,
-    currentPeriodEnd: endMs ? new Date(endMs).toISOString() : null,
+    currentPeriodEnd: preferredEndMs ? new Date(preferredEndMs).toISOString() : null,
     manualPremiumExpiresAt: manualEndMs ? new Date(manualEndMs).toISOString() : null,
     billingType: safeStr(d.premiumBillingProfile?.billing?.billingType),
     invoiceSendEmail: d.premiumBillingProfile?.billing?.invoicePreferences?.sendEmail !== false,
@@ -98,31 +165,13 @@ async function cancelStripeSubscriptionIfNeeded(subscriptionId) {
   }
 }
 
-async function clearPremiumFieldsOnUser(db, uid) {
-  await db.collection("Users").doc(uid).set(
-    {
-      premium: false,
-      subscriptionStatus: FieldValue.delete(),
-      subscriptionProvider: FieldValue.delete(),
-      stripeSubscriptionId: FieldValue.delete(),
-      stripeCustomerId: FieldValue.delete(),
-      currentPeriodEnd: FieldValue.delete(),
-      premiumSubscriptionCancelAtPeriodEnd: FieldValue.delete(),
-      premiumBillingProfile: FieldValue.delete(),
-      manualPremiumGrantedAt: FieldValue.delete(),
-      manualPremiumExpiresAt: FieldValue.delete(),
-      manualPremiumNote: FieldValue.delete(),
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
-}
-
 async function loadSubscriberUserDocs(db) {
   const users = db.collection("Users");
   const subscriberQueries = [
     users.where("premium", "==", true),
     users.where("subscriptionProvider", "==", "manual"),
+    users.where("subscriptionProvider", "==", "revenuecat"),
+    users.where("subscriptionProvider", "==", "multiple"),
     users.where("stripeSubscriptionId", ">", ""),
     users.where("manualPremiumGrantedAt", ">", Timestamp.fromMillis(0)),
     users.where("subscriptionStatus", "in", [
@@ -134,6 +183,14 @@ async function loadSubscriberUserDocs(db) {
       "incomplete",
       "incomplete_expired",
       "paused",
+    ]),
+    users.where("revenueCatSubscriptionStatus", "in", [
+      "active",
+      "trialing",
+      "past_due",
+      "canceled",
+      "expired",
+      "billing_issue",
     ]),
   ];
 
@@ -360,10 +417,12 @@ export default async function handler(req, res) {
         }
 
         let expiresField = FieldValue.delete();
+        let expiresAt = null;
         const m = typeof months === "number" ? months : parseInt(String(months ?? ""), 10);
         const unlimited = !(Number.isFinite(m) && m > 0);
         if (!unlimited) {
-          expiresField = Timestamp.fromMillis(Date.now() + m * 30 * 24 * 60 * 60 * 1000);
+          expiresAt = Timestamp.fromMillis(Date.now() + m * 30 * 24 * 60 * 60 * 1000);
+          expiresField = expiresAt;
         }
 
         let noteField;
@@ -388,12 +447,13 @@ export default async function handler(req, res) {
 
         const writePayload = {
           ...identityPatch,
-          premium: true,
-          subscriptionProvider: "manual",
+          ...buildPremiumSourcePatch(data, "manual", {
+            active: true,
+            status: "active",
+            expiresAt,
+            updatedAt: FieldValue.serverTimestamp(),
+          }),
           subscriptionStatus: "active",
-          stripeSubscriptionId: FieldValue.delete(),
-          premiumSubscriptionCancelAtPeriodEnd: FieldValue.delete(),
-          currentPeriodEnd: FieldValue.delete(),
           manualPremiumGrantedAt: FieldValue.serverTimestamp(),
           manualPremiumExpiresAt: expiresField,
           manualPremiumNote: noteField,
@@ -460,8 +520,23 @@ export default async function handler(req, res) {
 
       const data = docSnap.data() || {};
       const wasPremium = hasPremiumAccess(data);
-      const isStripe = data.subscriptionProvider === "stripe";
-      const subId = typeof data.stripeSubscriptionId === "string" ? data.stripeSubscriptionId.trim() : "";
+      const billing = resolveBillingSourceMeta(data);
+      const revocation = resolveAdminPremiumRevocation(data);
+      const hasActiveRevenueCat = billing.hasActiveRevenueCat || revocation.hasActiveRevenueCat;
+
+      if (billing.hasActiveStripe || billing.hasActiveRevenueCat) {
+        return res.status(409).json({
+          error: billing.hasActiveRevenueCat
+            ? "revenuecat_managed_externally"
+            : "paid_subscription_active",
+          message: billing.hasActiveRevenueCat
+            ? "Abonamentul Google Play este activ și nu poate fi șters din admin. Anulează-l sau rambursează-l din Google Play Console."
+            : "Abonamentul Stripe este activ și nu poate fi șters din admin. Anulează-l mai întâi din Stripe Dashboard.",
+          manageIn: billing.hasActiveRevenueCat ? "google_play" : "stripe",
+          hasActiveStripe: billing.hasActiveStripe,
+          hasActiveRevenueCat: billing.hasActiveRevenueCat,
+        });
+      }
 
       if (wasPremium && confirmActiveRevocation !== true) {
         return res.status(400).json({
@@ -471,16 +546,72 @@ export default async function handler(req, res) {
       }
 
       let stripeResult = null;
-      if (isStripe && subId) {
-        stripeResult = await cancelStripeSubscriptionIfNeeded(subId);
+      let revokedSource = null;
+      if (revocation.source === "stripe") {
+        // Inactive/historical Stripe rows only (active paid blocked above).
+        stripeResult = await cancelStripeSubscriptionIfNeeded(revocation.subscriptionId);
+        revokedSource = "stripe";
+      } else if (revocation.source === "manual") {
+        revokedSource = "manual";
+      } else if (revocation.error === "revenuecat_managed_externally") {
+        return res.status(409).json({
+          error: "revenuecat_managed_externally",
+          message:
+            "Abonamentul Google Play nu poate fi revocat local. Anulează-l sau rambursează-l din Google Play Console.",
+          manageIn: "google_play",
+        });
+      } else if (revocation.error === "stripe_subscription_id_missing") {
+        return res.status(409).json({
+          error: "stripe_subscription_id_missing",
+          message: "Sursa Stripe există, dar ID-ul abonamentului lipsește; nu s-a modificat nimic local.",
+        });
+      } else {
+        return res.status(409).json({
+          error: "no_locally_revocable_premium_source",
+          message: "Nu există o sursă Stripe sau manuală care poate fi revocată local.",
+        });
       }
 
-      await clearPremiumFieldsOnUser(db, userId);
+      await db.runTransaction(async (transaction) => {
+        const freshSnap = await transaction.get(ref);
+        const freshData = freshSnap.exists ? freshSnap.data() || {} : {};
+        const sourcePatch = buildPremiumSourcePatch(freshData, revokedSource, {
+          ...(freshData?.premiumSources?.[revokedSource] || {}),
+          active: false,
+          status: revokedSource === "stripe" ? "canceled" : "inactive",
+          expiresAt: Timestamp.fromMillis(Date.now()),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        const cleanup =
+          revokedSource === "stripe"
+            ? {
+                subscriptionStatus: "canceled",
+                stripeSubscriptionId: FieldValue.delete(),
+                currentPeriodEnd: Timestamp.fromMillis(Date.now()),
+                premiumSubscriptionCancelAtPeriodEnd: false,
+              }
+            : {
+                manualPremiumGrantedAt: FieldValue.delete(),
+                manualPremiumExpiresAt: FieldValue.delete(),
+                manualPremiumNote: FieldValue.delete(),
+              };
+        transaction.set(
+          ref,
+          {
+            ...sourcePatch,
+            ...cleanup,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
 
       return res.status(200).json({
         ok: true,
         uid,
         stripe: stripeResult,
+        revokedSource,
+        revenueCatPreserved: hasActiveRevenueCat,
         hadActivePremium: wasPremium,
       });
     } catch (err) {

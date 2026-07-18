@@ -1,4 +1,4 @@
-import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
+import { isIosPremiumSubscriptionsEnabled } from "../../../lib/globalSettings";
 import { getBillingConfig } from "../../../lib/billingConfig";
 import {
   BILLING_ERROR_CODES,
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
+    const iosPremiumSubscriptionsEnabled = await isIosPremiumSubscriptionsEnabled();
     const billing = getBillingConfig();
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120");
     logBillingObs({
@@ -32,10 +32,13 @@ export default async function handler(req, res) {
       stage: "config_resolved",
       requestId,
       result: { httpStatus: 200 },
-      config: getSafeBillingConfigSnapshot({ subscriptionSystemEnabled }),
+      config: getSafeBillingConfigSnapshot({
+        subscriptionSystemEnabled: iosPremiumSubscriptionsEnabled,
+      }),
     });
     return res.status(200).json({
-      subscriptionSystemEnabled,
+      iosPremiumSubscriptionsEnabled,
+      subscriptionSystemEnabled: iosPremiumSubscriptionsEnabled,
       billing,
     });
   } catch (e) {

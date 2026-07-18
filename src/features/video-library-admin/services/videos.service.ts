@@ -107,6 +107,11 @@ const isPublishAtInFuture = (value: unknown, nowMs = Date.now()): boolean => {
 const hasOwn = <T extends object, K extends PropertyKey>(obj: T, key: K): obj is T & Record<K, unknown> =>
   Object.prototype.hasOwnProperty.call(obj, key);
 
+const hasNotificationAlreadySent = (video: Partial<VideoDoc>): boolean => {
+  if (video.notificationState === VIDEO_NOTIFICATION_STATE_SENT) return true;
+  return video.notificationSentAt != null && video.notificationSentAt !== "";
+};
+
 const shouldResetNotificationStateToPending = (
   current: Partial<VideoDoc>,
   next: VideoUpdateInput,
@@ -116,6 +121,17 @@ const shouldResetNotificationStateToPending = (
   const nextPublished = hasOwn(next, "isPublished") ? next.isPublished === true : currentPublished;
   if (!nextPublished) return false;
   if (toMillisOrNull(nextNotificationAt) == null) return false;
+
+  const currentNotificationAtMs = toMillisOrNull(
+    current.notificationAt ?? resolveVideoNotificationAt(current)
+  );
+  const nextNotificationAtMs = toMillisOrNull(nextNotificationAt);
+  const scheduleChanged = currentNotificationAtMs !== nextNotificationAtMs;
+
+  // Match articles: never rebroadcast if already sent unless the notify moment moved.
+  if (hasNotificationAlreadySent(current) && !scheduleChanged) {
+    return false;
+  }
 
   if (nextPublished && !currentPublished) {
     return true;
@@ -129,11 +145,7 @@ const shouldResetNotificationStateToPending = (
     return false;
   }
 
-  const currentNotificationAtMs = toMillisOrNull(
-    current.notificationAt ?? resolveVideoNotificationAt(current)
-  );
-  const nextNotificationAtMs = toMillisOrNull(nextNotificationAt);
-  return currentNotificationAtMs !== nextNotificationAtMs;
+  return scheduleChanged;
 };
 
 const getNextOrder = async (): Promise<number> => {
@@ -292,13 +304,12 @@ export async function updateVideo(id: string, data: VideoUpdateInput): Promise<v
   };
   if (nextVideo.isPublished === true && toMillisOrNull(notificationAt) == null) {
     updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_SENT;
-    updatePayload.notificationSentAt = null;
   } else if (shouldResetNotificationStateToPending(current, data, notificationAt)) {
     updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_PENDING;
     updatePayload.notificationSentAt = null;
   } else if (hasOwn(data, "isPublished") && data.isPublished === false) {
+    // Keep notificationSentAt so republish does not rebroadcast.
     updatePayload.notificationState = VIDEO_NOTIFICATION_STATE_SENT;
-    updatePayload.notificationSentAt = null;
   }
   await updateDoc(ref, updatePayload);
   await rebuildPublicCacheAfterMutation("update");
@@ -321,14 +332,24 @@ export async function togglePublish(id: string, isPublished: boolean): Promise<v
       await assertFeaturedOnHomeLimit(id);
     }
   }
+  const notificationAt = isPublished
+    ? resolveVideoNotificationAt(current)
+    : current.notificationAt ?? null;
+  const alreadySent = hasNotificationAlreadySent(current);
+  let notificationState = VIDEO_NOTIFICATION_STATE_SENT;
+  let notificationSentAt: VideoDoc["notificationSentAt"] | null =
+    current.notificationSentAt ?? null;
+
+  if (isPublished && notificationAt && !alreadySent) {
+    notificationState = VIDEO_NOTIFICATION_STATE_PENDING;
+    notificationSentAt = null;
+  }
+
   await updateDoc(ref, {
     isPublished,
-    notificationAt: isPublished ? resolveVideoNotificationAt(current) : current.notificationAt ?? null,
-    notificationState:
-      isPublished && resolveVideoNotificationAt(current)
-        ? VIDEO_NOTIFICATION_STATE_PENDING
-        : VIDEO_NOTIFICATION_STATE_SENT,
-    notificationSentAt: null,
+    notificationAt,
+    notificationState,
+    notificationSentAt,
     updatedAt: serverTimestamp(),
   });
   await rebuildPublicCacheAfterMutation("togglePublish");

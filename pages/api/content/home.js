@@ -8,6 +8,7 @@ import {
 } from "../../../lib/loadContentHome";
 import { getOptionalAuth } from "../../../lib/requireAuth";
 import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
+import { normalizeAppPlatform } from "../../../lib/appPlatform";
 
 function buildRequestId() {
   return `content_home_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -30,6 +31,7 @@ async function handler(req, res) {
   try {
     const localeRaw = readSingleQueryValue(req.query.locale);
     const clientRaw = readSingleQueryValue(req.query.client);
+    const appPlatform = normalizeAppPlatform(req.query.appPlatform);
     const articlesLimit = normalizeHomeLimit(req.query.articlesLimit, DEFAULT_ARTICLES_LIMIT);
     const videosLimit = normalizeHomeLimit(req.query.videosLimit, DEFAULT_VIDEOS_LIMIT);
 
@@ -38,6 +40,7 @@ async function handler(req, res) {
       articlesLimit,
       videosLimit,
       client: clientRaw,
+      appPlatform,
       uid,
     });
 

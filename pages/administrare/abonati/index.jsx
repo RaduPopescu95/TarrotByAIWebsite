@@ -44,6 +44,58 @@ function PremiumDot({ active }) {
   );
 }
 
+function SourceBadge({ subscriber }) {
+  const source = subscriber?.billingSource;
+  if (source === "manual" || subscriber?.isManual) {
+    return (
+      <span className="inline-flex rounded-full bg-fuchsia-100 px-2 py-0.5 text-xs font-semibold text-fuchsia-900">
+        Manual
+      </span>
+    );
+  }
+  if (source === "multiple") {
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+        Stripe + Google Play
+      </span>
+    );
+  }
+  if (source === "google_play") {
+    return (
+      <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-900">
+        Google Play
+      </span>
+    );
+  }
+  if (source === "stripe" || subscriber?.stripeSubscriptionId) {
+    return (
+      <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-800">
+        Stripe
+      </span>
+    );
+  }
+  return <span className="text-slate-400 text-xs">—</span>;
+}
+
+function hasPaidActiveSubscription(subscriber) {
+  if (!subscriber) return false;
+  if (subscriber.canAdminDelete === false) return true;
+  return Boolean(subscriber.hasActiveStripe || subscriber.hasActiveRevenueCat);
+}
+
+function deleteBlockedTitle(subscriber) {
+  if (subscriber?.hasActiveRevenueCat && subscriber?.hasActiveStripe) {
+    return "Abonament Stripe și Google Play active — anulează-le din Stripe Dashboard / Google Play Console înainte de ștergere";
+  }
+  if (subscriber?.hasActiveRevenueCat) {
+    return "Abonament Google Play activ — anulează-l din Google Play Console";
+  }
+  if (subscriber?.hasActiveStripe) {
+    return "Abonament Stripe activ — anulează-l din Stripe Dashboard";
+  }
+  return "Nu poți șterge cât timp există un abonament plătit activ";
+}
+
 function formatDate(iso) {
   if (!iso) return "—";
   try {
@@ -90,11 +142,10 @@ function RemoveSubscriberModal({ subscriber, activeRevokeAck, onAckChange, onClo
 
         {isActive ? (
           <div className="mt-4 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-900">Abonament activ sau cu acces premium</p>
+            <p className="text-sm font-semibold text-amber-900">Acces premium activ (manual)</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900/90">
-              <li>Abonamentul Stripe va fi anulat imediat — clientul nu mai este taxat.</li>
-              <li>Accesul premium pe site este revocat imediat după confirmare.</li>
-              <li>Acțiunea nu poate fi anulată din acest panou; verifică înainte în Stripe dacă e nevoie.</li>
+              <li>Accesul premium acordat manual va fi revocat imediat după confirmare.</li>
+              <li>Abonamentele Stripe / Google Play active nu se pot șterge din acest panou.</li>
             </ul>
             <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-amber-200 bg-white/80 px-3 py-2.5">
               <input
@@ -105,7 +156,7 @@ function RemoveSubscriberModal({ subscriber, activeRevokeAck, onAckChange, onClo
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
               />
               <span className="text-sm font-medium text-amber-950">
-                Înțeleg: anulez abonamentul în Stripe și revoc accesul premium pentru {name}.
+                Înțeleg: revoc accesul premium manual pentru {name}.
               </span>
             </label>
           </div>
@@ -380,6 +431,7 @@ function SubscribersScreen() {
   };
 
   const openRemoveModal = (s) => {
+    if (hasPaidActiveSubscription(s)) return;
     setRemoveTarget(s);
     setActiveRevokeAck(false);
   };
@@ -412,7 +464,11 @@ function SubscribersScreen() {
         const msg =
           data?.error === "active_revocation_not_confirmed"
             ? "Bifează confirmarea pentru utilizatorii cu abonament activ."
-            : data?.message || data?.error || "Eroare la eliminare";
+            : data?.error === "paid_subscription_active" ||
+                data?.error === "revenuecat_managed_externally"
+              ? data?.message ||
+                "Abonamentul plătit activ nu poate fi șters din admin. Anulează-l din Stripe / Google Play."
+              : data?.message || data?.error || "Eroare la eliminare";
         throw new Error(msg);
       }
       setSubscribers((prev) => prev.filter((x) => x.uid !== removeTarget.uid));
@@ -448,11 +504,26 @@ function SubscribersScreen() {
 
   const stats = useMemo(() => {
     const active = subscribers.filter((s) => s.premium).length;
-    const manual = subscribers.filter((s) => s.isManual).length;
-    const manualActive = subscribers.filter((s) => s.isManual && s.premium).length;
+    const manual = subscribers.filter((s) => s.isManual || s.billingSource === "manual").length;
+    const manualActive = subscribers.filter(
+      (s) => (s.isManual || s.billingSource === "manual") && s.premium
+    ).length;
+    const stripe = subscribers.filter((s) => s.billingSource === "stripe").length;
+    const googlePlay = subscribers.filter((s) => s.billingSource === "google_play").length;
+    const multiple = subscribers.filter((s) => s.billingSource === "multiple").length;
     const canceled = subscribers.filter((s) => s.subscriptionStatus === "canceled").length;
     const cancelAtEnd = subscribers.filter((s) => s.cancelAtPeriodEnd && s.premium).length;
-    return { total: subscribers.length, active, manual, manualActive, canceled, cancelAtEnd };
+    return {
+      total: subscribers.length,
+      active,
+      manual,
+      manualActive,
+      stripe,
+      googlePlay,
+      multiple,
+      canceled,
+      cancelAtEnd,
+    };
   }, [subscribers]);
 
   const filtered = useMemo(() => {
@@ -460,12 +531,15 @@ function SubscribersScreen() {
     if (statusFilter === "active") list = list.filter((s) => s.premium);
     else if (statusFilter === "canceled") list = list.filter((s) => s.subscriptionStatus === "canceled");
     else if (statusFilter === "issues") list = list.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid");
-    else if (statusFilter === "manual") list = list.filter((s) => s.isManual);
+    else if (statusFilter === "manual") list = list.filter((s) => s.isManual || s.billingSource === "manual");
+    else if (statusFilter === "stripe") list = list.filter((s) => s.billingSource === "stripe");
+    else if (statusFilter === "google_play") list = list.filter((s) => s.billingSource === "google_play");
+    else if (statusFilter === "multiple") list = list.filter((s) => s.billingSource === "multiple");
 
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((s) =>
-        `${s.uid} ${s.firstName} ${s.lastName} ${s.email} ${s.stripeSubscriptionId} ${s.stripeCustomerId} ${s.billingName}`
+        `${s.uid} ${s.firstName} ${s.lastName} ${s.email} ${s.stripeSubscriptionId} ${s.stripeCustomerId} ${s.billingName} ${s.billingSource}`
           .toLowerCase()
           .includes(q)
       );
@@ -573,7 +647,7 @@ function SubscribersScreen() {
             Folosește doar când utilizatorul nu apare în listă. Pentru rândurile din tabel, folosește „Acordă premium”.
           </p>
           <p className="mb-3 text-xs text-amber-800/90">
-            Blocat doar dacă utilizatorul are încă acces activ prin Stripe — mai întâi „Șterge” sau anulează acolo.
+            Blocat dacă utilizatorul are abonament Stripe sau Google Play activ — anulează mai întâi din Stripe Dashboard / Google Play Console.
           </p>
           {grantBanner ? (
             <div
@@ -718,37 +792,55 @@ function SubscribersScreen() {
             {[
               { key: "all", label: "Toți", count: stats.total },
               { key: "active", label: "Activi", count: stats.active },
-              { key: "manual", label: "Adăugați manual", count: stats.manual },
+              { key: "stripe", label: "Stripe", count: stats.stripe, tone: "slate" },
+              { key: "google_play", label: "Google Play", count: stats.googlePlay, tone: "emerald" },
+              { key: "multiple", label: "Ambele", count: stats.multiple, tone: "amber" },
+              { key: "manual", label: "Adăugați manual", count: stats.manual, tone: "fuchsia" },
               { key: "canceled", label: "Anulați", count: stats.canceled },
               { key: "issues", label: "Probleme", count: subscribers.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid").length },
-            ].map((f) => (
+            ].map((f) => {
+              const active = statusFilter === f.key;
+              const tone = f.tone || "indigo";
+              const inactiveByTone = {
+                indigo: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                slate: "border border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100",
+                emerald: "border border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
+                amber: "border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100",
+                fuchsia: "border border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100",
+              };
+              const activeByTone = {
+                indigo: "bg-indigo-600 text-white",
+                slate: "bg-slate-700 text-white",
+                emerald: "bg-emerald-600 text-white",
+                amber: "bg-amber-600 text-white",
+                fuchsia: "bg-fuchsia-600 text-white",
+              };
+              const chipInactive = {
+                indigo: "bg-slate-100 text-slate-600",
+                slate: "bg-slate-200 text-slate-700",
+                emerald: "bg-emerald-100 text-emerald-800",
+                amber: "bg-amber-100 text-amber-800",
+                fuchsia: "bg-fuchsia-100 text-fuchsia-800",
+              };
+              return (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  statusFilter === f.key
-                    ? f.key === "manual"
-                      ? "bg-fuchsia-600 text-white"
-                      : "bg-indigo-600 text-white"
-                    : f.key === "manual"
-                      ? "border border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
-                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  active ? activeByTone[tone] : inactiveByTone[tone]
                 }`}
               >
                 {f.label}
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                    statusFilter === f.key
-                      ? "bg-white/20 text-inherit"
-                      : f.key === "manual"
-                        ? "bg-fuchsia-100 text-fuchsia-800"
-                        : "bg-slate-100 text-slate-600"
+                    active ? "bg-white/20 text-inherit" : chipInactive[tone]
                   }`}
                 >
                   {f.count}
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
           <span className="ml-auto text-sm text-slate-500">
             {filtered.length} {filtered.length === 1 ? "utilizator" : "utilizatori"}
@@ -794,8 +886,8 @@ function SubscribersScreen() {
                     <th className={thCls} onClick={() => toggleSort("email")}>
                       Email <SortIcon field="email" />
                     </th>
-                    <th className={thCls} onClick={() => toggleSort("isManual")}>
-                      Sursă <SortIcon field="isManual" />
+                    <th className={thCls} onClick={() => toggleSort("billingSource")}>
+                      Sursă <SortIcon field="billingSource" />
                     </th>
                     <th className={thCls} onClick={() => toggleSort("subscriptionStatus")}>
                       Status <SortIcon field="subscriptionStatus" />
@@ -847,17 +939,7 @@ function SubscribersScreen() {
                         </a>
                       </td>
                       <td className={tdCls}>
-                        {s.isManual ? (
-                          <span className="inline-flex rounded-full bg-fuchsia-100 px-2 py-0.5 text-xs font-semibold text-fuchsia-900">
-                            Manual
-                          </span>
-                        ) : s.subscriptionProvider === "stripe" || s.stripeSubscriptionId ? (
-                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-800">
-                            Stripe
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
+                        <SourceBadge subscriber={s} />
                       </td>
                       <td className={tdCls}>
                         <Badge status={s.subscriptionStatus} />
@@ -916,14 +998,20 @@ function SubscribersScreen() {
                           <button
                             type="button"
                             onClick={() => openGrantModal(s)}
-                            disabled={Boolean(s.premium && s.subscriptionProvider !== "manual" && s.stripeSubscriptionId)}
+                            disabled={Boolean(
+                              s.premium &&
+                                s.billingSource !== "manual" &&
+                                (s.hasActiveStripe || s.hasActiveRevenueCat || s.stripeSubscriptionId)
+                            )}
                             title={
-                              s.premium && s.subscriptionProvider !== "manual" && s.stripeSubscriptionId
-                                ? "Acces încă activ (Stripe) — folosește mai întâi „Șterge” sau anulează în Stripe"
+                              s.premium && s.billingSource !== "manual"
+                                ? "Acces încă activ (Stripe / Google Play) — anulează mai întâi în Stripe sau Google Play Console"
                                 : "Acordă acces premium din baza de date"
                             }
                             className={`inline-flex justify-center rounded-lg border px-2 py-1.5 text-xs font-medium shadow-sm transition ${
-                              s.premium && s.subscriptionProvider !== "manual" && s.stripeSubscriptionId
+                              s.premium &&
+                              s.billingSource !== "manual" &&
+                              (s.hasActiveStripe || s.hasActiveRevenueCat || s.stripeSubscriptionId)
                                 ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
                                 : "border-indigo-200 bg-indigo-50 text-indigo-900 hover:bg-indigo-100"
                             }`}
@@ -933,15 +1021,20 @@ function SubscribersScreen() {
                           <button
                             type="button"
                             onClick={() => openRemoveModal(s)}
+                            disabled={hasPaidActiveSubscription(s)}
                             className={`inline-flex justify-center rounded-lg border px-2 py-1.5 text-xs font-medium shadow-sm transition ${
-                              s.premium
-                                ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                                : "border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-800"
+                              hasPaidActiveSubscription(s)
+                                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                : s.premium
+                                  ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-800"
                             }`}
                             title={
-                              s.premium
-                                ? "Elimină din listă — necesită confirmare suplimentară (abonament activ)"
-                                : "Elimină din listă"
+                              hasPaidActiveSubscription(s)
+                                ? deleteBlockedTitle(s)
+                                : s.premium
+                                  ? "Elimină din listă — necesită confirmare (acces manual activ)"
+                                  : "Elimină din listă"
                             }
                           >
                             Șterge

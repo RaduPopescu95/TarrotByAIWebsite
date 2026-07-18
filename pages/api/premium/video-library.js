@@ -14,6 +14,7 @@ import {
 import { isSubscriptionSystemEnabled } from "../../../lib/globalSettings";
 import { withFirestoreReadTelemetry } from "../../../lib/firestoreCostLogger";
 import { resolveRowVideoSourceWithMeta } from "../../../lib/videoLibraryPublic";
+import { normalizeAppPlatform } from "../../../lib/appPlatform";
 import {
   auditVideoPlayback,
   buildVideoRequestTelemetry,
@@ -50,6 +51,7 @@ async function handler(req, res) {
     const clientRaw = readSingleQueryValue(req.query.client);
     const webClient =
       typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
+    const appPlatform = normalizeAppPlatform(req.query.appPlatform);
 
     const categorySlugRaw = readSingleQueryValue(req.query.categorySlug);
     const categoryNameRaw = readSingleQueryValue(req.query.category);
@@ -86,12 +88,13 @@ async function handler(req, res) {
         stage: "video_library_list",
         requestId,
         webClient,
+        appPlatform,
       });
       premiumActive = resolved.premiumActive;
       accessExplain = resolved.accessExplain;
       userDocExists = resolved.userDocExists;
     } else {
-      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient });
+      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient, appPlatform });
       if (hasAuthHeader && !uid) {
         accessExplain = {
           hasAccess: false,
@@ -192,6 +195,7 @@ async function handler(req, res) {
         locale,
         scope: scopeRaw || null,
         webClient,
+        appPlatform,
         categorySlug,
         category: categoryName,
         cursorPresent: Boolean(cursor),

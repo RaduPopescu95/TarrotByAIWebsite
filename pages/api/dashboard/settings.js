@@ -43,12 +43,13 @@ export default async function handler(req, res) {
     try {
       const body = req.body || {};
       const subscriptionUpdate =
-        typeof body.subscriptionSystemEnabled === "boolean"
+        typeof body.iosPremiumSubscriptionsEnabled === "boolean"
+          ? body.iosPremiumSubscriptionsEnabled
+          : typeof body.subscriptionSystemEnabled === "boolean"
           ? body.subscriptionSystemEnabled
           : undefined;
       const billingProviderUpdates = {};
       [
-        "androidBillingPremiumProvider",
         "androidBillingAnalysesProvider",
       ].forEach((key) => {
         if (body[key] === "stripe" || body[key] === "revenuecat") {
@@ -106,7 +107,7 @@ export default async function handler(req, res) {
 
       if (subscriptionUpdate !== undefined) {
         await updateGlobalSettings(
-          { subscriptionSystemEnabled: subscriptionUpdate },
+          { iosPremiumSubscriptionsEnabled: subscriptionUpdate },
           "dashboard"
         );
       }

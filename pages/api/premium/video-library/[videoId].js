@@ -25,6 +25,7 @@ import { isSubscriptionSystemEnabled } from "../../../../lib/globalSettings";
 import { withFirestoreReadTelemetry } from "../../../../lib/firestoreCostLogger";
 import { getVideoLikeSummary } from "../../../../lib/videoLikes";
 import { getVideoCommentCount } from "../../../../lib/videoComments";
+import { normalizeAppPlatform } from "../../../../lib/appPlatform";
 import {
   auditVideoPlayback,
   buildVideoRequestTelemetry,
@@ -83,6 +84,7 @@ async function handler(req, res) {
     const clientRaw = readSingleQueryValue(req.query.client);
     const webClient =
       typeof clientRaw === "string" && clientRaw.trim().toLowerCase() === "web";
+    const appPlatform = normalizeAppPlatform(req.query.appPlatform);
 
     const subscriptionSystemEnabled = await isSubscriptionSystemEnabled();
     let premiumActive = false;
@@ -95,6 +97,7 @@ async function handler(req, res) {
         requestId,
         videoId: rawId,
         webClient,
+        appPlatform,
       });
       premiumActive = resolved.premiumActive;
       accessExplain = resolved.accessExplain;
@@ -108,7 +111,7 @@ async function handler(req, res) {
         now: new Date().toISOString(),
       };
     } else {
-      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient });
+      premiumActive = await resolvePublicVideoLibraryPremiumActive({ webClient, appPlatform });
     }
 
     const nowMs = Date.now();

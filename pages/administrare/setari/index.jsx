@@ -12,8 +12,9 @@ function SettingsScreen() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [settings, setSettings] = useState({
+    iosPremiumSubscriptionsEnabled: true,
     subscriptionSystemEnabled: true,
-    androidBillingPremiumProvider: "stripe",
+    androidBillingPremiumProvider: "revenuecat",
     androidBillingAnalysesProvider: "stripe",
     mobileUpdatePromptEnabled: false,
     mobileForceUpdateEnabled: false,
@@ -35,8 +36,9 @@ function SettingsScreen() {
       if (!res.ok) throw new Error(data?.error || "load_failed");
       setSettings(
         data.settings || {
+          iosPremiumSubscriptionsEnabled: true,
           subscriptionSystemEnabled: true,
-          androidBillingPremiumProvider: "stripe",
+          androidBillingPremiumProvider: "revenuecat",
           androidBillingAnalysesProvider: "stripe",
           mobileUpdatePromptEnabled: false,
           mobileForceUpdateEnabled: false,
@@ -72,7 +74,7 @@ function SettingsScreen() {
           "x-dashboard-token": DASHBOARD_SECRET,
         },
         body: JSON.stringify({
-          subscriptionSystemEnabled: pendingToggle,
+          iosPremiumSubscriptionsEnabled: pendingToggle,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -80,8 +82,8 @@ function SettingsScreen() {
       setSettings(data.settings);
       setSuccess(
         pendingToggle
-          ? "Sistemul de abonament a fost activat pentru clienții non-web. Pe site, abonamentele rămân active normal."
-          : "Sistemul de abonament a fost dezactivat pentru clienții non-web. Pe site, abonamentele continuă să funcționeze normal."
+          ? "Abonamentul premium Stripe a fost activat pentru aplicația iOS. Android rămâne pe Google Play Billing."
+          : "Abonamentul premium Stripe a fost dezactivat pe iOS, iar videourile premium sunt libere doar acolo. Android rămâne pe Google Play Billing."
       );
       setPendingToggle(null);
     } catch (e) {
@@ -318,7 +320,7 @@ function SettingsScreen() {
           <>
           <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Sistem de Abonament Premium
+              Abonament premium iOS — Stripe
             </h2>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -328,27 +330,27 @@ function SettingsScreen() {
                     Sistemul de abonament este{" "}
                     <span
                       className={
-                        settings.subscriptionSystemEnabled
+                        settings.iosPremiumSubscriptionsEnabled
                           ? "text-emerald-600"
                           : "text-amber-600"
                       }
                     >
-                      {settings.subscriptionSystemEnabled
+                      {settings.iosPremiumSubscriptionsEnabled
                         ? "ACTIVAT"
                         : "DEZACTIVAT"}
                     </span>
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
-                    {settings.subscriptionSystemEnabled
-                      ? "Pentru clienții non-web, videourile marcate ca premium necesită un abonament activ. Pe site, abonamentele funcționează normal indiferent de acest toggle."
-                      : "Pentru clienții non-web, videourile premium sunt deblocate. Pe site, abonamentele și accesul premium funcționează normal în continuare."}
+                    {settings.iosPremiumSubscriptionsEnabled
+                      ? "Pe iPhone și iPad, videourile premium necesită un abonament Stripe activ. Android rămâne permanent pe Google Play Billing."
+                      : "Pe iPhone și iPad, videourile premium sunt deblocate și nu se mai pot porni abonamente Stripe noi. Android rămâne permanent pe Google Play Billing."}
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    handleToggleClick(!settings.subscriptionSystemEnabled)
+                    handleToggleClick(!settings.iosPremiumSubscriptionsEnabled)
                   }
                   disabled={
                     saving ||
@@ -356,16 +358,16 @@ function SettingsScreen() {
                     pendingMobileToggle !== null
                   }
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
-                    settings.subscriptionSystemEnabled
+                    settings.iosPremiumSubscriptionsEnabled
                       ? "bg-emerald-500"
                       : "bg-slate-300"
                   }`}
                   role="switch"
-                  aria-checked={settings.subscriptionSystemEnabled}
+                  aria-checked={settings.iosPremiumSubscriptionsEnabled}
                 >
                   <span
                     className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      settings.subscriptionSystemEnabled
+                      settings.iosPremiumSubscriptionsEnabled
                         ? "translate-x-7"
                         : "translate-x-0"
                     }`}
@@ -377,7 +379,7 @@ function SettingsScreen() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div
                   className={`rounded-lg border p-3 ${
-                    settings.subscriptionSystemEnabled
+                    settings.iosPremiumSubscriptionsEnabled
                       ? "border-emerald-200 bg-emerald-50"
                       : "border-slate-200 bg-white"
                   }`}
@@ -386,15 +388,15 @@ function SettingsScreen() {
                     Când este activat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• Clienții non-web verifică statusul premium</li>
-                    <li>• Videourile premium sunt blocate fără abonament</li>
-                    <li>• Site-ul web rămâne neschimbat</li>
+                    <li>• iOS verifică abonamentul premium Stripe</li>
+                    <li>• Videourile premium sunt blocate fără abonament pe iOS</li>
+                    <li>• Android și site-ul rămân neschimbate</li>
                   </ul>
                 </div>
 
                 <div
                   className={`rounded-lg border p-3 ${
-                    !settings.subscriptionSystemEnabled
+                    !settings.iosPremiumSubscriptionsEnabled
                       ? "border-amber-200 bg-amber-50"
                       : "border-slate-200 bg-white"
                   }`}
@@ -403,9 +405,9 @@ function SettingsScreen() {
                     Când este dezactivat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• Clienții non-web primesc acces liber la video-uri premium</li>
-                    <li>• Site-ul web verifică în continuare abonamentul</li>
-                    <li>• Checkout-ul și portalul Stripe web rămân active</li>
+                    <li>• Numai iOS primește acces liber la video-uri premium</li>
+                    <li>• Android verifică în continuare RevenueCat</li>
+                    <li>• Portalul Stripe și plățile pentru analize/cursuri rămân active</li>
                   </ul>
                 </div>
               </div>
@@ -424,13 +426,11 @@ function SettingsScreen() {
               Plăți Android
             </h2>
             <p className="mb-4 text-sm text-slate-600">
-              Comutatoarele afectează doar build-urile Android noi. iOS și web
-              rămân pe Stripe. Activează fiecare flux numai după configurarea
-              produselor în Google Play și RevenueCat.
+              Abonamentul premium Android rămâne permanent pe Google Play Billing.
+              Configurația pentru analize rămâne separată.
             </p>
             <div className="space-y-3">
               {[
-                ["androidBillingPremiumProvider", "Abonament premium"],
                 ["androidBillingAnalysesProvider", "Analize astrale"],
               ].map(([field, label]) => {
                 const revenueCatEnabled = settings[field] === "revenuecat";
@@ -469,6 +469,13 @@ function SettingsScreen() {
                   </div>
                 );
               })}
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div>
+                  <p className="font-medium text-slate-900">Abonament premium</p>
+                  <p className="text-sm text-emerald-700">Google Play Billing / RevenueCat — activ permanent</p>
+                </div>
+                <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">ACTIV</span>
+              </div>
             </div>
           </div>
 
