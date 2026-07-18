@@ -509,8 +509,17 @@ function SubscribersScreen() {
       (s) => (s.isManual || s.billingSource === "manual") && s.premium
     ).length;
     const stripe = subscribers.filter((s) => s.billingSource === "stripe").length;
+    const stripeActive = subscribers.filter(
+      (s) => s.billingSource === "stripe" && s.premium
+    ).length;
     const googlePlay = subscribers.filter((s) => s.billingSource === "google_play").length;
+    const googlePlayActive = subscribers.filter(
+      (s) => s.billingSource === "google_play" && s.premium
+    ).length;
     const multiple = subscribers.filter((s) => s.billingSource === "multiple").length;
+    const multipleActive = subscribers.filter(
+      (s) => s.billingSource === "multiple" && s.premium
+    ).length;
     const canceled = subscribers.filter((s) => s.subscriptionStatus === "canceled").length;
     const cancelAtEnd = subscribers.filter((s) => s.cancelAtPeriodEnd && s.premium).length;
     return {
@@ -519,8 +528,11 @@ function SubscribersScreen() {
       manual,
       manualActive,
       stripe,
+      stripeActive,
       googlePlay,
+      googlePlayActive,
       multiple,
+      multipleActive,
       canceled,
       cancelAtEnd,
     };
@@ -624,9 +636,27 @@ function SubscribersScreen() {
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
           <StatCard label="Total înregistrați" value={stats.total} color="border-slate-200" />
           <StatCard label="Activi acum" value={stats.active} color="border-emerald-200" />
+          <StatCard
+            label="Stripe"
+            value={stats.stripe}
+            sub={`${stats.stripeActive} activi acum`}
+            color="border-slate-300"
+          />
+          <StatCard
+            label="Google Play"
+            value={stats.googlePlay}
+            sub={`${stats.googlePlayActive} activi acum`}
+            color="border-emerald-300"
+          />
+          <StatCard
+            label="Ambele"
+            value={stats.multiple}
+            sub={`${stats.multipleActive} activi acum`}
+            color="border-amber-200"
+          />
           <StatCard
             label="Adăugați manual"
             value={stats.manual}
