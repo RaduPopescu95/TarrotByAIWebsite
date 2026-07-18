@@ -109,7 +109,7 @@ const hasOwn = <T extends object, K extends PropertyKey>(obj: T, key: K): obj is
 
 const hasNotificationAlreadySent = (video: Partial<VideoDoc>): boolean => {
   if (video.notificationState === VIDEO_NOTIFICATION_STATE_SENT) return true;
-  return video.notificationSentAt != null && video.notificationSentAt !== "";
+  return video.notificationSentAt != null;
 };
 
 const shouldResetNotificationStateToPending = (
