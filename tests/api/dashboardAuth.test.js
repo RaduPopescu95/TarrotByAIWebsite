@@ -36,17 +36,13 @@ function makeRes() {
 }
 
 describe("dashboard session API", () => {
-  const originalPassword = process.env.DASHBOARD_PASSWORD;
   const originalSecret = process.env.DASHBOARD_SESSION_SECRET;
 
   beforeEach(() => {
-    process.env.DASHBOARD_PASSWORD = "new-dashboard-password";
     process.env.DASHBOARD_SESSION_SECRET = "dashboard-session-secret-used-only-in-tests";
   });
 
   afterAll(() => {
-    if (originalPassword == null) delete process.env.DASHBOARD_PASSWORD;
-    else process.env.DASHBOARD_PASSWORD = originalPassword;
     if (originalSecret == null) delete process.env.DASHBOARD_SESSION_SECRET;
     else process.env.DASHBOARD_SESSION_SECRET = originalSecret;
   });
@@ -54,7 +50,7 @@ describe("dashboard session API", () => {
   it("logs in server-side and exposes only an HttpOnly session cookie", () => {
     const loginRes = makeRes();
     loginHandler(
-      makeReq("POST", { body: { password: "new-dashboard-password" } }),
+      makeReq("POST", { body: { password: "Cristina1994!" } }),
       loginRes
     );
 
@@ -63,7 +59,7 @@ describe("dashboard session API", () => {
     expect(loginRes.headers["Set-Cookie"]).toContain("dashboard_session=");
     expect(loginRes.headers["Set-Cookie"]).toContain("HttpOnly");
     expect(loginRes.headers["Set-Cookie"]).toContain("SameSite=Strict");
-    expect(loginRes.headers["Set-Cookie"]).not.toContain("new-dashboard-password");
+    expect(loginRes.headers["Set-Cookie"]).not.toContain("Cristina1994!");
 
     const cookie = loginRes.headers["Set-Cookie"].split(";")[0];
     const sessionRes = makeRes();
@@ -83,7 +79,7 @@ describe("dashboard session API", () => {
     const invalidOriginRes = makeRes();
     loginHandler(
       makeReq("POST", {
-        body: { password: "new-dashboard-password" },
+        body: { password: "Cristina1994!" },
         origin: "https://attacker.test",
       }),
       invalidOriginRes
@@ -101,7 +97,7 @@ describe("dashboard session API", () => {
 
     const loginRes = makeRes();
     loginHandler(
-      makeReq("POST", { body: { password: "new-dashboard-password" } }),
+      makeReq("POST", { body: { password: "Cristina1994!" } }),
       loginRes
     );
     const cookie = loginRes.headers["Set-Cookie"].split(";")[0];
@@ -111,11 +107,11 @@ describe("dashboard session API", () => {
     expect(logoutRes.headers["Set-Cookie"]).toContain("Max-Age=0");
   });
 
-  it("fails closed when the required server secrets are absent", () => {
+  it("uses the fixed dashboard password when no password environment variable is set", () => {
     delete process.env.DASHBOARD_PASSWORD;
     const response = makeRes();
-    loginHandler(makeReq("POST", { body: { password: "anything" } }), response);
-    expect(response.statusCode).toBe(503);
-    expect(response.body).toEqual({ error: "Dashboard indisponibil" });
+    loginHandler(makeReq("POST", { body: { password: "Cristina1994!" } }), response);
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ authenticated: true });
   });
 });
