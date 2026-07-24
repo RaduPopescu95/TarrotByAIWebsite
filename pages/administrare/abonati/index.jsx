@@ -510,14 +510,6 @@ function SubscribersScreen() {
     const stripeActive = subscribers.filter(
       (s) => s.billingSource === "stripe" && s.premium
     ).length;
-    const googlePlay = subscribers.filter((s) => s.billingSource === "google_play").length;
-    const googlePlayActive = subscribers.filter(
-      (s) => s.billingSource === "google_play" && s.premium
-    ).length;
-    const multiple = subscribers.filter((s) => s.billingSource === "multiple").length;
-    const multipleActive = subscribers.filter(
-      (s) => s.billingSource === "multiple" && s.premium
-    ).length;
     const canceled = subscribers.filter(
       (s) =>
         s.subscriptionStatus === "canceled" ||
@@ -531,10 +523,6 @@ function SubscribersScreen() {
       manualActive,
       stripe,
       stripeActive,
-      googlePlay,
-      googlePlayActive,
-      multiple,
-      multipleActive,
       canceled,
       cancelAtEnd,
     };
@@ -644,7 +632,7 @@ function SubscribersScreen() {
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Total înregistrați" value={stats.total} color="border-slate-200" />
           <StatCard label="Activi acum" value={stats.active} color="border-emerald-200" />
           <StatCard
@@ -652,18 +640,6 @@ function SubscribersScreen() {
             value={stats.stripe}
             sub={`${stats.stripeActive} activi acum`}
             color="border-slate-300"
-          />
-          <StatCard
-            label="Google Play"
-            value={stats.googlePlay}
-            sub={`${stats.googlePlayActive} activi acum`}
-            color="border-emerald-300"
-          />
-          <StatCard
-            label="Ambele"
-            value={stats.multiple}
-            sub={`${stats.multipleActive} activi acum`}
-            color="border-amber-200"
           />
           <StatCard
             label="Adăugați manual"
@@ -831,8 +807,6 @@ function SubscribersScreen() {
               { key: "all", label: "Toți", count: stats.total },
               { key: "active", label: "Activi", count: stats.active },
               { key: "stripe", label: "Stripe", count: stats.stripe, tone: "slate" },
-              { key: "google_play", label: "Google Play", count: stats.googlePlay, tone: "emerald" },
-              { key: "multiple", label: "Ambele", count: stats.multiple, tone: "amber" },
               { key: "manual", label: "Adăugați manual", count: stats.manual, tone: "fuchsia" },
               { key: "canceled", label: "Anulați", count: stats.canceled },
               { key: "issues", label: "Probleme", count: subscribers.filter((s) => s.subscriptionStatus === "past_due" || s.subscriptionStatus === "unpaid").length },

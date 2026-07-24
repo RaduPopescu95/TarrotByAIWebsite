@@ -594,5 +594,20 @@
   "deleteAccountReauthGoogle": "To confirm, you will be asked to sign in with Google again.",
   "deleteAccountDeleting": "Deleting account...",
   "deleteAccountDangerZoneTitle": "Danger zone",
-  "deleteAccountDangerZoneBody": "Deleting your account permanently removes your data from the platform."
+  "deleteAccountDangerZoneBody": "Deleting your account permanently removes your data from the platform.",
+  "support": "Support",
+  "supportPageTitle": "Support & Contact | Cristina Zurba",
+  "supportPageDescription": "Contact SPIRIT SOARE ȘI LUNĂ S.R.L., the organization behind Cristina Zurba apps and website.",
+  "supportPageHeading": "Support & Contact",
+  "supportOrgIntro": "The {{brandName}} website and mobile applications are operated by {{legalName}}. Use this page to contact the organization for questions or support.",
+  "supportCompanyDetails": "Company details",
+  "supportLabelLegalName": "Legal name",
+  "supportLabelCui": "Tax Identification Number (CUI)",
+  "supportLabelTradeRegister": "Trade Register number",
+  "supportLabelEuid": "European Unique Identifier (EUID)",
+  "supportLabelAdministrator": "Legal representative",
+  "supportLabelRegisteredOffice": "Registered office",
+  "supportContactHeading": "Contact the organization",
+  "supportContactBody": "For questions about the apps, website, subscriptions, or account support, email us. We aim to respond as soon as possible.",
+  "aboutOperatedBy": "{{brandName}} services and applications are provided by {{legalName}}. For support, visit"
 }

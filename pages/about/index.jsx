@@ -20,6 +20,7 @@ import {
   Layers
 } from "lucide-react";
 import AdPlacementShell from "../../components/Ads/AdPlacementShell";
+import { COMPANY_LEGAL } from "../../data/companyLegal";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -84,6 +85,17 @@ const AboutPage = () => {
               
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto lg:mx-0 leading-relaxed font-light mb-8">
                 {t("aboutHeroDescription")}
+              </p>
+
+              <p className="text-base md:text-lg text-gray-700 max-w-3xl mx-auto lg:mx-0 leading-relaxed mb-8">
+                {t("aboutOperatedBy", {
+                  brandName: COMPANY_LEGAL.brandName,
+                  legalName: COMPANY_LEGAL.legalName,
+                })}{" "}
+                <Link href="/support" className="font-semibold text-indigo-700 underline-offset-2 hover:underline">
+                  {t("support")}
+                </Link>
+                .
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

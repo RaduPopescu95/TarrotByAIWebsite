@@ -47,6 +47,8 @@ const nextConfig = {
       "astrograme-pdf",
       "setari",
       "ads-orchestration",
+      "comentarii-video",
+      "statistici-video",
     ];
     return adminPaths.map((path) => ({
       source: `/dashboard/${path}`,

@@ -30,6 +30,10 @@ import {
   auditVideoPlayback,
   buildVideoRequestTelemetry,
 } from "../../../../lib/videoLibraryPlaybackAudit";
+import {
+  recordVideoLibraryView,
+  resolveClientIpFromRequest,
+} from "../../../../lib/videoViews";
 
 function buildRequestId() {
   return `vld_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -262,6 +266,19 @@ async function handler(req, res) {
       },
       playbackWarning ? "warn" : "info"
     );
+
+    void recordVideoLibraryView({
+      videoId: rawId,
+      uid,
+      clientIp: resolveClientIpFromRequest(req),
+      nowMs,
+    }).catch((error) => {
+      console.warn("[premium.video-library.detail] view count failed", {
+        requestId,
+        videoId: rawId,
+        message: error?.message || error,
+      });
+    });
 
     return res.status(200).json({
       video,

@@ -53,6 +53,8 @@ export type VideoDoc = {
   chapters?: VideoChapter[];
   locales?: VideoLocales;
   featuredOnHome?: boolean;
+  /** Detail opens counted by Next.js API (debounced per viewer). */
+  viewsCount?: number;
 };
 
 export type VideoCategoryDoc = {

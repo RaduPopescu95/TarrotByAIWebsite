@@ -273,6 +273,9 @@ export default function VideoTable({
                   <span className="text-[10px] text-gray-500">{getSortIndicator("category")}</span>
                 </button>
               </th>
+              <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-700">
+                Vizualizări
+              </th>
               <th className="px-6 py-4" aria-sort={getAriaSort("publishAt")}>
                 <button
                   type="button"
@@ -344,6 +347,11 @@ export default function VideoTable({
                   ) : (
                     "—"
                   )}
+                </td>
+                <td className="px-6 py-4 text-right tabular-nums text-gray-800">
+                  {Number.isFinite(Number(video.viewsCount)) && Number(video.viewsCount) > 0
+                    ? Math.floor(Number(video.viewsCount))
+                    : 0}
                 </td>
                 <td className="px-6 py-4 text-gray-600">
                   {video.publishAt ? (

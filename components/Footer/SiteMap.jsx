@@ -3,14 +3,24 @@ import PropTypes from "prop-types";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
+import { COMPANY_LEGAL } from "../../data/companyLegal";
 
 function Copyright() {
   const { t } = useTranslation("common");
+  const year = new Date().getFullYear();
 
   return (
     <>
       <p style={styles.copyright}>
-        &copy;&nbsp; 2024. Cristina Zurba. {t("allRightsReserved")}.
+        &copy;&nbsp;{year} {COMPANY_LEGAL.legalName}. {t("allRightsReserved")}.
+      </p>
+      <p style={{ ...styles.copyright, marginTop: 6 }}>
+        CUI {COMPANY_LEGAL.cui} · {COMPANY_LEGAL.brandName}
+      </p>
+      <p style={{ ...styles.copyright, marginTop: 6 }}>
+        <Link href="/support" style={{ color: "#ffffff", textDecoration: "underline" }}>
+          {t("support")}
+        </Link>
       </p>
       <p style={{ ...styles.copyright, marginTop: 6 }}>
         <a
@@ -147,8 +157,8 @@ function Footer(props) {
   const footers = [
     {
       title: t("company"),
-      description: [t("about")],
-      link: ["/about"],
+      description: [t("about"), t("support")],
+      link: ["/about", "/support"],
     },
     {
       title: t("legal"),

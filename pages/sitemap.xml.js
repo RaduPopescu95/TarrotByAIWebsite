@@ -31,6 +31,12 @@ function generateSiteMap(articles, services) {
   
 
     <url>
+    <loc>${escapeXml(URL)}/support/</loc>
+  </url>
+  <url>
+    <loc>${escapeXml(URL)}/about/</loc>
+  </url>
+  <url>
     <loc>${escapeXml(URL)}/citat-motivational/</loc>
   </url>
   <url>
