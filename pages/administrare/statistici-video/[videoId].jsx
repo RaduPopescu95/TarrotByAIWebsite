@@ -1,103 +1,43 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
-import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
-
-const ViewsAreaChart = dynamic(() => import("../../../components/Dashboard/VideoViewsAreaChart"), {
-  ssr: false,
-  loading: () => <ChartSkeleton label="Se încarcă graficul…" />,
-});
+import VideoDetailsHeader from "../../../components/Dashboard/video-stats/VideoDetailsHeader";
+import VideoStatsTabs from "../../../components/Dashboard/video-stats/VideoStatsTabs";
+import VideoEvolutionPanel from "../../../components/Dashboard/video-stats/VideoEvolutionPanel";
+import VideoStatsEmptyState from "../../../components/Dashboard/video-stats/VideoStatsEmptyState";
+import { formatVideoStatsDelta, platformLabel } from "../../../components/Dashboard/video-stats/formatVideoStatsDelta";
+import {
+  DETAIL_TABS,
+  RANGE_OPTIONS,
+  VALID_DETAIL_TABS,
+  VALID_RANGES,
+} from "../../../components/Dashboard/video-stats/videoStatsConstants";
+import { KpiSkeleton } from "../../../components/Dashboard/video-stats/VideoStatsSkeleton";
 
 function dashboardHeaders() {
   return { Accept: "application/json" };
 }
 
-function formatDeltaPercent(current, previous) {
-  const cur = Number(current) || 0;
-  const prev = Number(previous) || 0;
-  if (prev <= 0) {
-    if (cur <= 0) return { label: "—", tone: "slate" };
-    return { label: "+100%", tone: "emerald" };
-  }
-  const pct = Math.round(((cur - prev) / prev) * 100);
-  if (pct > 0) return { label: `+${pct}%`, tone: "emerald" };
-  if (pct < 0) return { label: `${pct}%`, tone: "rose" };
-  return { label: "0%", tone: "slate" };
-}
-
-function platformLabel(platform) {
-  if (platform === "bunny") return "Bunny";
-  if (platform === "vimeo") return "Vimeo";
-  if (platform === "youtube") return "YouTube";
-  return platform || "—";
-}
-
-function ChartSkeleton({ label }) {
+function DetailKpi({ label, value, sub, loading }) {
   return (
-    <div className="flex h-64 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">
-      {label}
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, delta, loading }) {
-  const deltaTone =
-    delta?.tone === "emerald"
-      ? "text-emerald-700 bg-emerald-50 ring-emerald-600/15"
-      : delta?.tone === "rose"
-        ? "text-rose-700 bg-rose-50 ring-rose-600/15"
-        : "text-slate-600 bg-slate-100 ring-slate-300/40";
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-        {delta?.label ? (
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${deltaTone}`}
-          >
-            {delta.label}
-          </span>
-        ) : null}
-      </div>
+    <article className="rounded-xl border border-slate-200 bg-white p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       {loading ? (
         <div className="mt-3 h-8 w-20 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+        <p className="mt-2 text-[30px] font-bold tabular-nums text-slate-900">{value}</p>
       )}
-      {sub ? <p className="mt-1 text-xs text-slate-500">{sub}</p> : null}
-    </div>
-  );
-}
-
-function RangeButton({ active, children, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-        active
-          ? "bg-slate-900 text-white shadow-sm"
-          : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-      }`}
-    >
-      {children}
-    </button>
+      {sub ? <p className="mt-2 text-xs text-slate-500">{sub}</p> : null}
+    </article>
   );
 }
 
 function VideoViewsDetailScreen() {
   const router = useRouter();
   const videoId = typeof router.query.videoId === "string" ? router.query.videoId : "";
-  const rangeFromQuery =
-    typeof router.query.range === "string" &&
-    ["today", "7d", "30d", "all"].includes(router.query.range)
-      ? router.query.range
-      : "7d";
-
-  const [range, setRange] = useState(rangeFromQuery);
+  const [range, setRange] = useState("7d");
+  const [tab, setTab] = useState("evolutie");
   const [video, setVideo] = useState(null);
   const [series, setSeries] = useState([]);
   const [totalViews, setTotalViews] = useState(0);
@@ -109,17 +49,39 @@ function VideoViewsDetailScreen() {
   const [seriesToDay, setSeriesToDay] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setRange(rangeFromQuery);
-  }, [rangeFromQuery]);
+    if (!router.isReady) return;
+    const nextRange =
+      typeof router.query.range === "string" && VALID_RANGES.has(router.query.range)
+        ? router.query.range
+        : "7d";
+    const nextTab =
+      typeof router.query.tab === "string" && VALID_DETAIL_TABS.has(router.query.tab)
+        ? router.query.tab
+        : "evolutie";
+    setRange(nextRange);
+    setTab(nextTab);
+    setHydrated(true);
+  }, [router.isReady, router.query.range, router.query.tab]);
 
-  const backHref = useMemo(() => {
-    const params = new URLSearchParams();
-    if (range) params.set("range", range);
-    const qs = params.toString();
-    return qs ? `/administrare/statistici-video?${qs}` : "/administrare/statistici-video";
-  }, [range]);
+  const syncUrl = useCallback(
+    (patch) => {
+      if (!videoId) return;
+      const nextRange = patch.range ?? range;
+      const nextTab = patch.tab ?? tab;
+      const query = {};
+      if (nextRange && nextRange !== "7d") query.range = nextRange;
+      if (nextTab && nextTab !== "evolutie") query.tab = nextTab;
+      void router.replace(
+        { pathname: `/administrare/statistici-video/${videoId}`, query },
+        undefined,
+        { shallow: true }
+      );
+    },
+    [range, router, tab, videoId]
+  );
 
   const load = useCallback(async () => {
     if (!videoId) return;
@@ -132,7 +94,7 @@ function VideoViewsDetailScreen() {
         { headers: dashboardHeaders() }
       );
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data?.error || "Nu am putut încărca detaliile.");
+      if (!response.ok) throw new Error(data?.error || "Datele nu au putut fi încărcate.");
       setVideo(data?.video || null);
       setSeries(Array.isArray(data?.series) ? data.series : []);
       setTotalViews(Number(data?.totalViews) || 0);
@@ -143,7 +105,7 @@ function VideoViewsDetailScreen() {
       setSeriesFromDay(data?.seriesFromDay || null);
       setSeriesToDay(data?.seriesToDay || null);
     } catch (loadError) {
-      setError(loadError?.message || "Nu am putut încărca detaliile.");
+      setError(loadError?.message || "Datele nu au putut fi încărcate.");
       setVideo(null);
       setSeries([]);
       setTotalViews(0);
@@ -157,170 +119,188 @@ function VideoViewsDetailScreen() {
   }, [range, videoId]);
 
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!hydrated || !videoId) return;
     void load();
-  }, [load, router.isReady]);
+  }, [hydrated, load, videoId]);
 
-  const setRangeAndQuery = (nextRange) => {
-    setRange(nextRange);
-    if (!videoId) return;
-    void router.replace(
-      {
-        pathname: `/administrare/statistici-video/${videoId}`,
-        query: { range: nextRange },
-      },
-      undefined,
-      { shallow: true }
-    );
-  };
+  const backHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (range && range !== "7d") params.set("range", range);
+    const qs = params.toString();
+    return qs ? `/administrare/statistici-video?${qs}` : "/administrare/statistici-video";
+  }, [range]);
 
-  const chartPeriodLabel =
+  const periodLabel =
     seriesFromDay && seriesToDay
       ? seriesFromDay === seriesToDay
         ? seriesFromDay
         : `${seriesFromDay} → ${seriesToDay}`
       : "—";
 
-  const deltaCurrent = range === "all" ? seriesViews : totalViews;
-  const viewsDelta = formatDeltaPercent(deltaCurrent, previousTotalViews);
-  const hasChartData = series.some((point) => (Number(point.views) || 0) > 0);
-  const pageTitle = video?.title
-    ? `${video.title} | Statistici video`
-    : "Detalii video | Statistici";
+  const periodViews = range === "all" ? seriesViews : totalViews;
+  const viewsDelta = formatVideoStatsDelta(periodViews, previousTotalViews);
+  const lifetime = video?.viewsCountLifetime ?? 0;
+  const appreciationRate =
+    lifetime > 0 ? `${Math.round((likesCount / lifetime) * 1000) / 10}%` : "—";
+
+  if (!hydrated) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <Head>
-        <title>{pageTitle}</title>
+        <title>
+          {video?.title ? `${video.title} | Statistici video` : "Detalii video | Statistici"}
+        </title>
       </Head>
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6">
-          <Link
-            href={backHref}
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            ← Înapoi la statistici
-          </Link>
-        </div>
+      <div className="mx-auto max-w-5xl space-y-5">
+        <VideoDetailsHeader
+          backHref={backHref}
+          video={video}
+          videoId={videoId}
+          loading={loading}
+          onRefresh={() => void load()}
+        />
 
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            {loading && !video ? (
-              <div className="h-8 w-64 animate-pulse rounded bg-slate-200" />
-            ) : (
-              <h1 className="text-2xl font-bold text-slate-900">
-                {video?.title || "Video indisponibil"}
-              </h1>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-              <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
-                {platformLabel(video?.platform)}
-              </span>
-              <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
-                {video?.category || "Fără categorie"}
-              </span>
-              <span
-                className={`rounded-full px-2.5 py-1 font-semibold ring-1 ring-inset ${
-                  video?.isPublished
-                    ? "bg-emerald-50 text-emerald-800 ring-emerald-600/20"
-                    : "bg-slate-100 text-slate-700 ring-slate-300"
-                }`}
-              >
-                {video?.isPublished ? "Public" : "Ascuns"}
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">{videoId}</span>
-            </div>
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Perioadă">
+            {RANGE_OPTIONS.map((option) => {
+              const active = range === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setRange(option.value);
+                    syncUrl({ range: option.value });
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                    active
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
-          >
-            {loading ? "Se actualizează…" : "Reîmprospătează"}
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <RangeButton active={range === "today"} onClick={() => setRangeAndQuery("today")}>
-            Azi
-          </RangeButton>
-          <RangeButton active={range === "7d"} onClick={() => setRangeAndQuery("7d")}>
-            7 zile
-          </RangeButton>
-          <RangeButton active={range === "30d"} onClick={() => setRangeAndQuery("30d")}>
-            30 zile
-          </RangeButton>
-          <RangeButton active={range === "all"} onClick={() => setRangeAndQuery("all")}>
-            Total
-          </RangeButton>
-        </div>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Vizualizări"
-            value={totalViews}
-            sub={
-              range === "all"
-                ? "lifetime · delta pe ultimele 90 zile"
-                : `vs perioada anterioară (${previousTotalViews})`
-            }
-            delta={viewsDelta}
-            loading={loading}
-          />
-          <StatCard
-            label="Media / zi"
-            value={avgViewsPerDay}
-            sub={
-              range === "all"
-                ? "medie pe ultimele 90 zile"
-                : `pe ${series.length || 0} zile din grafic`
-            }
-            loading={loading}
-          />
-          <StatCard
-            label="Lifetime"
-            value={video?.viewsCountLifetime ?? 0}
-            sub="total all-time"
-            loading={loading}
-          />
-          <StatCard
-            label="Likes"
-            value={likesCount}
-            sub="lifetime"
-            loading={loading}
-          />
-        </div>
+        </section>
 
         {error ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
-          </div>
-        ) : null}
+          <VideoStatsEmptyState
+            title="Datele nu au putut fi încărcate."
+            description={error}
+            primaryLabel="Încearcă din nou"
+            onPrimary={() => void load()}
+          />
+        ) : (
+          <>
+            {loading && !video ? (
+              <KpiSkeleton />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <DetailKpi
+                  label="Vizualizări în perioada selectată"
+                  value={periodViews}
+                  sub={
+                    viewsDelta.isNewActivity
+                      ? "Activitate nouă în această perioadă"
+                      : viewsDelta.label
+                  }
+                />
+                <DetailKpi label="Vizualizări totale" value={lifetime} sub="all-time" />
+                <DetailKpi label="Like-uri" value={likesCount} sub="lifetime" />
+                <DetailKpi
+                  label="Media zilnică"
+                  value={avgViewsPerDay}
+                  sub={range === "all" ? "ultimele 90 zile" : "în perioada selectată"}
+                />
+              </div>
+            )}
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">Vizualizări pe zi</h2>
-              <p className="text-xs text-slate-500">{chartPeriodLabel}</p>
-            </div>
-            {!loading && viewsDelta.label !== "—" ? (
-              <span className="text-xs text-slate-500">
-                vs perioada anterioară:{" "}
-                <span className="font-semibold text-slate-800">{viewsDelta.label}</span>
-              </span>
-            ) : null}
-          </div>
-          {loading ? (
-            <ChartSkeleton label="Se încarcă graficul…" />
-          ) : !hasChartData ? (
-            <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
-              Nicio vizualizare zilnică pentru perioada selectată.
-            </div>
-          ) : (
-            <ViewsAreaChart data={series} />
-          )}
-        </section>
+            <VideoStatsTabs
+              tabs={DETAIL_TABS}
+              activeTab={tab}
+              onChange={(nextTab) => {
+                setTab(nextTab);
+                syncUrl({ tab: nextTab });
+              }}
+            >
+              {tab === "evolutie" ? (
+                <VideoEvolutionPanel
+                  loading={loading}
+                  series={series}
+                  range={range}
+                  previousTotalViews={previousTotalViews}
+                  periodLabel={periodLabel}
+                  onClearFilters={() => {
+                    setRange("7d");
+                    syncUrl({ range: "7d" });
+                  }}
+                />
+              ) : null}
+
+              {tab === "interactiuni" ? (
+                <section className="rounded-xl border border-slate-200 bg-white p-5">
+                  <h2 className="text-lg font-semibold text-slate-900">Interacțiuni</h2>
+                  <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <dt className="text-xs text-slate-500">Like-uri</dt>
+                      <dd className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                        {likesCount}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <dt className="text-xs text-slate-500">Rată de apreciere</dt>
+                      <dd className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                        {appreciationRate}
+                      </dd>
+                      <p className="mt-1 text-xs text-slate-500">
+                        like-uri / vizualizări totale
+                      </p>
+                    </div>
+                  </dl>
+                  <p className="mt-4 text-sm text-slate-500">
+                    Istoric like-uri indisponibil — nu există serie zilnică pentru like-uri.
+                  </p>
+                </section>
+              ) : null}
+
+              {tab === "informatii" ? (
+                <section className="rounded-xl border border-slate-200 bg-white p-5">
+                  <h2 className="text-lg font-semibold text-slate-900">Informații</h2>
+                  <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs text-slate-500">Platformă</dt>
+                      <dd className="mt-0.5 font-medium text-slate-900">
+                        {platformLabel(video?.platform)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">Categorie</dt>
+                      <dd className="mt-0.5 font-medium text-slate-900">
+                        {video?.category || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">Status</dt>
+                      <dd className="mt-0.5 font-medium text-slate-900">
+                        {video?.isPublished ? "Public" : "Ascuns"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">ID</dt>
+                      <dd className="mt-0.5 font-mono text-xs text-slate-700">{videoId}</dd>
+                    </div>
+                  </dl>
+                </section>
+              ) : null}
+            </VideoStatsTabs>
+          </>
+        )}
       </div>
     </main>
   );
