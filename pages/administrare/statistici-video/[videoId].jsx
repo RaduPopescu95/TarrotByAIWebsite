@@ -5,6 +5,7 @@ import LocalPasswordGate from "../../../components/Dashboard/LocalPasswordGate";
 import VideoDetailsHeader from "../../../components/Dashboard/video-stats/VideoDetailsHeader";
 import VideoStatsTabs from "../../../components/Dashboard/video-stats/VideoStatsTabs";
 import VideoEvolutionPanel from "../../../components/Dashboard/video-stats/VideoEvolutionPanel";
+import ViewsByLocalePanel from "../../../components/Dashboard/video-stats/ViewsByLocalePanel";
 import VideoStatsEmptyState from "../../../components/Dashboard/video-stats/VideoStatsEmptyState";
 import { formatVideoStatsDelta, platformLabel } from "../../../components/Dashboard/video-stats/formatVideoStatsDelta";
 import {
@@ -45,6 +46,7 @@ function VideoViewsDetailScreen() {
   const [previousTotalViews, setPreviousTotalViews] = useState(0);
   const [avgViewsPerDay, setAvgViewsPerDay] = useState(0);
   const [likesCount, setLikesCount] = useState(0);
+  const [viewsByLocale, setViewsByLocale] = useState([]);
   const [seriesFromDay, setSeriesFromDay] = useState(null);
   const [seriesToDay, setSeriesToDay] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +104,7 @@ function VideoViewsDetailScreen() {
       setPreviousTotalViews(Number(data?.previousTotalViews) || 0);
       setAvgViewsPerDay(Number(data?.avgViewsPerDay) || 0);
       setLikesCount(Number(data?.likesCount) || 0);
+      setViewsByLocale(Array.isArray(data?.viewsByLocale) ? data.viewsByLocale : []);
       setSeriesFromDay(data?.seriesFromDay || null);
       setSeriesToDay(data?.seriesToDay || null);
     } catch (loadError) {
@@ -113,6 +116,7 @@ function VideoViewsDetailScreen() {
       setPreviousTotalViews(0);
       setAvgViewsPerDay(0);
       setLikesCount(0);
+      setViewsByLocale([]);
     } finally {
       setLoading(false);
     }
@@ -236,6 +240,19 @@ function VideoViewsDetailScreen() {
                   range={range}
                   previousTotalViews={previousTotalViews}
                   periodLabel={periodLabel}
+                  onClearFilters={() => {
+                    setRange("7d");
+                    syncUrl({ range: "7d" });
+                  }}
+                />
+              ) : null}
+
+              {tab === "limbi" ? (
+                <ViewsByLocalePanel
+                  loading={loading}
+                  viewsByLocale={viewsByLocale}
+                  periodLabel={periodLabel}
+                  totalViews={periodViews}
                   onClearFilters={() => {
                     setRange("7d");
                     syncUrl({ range: "7d" });

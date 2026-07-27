@@ -271,6 +271,7 @@ async function handler(req, res) {
       videoId: rawId,
       uid,
       clientIp: resolveClientIpFromRequest(req),
+      locale,
       nowMs,
     }).catch((error) => {
       console.warn("[premium.video-library.detail] view count failed", {

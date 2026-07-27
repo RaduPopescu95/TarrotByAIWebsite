@@ -9,6 +9,7 @@ import VideoStatsTabs from "../../../components/Dashboard/video-stats/VideoStats
 import VideoEvolutionPanel from "../../../components/Dashboard/video-stats/VideoEvolutionPanel";
 import TopVideosRanking from "../../../components/Dashboard/video-stats/TopVideosRanking";
 import VideoStatsTable from "../../../components/Dashboard/video-stats/VideoStatsTable";
+import ViewsByLocalePanel from "../../../components/Dashboard/video-stats/ViewsByLocalePanel";
 import VideoStatsEmptyState from "../../../components/Dashboard/video-stats/VideoStatsEmptyState";
 import {
   LIST_TABS,
@@ -44,6 +45,7 @@ function VideoViewsStatsScreen() {
   const [avgViewsPerDay, setAvgViewsPerDay] = useState(0);
   const [videoCount, setVideoCount] = useState(0);
   const [topVideo, setTopVideo] = useState(null);
+  const [viewsByLocale, setViewsByLocale] = useState([]);
   const [seriesFromDay, setSeriesFromDay] = useState(null);
   const [seriesToDay, setSeriesToDay] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +132,7 @@ function VideoViewsStatsScreen() {
       setAvgViewsPerDay(Number(data?.avgViewsPerDay) || 0);
       setVideoCount(Number(data?.videoCount) || 0);
       setTopVideo(data?.topVideo || null);
+      setViewsByLocale(Array.isArray(data?.viewsByLocale) ? data.viewsByLocale : []);
       setSeriesFromDay(data?.seriesFromDay || null);
       setSeriesToDay(data?.seriesToDay || null);
       setUpdatedAtMs(Date.now());
@@ -143,6 +146,7 @@ function VideoViewsStatsScreen() {
       setAvgViewsPerDay(0);
       setVideoCount(0);
       setTopVideo(null);
+      setViewsByLocale([]);
     } finally {
       setLoading(false);
     }
@@ -171,6 +175,27 @@ function VideoViewsStatsScreen() {
     const allowed = new Set(filteredRows.map((row) => row.videoId));
     return topVideos.filter((item) => allowed.has(item.videoId));
   }, [category, filteredRows, topVideos]);
+
+  const displayViewsByLocale = useMemo(() => {
+    if (!category) return viewsByLocale;
+    const map = new Map();
+    for (const row of filteredRows) {
+      for (const entry of row.viewsByLocale || []) {
+        const locale = entry?.locale;
+        const count = Number(entry?.viewsCount) || 0;
+        if (!locale || count <= 0) continue;
+        map.set(locale, (map.get(locale) || 0) + count);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([locale, viewsCount]) => ({ locale, viewsCount }))
+      .sort((a, b) => b.viewsCount - a.viewsCount || a.locale.localeCompare(b.locale));
+  }, [category, filteredRows, viewsByLocale]);
+
+  const displayTotalViews = useMemo(() => {
+    if (!category) return totalViews;
+    return filteredRows.reduce((sum, row) => sum + (Number(row.viewsCount) || 0), 0);
+  }, [category, filteredRows, totalViews]);
 
   const seriesViews = useMemo(
     () => series.reduce((sum, point) => sum + (Number(point.views) || 0), 0),
@@ -303,6 +328,15 @@ function VideoViewsStatsScreen() {
                   range={range}
                   previousTotalViews={previousTotalViews}
                   periodLabel={periodLabel}
+                  onClearFilters={clearFilters}
+                />
+              ) : null}
+              {tab === "limbi" ? (
+                <ViewsByLocalePanel
+                  loading={loading}
+                  viewsByLocale={displayViewsByLocale}
+                  periodLabel={periodLabel}
+                  totalViews={displayTotalViews}
                   onClearFilters={clearFilters}
                 />
               ) : null}
