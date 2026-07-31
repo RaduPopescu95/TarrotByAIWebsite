@@ -2,12 +2,14 @@ import { getOptionalAuth } from "../../../../lib/requireAuth";
 import { normalizeLocale, readSingleQueryValue } from "../../../../lib/courses";
 import { setDynamicPublicCacheHeaders } from "../../../../lib/httpCache";
 import {
-  firestoreTsToMillis,
   resolveRowVideoSourceWithMeta,
   rowHasDirectValidEmbedForLocale,
   rowHasValidEmbedForLocale,
 } from "../../../../lib/videoLibraryPublic";
-import { canViewerSeeVideo } from "../../../../lib/videoReleaseSchedule";
+import {
+  canViewerSeeVideo,
+  getNextVideoTransitionAtMs,
+} from "../../../../lib/videoReleaseSchedule";
 import {
   loadPremiumVideoLibraryRowById,
   loadPremiumVideoRelatedRows,
@@ -199,14 +201,15 @@ async function handler(req, res) {
     if (uid || hasAuthHeader) {
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
     } else {
-      const targetPublishMs = firestoreTsToMillis(targetRow?.publishAt);
-      const nextPublishAtMs =
-        Number.isFinite(targetPublishMs) && targetPublishMs > nowMs ? targetPublishMs : null;
+      const nextPublishAtMs = getNextVideoTransitionAtMs(
+        [targetRow, ...relatedRows],
+        nowMs
+      );
       const cacheMeta = setDynamicPublicCacheHeaders(res, {
         nowMs,
         nextPublishAtMs,
         maxAgeSeconds: 30,
-        staleWhileRevalidateSeconds: 30,
+        staleWhileRevalidateSeconds: nextPublishAtMs != null ? 0 : 30,
       });
       cacheTtlSec = cacheMeta.cacheTtlSec;
     }

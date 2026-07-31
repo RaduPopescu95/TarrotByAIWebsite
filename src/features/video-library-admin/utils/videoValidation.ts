@@ -3,6 +3,10 @@ import {
   resolveLibraryEmbedSrc,
 } from "../../../../lib/videoLibraryPublic";
 import { validateVideoChapters } from "../../../../lib/videoChapters";
+import {
+  VIDEO_ACCESS_MODE_DUAL,
+  VIDEO_RELEASE_TIMEZONE,
+} from "../../../../lib/videoReleaseSchedule";
 import type { VideoCreateInput } from "../types/video";
 
 export const RO_VIDEO_URL_REQUIRED_MESSAGE =
@@ -37,6 +41,21 @@ function embedHintForPlatform(platform: string | undefined): string {
     return "Introdu link play/embed Bunny (player.mediadelivery.net), bibliotecă/id-video sau UUID video dacă NEXT_PUBLIC_BUNNY_STREAM_LIBRARY_ID e setat în mediu.";
   }
   return "Link invalid pentru platforma aleasă.";
+}
+
+export function validateVideoPublicReleaseDraft(input: {
+  accessMode: string;
+  dateInput: string;
+  timeInput: string;
+  publicReleaseAt: unknown;
+}): string | undefined {
+  if (input.accessMode !== VIDEO_ACCESS_MODE_DUAL) return undefined;
+  if (!input.dateInput.trim()) return "Alege data publicării generale.";
+  if (!input.timeInput.trim()) return "Alege ora publicării generale.";
+  if (!input.publicReleaseAt) {
+    return `Data sau ora publicării generale nu este validă în fusul ${VIDEO_RELEASE_TIMEZONE}.`;
+  }
+  return undefined;
 }
 
 /** Mirrors `resolveRowVideoSource(row, "ro")` used by the public video library API. */
@@ -83,7 +102,7 @@ export function validateVideoInput(input: VideoCreateInput): VideoValidationErro
       publicReleaseAtMs <= publishAtMs
     ) {
       errors.publicReleaseAt =
-        "Publicarea generală la 18:00 trebuie să fie după începutul accesului Premium.";
+        "Momentul publicării generale trebuie să fie după începutul accesului Premium.";
     }
   }
 

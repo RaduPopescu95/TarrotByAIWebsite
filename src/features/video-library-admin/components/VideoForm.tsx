@@ -5,6 +5,7 @@ import type { VideoCreateInput, VideoDoc, VideoLocales, VideoPlatform } from "..
 import {
   RO_VIDEO_URL_REQUIRED_MESSAGE,
   validateVideoInput,
+  validateVideoPublicReleaseDraft,
   type VideoValidationErrors,
 } from "../utils/videoValidation";
 import { listVideoCategories } from "../services/videos.service";
@@ -20,11 +21,12 @@ import { mergeLocalesWithVideoUrls, siteLocalesRootPreferredOrder } from "../uti
 import { sortLocalesForVideoAdmin } from "../utils/videoAdminLocaleOrder";
 import {
   buildVideoPublicReleaseDate,
-  formatVideoPublicReleaseDateInput,
+  getVideoPublicReleaseInputs,
   resolveVideoAccessMode,
   VIDEO_ACCESS_MODE_DUAL,
   VIDEO_ACCESS_MODE_FREE,
   VIDEO_ACCESS_MODE_PREMIUM,
+  VIDEO_PUBLIC_RELEASE_DEFAULT_TIME,
   VIDEO_RELEASE_TIMEZONE,
 } from "../../../../lib/videoReleaseSchedule";
 import {
@@ -197,6 +199,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
   const uiLocked = submitting || isTranslating || loading;
   const [publishAtInput, setPublishAtInput] = useState("");
   const [publicReleaseDateInput, setPublicReleaseDateInput] = useState("");
+  const [publicReleaseTimeInput, setPublicReleaseTimeInput] = useState(
+    VIDEO_PUBLIC_RELEASE_DEFAULT_TIME
+  );
   const [accessMode, setAccessMode] = useState<string>(VIDEO_ACCESS_MODE_PREMIUM);
   const roCardRef = useRef<HTMLDivElement>(null);
   const videoFormLocales = useMemo(() => sortLocalesForVideoAdmin(SITE_LOCALES), []);
@@ -266,7 +271,9 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
       } else {
         setPublishAtInput("");
       }
-      setPublicReleaseDateInput(formatVideoPublicReleaseDateInput(initialValue.publicReleaseAt));
+      const releaseInputs = getVideoPublicReleaseInputs(initialValue.publicReleaseAt);
+      setPublicReleaseDateInput(releaseInputs.date);
+      setPublicReleaseTimeInput(releaseInputs.time);
     } else {
       setForm({
         title: "",
@@ -285,6 +292,7 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
       setChapterDrafts([]);
       setAccessMode(VIDEO_ACCESS_MODE_PREMIUM);
       setPublicReleaseDateInput("");
+      setPublicReleaseTimeInput(VIDEO_PUBLIC_RELEASE_DEFAULT_TIME);
       setLocaleVideoUrls(buildInitialLocaleVideoUrls(null));
       setLocales(undefined);
       setErrors({});
@@ -318,16 +326,17 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
     setAccessMode(value);
     setErrors((prev) => ({ ...prev, publicReleaseAt: undefined }));
     if (value === VIDEO_ACCESS_MODE_FREE) {
-      setPublicReleaseDateInput("");
       setForm((prev) => ({ ...prev, isPremium: false, publicReleaseAt: null }));
       return;
     }
     if (value === VIDEO_ACCESS_MODE_PREMIUM) {
-      setPublicReleaseDateInput("");
       setForm((prev) => ({ ...prev, isPremium: true, publicReleaseAt: null }));
       return;
     }
-    const releaseDate = buildVideoPublicReleaseDate(publicReleaseDateInput);
+    const releaseDate = buildVideoPublicReleaseDate(
+      publicReleaseDateInput,
+      publicReleaseTimeInput
+    );
     setForm((prev) => ({
       ...prev,
       isPremium: true,
@@ -337,7 +346,19 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
 
   const handlePublicReleaseDateChange = (value: string) => {
     setPublicReleaseDateInput(value);
-    const releaseDate = buildVideoPublicReleaseDate(value);
+    setErrors((prev) => ({ ...prev, publicReleaseAt: undefined }));
+    const releaseDate = buildVideoPublicReleaseDate(value, publicReleaseTimeInput);
+    setForm((prev) => ({
+      ...prev,
+      isPremium: true,
+      publicReleaseAt: releaseDate ? Timestamp.fromDate(releaseDate) : null,
+    }));
+  };
+
+  const handlePublicReleaseTimeChange = (value: string) => {
+    setPublicReleaseTimeInput(value);
+    setErrors((prev) => ({ ...prev, publicReleaseAt: undefined }));
+    const releaseDate = buildVideoPublicReleaseDate(publicReleaseDateInput, value);
     setForm((prev) => ({
       ...prev,
       isPremium: true,
@@ -372,8 +393,14 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
     denormUrl: string
   ): VideoValidationErrors => {
     const validation = validateVideoInput(buildValidationInput(mergedLocales, denormUrl));
-    if (accessMode === VIDEO_ACCESS_MODE_DUAL && !form.publicReleaseAt) {
-      validation.publicReleaseAt = "Alege data publicării generale la ora 18:00.";
+    const releaseDraftError = validateVideoPublicReleaseDraft({
+      accessMode,
+      dateInput: publicReleaseDateInput,
+      timeInput: publicReleaseTimeInput,
+      publicReleaseAt: form.publicReleaseAt,
+    });
+    if (releaseDraftError) {
+      validation.publicReleaseAt = releaseDraftError;
     }
     return validation;
   };
@@ -840,23 +867,52 @@ export default function VideoForm({ initialValue, onCancel, onSubmit, loading = 
                 </div>
 
                 {accessMode === VIDEO_ACCESS_MODE_DUAL ? (
-                  <div className="min-w-0">
-                    <label className="text-sm font-medium text-gray-700">
-                      Data publicării generale
-                    </label>
-                    <input
-                      type="date"
-                      value={publicReleaseDateInput}
-                      onChange={(e) => handlePublicReleaseDateChange(e.target.value)}
-                      disabled={uiLocked}
-                      className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
-                        errors.publicReleaseAt
-                          ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
-                          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
-                      } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
-                    />
+                  <div className="min-w-0 sm:col-span-2">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-6">
+                      <div className="min-w-0">
+                        <label
+                          htmlFor="video-public-release-date"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Data publicării generale *
+                        </label>
+                        <input
+                          id="video-public-release-date"
+                          type="date"
+                          value={publicReleaseDateInput}
+                          onChange={(e) => handlePublicReleaseDateChange(e.target.value)}
+                          disabled={uiLocked}
+                          className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                            errors.publicReleaseAt
+                              ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                          } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <label
+                          htmlFor="video-public-release-time"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Ora publicării generale *
+                        </label>
+                        <input
+                          id="video-public-release-time"
+                          type="time"
+                          step={60}
+                          value={publicReleaseTimeInput}
+                          onChange={(e) => handlePublicReleaseTimeChange(e.target.value)}
+                          disabled={uiLocked}
+                          className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors focus:outline-none focus:ring-2 ${
+                            errors.publicReleaseAt
+                              ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                          } disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70`}
+                        />
+                      </div>
+                    </div>
                     <p className="mt-1.5 text-xs text-gray-500">
-                      Devine gratuit în aplicație la ora 18:00, fus {VIDEO_RELEASE_TIMEZONE}.
+                      Devine gratuit în aplicație și pe site la momentul ales, fus {VIDEO_RELEASE_TIMEZONE}.
                     </p>
                     {errors.publicReleaseAt ? (
                       <p className="mt-1.5 text-xs text-red-600">{errors.publicReleaseAt}</p>

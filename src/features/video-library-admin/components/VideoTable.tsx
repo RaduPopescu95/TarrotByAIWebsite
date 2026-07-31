@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { VideoDoc, VideoSortDirection, VideoSortField } from "../types/video";
 import { formatTimestamp } from "../utils/videoFormat";
-import { resolveVideoReleasePhase } from "../../../../lib/videoReleaseSchedule";
+import {
+  formatVideoPublicReleaseMoment,
+  resolveVideoReleasePhase,
+} from "../../../../lib/videoReleaseSchedule";
 
 function getReleaseStatus(video: VideoDoc) {
   const release = resolveVideoReleasePhase(video);
@@ -359,7 +362,7 @@ export default function VideoTable({
                       <span>T1: {formatTimestamp(video.publishAt)}</span>
                       {video.publicReleaseAt ? (
                         <span className="text-xs text-gray-500">
-                          Public la 18:00: {formatTimestamp(video.publicReleaseAt)}
+                          T2 public: {formatVideoPublicReleaseMoment(video.publicReleaseAt)}
                         </span>
                       ) : null}
                       <span

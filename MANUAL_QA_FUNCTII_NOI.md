@@ -49,7 +49,7 @@ flowchart LR
 | 3 | Categorie separată | [`pages/videouri/categorie/[slug].jsx`](pages/videouri/categorie/[slug].jsx) | [`VideoCategoryScreen.tsx`](../expo-mobile-app/src/features/video-library/screens/VideoCategoryScreen.tsx) |
 | 4 | Traduceri 27 limbi | [`public/locales/*/common.json`](public/locales), header LangSwitch | [`labels.ts`](../expo-mobile-app/src/utils/labels.ts), [`LangueageSelect.tsx`](../expo-mobile-app/src/pages/LangueageSelect.tsx) |
 | 5 | Link direct zodie | [`pages/videouri/categorie/[slug].jsx`](pages/videouri/categorie/[slug].jsx), [`.well-known/`](public/.well-known/) | [`HoroscopZilnic.js`](../expo-mobile-app/src/pages/astral/initials/HoroscopZilnic.js), [`linkingConfig.ts`](../expo-mobile-app/src/navigation/linkingConfig.ts) |
-| 6 | Dual-release 18:00 | [`lib/videoReleaseSchedule.js`](lib/videoReleaseSchedule.js), admin [`VideoForm.tsx`](src/features/video-library-admin/components/VideoForm.tsx) | [`videoRelease.ts`](../expo-mobile-app/src/features/video-library/utils/videoRelease.ts) |
+| 6 | Dual-release cu T2 configurabil | [`lib/videoReleaseSchedule.js`](lib/videoReleaseSchedule.js), admin [`VideoForm.tsx`](src/features/video-library-admin/components/VideoForm.tsx) | [`videoRelease.ts`](../expo-mobile-app/src/features/video-library/utils/videoRelease.ts) |
 | 7 | Trilogie Stripe Live | [`pages/courses/bundles/[bundleId].jsx`](pages/courses/bundles/[bundleId].jsx), admin tab Trilogii | [`CourseBundleDetailScreen.tsx`](../expo-mobile-app/src/features/courses/screens/CourseBundleDetailScreen.tsx) |
 | 8 | Like-uri + comentarii | [`pages/videouri/[videoId].jsx`](pages/videouri/[videoId].jsx), [`administrare/comentarii-video`](pages/administrare/comentarii-video/index.jsx) | [`VideoPlayerScreen.tsx`](../expo-mobile-app/src/features/video-library/screens/VideoPlayerScreen.tsx) |
 
@@ -80,7 +80,7 @@ flowchart LR
 | 3 | Categorie videoclipuri — pagină separată | ✓ | ✓ | ✓ | ✓ | Medie |
 | 4 | Traducerea aplicației și site-ului (27 limbi) | — | ✓ | ✓ | ✓ | Medie |
 | 5 | Link direct la zodie (stil YouTube) | ✓ | ✓ | ✓ | ✓ | Înaltă |
-| 6 | Programare: premium mai întâi, public la 18:00 | ✓ | ✓ | ✓ | ✓ | Înaltă |
+| 6 | Programare: premium mai întâi, public la T2 configurabil | ✓ | ✓ | ✓ | ✓ | Înaltă |
 | 7 | Trilogie / bundle 3 mini-cursuri (Stripe Live) | ✓ | ✓ | ✓ | ✓ | Medie |
 | 8 | Like-uri și comentarii la videoclipuri | ✓ | ✓ | ✓ | ✓ | Medie |
 
@@ -164,7 +164,7 @@ flowchart TB
 - [ ] `<SHA256_FINGERPRINT>` completat în [`next-js/public/.well-known/assetlinks.json`](next-js/public/.well-known/assetlinks.json)
 - [ ] Fișierele `.well-known` deployate pe production (fără redirect, `Content-Type: application/json`)
 - [ ] Stripe **Live** activ pentru #7 (checkout real; planifică **refund** după test)
-- [ ] Timezone device notat: _________________ (relevant #6 — referință: `Europe/Bucharest`, ora publică: **18:00**)
+- [ ] Timezone device notat: _________________ (relevant #6 — T2 este interpretat în `Europe/Bucharest`)
 - [ ] App iOS/Android instalată din build nativ recent (post-config deep linking)
 
 ### 0.4 Teste automate de referință (opțional, înainte de QA manual)
@@ -546,9 +546,9 @@ flowchart TB
 
 ---
 
-## 6. Programare videoclip: premium mai întâi, public la 18:00
+## 6. Programare videoclip: premium mai întâi, public la T2 configurabil
 
-**Ce verificăm:** Mod **Premium apoi public** — videoclipul devine vizibil abonaților premium de la T1 (`publishAt`), apoi tuturor de la T2 (`publicReleaseAt` = **18:00 Europe/Bucharest**).
+**Ce verificăm:** Mod **Premium apoi public** — videoclipul devine vizibil abonaților premium de la T1 (`publishAt`), apoi tuturor la data și ora T2 (`publicReleaseAt`) alese în fusul **Europe/Bucharest**.
 
 **Fișiere cheie:** [`next-js/lib/videoReleaseSchedule.js`](next-js/lib/videoReleaseSchedule.js), [`next-js/src/features/video-library-admin/components/VideoForm.tsx`](next-js/src/features/video-library-admin/components/VideoForm.tsx), Cloud Function `sendVideoPublishedNotifications`
 
@@ -559,7 +559,7 @@ stateDiagram-v2
   [*] --> Hidden: inainte de publishAt T1
   Hidden --> PremiumEarly: dupa T1 user premium
   Hidden --> HiddenFree: dupa T1 user free
-  PremiumEarly --> PublicAll: dupa publicReleaseAt 18:00 Bucharest
+  PremiumEarly --> PublicAll: dupa publicReleaseAt T2 Bucharest
   PublicAll --> [*]
 ```
 
@@ -568,47 +568,50 @@ stateDiagram-v2
 1. [`/dashboard/videos`](https://www.cristinazurba.com/dashboard/videos) → Adaugă/editează videoclip
 2. **Publică la** (T1) = acum sau în trecut
 3. **Mod acces** = `Premium apoi public`
-4. **Data publicării generale** = azi (pentru test imediat după 18:00) sau mâine
-5. **Publicat** = da
-6. Salvează
+4. **Data publicării generale** = azi sau mâine
+5. **Ora publicării generale** = o oră la câteva minute în viitor (implicit este 18:00, dar poate fi schimbată)
+6. **Publicat** = da
+7. Salvează
 
 **Firestore:** `publishAt`, `publicReleaseAt`, `isPublished: true`, `isPremium: true`
 
 ### Plan testare (alege una)
 
 **Opțiunea A — test live (recomandat):**
-- Creează video cu T1 = acum, dată publică = azi
-- Testează **înainte de 18:00** și **după 18:00** (Europe/Bucharest)
+- Creează video cu T1 = acum și T2 = peste câteva minute
+- Testează **înainte de T2** și **după T2** (Europe/Bucharest)
 
 **Opțiunea B — test programat:**
-- T1 = mâine 10:00, T2 = mâine 18:00
+- T1 = mâine 10:00, T2 = mâine la o oră arbitrară, de exemplu 14:37
 - Revii la orele respective
 
 ### Checklist Admin
 
 - [ ] Video dual-release creat cu ambele date
 - [ ] `isPublished = true`
-- [ ] Formular respinge dual-release fără dată publică
+- [ ] Ora este precompletată cu `18:00` pentru o programare nouă și poate fi schimbată
+- [ ] Formularul respinge dual-release fără dată sau fără oră publică
+- [ ] Editarea fără schimbarea datei/orei păstrează același `publicReleaseAt`
 
-### Checklist Web — User FREE (înainte de 18:00, după T1)
+### Checklist Web — User FREE (înainte de T2, după T1)
 
 - [ ] [`/videouri`](https://www.cristinazurba.com/videouri) — videoclipul **NU** apare în listă
 - [ ] `/videouri/{videoId}` — 404 sau mesaj indisponibil
 
-### Checklist Web — User PREMIUM (înainte de 18:00, după T1)
+### Checklist Web — User PREMIUM (înainte de T2, după T1)
 
 - [ ] `/videouri` — videoclipul **apare** în listă
 - [ ] `/videouri/{videoId}` — player funcțional
 - [ ] Badge/fază early access (dacă există în UI)
 
-### Checklist Web — User FREE (după 18:00 Bucharest)
+### Checklist Web — User FREE (după T2 Bucharest)
 
 - [ ] `/videouri` — videoclipul **apare** pentru toți
 - [ ] `/videouri/{videoId}` — player funcțional fără abonament
 
 ### Checklist iOS
 
-- [ ] Repetă scenariile free/premium înainte și după 18:00
+- [ ] Repetă scenariile free/premium înainte și după T2
 - [ ] Videoteca + player — același comportament ca web
 
 ### Checklist Android
@@ -626,13 +629,13 @@ stateDiagram-v2
 |------|------|
 | Free user nu vede video între T1–T2 | Free user vede video premium devreme |
 | Premium user vede după T1 | Premium user nu vede după T1 |
-| Toți văd după 18:00 Bucharest | Video rămâne blocat după T2 |
+| Toți văd după T2 Bucharest | Video rămâne blocat după T2 |
 | Comportament identic web/iOS/Android | Diferențe între platforme |
 
 ### Note / blocatori
 
-- Timezone: `Europe/Bucharest`, ora fixă **18:00**
-- Cache: așteaptă ~1 min sau hard refresh după T2
+- Timezone: `Europe/Bucharest`; data și ora T2 sunt configurabile la minut
+- Cache: un ecran deja deschis necesită refresh/focus/reload după T2
 - Likes/comentarii respectă aceleași reguli de vizibilitate
 
 ---
@@ -804,7 +807,7 @@ flowchart TB
 | 3 | Categorie separată | [ ] | [ ] | [ ] | [ ] | [ ] |
 | 4 | Traduceri 27 limbi | — | [ ] | [ ] | [ ] | [ ] |
 | 5 | Link direct zodie | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 6 | Dual-release 18:00 | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 6 | Dual-release cu T2 configurabil | [ ] | [ ] | [ ] | [ ] | [ ] |
 | 7 | Trilogie Stripe Live | [ ] | [ ] | [ ] | [ ] | [ ] |
 | 8 | Like-uri + comentarii | [ ] | [ ] | [ ] | [ ] | [ ] |
 

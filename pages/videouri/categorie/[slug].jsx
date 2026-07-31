@@ -12,6 +12,7 @@ import VideoPremiumThumbBadge from "../../../components/VideoLibrary/VideoPremiu
 import { useAuth } from "../../../context/AuthContext";
 import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../../lib/videoLibraryClientUtils";
 import { resolveUiLocale } from "../../../lib/siteLocales";
+import { getFirebaseBearerHeader } from "../../../utils/firebaseAuthHeaders";
 import GoogleAdSenseScript from "../../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../../components/Ads/GoogleAdSenseBanner";
 import VideoLibraryFiltersToolbar from "../../../components/VideoLibrary/VideoLibraryFiltersToolbar";
@@ -210,8 +211,9 @@ export default function VideoCategoryPage({ category }) {
         params.set("cursor", cursor);
       }
 
+      const authHeaders = await getFirebaseBearerHeader({ required: false });
       const res = await fetch(`/api/premium/video-library?${params.toString()}`, {
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...authHeaders },
       });
       const requestId = res.headers.get("x-request-id");
       const data = await res.json().catch(() => ({}));

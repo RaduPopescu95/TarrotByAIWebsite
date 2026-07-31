@@ -12,6 +12,7 @@ import { useAuth } from "../../context/AuthContext";
 import { isVideoPlayableForUser, isVideoAppOnlyLocked } from "../../lib/videoLibraryClientUtils";
 import VideoLibraryFiltersToolbar from "../../components/VideoLibrary/VideoLibraryFiltersToolbar";
 import { resolveUiLocale } from "../../lib/siteLocales";
+import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
 import {
@@ -108,10 +109,12 @@ export default function VideoLibraryPage() {
     setError("");
     try {
       const locale = router.locale || "ro";
+      const authHeaders = await getFirebaseBearerHeader({ required: false });
       const [res, categoriesRes] = await Promise.all([
         fetch(`/api/premium/video-library?locale=${encodeURIComponent(locale)}&client=web`, {
           headers: {
             Accept: "application/json",
+            ...authHeaders,
           },
         }),
         fetch("/api/public/video-categories", {
