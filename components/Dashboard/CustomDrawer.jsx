@@ -40,6 +40,7 @@ import AdsClickIcon from "@mui/icons-material/AdsClick";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 import { useRouter } from "next/router";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -118,6 +119,7 @@ const dashboardPrefetchScreens = [
 
 const administrarePrefetchScreens = [
   "abonati",
+  "abonamente-duplicate",
   "user-tokens",
   "comentarii-video",
   "statistici-video",
@@ -129,6 +131,7 @@ const administrarePrefetchScreens = [
 
 const ADMIN_MENU_ITEMS = [
   { screen: "abonati", text: "Abonați Premium", Icon: PeopleAltIcon },
+  { screen: "abonamente-duplicate", text: "Abonamente duplicate", Icon: ContentCopyIcon },
   { screen: "user-tokens", text: "Tokenuri push", Icon: NotificationsIcon },
   { screen: "comentarii-video", text: "Comentarii video", Icon: ChatBubbleOutlineIcon },
   { screen: "statistici-video", text: "Statistici video", Icon: VisibilityIcon },
