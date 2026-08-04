@@ -9,6 +9,7 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../../../utils/billingAudit.mjs";
+import { getOblioVatSettings, resolveCheckoutSessionOblioTax, shouldSendOblioEInvoice } from "../../../../utils/oblioTax";
 import {
   COURSE_BUNDLE_COLLECTION,
   normalizeBundleCourseIds,
@@ -110,11 +111,6 @@ function getPurchaseStatus({ isPaid, entitlementGranted, isFailureEvent }) {
   return "pending_payment";
 }
 
-function isTruthyEnv(val) {
-  if (typeof val !== "string") return false;
-  return ["1", "true", "yes", "y", "on"].includes(val.trim().toLowerCase());
-}
-
 function sanitizeString(value, maxLength = 255) {
   if (typeof value !== "string") return "";
   const normalized = value.trim();
@@ -174,22 +170,6 @@ function normalizeAddress(rawAddress) {
     state: sanitizeString(rawAddress.state || rawAddress.county, 120),
     postalCode: sanitizeString(rawAddress.postalCode || rawAddress.postal_code, 32),
     country: sanitizeString(rawAddress.country, 64),
-  };
-}
-
-function getSellerVatConfig() {
-  const sellerVatPayer = isTruthyEnv(process.env.OBLIO_SELLER_VAT_PAYER || process.env.OBLIO_VAT_PAYER);
-  const envDefaultVat = process.env.OBLIO_DEFAULT_VAT_RATE ?? process.env.OLBIO_DEFAULT_VAT_RATE ?? "19";
-
-  if (!sellerVatPayer) {
-    return { vatName: "Neplatitor", vatPercentage: 0, vatIncluded: 0 };
-  }
-
-  const vatPercentage = Number(envDefaultVat);
-  return {
-    vatName: "Normala",
-    vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
-    vatIncluded: 1,
   };
 }
 
@@ -538,9 +518,14 @@ async function createCourseOblioInvoice(db, event, session) {
     sanitizeString(course?.title, 180) ||
     (purchaseType === "bundle" ? `Trilogie ${courseId}` : `Curs ${courseId}`);
   const currency = normalizeCurrency(session?.currency, "RON");
-  const amountPaid = amountPaidCents / 100;
+  const taxLine = resolveCheckoutSessionOblioTax(session, getOblioVatSettings());
+  if (!taxLine.ok) {
+    const blockedPayload = { status: "blocked_total_mismatch", reason: taxLine.reason, checkoutSessionId, courseId, uid, eventType: event.type, updatedAt: FieldValue.serverTimestamp() };
+    console.error("[courses.webhook] oblio_blocked_total_mismatch", { checkoutSessionId, reason: taxLine.reason, amountPaidCents });
+    await paymentRef.set({ oblio: blockedPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { skipped: true, reason: "blocked_total_mismatch", checkoutSessionId, courseId, uid: maskUid(uid) };
+  }
   const issueDate = todayISO();
-  const vatCfg = getSellerVatConfig();
   const invoicePreferences = billing.invoicePreferences || {
     sendEmail: true,
     eInvoice: false,
@@ -556,7 +541,7 @@ async function createCourseOblioInvoice(db, event, session) {
     precision: 2,
     currency,
     sendEmail: invoicePreferences.sendEmail === false ? 0 : 1,
-    sendEInvoice: invoiceDecision.sendEInvoice ? 1 : 0,
+    sendEInvoice: invoiceDecision.sendEInvoice && shouldSendOblioEInvoice() ? 1 : 0,
     products: [
       {
         name: courseTitle,
@@ -564,11 +549,11 @@ async function createCourseOblioInvoice(db, event, session) {
           purchaseType === "bundle"
             ? `Acces trilogie de ${context.courseIds?.length || ""} cursuri online (${courseId})`
             : `Acces curs online (${courseId})`,
-        price: amountPaid,
+        price: taxLine.price,
         measuringUnit: "bucata",
-        vatName: vatCfg.vatName,
-        vatPercentage: vatCfg.vatPercentage,
-        vatIncluded: vatCfg.vatIncluded,
+        vatName: taxLine.vatName,
+        vatPercentage: taxLine.vatPercentage,
+        vatIncluded: taxLine.vatIncluded,
         quantity: 1,
         productType: "Serviciu",
       },
@@ -580,7 +565,7 @@ async function createCourseOblioInvoice(db, event, session) {
     collect: {
       type: "Card",
       documentNumber: `STRIPE-${checkoutSessionId}`,
-      value: amountPaid,
+      value: taxLine.total,
       issueDate,
       mentions: "Plata procesata prin Stripe",
     },
@@ -634,7 +619,7 @@ async function createCourseOblioInvoice(db, event, session) {
     purchaseType,
     ...(purchaseType === "bundle" ? { bundleId } : {}),
     uid,
-    amountPaid,
+    amountPaid: taxLine.total,
     currency,
     seriesName: sanitizeString(oblioData.seriesName, 64) || null,
     number:

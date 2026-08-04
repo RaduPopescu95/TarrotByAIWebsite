@@ -4,38 +4,12 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "./billingAudit.mjs";
+import { getOblioVatSettings, resolveCheckoutSessionOblioTax, shouldSendOblioEInvoice } from "./oblioTax";
 
 let OBLIO_TOKEN_CACHE = {
   accessToken: "",
   expiresAtMs: 0,
 };
-
-function isTruthyEnv(val) {
-  if (typeof val !== "string") return false;
-  return ["1", "true", "yes", "y", "on"].includes(val.trim().toLowerCase());
-}
-
-function getSellerVatConfig(sessionMetadata) {
-  const sellerVatPayer = isTruthyEnv(process.env.OBLIO_SELLER_VAT_PAYER || process.env.OBLIO_VAT_PAYER);
-  const envDefaultVat =
-    process.env.OBLIO_DEFAULT_VAT_RATE ??
-    process.env.OLBIO_DEFAULT_VAT_RATE ??
-    "19";
-
-  if (!sellerVatPayer) {
-    return { sellerVatPayer: false, vatPercentage: 0, vatIncluded: 0, vatName: "Neplatitor" };
-  }
-
-  const metaVat =
-    typeof sessionMetadata?.vatRate !== "undefined" ? Number(sessionMetadata.vatRate) : undefined;
-  const vatPercentage = Number.isFinite(metaVat) ? metaVat : Number(envDefaultVat);
-  return {
-    sellerVatPayer: true,
-    vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
-    vatIncluded: 1,
-    vatName: "Normala",
-  };
-}
 
 async function oblioAuthenticate() {
   const email = process.env.OBLIO_EMAIL || "";
@@ -120,14 +94,10 @@ function buildInvoicePayload({
   const oblioCif = process.env.OBLIO_CIF || "";
   const oblioSeriesName = process.env.OBLIO_SERIES || "FCT";
   const metadata = session?.metadata || {};
-  const vatCfg = getSellerVatConfig(metadata);
-  const grossAmountRaw =
-    typeof session?.amount_total === "number"
-      ? session.amount_total / 100
-      : rezervareData?.costConsultatie
-      ? Number(rezervareData.costConsultatie)
-      : 0;
-  const grossAmount = Math.round((Number(grossAmountRaw) || 0) * 100) / 100;
+  const taxLine = resolveCheckoutSessionOblioTax(session, getOblioVatSettings());
+  if (!taxLine.ok) {
+    throw new Error(`Oblio invoice blocked: ${taxLine.reason}`);
+  }
   const categorieName =
     rezervareData?.categorie?.about ||
     rezervareData?.categorie?.name ||
@@ -149,16 +119,16 @@ function buildInvoicePayload({
     precision: 2,
     currency: "RON",
     sendEmail: 1,
-    sendEInvoice: invoiceDecision.sendEInvoice ? 1 : 0,
+    sendEInvoice: invoiceDecision.sendEInvoice && shouldSendOblioEInvoice() ? 1 : 0,
     products: [
       {
         name: itemName,
         description: "",
-        price: grossAmount,
+        price: taxLine.price,
         measuringUnit: metadata.measureUnit || "bucată",
-        vatName: vatCfg.vatName,
-        vatPercentage: vatCfg.vatPercentage,
-        vatIncluded: vatCfg.vatIncluded,
+        vatName: taxLine.vatName,
+        vatPercentage: taxLine.vatPercentage,
+        vatIncluded: taxLine.vatIncluded,
         quantity: 1,
         productType: "Serviciu",
       },
@@ -174,7 +144,7 @@ function buildInvoicePayload({
     collect: {
       type: "Card",
       documentNumber: `STRIPE-${session?.id || rezervareData?.session_id || ""}`,
-      value: grossAmount,
+      value: taxLine.total,
       issueDate,
       mentions: "Plată procesată prin Stripe",
     },

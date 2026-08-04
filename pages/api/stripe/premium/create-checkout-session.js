@@ -17,6 +17,7 @@ import {
   isStripePremiumUsingLocalOverrides,
   resolvePremiumStripePriceId,
 } from "../../../../lib/stripePremiumEnv";
+import { getStripePriceTaxBehavior } from "../../../../utils/oblioTax";
 import { assertCanStartPremiumSubscription } from "../../../../lib/premiumSubscriptionGuard";
 import { buildUserIdentityPatch } from "../../../../lib/userIdentitySync";
 import {
@@ -64,6 +65,16 @@ export default async function handler(req, res) {
   }
   if (isStripePremiumUsingLocalOverrides() && process.env.STRIPE_PREMIUM_PRICE_ID_TEST) {
     console.info("[premium.checkout] using STRIPE_PREMIUM_PRICE_ID_TEST for development");
+  }
+  try {
+    const priceTax = await getStripePriceTaxBehavior(stripe, priceId);
+    if (priceTax.taxBehavior !== "exclusive") {
+      console.error("[premium.checkout] price_not_tax_exclusive", priceTax);
+      return res.status(409).json({ error: "Premium Price must use tax_behavior=exclusive", priceId: priceTax.id, taxBehavior: priceTax.taxBehavior });
+    }
+  } catch (error) {
+    console.error("[premium.checkout] price_retrieve_failed", { message: error?.message });
+    return res.status(500).json({ error: "Could not validate Premium Price tax behavior" });
   }
 
   let authUser;
@@ -173,6 +184,7 @@ export default async function handler(req, res) {
     payment_method_types: ["card"],
     billing_address_collection: "required",
     phone_number_collection: { enabled: true },
+    automatic_tax: { enabled: true },
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: uid,
     metadata,

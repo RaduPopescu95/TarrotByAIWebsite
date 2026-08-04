@@ -7,33 +7,9 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../../utils/billingAudit.mjs";
+import { getOblioVatSettings, resolveExclusiveOblioTax, shouldSendOblioEInvoice } from "../../../utils/oblioTax";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-function isTruthyEnv(val) {
-  if (typeof val !== "string") return false;
-  return ["1", "true", "yes", "y", "on"].includes(val.trim().toLowerCase());
-}
-
-function getSellerVatConfig() {
-  const sellerVatPayer = isTruthyEnv(process.env.OBLIO_SELLER_VAT_PAYER || process.env.OBLIO_VAT_PAYER);
-  const envDefaultVat =
-    process.env.OBLIO_DEFAULT_VAT_RATE ??
-    process.env.OLBIO_DEFAULT_VAT_RATE ??
-    "19";
-
-  if (!sellerVatPayer) {
-    return { sellerVatPayer: false, vatPercentage: 0, vatIncluded: 0, vatName: "Neplatitor" };
-  }
-
-  const vatPercentage = Number(envDefaultVat);
-  return {
-    sellerVatPayer: true,
-    vatPercentage: Number.isFinite(vatPercentage) ? vatPercentage : 19,
-    vatIncluded: 1,
-    vatName: "Normala",
-  };
-}
 
 function getBearerToken(req) {
   const header = req.headers?.authorization || "";
@@ -159,7 +135,7 @@ export default async function handler(req, res) {
     const piStatus = pi?.status;
     const piCurrency = (pi?.currency || "").toLowerCase();
     const piAmount = typeof pi?.amount_received === "number" ? pi.amount_received : pi?.amount;
-    const amountRON = roundTo(Math.round(toNumber(piAmount, 0)) / 100, 2);
+    const amountCents = Math.round(toNumber(piAmount, 0));
 
     if (piStatus !== "succeeded") {
       return res.status(400).json({ error: "Payment not succeeded", requestId, stripe: { status: piStatus } });
@@ -194,7 +170,16 @@ export default async function handler(req, res) {
     const currency = invoice?.currency || "RON";
     const precision = typeof invoice?.precision === "number" ? invoice.precision : 2;
     const sendEmail = invoice?.sendEmail === false ? 0 : 1;
-    const vatCfg = getSellerVatConfig();
+    const taxLine = resolveExclusiveOblioTax({
+      totalCents: amountCents,
+      subtotalCents: Number(pi?.metadata?.oblioNetAmountCents),
+      taxCents: Number(pi?.metadata?.oblioTaxAmountCents),
+      settings: getOblioVatSettings(),
+    });
+    if (!taxLine.ok) {
+      console.error(`[OBLIO_API] [${requestId}] blocked_total_mismatch`, { transactionId, reason: taxLine.reason, totalCents: amountCents });
+      return res.status(409).json({ error: "Stripe tax breakdown missing or inconsistent", requestId, transactionId });
+    }
 
     const productMap = {
       astrogama_natala: {
@@ -228,16 +213,16 @@ export default async function handler(req, res) {
       precision,
       currency,
       sendEmail,
-      sendEInvoice: invoiceDecision.sendEInvoice ? 1 : 0,
+      sendEInvoice: invoiceDecision.sendEInvoice && shouldSendOblioEInvoice() ? 1 : 0,
       products: [
         {
           name: mapped.name,
           description: mapped.description,
-          price: amountRON,
+          price: taxLine.price,
           measuringUnit: "bucată",
-          vatName: vatCfg.vatName,
-          vatPercentage: vatCfg.vatPercentage,
-          vatIncluded: vatCfg.vatIncluded,
+          vatName: taxLine.vatName,
+          vatPercentage: taxLine.vatPercentage,
+          vatIncluded: taxLine.vatIncluded,
           quantity: 1,
           productType: "Serviciu",
         },
@@ -247,7 +232,7 @@ export default async function handler(req, res) {
       collect: {
         type: "Card",
         documentNumber: `STRIPE-${transactionId}`,
-        value: amountRON,
+        value: taxLine.total,
         issueDate,
         mentions: "Plată procesată prin Stripe",
       },
@@ -275,7 +260,7 @@ export default async function handler(req, res) {
         status: "failed",
         updatedAt: new Date().toISOString(),
         stripe: {
-          amount: amountRON,
+          amount: taxLine.total,
           currency: piCurrency,
           customerEmail: billingAudit.normalizedClient.email,
           status: piStatus,
@@ -299,7 +284,7 @@ export default async function handler(req, res) {
       seriesName: oblioResp.data.seriesName,
       number: oblioResp.data.number,
       link: oblioResp.data.link,
-      total: amountRON,
+      total: taxLine.total,
       currency: "RON",
     };
 
@@ -309,7 +294,7 @@ export default async function handler(req, res) {
       status: "created",
       updatedAt: new Date().toISOString(),
       stripe: {
-        amount: amountRON,
+        amount: taxLine.total,
         currency: piCurrency,
         customerEmail: billingAudit.normalizedClient.email,
         status: piStatus,

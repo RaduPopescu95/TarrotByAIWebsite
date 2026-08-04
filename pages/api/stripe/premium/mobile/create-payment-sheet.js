@@ -16,6 +16,7 @@ import {
   isStripePremiumUsingLocalOverrides,
   resolvePremiumStripePriceId,
 } from "../../../../../lib/stripePremiumEnv";
+import { getStripePriceTaxBehavior } from "../../../../../utils/oblioTax";
 import { assertCanStartPremiumSubscription } from "../../../../../lib/premiumSubscriptionGuard";
 import { resolvePremiumPublicBaseUrl } from "../../../../../lib/premiumServerUtils";
 import { buildUserIdentityPatch } from "../../../../../lib/userIdentitySync";
@@ -132,6 +133,16 @@ export default async function handler(req, res) {
   if (isStripePremiumUsingLocalOverrides() && process.env.STRIPE_PREMIUM_PRICE_ID_TEST) {
     console.info("[premium.mobile.payment_sheet] using STRIPE_PREMIUM_PRICE_ID_TEST for development");
   }
+  try {
+    const priceTax = await getStripePriceTaxBehavior(stripe, priceId);
+    if (priceTax.taxBehavior !== "exclusive") {
+      console.error("[premium.mobile.payment_sheet] price_not_tax_exclusive", priceTax);
+      return res.status(409).json({ error: "Premium Price must use tax_behavior=exclusive", priceId: priceTax.id, taxBehavior: priceTax.taxBehavior });
+    }
+  } catch (error) {
+    console.error("[premium.mobile.payment_sheet] price_retrieve_failed", { message: error?.message });
+    return res.status(500).json({ error: "Could not validate Premium Price tax behavior" });
+  }
 
   const { billingDetails: rawBillingDetails } = req.body || {};
   let billingDetails = null;
@@ -190,6 +201,17 @@ export default async function handler(req, res) {
       uid,
       email: authUser.email || billingDetails?.email || "",
     });
+    await stripe.customers.update(customerId, {
+      name: [billingDetails?.firstName, billingDetails?.lastName].filter(Boolean).join(" ") || undefined,
+      address: {
+        line1: billingDetails?.address?.line1 || undefined,
+        line2: billingDetails?.address?.line2 || undefined,
+        city: billingDetails?.address?.city || undefined,
+        state: billingDetails?.address?.state || undefined,
+        postal_code: billingDetails?.address?.postalCode || undefined,
+        country: billingDetails?.address?.country === "Romania" ? "RO" : billingDetails?.address?.country || undefined,
+      },
+    });
 
     // Cancel any existing incomplete subscriptions for this customer
     const existingSubs = await stripe.subscriptions.list({
@@ -239,6 +261,7 @@ export default async function handler(req, res) {
       subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
+        automatic_tax: { enabled: true },
         payment_behavior: "default_incomplete",
         payment_settings: {
           save_default_payment_method: "on_subscription",

@@ -164,6 +164,7 @@ export default async (req, res) => {
           {
             price_data: {
               currency: "ron",
+              tax_behavior: "exclusive",
               product_data: {
                 name: `Consultatie pentru ${nume}`,
               },
@@ -173,6 +174,7 @@ export default async (req, res) => {
           },
         ],
         customer_email: email,
+        automatic_tax: { enabled: true },
         billing_address_collection: "required", // Solicită adresa de facturare
         phone_number_collection: { enabled: true }, // Solicită numărul de telefon
         metadata,

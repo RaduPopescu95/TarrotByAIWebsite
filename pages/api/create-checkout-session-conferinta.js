@@ -228,6 +228,7 @@ export default async function handler(req, res) {
         {
           price_data: {
             currency: 'ron',
+            tax_behavior: 'exclusive',
             product_data: {
               name: conferintaTitlu,
               description: `${tipConferinta === 'course' ? 'Curs' : 'Conferință'} - ${dataInceput}${dataFinal ? ` → ${dataFinal}` : ''}, ${oraInceput}${oraFinal ? ` - ${oraFinal}` : ''}`,
@@ -243,6 +244,7 @@ export default async function handler(req, res) {
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer_email: participantData.email,
+      automatic_tax: { enabled: true },
       billing_address_collection: 'required', // Solicită adresa de facturare pentru Oblio
       phone_number_collection: { enabled: true }, // Solicită numărul de telefon
       metadata: metadata,

@@ -438,10 +438,12 @@ export default async function handler(req, res) {
       payment_method_types: ["card"],
       billing_address_collection: "required",
       phone_number_collection: { enabled: true },
+      automatic_tax: { enabled: true },
       line_items: [
         {
           price_data: {
             currency,
+            tax_behavior: "exclusive",
             product_data: {
               name: item.title,
               ...(purchaseType === "bundle"

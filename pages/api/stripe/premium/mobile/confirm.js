@@ -263,6 +263,7 @@ export default async function handler(req, res) {
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
+        automatic_tax: { enabled: true },
         metadata: legacyMetadata,
         default_payment_method:
           typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
@@ -344,6 +345,7 @@ export default async function handler(req, res) {
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
+        automatic_tax: { enabled: true },
         metadata,
         default_payment_method:
           typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
