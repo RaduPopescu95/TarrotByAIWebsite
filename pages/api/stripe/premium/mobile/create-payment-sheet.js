@@ -36,6 +36,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 const PREMIUM_MOBILE_SESSION_COLLECTION = "premiumMobilePaymentSheets";
 
+function toStripeCountryCode(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return undefined;
+  if (["romania", "românia", "ro"].includes(normalized.toLowerCase())) return "RO";
+  return normalized.length === 2 ? normalized.toUpperCase() : undefined;
+}
+
 async function resolveOrCreateCustomer({ db, uid, email }) {
   const userRef = db.collection("Users").doc(uid);
   const snap = await userRef.get();
@@ -209,7 +216,7 @@ export default async function handler(req, res) {
         city: billingDetails?.address?.city || undefined,
         state: billingDetails?.address?.state || undefined,
         postal_code: billingDetails?.address?.postalCode || undefined,
-        country: billingDetails?.address?.country === "Romania" ? "RO" : billingDetails?.address?.country || undefined,
+        country: toStripeCountryCode(billingDetails?.address?.country),
       },
     });
 

@@ -197,6 +197,12 @@ export default async function handler(req, res) {
 
   if (stripeCustomerId) {
     sessionParams.customer = stripeCustomerId;
+    // Automatic Tax needs a valid location on an existing Customer. Checkout
+    // collects it above and persists the entered billing address/name.
+    sessionParams.customer_update = {
+      address: "auto",
+      name: "auto",
+    };
   } else if (authUser.email) {
     sessionParams.customer_email = authUser.email;
   }
