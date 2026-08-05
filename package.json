@@ -18,7 +18,8 @@
     "migrate:courses-previews": "node scripts/backfill-course-vimeo-previews.cjs",
     "backfill:video-category-slugs": "node scripts/backfill-video-category-slugs.cjs",
     "backfill:video-category-slugs:dry": "node scripts/backfill-video-category-slugs.cjs --dry-run",
-    "backfill:blog-scheduled-at": "node scripts/backfill-blog-scheduled-at.cjs"
+    "backfill:blog-scheduled-at": "node scripts/backfill-blog-scheduled-at.cjs",
+    "audit:premium-subscription-tax": "node scripts/migrate-premium-subscriptions-tax.cjs"
   },
   "dependencies": {
     "@babel/core": "^7.16.5",

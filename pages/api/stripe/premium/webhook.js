@@ -203,6 +203,12 @@ export default async function handler(req, res) {
             console.info("[premium.webhook] oblio_ok", { invoiceId: oblioResult.invoiceId });
           } else if (!oblioResult.skipped && oblioResult.status === "error") {
             console.warn("[premium.webhook] oblio_error", oblioResult);
+          } else if (oblioResult.skipped) {
+            console.warn("[premium.webhook] oblio_skipped", {
+              invoiceId: oblioResult.invoiceId || invoice.id,
+              reason: oblioResult.reason || "unknown",
+              detail: oblioResult.detail || undefined,
+            });
           }
         }
         break;
