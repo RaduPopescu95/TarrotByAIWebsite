@@ -1,0 +1,14 @@
+Subiect: Te rugăm să confirmi adresa de facturare pentru abonamentul tău
+
+Bună,
+
+Pentru ca abonamentul tău să continue cu datele de facturare și TVA-ul calculate corect, te rugăm să confirmi adresa completă de facturare în portalul securizat Stripe:
+
+{{LINK_STRIPE}}
+
+După autentificare, intră la „Update information” și completează strada și numărul, localitatea, județul, codul poștal și țara. Durează aproximativ un minut.
+
+Datele cardului nu trebuie reintroduse, iar abonamentul nu va fi taxat în momentul actualizării adresei.
+
+Mulțumim,
+Echipa Cristina Zurba

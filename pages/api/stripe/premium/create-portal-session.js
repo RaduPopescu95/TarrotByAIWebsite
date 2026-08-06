@@ -9,7 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 function parseFlow(req) {
   const body = req.body;
   if (!body || typeof body !== "object") return "default";
-  return body.flow === "cancel" ? "cancel" : "default";
+  if (body.flow === "cancel") return "cancel";
+  if (body.flow === "tax_address") return "tax_address";
+  return "default";
 }
 
 export default async function handler(req, res) {

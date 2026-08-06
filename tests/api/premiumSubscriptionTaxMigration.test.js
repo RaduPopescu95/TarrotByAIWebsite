@@ -1,5 +1,11 @@
 const {
   assessPreview,
+  addressEmailExportCsv,
+  renewalScheduleCsv,
+  inferSubscriptionPlatform,
+  daysUntilIso,
+  renewalUrgencyBucket,
+  buildPortalLoginUrl,
   buildStripeAddressFromPremiumProfile,
   discoverPremiumPrices,
   hasUsableInvoiceIdentity,
@@ -208,5 +214,55 @@ describe("premium subscription VAT migration", () => {
       expect.objectContaining({ priceId: "price_old", subscriptions: 2, likelyRole: "legacy_candidate" }),
       expect.objectContaining({ priceId: "price_new", subscriptions: 0, likelyRole: "destination_new" }),
     ]);
+  });
+
+  it("builds an encoded Stripe portal link and a spreadsheet-safe CSV", () => {
+    const portalUrl = buildPortalLoginUrl("ana+premium@example.test");
+    expect(portalUrl).toContain("prefilled_email=ana%2Bpremium%40example.test");
+
+    const csv = addressEmailExportCsv([
+      {
+        email: "ana@example.test",
+        name: '=HYPERLINK("unsafe")',
+        renewalAt: "2026-08-10T00:00:00.000Z",
+        portalUrl,
+      },
+    ]);
+    expect(csv).toContain("ana@example.test");
+    expect(csv).toContain("'=HYPERLINK");
+  });
+
+  it("builds a renewal schedule CSV with urgency helpers", () => {
+    expect(daysUntilIso("2026-08-10T00:00:00.000Z", Date.parse("2026-08-06T12:00:00.000Z"))).toBe(4);
+    expect(renewalUrgencyBucket(0)).toBe("overdue_or_today");
+    expect(renewalUrgencyBucket(7)).toBe("within_7_days");
+    expect(renewalUrgencyBucket(10)).toBe("within_8_14_days");
+    expect(renewalUrgencyBucket(20)).toBe("within_15_30_days");
+    expect(renewalUrgencyBucket(40)).toBe("after_30_days");
+
+    expect(inferSubscriptionPlatform({ metadata: { platform: "ios" } })).toEqual(
+      expect.objectContaining({ platform: "ios", confidence: "high" })
+    );
+    expect(inferSubscriptionPlatform({ metadata: { flow: "premium" } }).platform).toBe(
+      "unknown_likely_web_or_legacy"
+    );
+
+    const csv = renewalScheduleCsv([
+      {
+        email: "ana@example.test",
+        name: "Ana",
+        subscriptionId: "sub_123",
+        status: "active",
+        platform: "ios",
+        platformConfidence: "high",
+        renewalAt: "2026-08-10T00:00:00.000Z",
+        daysUntilRenewal: 4,
+        portalUrl: "https://example.test/portal",
+      },
+    ]);
+    expect(csv).toContain("zile_ramase");
+    expect(csv).toContain("sub_123");
+    expect(csv).toContain("\"ios\"");
+    expect(csv).toContain("\"4\"");
   });
 });

@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 
 const path = require("path");
+const fs = require("fs");
 const dotenv = require("dotenv");
 const Stripe = require("stripe");
 const admin = require("firebase-admin");
@@ -12,7 +13,13 @@ dotenv.config({ path: path.join(process.cwd(), ".env") });
 const APPLY_CONFIRMATION = "MIGRATE_PREMIUM_TAX";
 const ADDRESS_REPAIR_CONFIRMATION = "REPAIR_STRIPE_ADDRESSES";
 const ADDRESS_GATE_CONFIRMATION = "MARK_PREMIUM_TAX_ADDRESS_REQUIRED";
+const ROLLBACK_UNACCEPTED_CONFIRMATION = "ROLLBACK_UNACCEPTED_EXCLUSIVE";
 const ALLOWED_STATUSES = new Set(["active", "trialing", "past_due"]);
+const PORTAL_LOGIN_URL = "https://billing.stripe.com/p/login/eVq28r4Gyb8XgKz3cJbjW00";
+const PREMIUM_ACCEPT_PAGE_URL = "https://www.cristinazurba.com/premium/accept-price";
+const PREMIUM_TAX_MIGRATION_METADATA = "exclusive_v1";
+const PREMIUM_PRICE_CHANGE_CONSENT_VERSION = "v1_6_05";
+const PREMIUM_NEW_TOTAL_CENTS = 605;
 
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -32,6 +39,165 @@ function maskStripeId(value) {
   const normalized = clean(value);
   if (normalized.length <= 12) return normalized || "unknown";
   return `${normalized.slice(0, 8)}...${normalized.slice(-4)}`;
+}
+
+function hasValidPriceChangeConsentFromUserData(data) {
+  const consent = data?.premiumPriceChangeConsent;
+  if (!consent || typeof consent !== "object") return false;
+  if (clean(consent.version) !== PREMIUM_PRICE_CHANGE_CONSENT_VERSION) return false;
+  if (clean(consent.status) !== "accepted") return false;
+  return Boolean(consent.acceptedAt);
+}
+
+function classifyPriceChangeSegment({
+  priceId,
+  taxMigration,
+  latestAmountPaid,
+  exclusivePriceId,
+  legacyPriceIds,
+}) {
+  const paid = latestAmountPaid == null ? null : Number(latestAmountPaid);
+  if (paid === PREMIUM_NEW_TOTAL_CENTS) return "C_deja_605";
+  const onExclusive =
+    (exclusivePriceId && priceId === exclusivePriceId) ||
+    taxMigration === PREMIUM_TAX_MIGRATION_METADATA;
+  if (onExclusive) return "B_migrat_nefacturat_605";
+  if ((legacyPriceIds || []).includes(priceId)) return "A_nemigrat";
+  return "other";
+}
+
+function priceChangeSegmentsCsv(rows) {
+  const header = [
+    "segment",
+    "email",
+    "nume",
+    "subscription_id",
+    "status",
+    "price_id",
+    "urmatoarea_reinnoire",
+    "zile_ramase",
+    "latest_amount_paid_cents",
+    "has_consent",
+    "link_accept",
+    "link_anulare",
+  ];
+  return [
+    header,
+    ...rows.map((row) => [
+      row.segment,
+      row.email,
+      row.name,
+      row.subscriptionId,
+      row.status,
+      row.priceId,
+      row.renewalAt,
+      row.daysUntilRenewal,
+      row.latestAmountPaid,
+      row.hasConsent ? "yes" : "no",
+      row.linkAccept,
+      row.linkCancel,
+    ]),
+  ]
+    .map((row) => row.map(csvCell).join(","))
+    .join("\n");
+}
+
+function buildPortalLoginUrl(email) {
+  const url = new URL(PORTAL_LOGIN_URL);
+  const normalizedEmail = clean(email);
+  if (normalizedEmail) url.searchParams.set("prefilled_email", normalizedEmail);
+  return url.toString();
+}
+
+function csvCell(value) {
+  let normalized = value == null ? "" : String(value);
+  if (/^[=+\-@]/.test(normalized)) normalized = `'${normalized}`;
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function addressEmailExportCsv(rows) {
+  const header = ["email", "nume", "urmatoarea_reinnoire", "link_stripe"];
+  return [header, ...rows.map((row) => [row.email, row.name, row.renewalAt, row.portalUrl])]
+    .map((row) => row.map(csvCell).join(","))
+    .join("\n");
+}
+
+function inferSubscriptionPlatform(subscription) {
+  const meta = subscription?.metadata || {};
+  const rawPlatform = clean(meta.platform || meta.appPlatform || meta.clientPlatform).toLowerCase();
+  if (rawPlatform === "ios" || rawPlatform === "iphone" || rawPlatform === "ipad") {
+    return { platform: "ios", confidence: "high", source: "subscription.metadata.platform" };
+  }
+  if (rawPlatform === "android") {
+    return { platform: "android", confidence: "high", source: "subscription.metadata.platform" };
+  }
+  if (rawPlatform === "expo" || rawPlatform === "mobile") {
+    return { platform: "expo_mobile", confidence: "medium", source: "subscription.metadata.platform" };
+  }
+  if (rawPlatform === "web" || rawPlatform === "next" || rawPlatform === "nextjs") {
+    return { platform: "web", confidence: "high", source: "subscription.metadata.platform" };
+  }
+
+  // Web checkout stamps flow but historically omitted platform.
+  // Mobile payment-sheet always stamps platform when created via the current Expo flow.
+  const flow = clean(meta.flow).toLowerCase();
+  if (flow && !rawPlatform) {
+    return {
+      platform: "unknown_likely_web_or_legacy",
+      confidence: "low",
+      source: "subscription.metadata.flow_without_platform",
+    };
+  }
+  return {
+    platform: "unknown_legacy",
+    confidence: "low",
+    source: "missing_platform_metadata",
+  };
+}
+
+function renewalScheduleCsv(rows) {
+  const header = [
+    "email",
+    "nume",
+    "subscription_id",
+    "status",
+    "platform",
+    "platform_confidence",
+    "urmatoarea_reinnoire",
+    "zile_ramase",
+    "link_stripe",
+  ];
+  return [
+    header,
+    ...rows.map((row) => [
+      row.email,
+      row.name,
+      row.subscriptionId,
+      row.status,
+      row.platform,
+      row.platformConfidence,
+      row.renewalAt,
+      row.daysUntilRenewal,
+      row.portalUrl,
+    ]),
+  ]
+    .map((row) => row.map(csvCell).join(","))
+    .join("\n");
+}
+
+function daysUntilIso(isoDate, nowMs = Date.now()) {
+  const renewalMs = Date.parse(isoDate);
+  if (!Number.isFinite(renewalMs)) return "";
+  return Math.ceil((renewalMs - nowMs) / (24 * 60 * 60 * 1000));
+}
+
+function renewalUrgencyBucket(daysUntil) {
+  if (!Number.isFinite(daysUntil)) return "unknown";
+  if (daysUntil <= 0) return "overdue_or_today";
+  if (daysUntil <= 7) return "within_7_days";
+  if (daysUntil <= 14) return "within_8_14_days";
+  if (daysUntil <= 30) return "within_15_30_days";
+  return "after_30_days";
 }
 
 function customerIdFromSubscription(subscription) {
@@ -388,6 +554,8 @@ async function findPremiumUser(db, subscription, customerId) {
     uid: docs[0].id,
     hasBillingProfile,
     billingProfile: data?.premiumBillingProfile || null,
+    hasPriceChangeConsent: hasValidPriceChangeConsentFromUserData(data),
+    userData: data,
   };
 }
 
@@ -403,6 +571,50 @@ async function listCandidates(stripe, legacyPriceIds, onlySubscriptionId) {
     }
   }
   return [...byId.values()];
+}
+
+async function listCandidatesByPriceIds(stripe, priceIds, onlySubscriptionId) {
+  if (onlySubscriptionId) {
+    return [await stripe.subscriptions.retrieve(onlySubscriptionId, { expand: ["customer"] })];
+  }
+  const byId = new Map();
+  for (const priceId of priceIds) {
+    const subscriptions = stripe.subscriptions.list({ price: priceId, status: "all", limit: 100 });
+    for await (const subscription of subscriptions) {
+      byId.set(subscription.id, subscription);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function latestPaidInvoiceAmount(stripe, subscriptionId) {
+  const invoices = await stripe.invoices.list({
+    subscription: subscriptionId,
+    status: "paid",
+    limit: 5,
+  });
+  const paid = (invoices.data || []).find((invoice) => Number(invoice.amount_paid) > 0);
+  return paid ? Number(paid.amount_paid) : null;
+}
+
+async function rollbackOne(stripe, subscription, item, legacyPriceId, uid) {
+  const nextMeta = { ...(subscription.metadata || {}) };
+  delete nextMeta.taxMigration;
+  delete nextMeta.priceChangeConsentVersion;
+  if (clean(uid)) nextMeta.uid = clean(uid);
+  nextMeta.flow = nextMeta.flow || "site_premium";
+  nextMeta.taxMigrationRollback = "unaccepted_exclusive_v1";
+  return stripe.subscriptions.update(
+    subscription.id,
+    {
+      automatic_tax: { enabled: false },
+      billing_cycle_anchor: "unchanged",
+      proration_behavior: "none",
+      items: [{ id: item.id, price: legacyPriceId, quantity: 1 }],
+      metadata: nextMeta,
+    },
+    { idempotencyKey: `premium-tax-rollback-unaccepted-v1-${subscription.id}-${legacyPriceId}` }
+  );
 }
 
 async function discoverPremiumPrices(stripe) {
@@ -724,18 +936,427 @@ async function runAddressGateMarking({ stripe, db, candidates, legacyPriceIds, a
   if (summary.failed) process.exitCode = 1;
 }
 
+async function exportRenewalSchedule({ stripe, candidates, legacyPriceIds, outputPath }) {
+  const rows = [];
+  const summary = {
+    scanned: candidates.length,
+    renewingCandidates: 0,
+    addressIncomplete: 0,
+    addressAlreadyComplete: 0,
+    exported: 0,
+    missingEmail: 0,
+    ignoredNonRenewing: 0,
+    failed: 0,
+    platformCounts: {},
+    urgencyBuckets: {
+      overdue_or_today: 0,
+      within_7_days: 0,
+      within_8_14_days: 0,
+      within_15_30_days: 0,
+      after_30_days: 0,
+      unknown: 0,
+    },
+    soonestRenewalAt: null,
+    latestRenewalAt: null,
+  };
+
+  console.log("[premium-tax-renewal-schedule] start");
+  const nowMs = Date.now();
+  for (const subscription of candidates) {
+    const structural = subscriptionStructuralBlockers(subscription, legacyPriceIds);
+    if (!structural.ok) {
+      summary.ignoredNonRenewing += 1;
+      continue;
+    }
+    summary.renewingCandidates += 1;
+    try {
+      const customer = await resolveCustomer(stripe, subscription);
+      if (!customer || customer.deleted) {
+        summary.failed += 1;
+        continue;
+      }
+      if (hasUsableTaxAddress(customer)) {
+        summary.addressAlreadyComplete += 1;
+        continue;
+      }
+      summary.addressIncomplete += 1;
+
+      const periodEnd = periodEndFromSubscription(subscription);
+      const renewalAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : "";
+      const daysUntilRenewal = renewalAt === "" ? "" : daysUntilIso(renewalAt, nowMs);
+      const bucket = renewalUrgencyBucket(
+        daysUntilRenewal === "" ? Number.NaN : Number(daysUntilRenewal)
+      );
+      summary.urgencyBuckets[bucket] = (summary.urgencyBuckets[bucket] || 0) + 1;
+      if (renewalAt) {
+        if (!summary.soonestRenewalAt || renewalAt < summary.soonestRenewalAt) {
+          summary.soonestRenewalAt = renewalAt;
+        }
+        if (!summary.latestRenewalAt || renewalAt > summary.latestRenewalAt) {
+          summary.latestRenewalAt = renewalAt;
+        }
+      }
+
+      const email = clean(customer.email).toLowerCase();
+      if (!email) {
+        summary.missingEmail += 1;
+      }
+      const platformInfo = inferSubscriptionPlatform(subscription);
+      summary.platformCounts[platformInfo.platform] =
+        (summary.platformCounts[platformInfo.platform] || 0) + 1;
+      rows.push({
+        email: email || "",
+        name: clean(customer.name),
+        subscriptionId: subscription.id,
+        status: clean(subscription.status),
+        platform: platformInfo.platform,
+        platformConfidence: platformInfo.confidence,
+        renewalAt,
+        daysUntilRenewal,
+        portalUrl: buildPortalLoginUrl(email),
+      });
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-tax-renewal-schedule] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  rows.sort(
+    (a, b) =>
+      String(a.renewalAt).localeCompare(String(b.renewalAt)) ||
+      String(a.email).localeCompare(String(b.email))
+  );
+  summary.exported = rows.length;
+  const resolvedOutputPath = path.resolve(outputPath);
+  fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+  fs.writeFileSync(resolvedOutputPath, `${renewalScheduleCsv(rows)}\n`, { encoding: "utf8", mode: 0o600 });
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-renewal-schedule.summary",
+        summary,
+        outputPath: resolvedOutputPath,
+      },
+      null,
+      2
+    )
+  );
+  if (summary.failed) process.exitCode = 1;
+}
+
+async function exportAddressRequiredEmails({ stripe, db, candidates, legacyPriceIds, outputPath }) {
+  if (!db) throw new Error("Email export requires Firebase Admin configuration");
+  const rows = [];
+  const summary = {
+    scanned: candidates.length,
+    renewingCandidates: 0,
+    stillAddressIncomplete: 0,
+    exported: 0,
+    missingEmail: 0,
+    ignoredNonRenewing: 0,
+    notMarked: 0,
+    failed: 0,
+  };
+
+  console.log("[premium-tax-address-email-export] start");
+  for (const subscription of candidates) {
+    const structural = subscriptionStructuralBlockers(subscription, legacyPriceIds);
+    if (!structural.ok) {
+      summary.ignoredNonRenewing += 1;
+      continue;
+    }
+    summary.renewingCandidates += 1;
+    const customerId = customerIdFromSubscription(subscription);
+    try {
+      const customer = await resolveCustomer(stripe, subscription);
+      if (!customer || customer.deleted || hasUsableTaxAddress(customer)) continue;
+      summary.stillAddressIncomplete += 1;
+
+      const user = await findPremiumUser(db, subscription, customerId);
+      if (!user.ok) continue;
+      const gateSnapshot = await db.collection("Users").doc(user.uid).get();
+      if (gateSnapshot.data()?.premiumTaxAddressGate?.required !== true) {
+        summary.notMarked += 1;
+        continue;
+      }
+
+      const email = clean(customer.email).toLowerCase();
+      if (!email) {
+        summary.missingEmail += 1;
+        continue;
+      }
+      const periodEnd = periodEndFromSubscription(subscription);
+      rows.push({
+        email,
+        name: clean(customer.name),
+        renewalAt: periodEnd ? new Date(periodEnd * 1000).toISOString() : "",
+        portalUrl: buildPortalLoginUrl(email),
+      });
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-tax-address-email-export] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  rows.sort((a, b) => a.renewalAt.localeCompare(b.renewalAt) || a.email.localeCompare(b.email));
+  summary.exported = rows.length;
+  const resolvedOutputPath = path.resolve(outputPath);
+  fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+  fs.writeFileSync(resolvedOutputPath, `${addressEmailExportCsv(rows)}\n`, { encoding: "utf8", mode: 0o600 });
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-address-email-export.summary",
+        summary,
+        outputPath: resolvedOutputPath,
+      },
+      null,
+      2
+    )
+  );
+  if (summary.failed || summary.missingEmail) process.exitCode = 1;
+}
+
+async function exportPriceChangeSegments({
+  stripe,
+  db,
+  candidates,
+  exclusivePriceId,
+  legacyPriceIds,
+  outputPath,
+}) {
+  const rows = [];
+  const summary = {
+    scanned: candidates.length,
+    exported: 0,
+    segmentCounts: {},
+    ignoredNonRenewing: 0,
+    missingEmail: 0,
+    failed: 0,
+  };
+  const nowMs = Date.now();
+  console.log("[premium-price-change-segments] start");
+
+  for (const subscription of candidates) {
+    const status = clean(subscription.status);
+    if (!ALLOWED_STATUSES.has(status) || subscription.cancel_at_period_end) {
+      summary.ignoredNonRenewing += 1;
+      continue;
+    }
+    try {
+      const customer = await resolveCustomer(stripe, subscription);
+      if (!customer || customer.deleted) {
+        summary.failed += 1;
+        continue;
+      }
+      const priceId = clean(subscription?.items?.data?.[0]?.price?.id);
+      const taxMigration = clean(subscription?.metadata?.taxMigration);
+      const latestAmountPaid = await latestPaidInvoiceAmount(stripe, subscription.id);
+      const segment = classifyPriceChangeSegment({
+        priceId,
+        taxMigration,
+        latestAmountPaid,
+        exclusivePriceId,
+        legacyPriceIds,
+      });
+      if (segment === "other") {
+        summary.ignoredNonRenewing += 1;
+        continue;
+      }
+
+      const customerId = customerIdFromSubscription(subscription);
+      const user = await findPremiumUser(db, subscription, customerId);
+      const hasConsent = user.ok ? user.hasPriceChangeConsent : false;
+
+      // Skip A if already consented (they'll migrate via Accept or mass migrate)
+      if (segment === "A_nemigrat" && hasConsent) {
+        summary.segmentCounts.A_accepted_pending = (summary.segmentCounts.A_accepted_pending || 0) + 1;
+        continue;
+      }
+      // Skip B/C outreach rows that already consented (B shouldn't exist if consented+exclusive)
+      if (hasConsent && segment !== "C_deja_605") {
+        summary.segmentCounts.accepted_skip = (summary.segmentCounts.accepted_skip || 0) + 1;
+        continue;
+      }
+
+      const periodEnd = periodEndFromSubscription(subscription);
+      const renewalAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : "";
+      const email = clean(customer.email).toLowerCase();
+      if (!email) summary.missingEmail += 1;
+
+      summary.segmentCounts[segment] = (summary.segmentCounts[segment] || 0) + 1;
+      rows.push({
+        segment,
+        email: email || "",
+        name: clean(customer.name),
+        subscriptionId: subscription.id,
+        status,
+        priceId,
+        renewalAt,
+        daysUntilRenewal: renewalAt ? daysUntilIso(renewalAt, nowMs) : "",
+        latestAmountPaid: latestAmountPaid == null ? "" : latestAmountPaid,
+        hasConsent,
+        linkAccept: PREMIUM_ACCEPT_PAGE_URL,
+        linkCancel: buildPortalLoginUrl(email),
+      });
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-price-change-segments] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  rows.sort(
+    (a, b) =>
+      String(a.segment).localeCompare(String(b.segment)) ||
+      String(a.renewalAt).localeCompare(String(b.renewalAt)) ||
+      String(a.email).localeCompare(String(b.email))
+  );
+  summary.exported = rows.length;
+  const resolvedOutputPath = path.resolve(outputPath);
+  fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+  fs.writeFileSync(resolvedOutputPath, `${priceChangeSegmentsCsv(rows)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  console.log(
+    JSON.stringify(
+      { event: "premium-price-change-segments.summary", summary, outputPath: resolvedOutputPath },
+      null,
+      2
+    )
+  );
+  if (summary.failed) process.exitCode = 1;
+}
+
+async function rollbackUnacceptedExclusive({
+  stripe,
+  db,
+  candidates,
+  exclusivePriceId,
+  legacyPriceId,
+  apply,
+  summaryOnly,
+}) {
+  if (!legacyPriceId) throw new Error("Missing primary legacy price id for rollback");
+  const summary = {
+    scanned: candidates.length,
+    considered: 0,
+    eligible: 0,
+    rolledBack: 0,
+    skipped: 0,
+    failed: 0,
+    reasonCounts: {},
+  };
+  console.log("[premium-tax-rollback-unaccepted] start", { mode: apply ? "APPLY" : "DRY_RUN" });
+
+  for (const subscription of candidates) {
+    if (!ALLOWED_STATUSES.has(subscription.status) || subscription.cancel_at_period_end) {
+      summary.skipped += 1;
+      continue;
+    }
+    summary.considered += 1;
+    try {
+      const priceId = clean(subscription?.items?.data?.[0]?.price?.id);
+      const taxMigration = clean(subscription?.metadata?.taxMigration);
+      const onExclusive =
+        priceId === exclusivePriceId || taxMigration === PREMIUM_TAX_MIGRATION_METADATA;
+      if (!onExclusive) {
+        summary.skipped += 1;
+        addReasonCounts(summary, ["not_on_exclusive"]);
+        continue;
+      }
+      const latestAmountPaid = await latestPaidInvoiceAmount(stripe, subscription.id);
+      if (latestAmountPaid === PREMIUM_NEW_TOTAL_CENTS) {
+        summary.skipped += 1;
+        addReasonCounts(summary, ["already_charged_605"]);
+        continue;
+      }
+      const customerId = customerIdFromSubscription(subscription);
+      const user = await findPremiumUser(db, subscription, customerId);
+      if (user.ok && user.hasPriceChangeConsent) {
+        summary.skipped += 1;
+        addReasonCounts(summary, ["has_consent"]);
+        continue;
+      }
+      const item = subscription.items?.data?.[0];
+      if (!item?.id) {
+        summary.failed += 1;
+        addReasonCounts(summary, ["missing_item"]);
+        continue;
+      }
+      summary.eligible += 1;
+      if (!apply) {
+        if (!summaryOnly) {
+          console.log("[premium-tax-rollback-unaccepted] eligible", {
+            subscriptionId: maskStripeId(subscription.id),
+          });
+        }
+        continue;
+      }
+      await rollbackOne(stripe, subscription, item, legacyPriceId, user.ok ? user.uid : "");
+      summary.rolledBack += 1;
+      if (!summaryOnly) {
+        console.log("[premium-tax-rollback-unaccepted] rolled_back", {
+          subscriptionId: maskStripeId(subscription.id),
+        });
+      }
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-tax-rollback-unaccepted] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-rollback-unaccepted.summary",
+        mode: apply ? "APPLY" : "DRY_RUN",
+        summary,
+      },
+      null,
+      2
+    )
+  );
+  if (summary.failed) process.exitCode = 1;
+}
+
 async function main() {
   const apply = process.argv.includes("--apply");
   const discover = process.argv.includes("--discover");
   const repairAddresses = process.argv.includes("--repair-addresses-from-firestore");
   const repairAddressesFromPayments = process.argv.includes("--repair-addresses-from-stripe-payments");
   const markAddressRequired = process.argv.includes("--mark-address-required-in-firestore");
+  const exportAddressEmails = process.argv.includes("--export-address-required-emails");
+  const exportRenewalScheduleFlag = process.argv.includes("--export-renewal-schedule");
+  const exportPriceChangeSegmentsFlag = process.argv.includes("--export-price-change-segments");
+  const rollbackUnacceptedFlag = process.argv.includes("--rollback-unaccepted-exclusive");
   const anyAddressRepair = repairAddresses || repairAddressesFromPayments;
   const summaryOnly = process.argv.includes("--summary-only");
   const allowStripeInvoiceFallback = process.argv.includes("--allow-stripe-invoice-fallback");
   const confirmation = getArg("confirm");
   const onlySubscriptionId = getArg("subscription");
   const dueBeforeRaw = getArg("due-before");
+  const exportPathDefaultName = exportPriceChangeSegmentsFlag
+    ? `premium-price-change-segments-${new Date().toISOString().slice(0, 10)}.csv`
+    : exportRenewalScheduleFlag
+      ? `premium-tax-renewals-${new Date().toISOString().slice(0, 10)}.csv`
+      : `premium-tax-address-${new Date().toISOString().slice(0, 10)}.csv`;
+  const exportPath =
+    getArg("export-path") || path.join(process.cwd(), "private-exports", exportPathDefaultName);
   const dueBeforeMs = dueBeforeRaw ? Date.parse(`${dueBeforeRaw}T23:59:59.999Z`) : null;
   const destinationPriceId = clean(process.env.STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE);
   const legacyPriceIds = parseCsv(process.env.STRIPE_PREMIUM_LEGACY_PRICE_IDS);
@@ -749,7 +1370,7 @@ async function main() {
     if (!prices.length) process.exitCode = 1;
     return;
   }
-  if (!onlySubscriptionId && !legacyPriceIds.length) {
+  if (!onlySubscriptionId && !legacyPriceIds.length && !exportPriceChangeSegmentsFlag && !rollbackUnacceptedFlag) {
     throw new Error("Set STRIPE_PREMIUM_LEGACY_PRICE_IDS or pass --subscription=sub_...");
   }
   if (apply) {
@@ -769,6 +1390,15 @@ async function main() {
       if (confirmation !== ADDRESS_REPAIR_CONFIRMATION) {
         throw new Error(`Address repair apply requires --confirm=${ADDRESS_REPAIR_CONFIRMATION}`);
       }
+    } else if (rollbackUnacceptedFlag) {
+      if (process.env.PREMIUM_TAX_ROLLBACK_UNACCEPTED_ENABLED !== "true") {
+        throw new Error(
+          "Rollback apply is disabled. Set PREMIUM_TAX_ROLLBACK_UNACCEPTED_ENABLED=true explicitly."
+        );
+      }
+      if (confirmation !== ROLLBACK_UNACCEPTED_CONFIRMATION) {
+        throw new Error(`Rollback apply requires --confirm=${ROLLBACK_UNACCEPTED_CONFIRMATION}`);
+      }
     } else {
       if (process.env.PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED !== "true") {
         throw new Error("Apply is disabled. Set PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED=true explicitly.");
@@ -781,6 +1411,44 @@ async function main() {
   if (dueBeforeRaw && !Number.isFinite(dueBeforeMs)) throw new Error("Invalid --due-before date");
 
   const db = initFirestoreIfConfigured();
+
+  if (exportPriceChangeSegmentsFlag) {
+    if (apply) throw new Error("Price-change segment export is read-only; remove --apply");
+    if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
+    if (!legacyPriceIds.length) throw new Error("Missing STRIPE_PREMIUM_LEGACY_PRICE_IDS");
+    const priceIds = [...new Set([...legacyPriceIds, destinationPriceId])];
+    const segmentCandidates = await listCandidatesByPriceIds(stripe, priceIds, onlySubscriptionId);
+    await exportPriceChangeSegments({
+      stripe,
+      db,
+      candidates: segmentCandidates,
+      exclusivePriceId: destinationPriceId,
+      legacyPriceIds,
+      outputPath: exportPath,
+    });
+    return;
+  }
+
+  if (rollbackUnacceptedFlag) {
+    if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
+    if (!legacyPriceIds.length) throw new Error("Missing STRIPE_PREMIUM_LEGACY_PRICE_IDS");
+    const exclusiveCandidates = await listCandidatesByPriceIds(
+      stripe,
+      [destinationPriceId],
+      onlySubscriptionId
+    );
+    await rollbackUnacceptedExclusive({
+      stripe,
+      db,
+      candidates: exclusiveCandidates,
+      exclusivePriceId: destinationPriceId,
+      legacyPriceId: legacyPriceIds[0],
+      apply,
+      summaryOnly,
+    });
+    return;
+  }
+
   const candidates = await listCandidates(stripe, legacyPriceIds, onlySubscriptionId);
   if (repairAddresses) {
     await runAddressRepair({ stripe, db, candidates, legacyPriceIds, apply, summaryOnly });
@@ -792,6 +1460,16 @@ async function main() {
   }
   if (markAddressRequired) {
     await runAddressGateMarking({ stripe, db, candidates, legacyPriceIds, apply, summaryOnly });
+    return;
+  }
+  if (exportRenewalScheduleFlag) {
+    if (apply) throw new Error("Renewal schedule export is read-only; remove --apply");
+    await exportRenewalSchedule({ stripe, candidates, legacyPriceIds, outputPath: exportPath });
+    return;
+  }
+  if (exportAddressEmails) {
+    if (apply) throw new Error("Email export is read-only; remove --apply");
+    await exportAddressRequiredEmails({ stripe, db, candidates, legacyPriceIds, outputPath: exportPath });
     return;
   }
   if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
@@ -820,6 +1498,7 @@ async function main() {
     legacyPriceIds,
     dueBefore: dueBeforeRaw || null,
     firestoreCheck: Boolean(db),
+    requirePriceChangeConsent: true,
   });
 
   for (const subscription of candidates) {
@@ -861,6 +1540,7 @@ async function main() {
 
       const user = await findPremiumUser(db, subscription, customerId);
       if (!user.ok) row.reasons.push(user.reason);
+      else if (!user.hasPriceChangeConsent) row.reasons.push("missing_price_change_consent");
       else if (!user.hasBillingProfile && !allowStripeInvoiceFallback) {
         row.reasons.push("missing_premium_billing_profile");
       } else if (!user.hasBillingProfile && !hasUsableInvoiceIdentity(customer)) {
@@ -963,4 +1643,13 @@ module.exports = {
   periodEndFromSubscription,
   subscriptionStructuralBlockers,
   validateDestinationPrice,
+  addressEmailExportCsv,
+  renewalScheduleCsv,
+  inferSubscriptionPlatform,
+  daysUntilIso,
+  renewalUrgencyBucket,
+  buildPortalLoginUrl,
+  classifyPriceChangeSegment,
+  hasValidPriceChangeConsentFromUserData,
+  priceChangeSegmentsCsv,
 };
