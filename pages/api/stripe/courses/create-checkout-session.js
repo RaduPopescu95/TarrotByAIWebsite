@@ -19,6 +19,7 @@ import {
   normalizeBillingDetails,
   buildBillingContextInput,
 } from "../../../../lib/stripeBillingDetails";
+import { resolveCourseCheckoutTaxCustomerFields } from "../../../../lib/stripeCourseCheckoutTax";
 import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisibleOnChannel,
@@ -433,6 +434,18 @@ export default async function handler(req, res) {
     metadata.invoiceDeliveryInRomania = String(billingAudit.normalizedClient.deliveryInRomania);
     metadata.invoiceEligibleForEInvoice = String(billingAudit.normalizedClient.eligibleForEInvoice);
 
+    // Mobile (Expo WebView): seed a one-off Customer with app billing address so
+    // Stripe Automatic Tax has a location. Web keeps customer_email-only behavior.
+    // Never writes Users.stripeCustomerId — avoids Premium tax-address side effects.
+    const taxCustomerFields = await resolveCourseCheckoutTaxCustomerFields({
+      stripe,
+      sourcePlatform,
+      isMobilePlatform,
+      billingDetails,
+      authEmail: authUser.email || "",
+      uid: authUser.uid,
+    });
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -463,7 +476,7 @@ export default async function handler(req, res) {
       ],
       metadata,
       client_reference_id: `${authUser.uid}:${purchaseType}:${itemId}`,
-      ...(authUser.email ? { customer_email: authUser.email } : {}),
+      ...taxCustomerFields,
       success_url: returnUrls.successUrl,
       cancel_url: returnUrls.cancelUrl,
     });

@@ -1,9 +1,12 @@
 jest.mock("stripe", () => {
   const create = jest.fn();
+  const customersCreate = jest.fn();
   const StripeMock = jest.fn().mockImplementation(() => ({
     checkout: { sessions: { create } },
+    customers: { create: customersCreate },
   }));
   StripeMock.mockSessionCreate = create;
+  StripeMock.mockCustomersCreate = customersCreate;
   return StripeMock;
 });
 
@@ -38,6 +41,13 @@ jest.mock("../../lib/stripeBillingDetails", () => ({
     firstName: "Test",
     lastName: "User",
     email: "user@example.com",
+    address: {
+      line1: "Strada Test 1",
+      city: "Bucuresti",
+      state: "Bucuresti",
+      postalCode: "000000",
+      country: "Romania",
+    },
     invoicePreferences: { sendEmail: true },
   })),
   buildBillingContextInput: jest.fn(() => ({})),
@@ -48,6 +58,7 @@ import Stripe from "stripe";
 import checkoutHandler from "../../pages/api/stripe/courses/create-checkout-session";
 
 const mockStripeCreate = Stripe.mockSessionCreate;
+const mockCustomersCreate = Stripe.mockCustomersCreate;
 
 function createResponse() {
   return {
@@ -227,16 +238,54 @@ describe("course checkout channel enforcement", () => {
       url: "https://checkout.stripe.test/cs_test_1",
       sessionId: "cs_test_1",
     });
+    expect(mockCustomersCreate).not.toHaveBeenCalled();
     expect(mockStripeCreate).toHaveBeenCalledTimes(1);
     expect(mockStripeCreate.mock.calls[0][0]).toMatchObject({
       mode: "payment",
+      customer_email: "user@example.com",
       metadata: {
         uid: "user-1",
         courseId: "course-web",
         sourcePlatform: "web",
       },
     });
+    expect(mockStripeCreate.mock.calls[0][0].customer).toBeUndefined();
     expect(db.checkoutWrites).toHaveLength(1);
+  });
+
+  test("seeds a tax Customer for Expo without changing web customer_email flow", async () => {
+    const mobileCourse = {
+      title: "Curs Mobile",
+      status: "published",
+      price: 99,
+      currency: "RON",
+      availableOnWebsite: true,
+      availableOnMobile: true,
+    };
+    getAdminDb.mockReturnValue(createDb(mobileCourse));
+    mockCustomersCreate.mockResolvedValue({ id: "cus_expo_course" });
+    mockStripeCreate.mockResolvedValue({
+      id: "cs_expo_1",
+      url: "https://checkout.stripe.test/cs_expo_1",
+    });
+    const res = createResponse();
+
+    await checkoutHandler(requestFor("expo"), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(mockCustomersCreate).toHaveBeenCalledTimes(1);
+    expect(mockCustomersCreate.mock.calls[0][0]).toMatchObject({
+      address: { country: "RO", line1: "Strada Test 1", city: "Bucuresti" },
+      metadata: { uid: "user-1", source: "courses_checkout" },
+    });
+    expect(mockCustomersCreate.mock.calls[0][0].address.postal_code).toBeUndefined();
+    expect(mockStripeCreate.mock.calls[0][0]).toMatchObject({
+      customer: "cus_expo_course",
+      customer_update: { address: "auto", name: "auto" },
+      automatic_tax: { enabled: true },
+      metadata: { sourcePlatform: "expo" },
+    });
+    expect(mockStripeCreate.mock.calls[0][0].customer_email).toBeUndefined();
   });
 
   test("enforces the bundle channel independently of its included courses", async () => {
