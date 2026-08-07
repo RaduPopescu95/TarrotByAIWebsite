@@ -14,11 +14,14 @@ const APPLY_CONFIRMATION = "MIGRATE_PREMIUM_TAX";
 const ADDRESS_REPAIR_CONFIRMATION = "REPAIR_STRIPE_ADDRESSES";
 const ADDRESS_GATE_CONFIRMATION = "MARK_PREMIUM_TAX_ADDRESS_REQUIRED";
 const ROLLBACK_UNACCEPTED_CONFIRMATION = "ROLLBACK_UNACCEPTED_EXCLUSIVE";
+const SCHEDULE_CANCEL_CONFIRMATION = "SCHEDULE_CANCEL_UNACCEPTED";
+const REFUND_DECLINED_CONFIRMATION = "REFUND_DECLINED_605";
 const ALLOWED_STATUSES = new Set(["active", "trialing", "past_due"]);
 const PORTAL_LOGIN_URL = "https://billing.stripe.com/p/login/eVq28r4Gyb8XgKz3cJbjW00";
 const PREMIUM_ACCEPT_PAGE_URL = "https://www.cristinazurba.com/premium/accept-price";
 const PREMIUM_TAX_MIGRATION_METADATA = "exclusive_v1";
 const PREMIUM_PRICE_CHANGE_CONSENT_VERSION = "v1_6_05";
+const PREMIUM_PRICE_CHANGE_CANCEL_REASON = "unaccepted_v1_6_05";
 const PREMIUM_NEW_TOTAL_CENTS = 605;
 
 function clean(value) {
@@ -58,12 +61,49 @@ function classifyPriceChangeSegment({
 }) {
   const paid = latestAmountPaid == null ? null : Number(latestAmountPaid);
   if (paid === PREMIUM_NEW_TOTAL_CENTS) return "C_deja_605";
+  // Prefer live Price ID over stale taxMigration metadata after rollback.
+  if ((legacyPriceIds || []).includes(priceId)) return "A_nemigrat";
   const onExclusive =
     (exclusivePriceId && priceId === exclusivePriceId) ||
-    taxMigration === PREMIUM_TAX_MIGRATION_METADATA;
+    (!(legacyPriceIds || []).includes(priceId) && taxMigration === PREMIUM_TAX_MIGRATION_METADATA);
   if (onExclusive) return "B_migrat_nefacturat_605";
-  if ((legacyPriceIds || []).includes(priceId)) return "A_nemigrat";
   return "other";
+}
+
+function isEligibleForScheduleCancelUnaccepted({
+  status,
+  cancelAtPeriodEnd,
+  hasConsent,
+  segment,
+}) {
+  if (!ALLOWED_STATUSES.has(clean(status))) {
+    return { ok: false, reason: `status_${clean(status) || "unknown"}` };
+  }
+  if (cancelAtPeriodEnd) return { ok: false, reason: "already_cancel_at_period_end" };
+  if (hasConsent) return { ok: false, reason: "has_consent" };
+  if (segment !== "A_nemigrat" && segment !== "C_deja_605") {
+    return { ok: false, reason: "segment_not_ac" };
+  }
+  return { ok: true, reason: null };
+}
+
+function isEligibleForRefundDeclined605({
+  status,
+  cancelAtPeriodEnd,
+  hasConsent,
+  latestAmountPaid,
+  amountRefunded,
+}) {
+  if (hasConsent) return { ok: false, reason: "has_consent" };
+  if (Number(latestAmountPaid) !== PREMIUM_NEW_TOTAL_CENTS) {
+    return { ok: false, reason: "not_605_invoice" };
+  }
+  const refunded = amountRefunded == null ? 0 : Number(amountRefunded);
+  if (refunded >= PREMIUM_NEW_TOTAL_CENTS) return { ok: false, reason: "already_refunded" };
+  if (!(cancelAtPeriodEnd || clean(status) === "canceled")) {
+    return { ok: false, reason: "not_canceled_or_scheduled" };
+  }
+  return { ok: true, reason: null };
 }
 
 function priceChangeSegmentsCsv(rows) {
@@ -588,19 +628,24 @@ async function listCandidatesByPriceIds(stripe, priceIds, onlySubscriptionId) {
 }
 
 async function latestPaidInvoiceAmount(stripe, subscriptionId) {
+  const invoice = await latestPaidInvoice(stripe, subscriptionId);
+  return invoice ? Number(invoice.amount_paid) : null;
+}
+
+async function latestPaidInvoice(stripe, subscriptionId) {
   const invoices = await stripe.invoices.list({
     subscription: subscriptionId,
     status: "paid",
     limit: 5,
   });
-  const paid = (invoices.data || []).find((invoice) => Number(invoice.amount_paid) > 0);
-  return paid ? Number(paid.amount_paid) : null;
+  return (invoices.data || []).find((invoice) => Number(invoice.amount_paid) > 0) || null;
 }
 
 async function rollbackOne(stripe, subscription, item, legacyPriceId, uid) {
   const nextMeta = { ...(subscription.metadata || {}) };
-  delete nextMeta.taxMigration;
-  delete nextMeta.priceChangeConsentVersion;
+  // Stripe clears metadata keys only when set to empty string.
+  nextMeta.taxMigration = "";
+  nextMeta.priceChangeConsentVersion = "";
   if (clean(uid)) nextMeta.uid = clean(uid);
   nextMeta.flow = nextMeta.flow || "site_premium";
   nextMeta.taxMigrationRollback = "unaccepted_exclusive_v1";
@@ -1334,6 +1379,319 @@ async function rollbackUnacceptedExclusive({
   if (summary.failed) process.exitCode = 1;
 }
 
+async function scheduleCancelUnaccepted({
+  stripe,
+  db,
+  candidates,
+  exclusivePriceId,
+  legacyPriceIds,
+  apply,
+  summaryOnly,
+  outputPath,
+}) {
+  const rows = [];
+  const summary = {
+    scanned: candidates.length,
+    considered: 0,
+    eligible: 0,
+    scheduled: 0,
+    skipped: 0,
+    failed: 0,
+    reasonCounts: {},
+    segmentCounts: {},
+  };
+  console.log("[premium-tax-schedule-cancel] start", { mode: apply ? "APPLY" : "DRY_RUN" });
+
+  for (const subscription of candidates) {
+    summary.considered += 1;
+    try {
+      const priceId = clean(subscription?.items?.data?.[0]?.price?.id);
+      const taxMigration = clean(subscription?.metadata?.taxMigration);
+      const latestAmountPaid = await latestPaidInvoiceAmount(stripe, subscription.id);
+      const segment = classifyPriceChangeSegment({
+        priceId,
+        taxMigration,
+        latestAmountPaid,
+        exclusivePriceId,
+        legacyPriceIds,
+      });
+      const customerId = customerIdFromSubscription(subscription);
+      const user = await findPremiumUser(db, subscription, customerId);
+      const hasConsent = user.ok ? user.hasPriceChangeConsent : false;
+      const eligibility = isEligibleForScheduleCancelUnaccepted({
+        status: subscription.status,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
+        hasConsent,
+        segment,
+      });
+      if (!eligibility.ok) {
+        summary.skipped += 1;
+        addReasonCounts(summary, [eligibility.reason]);
+        continue;
+      }
+
+      summary.eligible += 1;
+      summary.segmentCounts[segment] = (summary.segmentCounts[segment] || 0) + 1;
+      const customer = await resolveCustomer(stripe, subscription);
+      const email = clean(customer?.email).toLowerCase();
+      const periodEnd = periodEndFromSubscription(subscription);
+      const renewalAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : "";
+      rows.push({
+        segment,
+        email: email || "",
+        subscriptionId: subscription.id,
+        status: clean(subscription.status),
+        priceId,
+        renewalAt,
+        latestAmountPaid: latestAmountPaid == null ? "" : latestAmountPaid,
+      });
+
+      if (!apply) {
+        if (!summaryOnly) {
+          console.log("[premium-tax-schedule-cancel] eligible", {
+            subscriptionId: maskStripeId(subscription.id),
+            segment,
+          });
+        }
+        continue;
+      }
+
+      await stripe.subscriptions.update(
+        subscription.id,
+        {
+          cancel_at_period_end: true,
+          metadata: {
+            ...(subscription.metadata || {}),
+            priceChangeCancelReason: PREMIUM_PRICE_CHANGE_CANCEL_REASON,
+          },
+        },
+        {
+          idempotencyKey: `premium-tax-schedule-cancel-v1-${subscription.id}-${PREMIUM_PRICE_CHANGE_CANCEL_REASON}`,
+        }
+      );
+      summary.scheduled += 1;
+      if (!summaryOnly) {
+        console.log("[premium-tax-schedule-cancel] scheduled", {
+          subscriptionId: maskStripeId(subscription.id),
+          segment,
+        });
+      }
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-tax-schedule-cancel] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  let resolvedOutputPath = null;
+  if (outputPath && rows.length) {
+    const header = [
+      "segment",
+      "email",
+      "subscription_id",
+      "status",
+      "price_id",
+      "urmatoarea_reinnoire",
+      "latest_amount_paid_cents",
+    ];
+    const csv = [
+      header,
+      ...rows.map((row) => [
+        row.segment,
+        row.email,
+        row.subscriptionId,
+        row.status,
+        row.priceId,
+        row.renewalAt,
+        row.latestAmountPaid,
+      ]),
+    ]
+      .map((line) => line.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    resolvedOutputPath = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+    fs.writeFileSync(resolvedOutputPath, `${csv}\n`, { encoding: "utf8", mode: 0o600 });
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-schedule-cancel.summary",
+        mode: apply ? "APPLY" : "DRY_RUN",
+        summary,
+        outputPath: resolvedOutputPath,
+      },
+      null,
+      2
+    )
+  );
+  if (summary.failed) process.exitCode = 1;
+}
+
+async function refundDeclined605({
+  stripe,
+  db,
+  candidates,
+  exclusivePriceId,
+  legacyPriceIds,
+  apply,
+  summaryOnly,
+  outputPath,
+}) {
+  const rows = [];
+  const summary = {
+    scanned: candidates.length,
+    considered: 0,
+    eligible: 0,
+    refunded: 0,
+    skipped: 0,
+    failed: 0,
+    reasonCounts: {},
+  };
+  console.log("[premium-tax-refund-declined] start", { mode: apply ? "APPLY" : "DRY_RUN" });
+
+  for (const subscription of candidates) {
+    summary.considered += 1;
+    try {
+      const priceId = clean(subscription?.items?.data?.[0]?.price?.id);
+      const taxMigration = clean(subscription?.metadata?.taxMigration);
+      const invoice = await latestPaidInvoice(stripe, subscription.id);
+      const latestAmountPaid = invoice ? Number(invoice.amount_paid) : null;
+      const amountRefunded = invoice ? Number(invoice.amount_refunded || 0) : 0;
+      const segment = classifyPriceChangeSegment({
+        priceId,
+        taxMigration,
+        latestAmountPaid,
+        exclusivePriceId,
+        legacyPriceIds,
+      });
+      if (segment !== "C_deja_605") {
+        summary.skipped += 1;
+        addReasonCounts(summary, ["not_segment_c"]);
+        continue;
+      }
+
+      const customerId = customerIdFromSubscription(subscription);
+      const user = await findPremiumUser(db, subscription, customerId);
+      const hasConsent = user.ok ? user.hasPriceChangeConsent : false;
+      const eligibility = isEligibleForRefundDeclined605({
+        status: subscription.status,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
+        hasConsent,
+        latestAmountPaid,
+        amountRefunded,
+      });
+      if (!eligibility.ok) {
+        summary.skipped += 1;
+        addReasonCounts(summary, [eligibility.reason]);
+        continue;
+      }
+
+      const chargeId =
+        typeof invoice.charge === "string" ? invoice.charge : clean(invoice.charge?.id);
+      const paymentIntentId =
+        typeof invoice.payment_intent === "string"
+          ? invoice.payment_intent
+          : clean(invoice.payment_intent?.id);
+      if (!chargeId && !paymentIntentId) {
+        summary.failed += 1;
+        addReasonCounts(summary, ["missing_charge_or_payment_intent"]);
+        continue;
+      }
+
+      summary.eligible += 1;
+      const customer = await resolveCustomer(stripe, subscription);
+      const email = clean(customer?.email).toLowerCase();
+      rows.push({
+        email: email || "",
+        subscriptionId: subscription.id,
+        invoiceId: invoice.id,
+        amountPaid: latestAmountPaid,
+        amountRefunded,
+        status: clean(subscription.status),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end === true ? "yes" : "no",
+      });
+
+      if (!apply) {
+        if (!summaryOnly) {
+          console.log("[premium-tax-refund-declined] eligible", {
+            subscriptionId: maskStripeId(subscription.id),
+            invoiceId: maskStripeId(invoice.id),
+          });
+        }
+        continue;
+      }
+
+      const refundParams = chargeId
+        ? { charge: chargeId }
+        : { payment_intent: paymentIntentId };
+      await stripe.refunds.create(refundParams, {
+        idempotencyKey: `premium-tax-refund-declined-605-v1-${invoice.id}`,
+      });
+      summary.refunded += 1;
+      if (!summaryOnly) {
+        console.log("[premium-tax-refund-declined] refunded", {
+          subscriptionId: maskStripeId(subscription.id),
+          invoiceId: maskStripeId(invoice.id),
+        });
+      }
+    } catch (error) {
+      summary.failed += 1;
+      console.error("[premium-tax-refund-declined] failed", {
+        subscriptionId: maskStripeId(subscription.id),
+        message: clean(error?.message).slice(0, 300),
+      });
+    }
+  }
+
+  let resolvedOutputPath = null;
+  if (outputPath && rows.length) {
+    const header = [
+      "email",
+      "subscription_id",
+      "invoice_id",
+      "amount_paid_cents",
+      "amount_refunded_cents",
+      "status",
+      "cancel_at_period_end",
+    ];
+    const csv = [
+      header,
+      ...rows.map((row) => [
+        row.email,
+        row.subscriptionId,
+        row.invoiceId,
+        row.amountPaid,
+        row.amountRefunded,
+        row.status,
+        row.cancelAtPeriodEnd,
+      ]),
+    ]
+      .map((line) => line.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    resolvedOutputPath = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+    fs.writeFileSync(resolvedOutputPath, `${csv}\n`, { encoding: "utf8", mode: 0o600 });
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-refund-declined.summary",
+        mode: apply ? "APPLY" : "DRY_RUN",
+        summary,
+        outputPath: resolvedOutputPath,
+        note: "Oblio credit notes are not created automatically; handle accounting manually if needed.",
+      },
+      null,
+      2
+    )
+  );
+  if (summary.failed) process.exitCode = 1;
+}
+
 async function main() {
   const apply = process.argv.includes("--apply");
   const discover = process.argv.includes("--discover");
@@ -1344,17 +1702,23 @@ async function main() {
   const exportRenewalScheduleFlag = process.argv.includes("--export-renewal-schedule");
   const exportPriceChangeSegmentsFlag = process.argv.includes("--export-price-change-segments");
   const rollbackUnacceptedFlag = process.argv.includes("--rollback-unaccepted-exclusive");
+  const scheduleCancelUnacceptedFlag = process.argv.includes("--schedule-cancel-unaccepted");
+  const refundDeclined605Flag = process.argv.includes("--refund-declined-605");
   const anyAddressRepair = repairAddresses || repairAddressesFromPayments;
   const summaryOnly = process.argv.includes("--summary-only");
   const allowStripeInvoiceFallback = process.argv.includes("--allow-stripe-invoice-fallback");
   const confirmation = getArg("confirm");
   const onlySubscriptionId = getArg("subscription");
   const dueBeforeRaw = getArg("due-before");
-  const exportPathDefaultName = exportPriceChangeSegmentsFlag
-    ? `premium-price-change-segments-${new Date().toISOString().slice(0, 10)}.csv`
-    : exportRenewalScheduleFlag
-      ? `premium-tax-renewals-${new Date().toISOString().slice(0, 10)}.csv`
-      : `premium-tax-address-${new Date().toISOString().slice(0, 10)}.csv`;
+  const exportPathDefaultName = scheduleCancelUnacceptedFlag
+    ? `premium-schedule-cancel-${new Date().toISOString().slice(0, 10)}.csv`
+    : refundDeclined605Flag
+      ? `premium-refund-declined-605-${new Date().toISOString().slice(0, 10)}.csv`
+      : exportPriceChangeSegmentsFlag
+        ? `premium-price-change-segments-${new Date().toISOString().slice(0, 10)}.csv`
+        : exportRenewalScheduleFlag
+          ? `premium-tax-renewals-${new Date().toISOString().slice(0, 10)}.csv`
+          : `premium-tax-address-${new Date().toISOString().slice(0, 10)}.csv`;
   const exportPath =
     getArg("export-path") || path.join(process.cwd(), "private-exports", exportPathDefaultName);
   const dueBeforeMs = dueBeforeRaw ? Date.parse(`${dueBeforeRaw}T23:59:59.999Z`) : null;
@@ -1370,7 +1734,14 @@ async function main() {
     if (!prices.length) process.exitCode = 1;
     return;
   }
-  if (!onlySubscriptionId && !legacyPriceIds.length && !exportPriceChangeSegmentsFlag && !rollbackUnacceptedFlag) {
+  if (
+    !onlySubscriptionId &&
+    !legacyPriceIds.length &&
+    !exportPriceChangeSegmentsFlag &&
+    !rollbackUnacceptedFlag &&
+    !scheduleCancelUnacceptedFlag &&
+    !refundDeclined605Flag
+  ) {
     throw new Error("Set STRIPE_PREMIUM_LEGACY_PRICE_IDS or pass --subscription=sub_...");
   }
   if (apply) {
@@ -1399,6 +1770,24 @@ async function main() {
       if (confirmation !== ROLLBACK_UNACCEPTED_CONFIRMATION) {
         throw new Error(`Rollback apply requires --confirm=${ROLLBACK_UNACCEPTED_CONFIRMATION}`);
       }
+    } else if (scheduleCancelUnacceptedFlag) {
+      if (process.env.PREMIUM_TAX_SCHEDULE_CANCEL_ENABLED !== "true") {
+        throw new Error(
+          "Schedule-cancel apply is disabled. Set PREMIUM_TAX_SCHEDULE_CANCEL_ENABLED=true explicitly."
+        );
+      }
+      if (confirmation !== SCHEDULE_CANCEL_CONFIRMATION) {
+        throw new Error(`Schedule-cancel apply requires --confirm=${SCHEDULE_CANCEL_CONFIRMATION}`);
+      }
+    } else if (refundDeclined605Flag) {
+      if (process.env.PREMIUM_TAX_REFUND_DECLINED_ENABLED !== "true") {
+        throw new Error(
+          "Refund-declined apply is disabled. Set PREMIUM_TAX_REFUND_DECLINED_ENABLED=true explicitly."
+        );
+      }
+      if (confirmation !== REFUND_DECLINED_CONFIRMATION) {
+        throw new Error(`Refund-declined apply requires --confirm=${REFUND_DECLINED_CONFIRMATION}`);
+      }
     } else {
       if (process.env.PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED !== "true") {
         throw new Error("Apply is disabled. Set PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED=true explicitly.");
@@ -1424,6 +1813,45 @@ async function main() {
       candidates: segmentCandidates,
       exclusivePriceId: destinationPriceId,
       legacyPriceIds,
+      outputPath: exportPath,
+    });
+    return;
+  }
+
+  if (scheduleCancelUnacceptedFlag) {
+    if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
+    if (!legacyPriceIds.length) throw new Error("Missing STRIPE_PREMIUM_LEGACY_PRICE_IDS");
+    const priceIds = [...new Set([...legacyPriceIds, destinationPriceId])];
+    const scheduleCandidates = await listCandidatesByPriceIds(stripe, priceIds, onlySubscriptionId);
+    await scheduleCancelUnaccepted({
+      stripe,
+      db,
+      candidates: scheduleCandidates,
+      exclusivePriceId: destinationPriceId,
+      legacyPriceIds,
+      apply,
+      summaryOnly,
+      outputPath: exportPath,
+    });
+    return;
+  }
+
+  if (refundDeclined605Flag) {
+    if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
+    if (!legacyPriceIds.length) throw new Error("Missing STRIPE_PREMIUM_LEGACY_PRICE_IDS");
+    const refundCandidates = await listCandidatesByPriceIds(
+      stripe,
+      [destinationPriceId],
+      onlySubscriptionId
+    );
+    await refundDeclined605({
+      stripe,
+      db,
+      candidates: refundCandidates,
+      exclusivePriceId: destinationPriceId,
+      legacyPriceIds,
+      apply,
+      summaryOnly,
       outputPath: exportPath,
     });
     return;
@@ -1651,5 +2079,7 @@ module.exports = {
   buildPortalLoginUrl,
   classifyPriceChangeSegment,
   hasValidPriceChangeConsentFromUserData,
+  isEligibleForScheduleCancelUnaccepted,
+  isEligibleForRefundDeclined605,
   priceChangeSegmentsCsv,
 };

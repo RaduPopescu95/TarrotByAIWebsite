@@ -99,6 +99,7 @@ function buildStatusPayload({ userData, subscription, customer, exclusivePriceId
     subscriptionId: subscription.id,
     priceId,
     onExclusivePrice: onExclusive,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
     consentAccepted,
     addressComplete: address.complete,
     addressReasons: address.reasons,
@@ -155,12 +156,27 @@ export default async function handler(req, res) {
     }
 
     if (hasValidPriceChangeConsent(user.data)) {
+      let finalSubscription = subscription;
+      if (subscription.cancel_at_period_end === true) {
+        finalSubscription = await stripe.subscriptions.update(
+          subscription.id,
+          {
+            cancel_at_period_end: false,
+            metadata: {
+              ...(subscription.metadata || {}),
+              priceChangeCancelReason: "",
+              priceChangeConsentVersion: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+            },
+          },
+          { idempotencyKey: `premium-price-consent-clear-cancel-v1-${subscription.id}` }
+        );
+      }
       return res.status(200).json({
         ok: true,
         alreadyAccepted: true,
         ...buildStatusPayload({
           userData: user.data,
-          subscription,
+          subscription: finalSubscription,
           customer,
           exclusivePriceId,
           legacyPriceIds,
@@ -202,7 +218,7 @@ export default async function handler(req, res) {
       });
       migrated = true;
     } else {
-      // Already exclusive: ensure consent metadata is stamped for audit.
+      // Already exclusive: stamp consent metadata and clear any scheduled cancel.
       const exclusiveItem =
         findExclusiveSubscriptionItem(subscription, exclusivePriceId) ||
         subscription.items?.data?.[0];
@@ -210,12 +226,14 @@ export default async function handler(req, res) {
         finalSubscription = await stripe.subscriptions.update(
           subscription.id,
           {
+            cancel_at_period_end: false,
             metadata: {
               ...(subscription.metadata || {}),
               flow: "site_premium",
               uid: authUser.uid,
               taxMigration: PREMIUM_TAX_MIGRATION_METADATA,
               priceChangeConsentVersion: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+              priceChangeCancelReason: "",
             },
           },
           { idempotencyKey: `premium-price-consent-stamp-v1-${subscription.id}` }

@@ -36,7 +36,7 @@ function formatMoneyFromCents(cents) {
 }
 
 function formatRenewal(iso) {
-  if (!iso) return "următoarea reînnoire";
+  if (!iso) return "finalul perioadei curente";
   try {
     return new Intl.DateTimeFormat("ro-RO", {
       dateStyle: "long",
@@ -157,7 +157,7 @@ export default function PremiumAcceptPricePage() {
       setMessage(
         payload.alreadyAccepted
           ? "Ai confirmat deja noul preț. Mulțumim."
-          : "Confirmarea a fost înregistrată. La următoarea reînnoire se aplică 5 EUR + TVA."
+          : "Confirmarea a fost înregistrată. Abonamentul continuă la 5 EUR + TVA de la următoarea reînnoire."
       );
     } catch (_) {
       setMessage("Nu am putut salva confirmarea. Încearcă din nou.");
@@ -171,6 +171,8 @@ export default function PremiumAcceptPricePage() {
   const newTotal = formatMoneyFromCents(status?.newTotalCents ?? PREMIUM_PRICE_CHANGE_NEW_TOTAL_CENTS);
   const renewalLabel = formatRenewal(status?.renewalAt);
   const missingLabels = addressReasons.map((reason) => REASON_LABELS[reason]).filter(Boolean);
+  const alreadyOnNewPrice = Boolean(status?.onExclusivePrice);
+  const cancelScheduled = Boolean(status?.cancelAtPeriodEnd);
 
   return (
     <>
@@ -184,7 +186,9 @@ export default function PremiumAcceptPricePage() {
             Actualizare preț Premium
           </h1>
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
-            Confirmă noul preț cu TVA sau anulează abonamentul înainte de reînnoire.
+            Ai două opțiuni: confirmă noul preț (6,05 EUR/lună în România) sau anulează
+            abonamentul. Fără confirmare, abonamentul se oprește la finalul perioadei deja
+            plătite.
           </p>
 
         {!loading && !isAuthed ? (
@@ -228,15 +232,36 @@ export default function PremiumAcceptPricePage() {
                   }}
                 >
                   <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
-                    Preț actual: {oldTotal}/lună
+                    {alreadyOnNewPrice
+                      ? `Preț curent: ${newTotal}/lună (TVA inclus)`
+                      : `Preț anterior: ${oldTotal}/lună`}
                   </p>
-                  <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
-                    Preț nou (România): {newTotal}/lună, TVA inclus
-                  </p>
+                  {!alreadyOnNewPrice ? (
+                    <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
+                      Preț nou (România): {newTotal}/lună, TVA inclus
+                    </p>
+                  ) : null}
                   <p style={{ margin: 0, color: "#475569", lineHeight: 1.5 }}>
-                    Intră în vigoare la reînnoirea din <strong>{renewalLabel}</strong>. Nu se percep
-                    diferențe retroactiv.
+                    {alreadyOnNewPrice ? (
+                      <>
+                        Confirmă că ești de acord să continui la acest preț. Dacă nu ești de
+                        acord, anulează abonamentul — returnăm plata recentă de {newTotal} după
+                        anulare. Data de referință: <strong>{renewalLabel}</strong>.
+                      </>
+                    ) : (
+                      <>
+                        Dacă confirmi, noul preț intră în vigoare la reînnoirea din{" "}
+                        <strong>{renewalLabel}</strong>. Dacă nu confirmi, abonamentul se
+                        oprește atunci (fără taxă nouă). Nu se percep diferențe retroactiv.
+                      </>
+                    )}
                   </p>
+                  {cancelScheduled ? (
+                    <p style={{ margin: "12px 0 0", color: "#b45309", lineHeight: 1.45 }}>
+                      Oprirea abonamentului este deja programată. Dacă confirmi acum, reactivăm
+                      continuarea la noul preț.
+                    </p>
+                  ) : null}
                 </div>
 
                 {status.consentAccepted ? (
@@ -324,6 +349,12 @@ export default function PremiumAcceptPricePage() {
                 >
                   Anulează abonamentul
                 </button>
+                {alreadyOnNewPrice && !status.consentAccepted ? (
+                  <p style={{ marginTop: 12, color: "#64748b", fontSize: 14, lineHeight: 1.45 }}>
+                    Dacă anulezi pentru că nu ești de acord cu 6,05 EUR, returnăm plata recentă
+                    de {newTotal} (procesare după anulare).
+                  </p>
+                ) : null}
               </>
             ) : null}
 
