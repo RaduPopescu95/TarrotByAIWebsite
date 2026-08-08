@@ -18,6 +18,7 @@ import AdsProviderScripts from "../components/Ads/AdsProviderScripts";
 import { AdsEngagementProvider } from "../components/Ads/AdsEngagementContext";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import PremiumTaxAddressGate from "../components/PremiumTaxAddressGate";
+import PremiumPriceChangeBanner from "../components/PremiumPriceChangeBanner";
 import { useFirstVisit } from "../hooks/useFirstVisit";
 import { initAccountSwitchMonitor } from "../utils/authUtils"; // 🚀 NEW: Import account switch monitor
 import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
@@ -231,6 +232,7 @@ function MyApp({ Component, pageProps }) {
                 )}
                 
                 <AdsEngagementProvider>
+                  <PremiumPriceChangeBanner />
                   <Component {...pageProps} />
                   <PremiumTaxAddressGate />
                 </AdsEngagementProvider>

@@ -1,12 +1,16 @@
 const {
   PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+  PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
   PREMIUM_TAX_MIGRATION_METADATA,
   PRICE_CHANGE_SEGMENTS,
   buildConsentRecord,
+  buildPriceChangeSiteNoticeRecord,
   classifyPriceChangeSegment,
+  hasAcknowledgedPriceChangeSiteNotice,
   hasValidPriceChangeConsent,
   isEligibleForScheduleCancelUnaccepted,
   isEligibleForRefundDeclined605,
+  shouldShowPremiumPriceChangeSiteNotice,
 } = require("../../lib/premiumPriceChangeConsent");
 
 const {
@@ -193,6 +197,102 @@ describe("premiumPriceChangeConsent", () => {
         amountRefunded: 605,
       })
     ).toEqual({ ok: false, reason: "already_refunded" });
+  });
+
+  it("shows site notice for forced consent / migration / scheduled cancel", () => {
+    expect(shouldShowPremiumPriceChangeSiteNotice({})).toBe(false);
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "active",
+        premium: true,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "active",
+        premiumPriceChangeConsent: {
+          version: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+          status: "accepted",
+          source: "forced_ops_v1",
+          acceptedAt: "2026-08-07T12:00:00.000Z",
+        },
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "active",
+        premiumTaxAddressGate: { migrationCompleted: true },
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "cancel_at_period_end",
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "active",
+        premiumPriceChangeConsent: {
+          version: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+          status: "accepted",
+          acceptedAt: "2026-08-07T12:00:00.000Z",
+        },
+        premiumPriceChangeNotice: {
+          version: PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
+          acknowledgedAt: "2026-08-08T10:00:00.000Z",
+          source: "site_banner",
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "active",
+        premiumTaxAddressGate: { required: true, migrationCompleted: true },
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowPremiumPriceChangeSiteNotice({
+        stripeSubscriptionId: "sub_1",
+        subscriptionStatus: "canceled",
+        premiumPriceChangeConsent: {
+          version: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+          status: "accepted",
+          acceptedAt: "2026-08-07T12:00:00.000Z",
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      hasAcknowledgedPriceChangeSiteNotice({
+        premiumPriceChangeNotice: {
+          version: PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
+          acknowledgedAt: "2026-08-08T10:00:00.000Z",
+        },
+      })
+    ).toBe(true);
+
+    expect(
+      buildPriceChangeSiteNoticeRecord({
+        source: "accept_page",
+        serverTimestamp: "2026-08-08T10:00:00.000Z",
+      })
+    ).toEqual({
+      version: PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
+      acknowledgedAt: "2026-08-08T10:00:00.000Z",
+      source: "accept_page",
+    });
   });
 
   it("keeps script helpers in sync", () => {

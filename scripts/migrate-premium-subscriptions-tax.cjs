@@ -16,12 +16,14 @@ const ADDRESS_GATE_CONFIRMATION = "MARK_PREMIUM_TAX_ADDRESS_REQUIRED";
 const ROLLBACK_UNACCEPTED_CONFIRMATION = "ROLLBACK_UNACCEPTED_EXCLUSIVE";
 const SCHEDULE_CANCEL_CONFIRMATION = "SCHEDULE_CANCEL_UNACCEPTED";
 const REFUND_DECLINED_CONFIRMATION = "REFUND_DECLINED_605";
+const FORCE_WITHOUT_CONSENT_CONFIRMATION = "FORCE_MIGRATE_WITHOUT_CONSENT";
 const ALLOWED_STATUSES = new Set(["active", "trialing", "past_due"]);
 const PORTAL_LOGIN_URL = "https://billing.stripe.com/p/login/eVq28r4Gyb8XgKz3cJbjW00";
 const PREMIUM_ACCEPT_PAGE_URL = "https://www.cristinazurba.com/premium/accept-price";
 const PREMIUM_TAX_MIGRATION_METADATA = "exclusive_v1";
 const PREMIUM_PRICE_CHANGE_CONSENT_VERSION = "v1_6_05";
 const PREMIUM_PRICE_CHANGE_CANCEL_REASON = "unaccepted_v1_6_05";
+const PREMIUM_PRICE_CHANGE_FORCED_SOURCE = "forced_ops_v1";
 const PREMIUM_NEW_TOTAL_CENTS = 605;
 
 function clean(value) {
@@ -735,23 +737,52 @@ async function previewMigration(stripe, subscription, item, destinationPriceId) 
   });
 }
 
-async function migrateOne(stripe, subscription, item, destinationPriceId, uid) {
+async function migrateOne(stripe, subscription, item, destinationPriceId, uid, options = {}) {
+  const forceWithoutConsent = Boolean(options.forceWithoutConsent);
   return stripe.subscriptions.update(
     subscription.id,
     {
       automatic_tax: { enabled: true },
       billing_cycle_anchor: "unchanged",
       proration_behavior: "none",
+      cancel_at_period_end: false,
       items: [{ id: item.id, price: destinationPriceId, quantity: 1 }],
       metadata: {
         ...(subscription.metadata || {}),
         flow: "site_premium",
         uid,
-        taxMigration: "exclusive_v1",
+        taxMigration: PREMIUM_TAX_MIGRATION_METADATA,
+        priceChangeConsentVersion: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+        priceChangeCancelReason: "",
+        ...(forceWithoutConsent
+          ? { priceChangeConsentSource: PREMIUM_PRICE_CHANGE_FORCED_SOURCE }
+          : {}),
       },
     },
     { idempotencyKey: `premium-tax-exclusive-v1-${subscription.id}-${destinationPriceId}` }
   );
+}
+
+function forceMigrateSkippedCsv(rows) {
+  const header = [
+    "email",
+    "subscription_id",
+    "status",
+    "urmatoarea_reinnoire",
+    "reasons",
+  ];
+  return [
+    header,
+    ...rows.map((row) => [
+      row.email || "",
+      row.subscriptionIdFull || "",
+      row.status || "",
+      row.renewalAt || "",
+      Array.isArray(row.reasons) ? row.reasons.join("|") : "",
+    ]),
+  ]
+    .map((line) => line.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(","))
+    .join("\n");
 }
 
 async function runAddressRepair({ stripe, db, candidates, legacyPriceIds, apply, summaryOnly }) {
@@ -1388,6 +1419,7 @@ async function scheduleCancelUnaccepted({
   apply,
   summaryOnly,
   outputPath,
+  legacyOnly = false,
 }) {
   const rows = [];
   const summary = {
@@ -1399,8 +1431,12 @@ async function scheduleCancelUnaccepted({
     failed: 0,
     reasonCounts: {},
     segmentCounts: {},
+    legacyOnly: Boolean(legacyOnly),
   };
-  console.log("[premium-tax-schedule-cancel] start", { mode: apply ? "APPLY" : "DRY_RUN" });
+  console.log("[premium-tax-schedule-cancel] start", {
+    mode: apply ? "APPLY" : "DRY_RUN",
+    legacyOnly: Boolean(legacyOnly),
+  });
 
   for (const subscription of candidates) {
     summary.considered += 1;
@@ -1415,6 +1451,11 @@ async function scheduleCancelUnaccepted({
         exclusivePriceId,
         legacyPriceIds,
       });
+      if (legacyOnly && segment !== "A_nemigrat") {
+        summary.skipped += 1;
+        addReasonCounts(summary, ["not_legacy_segment_a"]);
+        continue;
+      }
       const customerId = customerIdFromSubscription(subscription);
       const user = await findPremiumUser(db, subscription, customerId);
       const hasConsent = user.ok ? user.hasPriceChangeConsent : false;
@@ -1703,22 +1744,26 @@ async function main() {
   const exportPriceChangeSegmentsFlag = process.argv.includes("--export-price-change-segments");
   const rollbackUnacceptedFlag = process.argv.includes("--rollback-unaccepted-exclusive");
   const scheduleCancelUnacceptedFlag = process.argv.includes("--schedule-cancel-unaccepted");
+  const scheduleCancelLegacyOnlyFlag = process.argv.includes("--legacy-only");
   const refundDeclined605Flag = process.argv.includes("--refund-declined-605");
+  const forceWithoutConsentFlag = process.argv.includes("--force-without-consent");
   const anyAddressRepair = repairAddresses || repairAddressesFromPayments;
   const summaryOnly = process.argv.includes("--summary-only");
   const allowStripeInvoiceFallback = process.argv.includes("--allow-stripe-invoice-fallback");
   const confirmation = getArg("confirm");
   const onlySubscriptionId = getArg("subscription");
   const dueBeforeRaw = getArg("due-before");
-  const exportPathDefaultName = scheduleCancelUnacceptedFlag
-    ? `premium-schedule-cancel-${new Date().toISOString().slice(0, 10)}.csv`
-    : refundDeclined605Flag
-      ? `premium-refund-declined-605-${new Date().toISOString().slice(0, 10)}.csv`
-      : exportPriceChangeSegmentsFlag
-        ? `premium-price-change-segments-${new Date().toISOString().slice(0, 10)}.csv`
-        : exportRenewalScheduleFlag
-          ? `premium-tax-renewals-${new Date().toISOString().slice(0, 10)}.csv`
-          : `premium-tax-address-${new Date().toISOString().slice(0, 10)}.csv`;
+  const exportPathDefaultName = forceWithoutConsentFlag
+    ? `premium-force-migrate-skipped-${new Date().toISOString().slice(0, 10)}.csv`
+    : scheduleCancelUnacceptedFlag
+      ? `premium-schedule-cancel-${new Date().toISOString().slice(0, 10)}.csv`
+      : refundDeclined605Flag
+        ? `premium-refund-declined-605-${new Date().toISOString().slice(0, 10)}.csv`
+        : exportPriceChangeSegmentsFlag
+          ? `premium-price-change-segments-${new Date().toISOString().slice(0, 10)}.csv`
+          : exportRenewalScheduleFlag
+            ? `premium-tax-renewals-${new Date().toISOString().slice(0, 10)}.csv`
+            : `premium-tax-address-${new Date().toISOString().slice(0, 10)}.csv`;
   const exportPath =
     getArg("export-path") || path.join(process.cwd(), "private-exports", exportPathDefaultName);
   const dueBeforeMs = dueBeforeRaw ? Date.parse(`${dueBeforeRaw}T23:59:59.999Z`) : null;
@@ -1788,6 +1833,17 @@ async function main() {
       if (confirmation !== REFUND_DECLINED_CONFIRMATION) {
         throw new Error(`Refund-declined apply requires --confirm=${REFUND_DECLINED_CONFIRMATION}`);
       }
+    } else if (forceWithoutConsentFlag) {
+      if (process.env.PREMIUM_TAX_FORCE_WITHOUT_CONSENT_ENABLED !== "true") {
+        throw new Error(
+          "Force-without-consent apply is disabled. Set PREMIUM_TAX_FORCE_WITHOUT_CONSENT_ENABLED=true explicitly."
+        );
+      }
+      if (confirmation !== FORCE_WITHOUT_CONSENT_CONFIRMATION) {
+        throw new Error(
+          `Force-without-consent apply requires --confirm=${FORCE_WITHOUT_CONSENT_CONFIRMATION}`
+        );
+      }
     } else {
       if (process.env.PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED !== "true") {
         throw new Error("Apply is disabled. Set PREMIUM_SUBSCRIPTION_TAX_MIGRATION_ENABLED=true explicitly.");
@@ -1821,7 +1877,9 @@ async function main() {
   if (scheduleCancelUnacceptedFlag) {
     if (!destinationPriceId) throw new Error("Missing STRIPE_PREMIUM_PRICE_ID_EXCLUSIVE");
     if (!legacyPriceIds.length) throw new Error("Missing STRIPE_PREMIUM_LEGACY_PRICE_IDS");
-    const priceIds = [...new Set([...legacyPriceIds, destinationPriceId])];
+    const priceIds = scheduleCancelLegacyOnlyFlag
+      ? [...legacyPriceIds]
+      : [...new Set([...legacyPriceIds, destinationPriceId])];
     const scheduleCandidates = await listCandidatesByPriceIds(stripe, priceIds, onlySubscriptionId);
     await scheduleCancelUnaccepted({
       stripe,
@@ -1832,6 +1890,7 @@ async function main() {
       apply,
       summaryOnly,
       outputPath: exportPath,
+      legacyOnly: scheduleCancelLegacyOnlyFlag,
     });
     return;
   }
@@ -1918,7 +1977,9 @@ async function main() {
     reasonCounts: {},
     previewTotals: {},
     billingSourceCounts: {},
+    forceWithoutConsent: forceWithoutConsentFlag,
   };
+  const skippedRows = [];
 
   console.log("[premium-tax-migration] start", {
     mode: apply ? "APPLY" : "DRY_RUN",
@@ -1926,7 +1987,8 @@ async function main() {
     legacyPriceIds,
     dueBefore: dueBeforeRaw || null,
     firestoreCheck: Boolean(db),
-    requirePriceChangeConsent: true,
+    requirePriceChangeConsent: !forceWithoutConsentFlag,
+    forceWithoutConsent: forceWithoutConsentFlag,
   });
 
   for (const subscription of candidates) {
@@ -1949,27 +2011,42 @@ async function main() {
     const customerId = customerIdFromSubscription(subscription);
     const row = {
       subscriptionId: maskStripeId(subscription.id),
+      subscriptionIdFull: subscription.id,
       renewalAt: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       status: subscription.status,
+      email: "",
       reasons: [...structural.reasons],
     };
 
-    if (row.reasons.length) {
+    const recordBlocked = () => {
       summary.blocked += 1;
       addReasonCounts(summary, row.reasons);
+      skippedRows.push({
+        email: row.email,
+        subscriptionIdFull: row.subscriptionIdFull,
+        status: row.status,
+        renewalAt: row.renewalAt || "",
+        reasons: row.reasons,
+      });
       if (!summaryOnly) console.warn("[premium-tax-migration] blocked", row);
+    };
+
+    if (row.reasons.length) {
+      recordBlocked();
       continue;
     }
 
     try {
       const customer = await resolveCustomer(stripe, subscription);
+      row.email = clean(customer?.email).toLowerCase();
       if (!customer || customer.deleted) row.reasons.push("customer_missing_or_deleted");
       else if (!hasUsableTaxAddress(customer)) row.reasons.push("customer_tax_address_incomplete");
 
       const user = await findPremiumUser(db, subscription, customerId);
       if (!user.ok) row.reasons.push(user.reason);
-      else if (!user.hasPriceChangeConsent) row.reasons.push("missing_price_change_consent");
-      else if (!user.hasBillingProfile && !allowStripeInvoiceFallback) {
+      else if (!forceWithoutConsentFlag && !user.hasPriceChangeConsent) {
+        row.reasons.push("missing_price_change_consent");
+      } else if (!user.hasBillingProfile && !allowStripeInvoiceFallback) {
         row.reasons.push("missing_premium_billing_profile");
       } else if (!user.hasBillingProfile && !hasUsableInvoiceIdentity(customer)) {
         row.reasons.push("stripe_invoice_identity_incomplete");
@@ -1989,9 +2066,7 @@ async function main() {
       row.preview = previewAssessment;
 
       if (row.reasons.length) {
-        summary.blocked += 1;
-        addReasonCounts(summary, row.reasons);
-        if (!summaryOnly) console.warn("[premium-tax-migration] blocked", row);
+        recordBlocked();
         continue;
       }
 
@@ -2005,7 +2080,9 @@ async function main() {
         continue;
       }
 
-      await migrateOne(stripe, subscription, structural.item, destinationPriceId, user.uid);
+      await migrateOne(stripe, subscription, structural.item, destinationPriceId, user.uid, {
+        forceWithoutConsent: forceWithoutConsentFlag,
+      });
       const updated = await stripe.subscriptions.retrieve(subscription.id);
       const updatedPriceId = clean(updated?.items?.data?.[0]?.price?.id);
       if (updatedPriceId !== destinationPriceId || updated?.automatic_tax?.enabled !== true) {
@@ -2014,18 +2091,36 @@ async function main() {
       summary.migrated += 1;
       if (db && user?.ok) {
         try {
-          await db.collection("Users").doc(user.uid).set(
-            {
-              premiumTaxAddressGate: {
-                required: false,
-                readyForMigration: false,
-                migrationCompleted: true,
-                migratedAt: admin.firestore.FieldValue.serverTimestamp(),
-                version: 1,
-              },
+          const firestorePatch = {
+            premiumTaxAddressGate: {
+              required: false,
+              readyForMigration: false,
+              migrationCompleted: true,
+              migratedAt: admin.firestore.FieldValue.serverTimestamp(),
+              version: 1,
             },
-            { merge: true }
-          );
+          };
+          if (forceWithoutConsentFlag || !user.hasPriceChangeConsent) {
+            firestorePatch.premiumPriceChangeConsent = {
+              version: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+              status: "accepted",
+              source: forceWithoutConsentFlag
+                ? PREMIUM_PRICE_CHANGE_FORCED_SOURCE
+                : "migrated_ops_v1",
+              consentText:
+                "Migrare operațională la prețul 5 EUR + TVA (6,05 EUR pentru România / TVA 21%).",
+              oldTotalCents: 500,
+              newTotalCents: PREMIUM_NEW_TOTAL_CENTS,
+              oldPriceId: clean(structural.item?.price?.id) || null,
+              newPriceId: destinationPriceId,
+              subscriptionId: subscription.id,
+              renewalAt: row.renewalAt,
+              uid: user.uid,
+              acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+              noticeVersion: PREMIUM_PRICE_CHANGE_CONSENT_VERSION,
+            };
+          }
+          await db.collection("Users").doc(user.uid).set(firestorePatch, { merge: true });
         } catch (gateError) {
           console.warn("[premium-tax-migration] gate_clear_failed", {
             subscriptionId: maskStripeId(subscription.id),
@@ -2038,10 +2133,18 @@ async function main() {
           subscriptionId: maskStripeId(subscription.id),
           renewalAt: row.renewalAt,
           preview: row.preview,
+          forced: forceWithoutConsentFlag,
         });
       }
     } catch (error) {
       summary.failed += 1;
+      skippedRows.push({
+        email: row.email,
+        subscriptionIdFull: row.subscriptionIdFull,
+        status: row.status,
+        renewalAt: row.renewalAt || "",
+        reasons: [`failed:${clean(error?.message).slice(0, 120)}`],
+      });
       console.error("[premium-tax-migration] failed", {
         subscriptionId: maskStripeId(subscription.id),
         message: clean(error?.message).slice(0, 300),
@@ -2049,7 +2152,28 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ event: "premium-tax-migration.summary", mode: apply ? "APPLY" : "DRY_RUN", summary }, null, 2));
+  let skippedOutputPath = null;
+  if (forceWithoutConsentFlag && skippedRows.length) {
+    skippedOutputPath = path.resolve(exportPath);
+    fs.mkdirSync(path.dirname(skippedOutputPath), { recursive: true });
+    fs.writeFileSync(skippedOutputPath, `${forceMigrateSkippedCsv(skippedRows)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        event: "premium-tax-migration.summary",
+        mode: apply ? "APPLY" : "DRY_RUN",
+        summary,
+        skippedOutputPath,
+      },
+      null,
+      2
+    )
+  );
   if (summary.failed) process.exitCode = 1;
 }
 
@@ -2082,4 +2206,7 @@ module.exports = {
   isEligibleForScheduleCancelUnaccepted,
   isEligibleForRefundDeclined605,
   priceChangeSegmentsCsv,
+  forceMigrateSkippedCsv,
+  FORCE_WITHOUT_CONSENT_CONFIRMATION,
+  PREMIUM_PRICE_CHANGE_FORCED_SOURCE,
 };

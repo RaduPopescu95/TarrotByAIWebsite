@@ -10,6 +10,9 @@ import {
   PREMIUM_PRICE_CHANGE_CONSENT_TEXT_RO,
   PREMIUM_PRICE_CHANGE_NEW_TOTAL_CENTS,
   PREMIUM_PRICE_CHANGE_OLD_TOTAL_CENTS,
+  PREMIUM_PRICE_CHANGE_SITE_NOTICE_BODY_RO,
+  PREMIUM_PRICE_CHANGE_SITE_NOTICE_HEADLINE_RO,
+  PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
 } from "../../lib/premiumPriceChangeConsent";
 
 export async function getServerSideProps({ locale }) {
@@ -56,8 +59,10 @@ export default function PremiumAcceptPricePage() {
   const [statusError, setStatusError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [acknowledging, setAcknowledging] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [message, setMessage] = useState("");
+  const [noticeAcknowledged, setNoticeAcknowledged] = useState(false);
   const [addressReasons, setAddressReasons] = useState([]);
 
   const isAuthed = Boolean(currentUser && !currentUser.isAnonymous && !isGuestUser);
@@ -113,6 +118,50 @@ export default function PremiumAcceptPricePage() {
     }
   }
 
+  async function acknowledgeNotice() {
+    setAcknowledging(true);
+    setMessage("");
+    try {
+      // If cancel was scheduled but consent already exists, clear cancel via accept API.
+      if (status?.cancelAtPeriodEnd && status?.consentAccepted) {
+        const acceptResponse = await fetch("/api/stripe/premium/accept-price-change", {
+          method: "POST",
+          headers: await authHeaders(),
+          body: JSON.stringify({ accepted: true }),
+        });
+        const acceptPayload = await acceptResponse.json().catch(() => ({}));
+        if (acceptResponse.ok && acceptPayload?.ok) {
+          setStatus(acceptPayload);
+        }
+      }
+
+      const response = await fetch("/api/stripe/premium/acknowledge-price-change-notice", {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ source: "accept_page" }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        setMessage(payload?.error || "Nu am putut salva confirmarea. Încearcă din nou.");
+        return;
+      }
+      setNoticeAcknowledged(true);
+      setUserData((previous) => ({
+        ...(previous || {}),
+        premiumPriceChangeNotice: {
+          version: PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
+          acknowledgedAt: new Date().toISOString(),
+          source: "accept_page",
+        },
+      }));
+      setMessage("Mulțumim. Abonamentul continuă la 5 EUR + TVA de la următoarea reînnoire.");
+    } catch (_) {
+      setMessage("Nu am putut salva confirmarea. Încearcă din nou.");
+    } finally {
+      setAcknowledging(false);
+    }
+  }
+
   async function submitAccept() {
     if (!accepted) {
       setMessage("Te rugăm să bifezi acordul înainte de a continua.");
@@ -154,10 +203,27 @@ export default function PremiumAcceptPricePage() {
           migrationCompleted: true,
         },
       }));
+      // Also acknowledge site notice so the global banner does not reappear.
+      try {
+        await fetch("/api/stripe/premium/acknowledge-price-change-notice", {
+          method: "POST",
+          headers: await authHeaders(),
+          body: JSON.stringify({ source: "accept_page" }),
+        });
+        setUserData((previous) => ({
+          ...(previous || {}),
+          premiumPriceChangeNotice: {
+            version: PREMIUM_PRICE_CHANGE_SITE_NOTICE_VERSION,
+            acknowledgedAt: new Date().toISOString(),
+            source: "accept_page",
+          },
+        }));
+        setNoticeAcknowledged(true);
+      } catch (_) {
+        // Non-blocking: accept already succeeded.
+      }
       setMessage(
-        payload.alreadyAccepted
-          ? "Ai confirmat deja noul preț. Mulțumim."
-          : "Confirmarea a fost înregistrată. Abonamentul continuă la 5 EUR + TVA de la următoarea reînnoire."
+        "Confirmarea a fost înregistrată. Abonamentul continuă la 5 EUR + TVA de la următoarea reînnoire."
       );
     } catch (_) {
       setMessage("Nu am putut salva confirmarea. Încearcă din nou.");
@@ -173,201 +239,240 @@ export default function PremiumAcceptPricePage() {
   const missingLabels = addressReasons.map((reason) => REASON_LABELS[reason]).filter(Boolean);
   const alreadyOnNewPrice = Boolean(status?.onExclusivePrice);
   const cancelScheduled = Boolean(status?.cancelAtPeriodEnd);
+  const busy = submitting || acknowledging || openingPortal;
 
   return (
     <>
       <Head>
-        <title>Confirmare preț Premium | Cristina Zurba</title>
+        <title>Actualizare preț Premium | Cristina Zurba</title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <AuthFunnelShell mainVerticalAlign="start">
         <div className="mx-auto w-full max-w-xl rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8 sm:py-7">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-            Actualizare preț Premium
+            {alreadyOnNewPrice
+              ? PREMIUM_PRICE_CHANGE_SITE_NOTICE_HEADLINE_RO
+              : "Actualizare preț Premium"}
           </h1>
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
-            Ai două opțiuni: confirmă noul preț (6,05 EUR/lună în România) sau anulează
-            abonamentul. Fără confirmare, abonamentul se oprește la finalul perioadei deja
-            plătite.
+            {alreadyOnNewPrice
+              ? PREMIUM_PRICE_CHANGE_SITE_NOTICE_BODY_RO
+              : "Confirmă noul preț (6,05 EUR/lună în România) sau oprește abonamentul. Fără confirmare, abonamentul se oprește la finalul perioadei deja plătite."}
           </p>
 
-        {!loading && !isAuthed ? (
-          <div style={{ padding: "24px 8px", textAlign: "center" }}>
-            <p style={{ marginBottom: 16, color: "#334155", lineHeight: 1.5 }}>
-              Pentru a confirma noul preț, te rugăm să te autentifici.
-            </p>
-            <Link
-              href={`/login?returnUrl=${encodeURIComponent(router.asPath || "/premium/accept-price")}`}
-              style={{
-                display: "inline-block",
-                padding: "12px 20px",
-                borderRadius: 12,
-                background: "#0f172a",
-                color: "#fff",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              Autentificare
-            </Link>
-          </div>
-        ) : null}
+          {!loading && !isAuthed ? (
+            <div style={{ padding: "24px 8px", textAlign: "center" }}>
+              <p style={{ marginBottom: 16, color: "#334155", lineHeight: 1.5 }}>
+                Pentru a vedea detaliile abonamentului, te rugăm să te autentifici.
+              </p>
+              <Link
+                href={`/login?returnUrl=${encodeURIComponent(router.asPath || "/premium/accept-price")}`}
+                style={{
+                  display: "inline-block",
+                  padding: "12px 20px",
+                  borderRadius: 12,
+                  background: "#0f172a",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Autentificare
+              </Link>
+            </div>
+          ) : null}
 
-        {isAuthed ? (
-          <div style={{ padding: "8px 4px 8px" }}>
-            {statusLoading ? <p style={{ color: "#64748b" }}>Se încarcă detaliile…</p> : null}
-            {statusError ? (
-              <p style={{ color: "#b91c1c", marginBottom: 16 }}>{statusError}</p>
-            ) : null}
+          {isAuthed ? (
+            <div style={{ padding: "8px 4px 8px" }}>
+              {statusLoading ? <p style={{ color: "#64748b" }}>Se încarcă detaliile…</p> : null}
+              {statusError ? (
+                <p style={{ color: "#b91c1c", marginBottom: 16 }}>{statusError}</p>
+              ) : null}
 
-            {status ? (
-              <>
-                <div
-                  style={{
-                    borderRadius: 16,
-                    border: "1px solid #e2e8f0",
-                    padding: 20,
-                    marginBottom: 20,
-                    background: "#f8fafc",
-                  }}
-                >
-                  <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
-                    {alreadyOnNewPrice
-                      ? `Preț curent: ${newTotal}/lună (TVA inclus)`
-                      : `Preț anterior: ${oldTotal}/lună`}
-                  </p>
-                  {!alreadyOnNewPrice ? (
+              {status ? (
+                <>
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      border: "1px solid #e2e8f0",
+                      padding: 20,
+                      marginBottom: 20,
+                      background: "#f8fafc",
+                    }}
+                  >
                     <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
-                      Preț nou (România): {newTotal}/lună, TVA inclus
+                      {alreadyOnNewPrice
+                        ? `Preț curent: ${newTotal}/lună (TVA inclus)`
+                        : `Preț anterior: ${oldTotal}/lună`}
                     </p>
-                  ) : null}
-                  <p style={{ margin: 0, color: "#475569", lineHeight: 1.5 }}>
-                    {alreadyOnNewPrice ? (
-                      <>
-                        Confirmă că ești de acord să continui la acest preț. Dacă nu ești de
-                        acord, anulează abonamentul — returnăm plata recentă de {newTotal} după
-                        anulare. Data de referință: <strong>{renewalLabel}</strong>.
-                      </>
-                    ) : (
-                      <>
-                        Dacă confirmi, noul preț intră în vigoare la reînnoirea din{" "}
-                        <strong>{renewalLabel}</strong>. Dacă nu confirmi, abonamentul se
-                        oprește atunci (fără taxă nouă). Nu se percep diferențe retroactiv.
-                      </>
-                    )}
-                  </p>
-                  {cancelScheduled ? (
-                    <p style={{ margin: "12px 0 0", color: "#b45309", lineHeight: 1.45 }}>
-                      Oprirea abonamentului este deja programată. Dacă confirmi acum, reactivăm
-                      continuarea la noul preț.
+                    {!alreadyOnNewPrice ? (
+                      <p style={{ margin: "0 0 8px", color: "#0f172a", fontSize: 18, fontWeight: 700 }}>
+                        Preț nou (România): {newTotal}/lună, TVA inclus
+                      </p>
+                    ) : null}
+                    <p style={{ margin: 0, color: "#475569", lineHeight: 1.5 }}>
+                      {alreadyOnNewPrice ? (
+                        <>
+                          Următoarea reînnoire: <strong>{renewalLabel}</strong>. Dacă nu doriți să
+                          continuați, opriți abonamentul — accesul rămâne până la finalul perioadei
+                          deja plătite.
+                        </>
+                      ) : (
+                        <>
+                          Dacă confirmi, noul preț intră în vigoare la reînnoirea din{" "}
+                          <strong>{renewalLabel}</strong>. Dacă nu confirmi, abonamentul se oprește
+                          atunci (fără taxă nouă). Nu se percep diferențe retroactiv.
+                        </>
+                      )}
                     </p>
-                  ) : null}
-                </div>
+                    {cancelScheduled ? (
+                      <p style={{ margin: "12px 0 0", color: "#b45309", lineHeight: 1.45 }}>
+                        {alreadyOnNewPrice
+                          ? "Oprirea abonamentului este deja programată. Dacă apăsați „Continui la noul preț”, reactivăm reînnoirea."
+                          : "Oprirea abonamentului este deja programată. Dacă confirmi acum, reactivăm continuarea la noul preț."}
+                      </p>
+                    ) : null}
+                  </div>
 
-                {status.consentAccepted ? (
-                  <p style={{ color: "#166534", fontWeight: 600, marginBottom: 16 }}>
-                    Ai acceptat deja noul preț. Nu mai este nevoie de o nouă confirmare.
-                  </p>
-                ) : (
-                  <>
-                    <label
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        alignItems: "flex-start",
-                        marginBottom: 20,
-                        cursor: "pointer",
-                        color: "#0f172a",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={accepted}
-                        onChange={(event) => setAccepted(event.target.checked)}
-                        style={{ marginTop: 4, width: 18, height: 18 }}
-                      />
-                      <span>{consentText}</span>
-                    </label>
+                  {alreadyOnNewPrice ? (
+                    <>
+                      {!noticeAcknowledged ? (
+                        <button
+                          type="button"
+                          onClick={acknowledgeNotice}
+                          disabled={busy}
+                          style={{
+                            width: "100%",
+                            padding: "14px 18px",
+                            borderRadius: 12,
+                            border: "none",
+                            background: busy ? "#94a3b8" : "#0f172a",
+                            color: "#fff",
+                            fontWeight: 700,
+                            cursor: busy ? "not-allowed" : "pointer",
+                            marginBottom: 12,
+                          }}
+                        >
+                          {acknowledging ? "Se salvează…" : "Continui la noul preț"}
+                        </button>
+                      ) : (
+                        <p style={{ color: "#166534", fontWeight: 600, marginBottom: 16 }}>
+                          Ați confirmat că continuați la noul preț. Mulțumim.
+                        </p>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={submitAccept}
-                      disabled={submitting || !accepted}
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        border: "none",
-                        background: submitting || !accepted ? "#94a3b8" : "#0f172a",
-                        color: "#fff",
-                        fontWeight: 700,
-                        cursor: submitting || !accepted ? "not-allowed" : "pointer",
-                        marginBottom: 12,
-                      }}
-                    >
-                      {submitting ? "Se confirmă…" : "Confirmă și continuă abonamentul"}
-                    </button>
-
-                    {!status.addressComplete ? (
                       <button
                         type="button"
-                        onClick={() => openPortal("tax_address")}
-                        disabled={openingPortal}
+                        onClick={() => openPortal("cancel")}
+                        disabled={busy}
                         style={{
                           width: "100%",
                           padding: "12px 18px",
                           borderRadius: 12,
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid #fecaca",
                           background: "#fff",
-                          color: "#0f172a",
+                          color: "#991b1b",
                           fontWeight: 600,
+                          cursor: busy ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {openingPortal ? "Se deschide portalul…" : "Oprește abonamentul"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <label
+                        style={{
+                          display: "flex",
+                          gap: 12,
+                          alignItems: "flex-start",
+                          marginBottom: 20,
                           cursor: "pointer",
+                          color: "#0f172a",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={accepted}
+                          onChange={(event) => setAccepted(event.target.checked)}
+                          style={{ marginTop: 4, width: 18, height: 18 }}
+                        />
+                        <span>{consentText}</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={submitAccept}
+                        disabled={submitting || !accepted || openingPortal}
+                        style={{
+                          width: "100%",
+                          padding: "14px 18px",
+                          borderRadius: 12,
+                          border: "none",
+                          background: submitting || !accepted ? "#94a3b8" : "#0f172a",
+                          color: "#fff",
+                          fontWeight: 700,
+                          cursor: submitting || !accepted ? "not-allowed" : "pointer",
                           marginBottom: 12,
                         }}
                       >
-                        {openingPortal ? "Se deschide portalul…" : "Completează adresa de facturare"}
+                        {submitting ? "Se confirmă…" : "Confirmă și continuă abonamentul"}
                       </button>
-                    ) : null}
-                  </>
-                )}
 
-                <button
-                  type="button"
-                  onClick={() => openPortal("cancel")}
-                  disabled={openingPortal}
-                  style={{
-                    width: "100%",
-                    padding: "12px 18px",
-                    borderRadius: 12,
-                    border: "1px solid #fecaca",
-                    background: "#fff",
-                    color: "#991b1b",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Anulează abonamentul
-                </button>
-                {alreadyOnNewPrice && !status.consentAccepted ? (
-                  <p style={{ marginTop: 12, color: "#64748b", fontSize: 14, lineHeight: 1.45 }}>
-                    Dacă anulezi pentru că nu ești de acord cu 6,05 EUR, returnăm plata recentă
-                    de {newTotal} (procesare după anulare).
-                  </p>
-                ) : null}
-              </>
-            ) : null}
+                      {!status.addressComplete ? (
+                        <button
+                          type="button"
+                          onClick={() => openPortal("tax_address")}
+                          disabled={busy}
+                          style={{
+                            width: "100%",
+                            padding: "12px 18px",
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            background: "#fff",
+                            color: "#0f172a",
+                            fontWeight: 600,
+                            cursor: busy ? "not-allowed" : "pointer",
+                            marginBottom: 12,
+                          }}
+                        >
+                          {openingPortal ? "Se deschide portalul…" : "Completează adresa de facturare"}
+                        </button>
+                      ) : null}
 
-            {missingLabels.length ? (
-              <p style={{ marginTop: 16, color: "#b45309" }}>
-                Lipsesc: {missingLabels.join(", ")}.
-              </p>
-            ) : null}
-            {message ? (
-              <p style={{ marginTop: 16, color: "#0f172a", lineHeight: 1.45 }}>{message}</p>
-            ) : null}
-          </div>
-        ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openPortal("cancel")}
+                        disabled={busy}
+                        style={{
+                          width: "100%",
+                          padding: "12px 18px",
+                          borderRadius: 12,
+                          border: "1px solid #fecaca",
+                          background: "#fff",
+                          color: "#991b1b",
+                          fontWeight: 600,
+                          cursor: busy ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {openingPortal ? "Se deschide portalul…" : "Oprește abonamentul"}
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : null}
+
+              {missingLabels.length ? (
+                <p style={{ marginTop: 16, color: "#b45309" }}>
+                  Lipsesc: {missingLabels.join(", ")}.
+                </p>
+              ) : null}
+              {message ? (
+                <p style={{ marginTop: 16, color: "#0f172a", lineHeight: 1.45 }}>{message}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </AuthFunnelShell>
     </>
