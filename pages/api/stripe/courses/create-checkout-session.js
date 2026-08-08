@@ -20,6 +20,7 @@ import {
   buildBillingContextInput,
 } from "../../../../lib/stripeBillingDetails";
 import { resolveCourseCheckoutTaxCustomerFields } from "../../../../lib/stripeCourseCheckoutTax";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
 import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisibleOnChannel,
@@ -446,12 +447,12 @@ export default async function handler(req, res) {
       uid: authUser.uid,
     });
 
+    const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       billing_address_collection: "required",
       phone_number_collection: { enabled: true },
-      automatic_tax: { enabled: true },
       line_items: [
         {
           price_data: {
@@ -472,6 +473,7 @@ export default async function handler(req, res) {
             unit_amount: unitAmount,
           },
           quantity: 1,
+          tax_rates: [fixedVatTaxRateId],
         },
       ],
       metadata,

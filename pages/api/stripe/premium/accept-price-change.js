@@ -20,6 +20,7 @@ import {
   subscriptionPrimaryPriceId,
   subscriptionTaxMigrationMeta,
 } from "../../../../lib/premiumPriceChangeConsent";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -223,9 +224,12 @@ export default async function handler(req, res) {
         findExclusiveSubscriptionItem(subscription, exclusivePriceId) ||
         subscription.items?.data?.[0];
       if (exclusiveItem?.id) {
+        const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
         finalSubscription = await stripe.subscriptions.update(
           subscription.id,
           {
+            automatic_tax: { enabled: false },
+            default_tax_rates: [fixedVatTaxRateId],
             cancel_at_period_end: false,
             metadata: {
               ...(subscription.metadata || {}),

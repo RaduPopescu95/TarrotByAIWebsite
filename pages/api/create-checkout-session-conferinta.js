@@ -5,6 +5,7 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from '../../utils/billingAudit.mjs';
+import { getFixedVatTaxRateId } from '../../lib/stripeFixedVat';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -221,7 +222,8 @@ export default async function handler(req, res) {
     // Creează Stripe checkout session
     console.log(`💳 [${checkoutId}] Creez Stripe checkout session...`);
     console.log(`💳 [${checkoutId}] Preț: ${pretParticipare} RON (${Math.round(pretParticipare * 100)} cents)`);
-    
+    const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -237,6 +239,7 @@ export default async function handler(req, res) {
             unit_amount: Math.round(pretParticipare * 100), // Stripe expects amount in cents
           },
           quantity: 1,
+          tax_rates: [fixedVatTaxRateId],
         },
       ],
       mode: 'payment',
@@ -244,7 +247,6 @@ export default async function handler(req, res) {
       success_url: `${req.headers.origin}/success-conferinta-grup?session_id={CHECKOUT_SESSION_ID}&conferinta_id=${conferintaId}`,
       cancel_url: `${req.headers.origin}/calendar-conferinte-grup`,
       customer_email: participantData.email,
-      automatic_tax: { enabled: true },
       billing_address_collection: 'required', // Solicită adresa de facturare pentru Oblio
       phone_number_collection: { enabled: true }, // Solicită numărul de telefon
       metadata: metadata,

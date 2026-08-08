@@ -18,6 +18,7 @@ import {
   resolvePremiumStripePriceId,
 } from "../../../../lib/stripePremiumEnv";
 import { getStripePriceTaxBehavior } from "../../../../utils/oblioTax";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
 import { assertCanStartPremiumSubscription } from "../../../../lib/premiumSubscriptionGuard";
 import { buildUserIdentityPatch } from "../../../../lib/userIdentitySync";
 import {
@@ -179,17 +180,18 @@ export default async function handler(req, res) {
     metadata.invoiceDueDays = String(billingDetails.invoicePreferences.dueDays);
   }
 
+  const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
   const sessionParams = {
     mode: "subscription",
     payment_method_types: ["card"],
     billing_address_collection: "required",
     phone_number_collection: { enabled: true },
-    automatic_tax: { enabled: true },
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: uid,
     metadata,
     subscription_data: {
       metadata,
+      default_tax_rates: [fixedVatTaxRateId],
     },
     success_url: `${baseUrl}/premium?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/abonament?checkout=cancel`,

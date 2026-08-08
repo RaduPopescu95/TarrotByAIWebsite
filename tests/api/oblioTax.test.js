@@ -19,8 +19,8 @@ describe("Oblio tax payloads", () => {
     expect(resolveExclusiveOblioTax({ totalCents: 30000, subtotalCents: 24793, taxCents: 5207, settings: vatPayer })).toMatchObject({ ok: true, price: 247.93, total: 300, vatIncluded: 0 });
   });
 
-  test("Stripe zero tax maps to the configured valid zero-VAT Oblio name", () => {
-    expect(resolveExclusiveOblioTax({ totalCents: 500, subtotalCents: 500, taxCents: 0, settings: vatPayer })).toMatchObject({ ok: true, price: 5, total: 5, vatPercentage: 0, vatName: "Scutit", vatIncluded: 0 });
+  test("blocks zero-tax Stripe totals under the fixed 21% policy", () => {
+    expect(resolveExclusiveOblioTax({ totalCents: 500, subtotalCents: 500, taxCents: 0, settings: vatPayer })).toEqual({ ok: false, reason: "missing_fixed_vat_21" });
   });
 
   test("blocks an invoice when the Stripe total does not equal net plus tax", () => {

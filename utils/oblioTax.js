@@ -17,10 +17,10 @@ function money(cents) {
 
 export function getOblioVatSettings(env = process.env) {
   const sellerVatPayer = truthy(env.OBLIO_SELLER_VAT_PAYER || env.OBLIO_VAT_PAYER);
-  const configuredRate = Number(env.OBLIO_DEFAULT_VAT_RATE ?? env.OLBIO_DEFAULT_VAT_RATE ?? "19");
+  const configuredRate = Number(env.OBLIO_DEFAULT_VAT_RATE ?? env.OLBIO_DEFAULT_VAT_RATE ?? "21");
   return {
     sellerVatPayer,
-    defaultRate: Number.isFinite(configuredRate) ? configuredRate : 19,
+    defaultRate: Number.isFinite(configuredRate) ? configuredRate : 21,
     normalVatName: env.OBLIO_VAT_NAME || "Normala",
     zeroVatName: env.OBLIO_ZERO_VAT_NAME || "Scutit",
   };
@@ -52,22 +52,20 @@ export function resolveExclusiveOblioTax(input) {
   if (taxCents === null || taxCents < 0 || subtotalCents < 0) return { ok: false, reason: "invalid_stripe_tax_breakdown" };
   if (subtotalCents + taxCents !== totalCents) return { ok: false, reason: "stripe_total_tax_mismatch" };
 
-  // A zero tax returned by Stripe is intentional (zero-rated/reverse charge).
   if (taxCents === 0) {
-    return { ok: true, price: money(subtotalCents), total: money(totalCents), tax: 0, vatPercentage: 0, vatName: settings.zeroVatName, vatIncluded: 0 };
+    return { ok: false, reason: "missing_fixed_vat_21" };
   }
 
-  const calculatedRate = (taxCents * 100) / subtotalCents;
-  const roundedRate = Math.round(calculatedRate * 100) / 100;
-  const expectedTax = Math.round((subtotalCents * roundedRate) / 100);
-  if (expectedTax !== taxCents) return { ok: false, reason: "stripe_tax_rate_rounding_mismatch" };
+  const expectedRate = Number(settings.defaultRate);
+  const expectedTax = Math.round((subtotalCents * expectedRate) / 100);
+  if (expectedTax !== taxCents) return { ok: false, reason: "stripe_fixed_vat_21_mismatch" };
 
   return {
     ok: true,
     price: money(subtotalCents),
     total: money(totalCents),
     tax: money(taxCents),
-    vatPercentage: roundedRate,
+    vatPercentage: expectedRate,
     vatName: settings.normalVatName,
     vatIncluded: 0,
   };

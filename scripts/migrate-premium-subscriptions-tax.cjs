@@ -501,16 +501,14 @@ function assessPreview(preview, customerCountry, destinationPrice) {
   const tax = sumAmounts(preview?.total_tax_amounts);
   const discounts = sumAmounts(preview?.total_discount_amounts);
   const taxStatus = clean(preview?.automatic_tax?.status);
-  const country = clean(customerCountry).toUpperCase();
   const reasons = [];
 
-  if (taxStatus !== "complete") reasons.push(`automatic_tax_${taxStatus || "unknown"}`);
   if (subtotal !== expectedNet) reasons.push("subtotal_not_destination_price");
   if (discounts !== 0) reasons.push("discount_present");
   if (amountDue !== total) reasons.push("customer_balance_or_credit_present");
   if (total !== subtotal + tax) reasons.push("preview_total_breakdown_mismatch");
-  if (country === "RO" && !(subtotal === 500 && tax === 105 && total === 605)) {
-    reasons.push("romanian_total_must_be_605");
+  if (!(subtotal === 500 && tax === 105 && total === 605)) {
+    reasons.push("fixed_vat_total_must_be_605");
   }
 
   return {
@@ -719,13 +717,16 @@ function customerCountry(customer) {
 }
 
 async function previewMigration(stripe, subscription, item, destinationPriceId) {
+  const fixedVatTaxRateId = clean(process.env.STRIPE_FIXED_VAT_TAX_RATE_ID);
+  if (!fixedVatTaxRateId) throw new Error("Missing STRIPE_FIXED_VAT_TAX_RATE_ID");
   return stripe.invoices.createPreview({
     customer: customerIdFromSubscription(subscription),
     subscription: subscription.id,
-    automatic_tax: { enabled: true },
+    automatic_tax: { enabled: false },
     subscription_details: {
       billing_cycle_anchor: "unchanged",
       proration_behavior: "none",
+      default_tax_rates: [fixedVatTaxRateId],
       items: [
         {
           id: item.id,
@@ -739,10 +740,13 @@ async function previewMigration(stripe, subscription, item, destinationPriceId) 
 
 async function migrateOne(stripe, subscription, item, destinationPriceId, uid, options = {}) {
   const forceWithoutConsent = Boolean(options.forceWithoutConsent);
+  const fixedVatTaxRateId = clean(process.env.STRIPE_FIXED_VAT_TAX_RATE_ID);
+  if (!fixedVatTaxRateId) throw new Error("Missing STRIPE_FIXED_VAT_TAX_RATE_ID");
   return stripe.subscriptions.update(
     subscription.id,
     {
-      automatic_tax: { enabled: true },
+      automatic_tax: { enabled: false },
+      default_tax_rates: [fixedVatTaxRateId],
       billing_cycle_anchor: "unchanged",
       proration_behavior: "none",
       cancel_at_period_end: false,
@@ -2085,7 +2089,15 @@ async function main() {
       });
       const updated = await stripe.subscriptions.retrieve(subscription.id);
       const updatedPriceId = clean(updated?.items?.data?.[0]?.price?.id);
-      if (updatedPriceId !== destinationPriceId || updated?.automatic_tax?.enabled !== true) {
+      const updatedTaxRateIds = (updated?.default_tax_rates || []).map((rate) =>
+        typeof rate === "string" ? rate : clean(rate?.id)
+      );
+      if (
+        updatedPriceId !== destinationPriceId ||
+        updated?.automatic_tax?.enabled === true ||
+        updatedTaxRateIds.length !== 1 ||
+        updatedTaxRateIds[0] !== clean(process.env.STRIPE_FIXED_VAT_TAX_RATE_ID)
+      ) {
         throw new Error("post_update_subscription_validation_failed");
       }
       summary.migrated += 1;

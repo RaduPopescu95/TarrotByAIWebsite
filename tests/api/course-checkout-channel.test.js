@@ -1,12 +1,15 @@
 jest.mock("stripe", () => {
   const create = jest.fn();
   const customersCreate = jest.fn();
+  const taxRateRetrieve = jest.fn();
   const StripeMock = jest.fn().mockImplementation(() => ({
     checkout: { sessions: { create } },
     customers: { create: customersCreate },
+    taxRates: { retrieve: taxRateRetrieve },
   }));
   StripeMock.mockSessionCreate = create;
   StripeMock.mockCustomersCreate = customersCreate;
+  StripeMock.mockTaxRateRetrieve = taxRateRetrieve;
   return StripeMock;
 });
 
@@ -59,6 +62,7 @@ import checkoutHandler from "../../pages/api/stripe/courses/create-checkout-sess
 
 const mockStripeCreate = Stripe.mockSessionCreate;
 const mockCustomersCreate = Stripe.mockCustomersCreate;
+const mockTaxRateRetrieve = Stripe.mockTaxRateRetrieve;
 
 function createResponse() {
   return {
@@ -209,6 +213,13 @@ describe("course checkout channel enforcement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.STRIPE_FIXED_VAT_TAX_RATE_ID = "txr_fixed_21";
+    mockTaxRateRetrieve.mockResolvedValue({
+      id: "txr_fixed_21",
+      active: true,
+      inclusive: false,
+      percentage: 21,
+    });
   });
 
   test("blocks Expo checkout for a website-only course", async () => {
@@ -282,8 +293,10 @@ describe("course checkout channel enforcement", () => {
     expect(mockStripeCreate.mock.calls[0][0]).toMatchObject({
       customer: "cus_expo_course",
       customer_update: { address: "auto", name: "auto" },
-      automatic_tax: { enabled: true },
       metadata: { sourcePlatform: "expo" },
+      line_items: [
+        expect.objectContaining({ tax_rates: ["txr_fixed_21"] }),
+      ],
     });
     expect(mockStripeCreate.mock.calls[0][0].customer_email).toBeUndefined();
   });

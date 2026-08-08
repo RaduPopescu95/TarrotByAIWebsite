@@ -57,10 +57,10 @@ describe("premium subscription VAT migration", () => {
       destinationPrice
     );
     expect(result.ok).toBe(false);
-    expect(result.reasons).toContain("romanian_total_must_be_605");
+    expect(result.reasons).toContain("fixed_vat_total_must_be_605");
   });
 
-  it("allows a Stripe-confirmed zero-tax foreign preview", () => {
+  it("blocks a zero-tax foreign preview under the global fixed VAT policy", () => {
     expect(
       assessPreview(
         {
@@ -74,8 +74,8 @@ describe("premium subscription VAT migration", () => {
         },
         "US",
         destinationPrice
-      ).ok
-    ).toBe(true);
+      ).reasons
+    ).toContain("fixed_vat_total_must_be_605");
   });
 
   it("requires a complete Romanian customer address", () => {

@@ -5,6 +5,7 @@ import { requireAuth } from "../../../../../lib/requireAuth";
 import { PREMIUM_FLOW_METADATA, hasPremiumAccess } from "../../../../../lib/premiumAccess";
 import { syncPremiumSubscription } from "../../../../../lib/stripePremiumSubscriptionSync";
 import { resolvePremiumStripePriceId } from "../../../../../lib/stripePremiumEnv";
+import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVat";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2026-02-25.clover",
@@ -260,10 +261,12 @@ export default async function handler(req, res) {
         priceId,
       });
 
+      const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
-        automatic_tax: { enabled: true },
+        automatic_tax: { enabled: false },
+        default_tax_rates: [fixedVatTaxRateId],
         metadata: legacyMetadata,
         default_payment_method:
           typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,
@@ -342,10 +345,12 @@ export default async function handler(req, res) {
         },
       });
 
+      const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
-        automatic_tax: { enabled: true },
+        automatic_tax: { enabled: false },
+        default_tax_rates: [fixedVatTaxRateId],
         metadata,
         default_payment_method:
           typeof paymentMethodId === "string" ? paymentMethodId : paymentMethodId.id,

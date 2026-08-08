@@ -19,7 +19,9 @@
     "backfill:video-category-slugs": "node scripts/backfill-video-category-slugs.cjs",
     "backfill:video-category-slugs:dry": "node scripts/backfill-video-category-slugs.cjs --dry-run",
     "backfill:blog-scheduled-at": "node scripts/backfill-blog-scheduled-at.cjs",
-    "audit:premium-subscription-tax": "node scripts/migrate-premium-subscriptions-tax.cjs"
+    "audit:premium-subscription-tax": "node scripts/migrate-premium-subscriptions-tax.cjs",
+    "migrate:premium-fixed-vat": "node scripts/migrate-premium-fixed-vat.cjs",
+    "stripe:setup-fixed-vat": "node scripts/setup-fixed-vat-tax-rate.cjs"
   },
   "dependencies": {
     "@babel/core": "^7.16.5",

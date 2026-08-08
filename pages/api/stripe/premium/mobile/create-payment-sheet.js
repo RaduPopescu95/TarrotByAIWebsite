@@ -17,6 +17,7 @@ import {
   resolvePremiumStripePriceId,
 } from "../../../../../lib/stripePremiumEnv";
 import { getStripePriceTaxBehavior } from "../../../../../utils/oblioTax";
+import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVat";
 import { assertCanStartPremiumSubscription } from "../../../../../lib/premiumSubscriptionGuard";
 import { resolvePremiumPublicBaseUrl } from "../../../../../lib/premiumServerUtils";
 import { buildUserIdentityPatch } from "../../../../../lib/userIdentitySync";
@@ -265,10 +266,12 @@ export default async function handler(req, res) {
     // This guarantees that a Subscription always exists - no race conditions.
     let subscription;
     try {
+      const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
       subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId, quantity: 1 }],
-        automatic_tax: { enabled: true },
+        automatic_tax: { enabled: false },
+        default_tax_rates: [fixedVatTaxRateId],
         payment_behavior: "default_incomplete",
         payment_settings: {
           save_default_payment_method: "on_subscription",

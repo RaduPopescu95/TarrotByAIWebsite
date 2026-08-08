@@ -7,6 +7,7 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../utils/billingAudit.mjs";
+import { getFixedVatTaxRateId } from "../../lib/stripeFixedVat";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -155,6 +156,8 @@ export default async (req, res) => {
         invoiceEligibleForEInvoice: String(billingAudit.normalizedClient.eligibleForEInvoice),
       };
 
+      const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
+
       // Creează sesiunea de checkout cu opțiunea de creare factură
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -171,10 +174,10 @@ export default async (req, res) => {
               unit_amount: costConsultatie, // Prețul în bani (de exemplu: 10000 bani pentru 100 RON)
             },
             quantity: 1,
+            tax_rates: [fixedVatTaxRateId],
           },
         ],
         customer_email: email,
-        automatic_tax: { enabled: true },
         billing_address_collection: "required", // Solicită adresa de facturare
         phone_number_collection: { enabled: true }, // Solicită numărul de telefon
         metadata,

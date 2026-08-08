@@ -5,6 +5,7 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
 import { emitPremiumSubscriptionOblioInvoice } from "../../../../lib/premiumSubscriptionOblio";
 import { resolvePremiumAbonamentWebhookSecret } from "../../../../lib/stripePremiumEnv";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
 import {
   syncPremiumSubscription,
   syncPremiumSubscriptionById,
@@ -285,9 +286,12 @@ export default async function handler(req, res) {
             else if (interval === "week") trialEndTimestamp = now + 7 * 86400 * intervalCount;
             else if (interval === "day") trialEndTimestamp = now + 86400 * intervalCount;
 
+            const fixedVatTaxRateId = await getFixedVatTaxRateId(stripe);
             const subscription = await stripe.subscriptions.create({
               customer: customerId,
               items: [{ price: priceId, quantity: 1 }],
+              automatic_tax: { enabled: false },
+              default_tax_rates: [fixedVatTaxRateId],
               metadata: {
                 uid,
                 flow: pi.metadata.flow || PREMIUM_FLOW_METADATA,
