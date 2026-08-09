@@ -710,12 +710,13 @@ async function processBundleCheckoutSessionEvent(db, event, session, context) {
   const stripePaymentIntentId =
     typeof session?.payment_intent === "string" ? session.payment_intent : null;
   const amountPaidCents = toAmountCents(session?.amount_total);
+  const amountSubtotalCents = toAmountCents(session?.amount_subtotal);
   const expectedAmountCents = parseExpectedAmountCents(session?.metadata);
   const currency = normalizeCurrency(session?.currency, "RON");
   const expectedCurrency = normalizeCurrency(session?.metadata?.expectedCurrency, "");
   const amountMatches =
     expectedAmountCents === null ||
-    (amountPaidCents !== null && amountPaidCents === expectedAmountCents);
+    (amountSubtotalCents !== null && amountSubtotalCents === expectedAmountCents);
   const currencyMatches = !expectedCurrency || currency === expectedCurrency;
   const entitlementGranted = isPaid && amountMatches && currencyMatches;
   const purchaseStatus = getPurchaseStatus({
@@ -837,6 +838,7 @@ async function processBundleCheckoutSessionEvent(db, event, session, context) {
         stripePaymentIntentId,
         amountPaid: amountPaidCents !== null ? amountPaidCents / 100 : 0,
         amountPaidCents,
+        amountSubtotalCents,
         currency,
         expectedAmountCents,
         expectedCurrency: expectedCurrency || null,
@@ -915,13 +917,15 @@ async function processCheckoutSessionEvent(db, event, session) {
     typeof session?.payment_intent === "string" ? session.payment_intent : null;
 
   const amountPaidCents = toAmountCents(session?.amount_total);
+  const amountSubtotalCents = toAmountCents(session?.amount_subtotal);
   const expectedAmountCents = parseExpectedAmountCents(session?.metadata);
 
   const currency = normalizeCurrency(session?.currency, "RON");
   const expectedCurrency = normalizeCurrency(session?.metadata?.expectedCurrency, "");
 
   const amountMatches =
-    expectedAmountCents === null || (amountPaidCents !== null && amountPaidCents === expectedAmountCents);
+    expectedAmountCents === null ||
+    (amountSubtotalCents !== null && amountSubtotalCents === expectedAmountCents);
   const currencyMatches = !expectedCurrency || currency === expectedCurrency;
   const entitlementGranted = isPaid && amountMatches && currencyMatches;
   const purchaseStatus = getPurchaseStatus({ isPaid, entitlementGranted, isFailureEvent });
@@ -935,6 +939,7 @@ async function processCheckoutSessionEvent(db, event, session) {
     paymentStatus,
     isPaid,
     amountPaidCents,
+    amountSubtotalCents,
     expectedAmountCents,
     amountMatches,
     currency,
@@ -1018,6 +1023,7 @@ async function processCheckoutSessionEvent(db, event, session) {
         stripePaymentIntentId,
         amountPaid: amountPaidCents !== null ? amountPaidCents / 100 : 0,
         amountPaidCents,
+        amountSubtotalCents,
         currency,
         expectedAmountCents,
         expectedCurrency: expectedCurrency || null,

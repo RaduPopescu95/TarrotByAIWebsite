@@ -1,6 +1,11 @@
 import { getAdminDb } from "../../../lib/firebaseAdmin";
 import { requireAuth } from "../../../lib/requireAuth";
-import { isCourseVisible, resolveDate, toSafeCourse } from "../../../lib/courses";
+import {
+  applyFixedVatDisplayPrice,
+  isCourseVisible,
+  resolveDate,
+  toSafeCourse,
+} from "../../../lib/courses";
 import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisible,
@@ -179,7 +184,9 @@ async function handler(req, res) {
           accessSource: purchase.accessSource,
           bundleId: purchase.bundleId,
           courseMissing,
-          course: courseData ? toSafeCourse(purchase.courseId, courseData, locale) : null,
+          course: courseData
+            ? applyFixedVatDisplayPrice(toSafeCourse(purchase.courseId, courseData, locale))
+            : null,
         };
       })
       .filter(Boolean);

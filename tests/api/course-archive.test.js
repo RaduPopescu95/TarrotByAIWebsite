@@ -93,7 +93,8 @@ function makeCourseSession() {
     id: "cs_course",
     payment_status: "paid",
     payment_intent: "pi_course",
-    amount_total: 5000,
+    amount_subtotal: 5000,
+    amount_total: 6050,
     currency: "ron",
     metadata: {
       uid: "user-1",
@@ -109,7 +110,8 @@ function makeBundleSession() {
     id: "cs_bundle",
     payment_status: "paid",
     payment_intent: "pi_bundle",
-    amount_total: 12000,
+    amount_subtotal: 12000,
+    amount_total: 14520,
     currency: "ron",
     metadata: {
       uid: "user-1",
@@ -199,6 +201,28 @@ describe("course archive policy", () => {
           typeof write.data.purchaseCount === "object"
       )
     ).toBe(true);
+  });
+
+  test("single course webhook rejects a paid total when the net subtotal is wrong", async () => {
+    const { db, writes } = createDb({});
+    const event = { id: "evt_course_bad_subtotal", type: "checkout.session.completed" };
+    const session = {
+      ...makeCourseSession(),
+      amount_subtotal: 4999,
+      amount_total: 6049,
+    };
+
+    const result = await processCheckoutSessionEvent(db, event, session);
+
+    expect(result.entitlementGranted).toBe(false);
+    expect(result.amountMatches).toBe(false);
+    expect(
+      writes.some(
+        (write) =>
+          write.path === "users/user-1/purchases/course-1" &&
+          write.data?.status === "paid"
+      )
+    ).toBe(false);
   });
 
   test("single course webhook does not increment purchaseCount when already paid", async () => {

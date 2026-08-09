@@ -204,8 +204,8 @@ describe("course checkout channel enforcement", () => {
   const websiteOnlyCourse = {
     title: "Curs Website",
     status: "published",
-    price: 99,
-    currency: "RON",
+    price: 5,
+    currency: "EUR",
     availableOnWebsite: true,
     availableOnMobile: false,
   };
@@ -257,8 +257,20 @@ describe("course checkout channel enforcement", () => {
       metadata: {
         uid: "user-1",
         courseId: "course-web",
+        expectedAmount: "500",
+        expectedCurrency: "EUR",
         sourcePlatform: "web",
       },
+      line_items: [
+        {
+          price_data: expect.objectContaining({
+            unit_amount: 500,
+            tax_behavior: "exclusive",
+          }),
+          quantity: 1,
+          tax_rates: ["txr_fixed_21"],
+        },
+      ],
     });
     expect(mockStripeCreate.mock.calls[0][0].customer).toBeUndefined();
     expect(db.checkoutWrites).toHaveLength(1);
@@ -309,8 +321,8 @@ describe("course checkout channel enforcement", () => {
     const bundle = {
       title: "Pachet Website",
       status: "published",
-      price: 149,
-      currency: "RON",
+      price: 25,
+      currency: "EUR",
       courseIds: ["a", "b"],
       availableOnWebsite: true,
       availableOnMobile: false,
@@ -336,7 +348,16 @@ describe("course checkout channel enforcement", () => {
     expect(mockStripeCreate.mock.calls[0][0].metadata).toMatchObject({
       purchaseType: "bundle",
       bundleId: "bundle-web",
+      expectedAmount: "2500",
+      expectedCurrency: "EUR",
       sourcePlatform: "web",
+    });
+    expect(mockStripeCreate.mock.calls[0][0].line_items[0]).toMatchObject({
+      price_data: {
+        unit_amount: 2500,
+        tax_behavior: "exclusive",
+      },
+      tax_rates: ["txr_fixed_21"],
     });
   });
 

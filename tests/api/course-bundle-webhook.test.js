@@ -56,7 +56,8 @@ function makeSession() {
     id: "cs_bundle",
     payment_status: "paid",
     payment_intent: "pi_bundle",
-    amount_total: 12000,
+    amount_subtotal: 12000,
+    amount_total: 14520,
     currency: "ron",
     metadata: {
       uid: "user-1",
@@ -134,7 +135,7 @@ describe("course bundle webhook", () => {
       "courseBundles/bundle-1": { courseIds: ["course-a", "course-b", "course-c"] },
     });
     const event = { id: "evt_bad_amount", type: "checkout.session.completed" };
-    const session = { ...makeSession(), amount_total: 11999 };
+    const session = { ...makeSession(), amount_subtotal: 11999, amount_total: 14519 };
 
     const result = await processBundleCheckoutSessionEvent(
       db,

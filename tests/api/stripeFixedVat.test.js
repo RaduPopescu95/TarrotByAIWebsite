@@ -2,6 +2,7 @@ const {
   STRIPE_FIXED_VAT_PERCENTAGE,
   __resetFixedVatTaxRateCacheForTests,
   assessFixedVatTaxRate,
+  calculateFixedVatMajor,
   calculateFixedVatMinor,
   getFixedVatTaxRateId,
   resolveFixedVatTaxRateId,
@@ -37,6 +38,12 @@ describe("stripeFixedVat", () => {
       total: 605,
       percentage: 21,
     });
+  });
+
+  it("calculates VAT-inclusive public display prices from net major amounts", () => {
+    expect(calculateFixedVatMajor(5)).toBe(6.05);
+    expect(calculateFixedVatMajor(25)).toBe(30.25);
+    expect(calculateFixedVatMajor(0)).toBe(0);
   });
 
   it("rejects inactive, inclusive, or non-21 Tax Rates", () => {

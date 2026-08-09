@@ -4,6 +4,7 @@ import {
   isCourseVisibleOnChannel,
   resolveCourseRequestChannel,
   toSafeCourse,
+  applyFixedVatDisplayPrice,
   applyCourseDetailContentGate,
   resolveCourseAvailableLocales,
 } from "../../../lib/courses";
@@ -134,9 +135,11 @@ async function handler(req, res) {
     }
 
     const safeCourse = applyCourseDetailContentGate(
-      toSafeCourse(courseId, courseData, locale, {
-        includeDetailContent: true,
-      }),
+      applyFixedVatDisplayPrice(
+        toSafeCourse(courseId, courseData, locale, {
+          includeDetailContent: true,
+        })
+      ),
       hasAccess
     );
 

@@ -21,6 +21,7 @@
     "backfill:blog-scheduled-at": "node scripts/backfill-blog-scheduled-at.cjs",
     "audit:premium-subscription-tax": "node scripts/migrate-premium-subscriptions-tax.cjs",
     "migrate:premium-fixed-vat": "node scripts/migrate-premium-fixed-vat.cjs",
+    "repair:course-vat-entitlements": "node scripts/repair-course-vat-entitlements.cjs",
     "stripe:setup-fixed-vat": "node scripts/setup-fixed-vat-tax-rate.cjs"
   },
   "dependencies": {
