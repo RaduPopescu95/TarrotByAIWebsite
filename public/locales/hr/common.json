@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Premium videozapisi (Bunny Stream) — uskoro.",
   "premiumSubscribePageTitle": "Premium pretplata",
   "premiumSubscribeHeading": "Mjesečna premium pretplata",
-  "premiumSubscribePriceLine": "5 € / mjesečno",
+  "premiumSubscribePriceLine": "{{price}} / mjesečno, PDV uključen",
   "premiumSubscribeBackLink": "Povratak na premium područje",
   "premiumSubscribePoint1": "Naplata je samo za pojedince (potrebna je puna poštanska adresa).",
   "premiumSubscribePoint2": "Sigurno plaćanje putem Stripea; rumunjske županije i mjesta koriste popise kompatibilne s Oblio-om.",

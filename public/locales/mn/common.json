@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "\nДээд зэрэглэлийн видеонууд (Bunny Stream) — удахгүй гарах болно.",
   "premiumSubscribePageTitle": "\nДээд зэрэглэлийн захиалга",
   "premiumSubscribeHeading": "\nСар бүрийн дээд зэрэглэлийн захиалга",
-  "premiumSubscribePriceLine": "\nСард €5",
+  "premiumSubscribePriceLine": "Сард {{price}}, НӨАТ орсон",
   "premiumSubscribeBackLink": "\nДээд зэрэглэлийн бүс рүү буцах",
   "premiumSubscribePoint1": "\nТөлбөр тооцоо нь зөвхөн хувь хүмүүст зориулагдсан (шуудангийн бүтэн хаяг шаардлагатай).",
   "premiumSubscribePoint2": "\nStripe-ээр дамжуулан аюулгүй төлбөр хийх; Румын муж болон орон нутаг Oblio-д нийцсэн жагсаалтыг ашигладаг.",

@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "مقاطع فيديو مميزة (بث الأرنب) - قريباً.",
   "premiumSubscribePageTitle": "اشتراك مميز",
   "premiumSubscribeHeading": "اشتراك شهري مميز",
-  "premiumSubscribePriceLine": "5 يورو شهرياً",
+  "premiumSubscribePriceLine": "{{price}} شهرياً، شامل ضريبة القيمة المضافة",
   "premiumSubscribeBackLink": "العودة إلى المنطقة المميزة",
   "premiumSubscribePoint1": "الفواتير مخصصة للأفراد فقط (يلزم تقديم العنوان البريدي الكامل).",
   "premiumSubscribePoint2": "الدفع الآمن عبر Stripe؛ تستخدم المقاطعات والمناطق الرومانية قوائم متوافقة مع Oblio.",

@@ -25,6 +25,7 @@ import {
 } from "../../utils/billingAudit.mjs";
 import { hasPremiumAccess } from "../../lib/premiumAccess";
 import { PREMIUM_ALREADY_ACTIVE_ERROR } from "../../lib/premiumSubscriptionGuard";
+import { usePremiumDisplayPrice } from "../../utils/usePremiumDisplayPrice";
 
 export async function getServerSideProps({ locale }) {
   return {
@@ -134,6 +135,7 @@ export default function AbonamentPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
   const { currentUser, loading, isGuestUser, userData } = useAuth();
+  const { priceText: premiumPriceText } = usePremiumDisplayPrice(router.locale);
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
   const [portalLoading, setPortalLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -484,7 +486,7 @@ export default function AbonamentPage() {
               {t("premiumSubscribeHeading")}
             </h1>
             <p className="mt-1 text-lg font-semibold text-indigo-700 lg:text-xl">
-              {t("premiumSubscribePriceLine")}
+              {t("premiumSubscribePriceLine", { price: premiumPriceText })}
             </p>
             <p
               className={`mt-2 max-w-md text-sm leading-relaxed text-slate-600 lg:mt-1.5 lg:max-w-none lg:text-sm lg:leading-snug ${

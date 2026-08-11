@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "프리미엄 영상(버니 스트림) - 곧 출시됩니다.",
   "premiumSubscribePageTitle": "프리미엄 구독",
   "premiumSubscribeHeading": "월간 프리미엄 구독",
-  "premiumSubscribePriceLine": "월 5유로",
+  "premiumSubscribePriceLine": "월 {{price}} (부가세 포함)",
   "premiumSubscribeBackLink": "프리미엄 영역으로 돌아가기",
   "premiumSubscribePoint1": "청구는 개인에게만 해당됩니다(정확한 우편 주소 필수).",
   "premiumSubscribePoint2": "Stripe를 통한 안전한 결제; 루마니아의 각 카운티 및 지역은 Oblio 규격 목록을 사용합니다.",

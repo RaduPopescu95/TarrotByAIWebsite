@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "סרטוני פרימיום (Bunny Stream) - בקרוב.",
   "premiumSubscribePageTitle": "מנוי פרימיום",
   "premiumSubscribeHeading": "מנוי פרימיום חודשי",
-  "premiumSubscribePriceLine": "5 אירו לחודש",
+  "premiumSubscribePriceLine": "{{price}} לחודש, כולל מע״מ",
   "premiumSubscribeBackLink": "חזרה לאזור הפרימיום",
   "premiumSubscribePoint1": "החיוב הוא לאנשים פרטיים בלבד (נדרשת כתובת דואר מלאה).",
   "premiumSubscribePoint2": "תשלום מאובטח דרך Stripe; המחוז והיישוב הרומני משתמשים ברשימות תואמות Oblio.",

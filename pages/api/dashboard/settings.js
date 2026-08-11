@@ -1,4 +1,9 @@
+import Stripe from "stripe";
 import { getGlobalSettings, updateGlobalSettings } from "../../../lib/globalSettings";
+import {
+  assertVatPercentageMatchesStripe,
+  normalizeVatPercentage,
+} from "../../../lib/stripeFixedVat";
 import {
   loadMobileUpdateStatus,
   setMobileForceUpdateEnabled,
@@ -7,6 +12,8 @@ import {
   validateForceUpdateMinVersions,
 } from "../../../lib/mobileUpdatePromptSettings";
 import { requireDashboardAccess } from "../../../lib/requireAuth";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 async function mergeSettingsForResponse() {
   const [global, mobileStatus] = await Promise.all([
@@ -72,6 +79,7 @@ export default async function handler(req, res) {
         body,
         "mobileMinAppVersionAndroid"
       );
+      const vatProvided = Object.prototype.hasOwnProperty.call(body, "vatPercentage");
 
       if (
         subscriptionUpdate === undefined &&
@@ -79,9 +87,44 @@ export default async function handler(req, res) {
         mobilePromptUpdate === undefined &&
         mobileForceUpdate === undefined &&
         !mobileMinIosProvided &&
-        !mobileMinAndroidProvided
+        !mobileMinAndroidProvided &&
+        !vatProvided
       ) {
         return res.status(400).json({ error: "No valid settings to update" });
+      }
+
+      if (vatProvided) {
+        const vatPercentage = normalizeVatPercentage(body.vatPercentage);
+        if (vatPercentage === null) {
+          return res.status(400).json({
+            error:
+              "Procentul de TVA este invalid. Folosește un număr între 0 și 100 (ex. 21).",
+          });
+        }
+        try {
+          await assertVatPercentageMatchesStripe(stripe, vatPercentage);
+        } catch (vatError) {
+          if (vatError?.message === "vat_tax_rate_not_configured") {
+            return res.status(409).json({
+              error:
+                "Cota de TVA din Stripe nu este configurată (STRIPE_FIXED_VAT_TAX_RATE_ID). Configurează-o înainte de a schimba procentul.",
+            });
+          }
+          if (vatError?.message === "vat_percentage_stripe_mismatch") {
+            const stripePercentage = vatError.stripePercentage;
+            return res.status(409).json({
+              error:
+                `Stripe încasează în prezent ${stripePercentage ?? "un alt"}% TVA. ` +
+                `Creează mai întâi o cotă Stripe de ${vatPercentage}% și pune-o în STRIPE_FIXED_VAT_TAX_RATE_ID, ` +
+                "altfel prețurile afișate ar fi diferite de cele încasate.",
+            });
+          }
+          console.error("[dashboard/settings] vat validation failed", vatError?.message || vatError);
+          return res.status(502).json({
+            error: "Nu am putut verifica cota de TVA în Stripe. Încearcă din nou.",
+          });
+        }
+        await updateGlobalSettings({ vatPercentage }, "dashboard");
       }
 
       const currentMobileStatus = await loadMobileUpdateStatus({ bypassCache: true });
@@ -136,6 +179,11 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ ok: true, settings });
     } catch (err) {
+      if (err?.message === "invalid_vat_percentage") {
+        return res.status(400).json({
+          error: "Procentul de TVA este invalid. Folosește un număr între 0 și 100 (ex. 21).",
+        });
+      }
       if (err?.message === "invalid_min_app_version_ios") {
         return res.status(400).json({
           error: "Versiunea minimă iOS este invalidă. Folosește un număr întreg (ex. 4).",

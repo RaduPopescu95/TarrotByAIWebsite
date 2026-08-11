@@ -24,6 +24,12 @@ import {
   createInitialBillingFormValues,
   mapBillingAuditErrorsToForm,
 } from "../../../utils/billingAddressData.mjs";
+import {
+  formatCurrencyAmount,
+  formatGross,
+  grossFromNet,
+  useVatPercentage,
+} from "../../../utils/vatDisplay";
 
 moment.locale("ro");
 
@@ -33,6 +39,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 const CheckoutConferintaGrup = ({ conferintaId }) => {
   const router = useRouter();
   const { currentUser, userData } = useAuth();
+  const vatPercentage = useVatPercentage();
   const [conferinta, setConferinta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -677,8 +684,13 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
 
                   <div className="text-center">
                     <div className="price-display">
-                      <span className="text-muted">Preț participare:</span>
-                      <div className="h3 text-primary mb-0">{conferinta.pretParticipare} RON</div>
+                      <span className="text-muted">Preț participare (TVA inclus):</span>
+                      <div className="h3 text-primary mb-0">
+                        {formatGross(conferinta.pretParticipare, {
+                          vatPercentage,
+                          currency: "RON",
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -893,15 +905,35 @@ const CheckoutConferintaGrup = ({ conferintaId }) => {
                               <p className="text-muted mb-0">{displayInfo.type} • {displayInfo.dataRange}</p>
                             </div>
                             <div className="col-md-4 text-end">
-                              <h4 className="text-primary mb-0">{conferinta.pretParticipare} RON</h4>
+                              <h4 className="text-primary mb-0">
+                                {formatCurrencyAmount(conferinta.pretParticipare, {
+                                  currency: "RON",
+                                })}
+                              </h4>
                             </div>
                           </div>
-                          
+
                           <hr />
-                          
+
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                            <span>TVA ({vatPercentage}%)</span>
+                            <span>
+                              {formatCurrencyAmount(
+                                grossFromNet(conferinta.pretParticipare, vatPercentage) -
+                                  Number(conferinta.pretParticipare),
+                                { currency: "RON" }
+                              )}
+                            </span>
+                          </div>
+
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <span><strong>Total de plată:</strong></span>
-                            <span className="h4 text-primary">{conferinta.pretParticipare} RON</span>
+                            <span className="h4 text-primary">
+                              {formatGross(conferinta.pretParticipare, {
+                                vatPercentage,
+                                currency: "RON",
+                              })}
+                            </span>
                           </div>
 
                           {/* ⚠️ DISCLAIMER IMPORTANT ÎNAINTE DE PLATĂ */}

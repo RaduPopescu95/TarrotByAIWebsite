@@ -7,12 +7,14 @@ import moment from "moment";
 import "moment/locale/ro";
 import { useRouter } from "next/router";
 import styles from "./ConferinteGrup.module.css";
+import { formatGross, useVatPercentage } from "../../../utils/vatDisplay";
 
 moment.locale("ro");
 
 const CalendarConferinteGrup = () => {
   const { currentUser, userData, loading: authLoading } = useAuth();
   const router = useRouter();
+  const vatPercentage = useVatPercentage();
   const [conferinte, setConferinte] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -311,8 +313,12 @@ const CalendarConferinteGrup = () => {
                         <div className="d-flex justify-content-between align-items-center mt-auto">
                           <div className="price">
                             <strong className={styles.conferintaPrice}>
-                              {conferinta.pretParticipare} RON
+                              {formatGross(conferinta.pretParticipare, {
+                                vatPercentage,
+                                currency: "RON",
+                              })}
                             </strong>
+                            <small className="d-block text-muted">TVA inclus</small>
                           </div>
                           
                           <button

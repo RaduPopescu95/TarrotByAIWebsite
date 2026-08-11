@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Vídeos premium (Bunny Stream) — em breve.\n",
   "premiumSubscribePageTitle": "Assinatura Premium",
   "premiumSubscribeHeading": "Assinatura Premium Mensal",
-  "premiumSubscribePriceLine": "€5/mês",
+  "premiumSubscribePriceLine": "{{price}}/mês, IVA incluído",
   "premiumSubscribeBackLink": "Voltar à área premium",
   "premiumSubscribePoint1": "A cobrança é feita somente para pessoas físicas (endereço postal completo obrigatório).\n",
   "premiumSubscribePoint2": "Pagamento seguro via Stripe; os municípios e localidades da Romênia utilizam listas compatíveis com o protocolo Oblio.\n",

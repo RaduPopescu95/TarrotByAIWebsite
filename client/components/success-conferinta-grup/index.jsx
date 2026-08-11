@@ -8,12 +8,14 @@ import moment from "moment";
 import "moment/locale/ro";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
+import { formatGross, useVatPercentage } from "../../../utils/vatDisplay";
 
 moment.locale("ro");
 
 const SuccessConferintaGrup = () => {
   const router = useRouter();
   const { currentUser } = useAuth();
+  const vatPercentage = useVatPercentage();
   const [loading, setLoading] = useState(true);
   const [conferinta, setConferinta] = useState(null);
   const [participant, setParticipant] = useState(null);
@@ -403,8 +405,13 @@ const SuccessConferintaGrup = () => {
                       <p className="text-muted mb-0">{displayInfo.type} • {displayInfo.dataRange}</p>
                     </div>
                     <div className="col-md-4 text-end">
-                      <h4 className="text-success mb-0">{conferinta.pretParticipare} RON</h4>
-                      <small className="text-muted">Plătit cu succes</small>
+                      <h4 className="text-success mb-0">
+                        {formatGross(conferinta.pretParticipare, {
+                          vatPercentage,
+                          currency: "RON",
+                        })}
+                      </h4>
+                      <small className="text-muted">Plătit cu succes, TVA inclus</small>
                     </div>
                   </div>
                   

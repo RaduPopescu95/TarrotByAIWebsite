@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Премиум-видео (Bunny Stream) — скоро появятся.\n",
   "premiumSubscribePageTitle": "Премиум-подписка",
   "premiumSubscribeHeading": "Ежемесячная премиум-подписка",
-  "premiumSubscribePriceLine": "5 евро в месяц",
+  "premiumSubscribePriceLine": "{{price}} в месяц, с НДС",
   "premiumSubscribeBackLink": "Вернуться в премиум-зону",
   "premiumSubscribePoint1": "Оплата только для физических лиц (требуется полный почтовый адрес).\n",
   "premiumSubscribePoint2": "Безопасная оплата через Stripe; в румынских округах и населенных пунктах используются списки, соответствующие стандарту Oblio.\n",

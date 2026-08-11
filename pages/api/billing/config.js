@@ -1,5 +1,7 @@
+import Stripe from "stripe";
 import { getPublicBillingConfig } from "../../../lib/billingConfig";
-import { getGlobalSettings } from "../../../lib/globalSettings";
+import { getGlobalSettings, getVatPercentage } from "../../../lib/globalSettings";
+import { getPremiumDisplayPricing } from "../../../lib/premiumDisplayPricing";
 import {
   BILLING_ERROR_CODES,
   getBillingRequestId,
@@ -7,6 +9,8 @@ import {
   logBillingObs,
   setBillingRequestId,
 } from "../../../lib/billingObservability";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async function handler(req, res) {
   const requestId = setBillingRequestId(res, getBillingRequestId(req, "bcfg"));
@@ -27,6 +31,8 @@ export default async function handler(req, res) {
     const settings = await getGlobalSettings();
     const config = getPublicBillingConfig(settings);
     const safeConfig = getSafeBillingConfigSnapshot(settings);
+    const vatPercentage = await getVatPercentage();
+    const premiumPricing = await getPremiumDisplayPricing(stripe, vatPercentage);
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120");
     logBillingObs({
       scope: "billing_config",
@@ -40,6 +46,9 @@ export default async function handler(req, res) {
       ...config,
       iosPremiumSubscriptionsEnabled: settings.iosPremiumSubscriptionsEnabled,
       subscriptionSystemEnabled: settings.iosPremiumSubscriptionsEnabled,
+      vatPercentage,
+      pricesIncludeVat: true,
+      premiumPricing,
     });
   } catch (error) {
     logBillingObs({

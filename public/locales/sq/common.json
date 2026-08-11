@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Video premium (Bunny Stream) — së shpejti.",
   "premiumSubscribePageTitle": "Abonim premium",
   "premiumSubscribeHeading": "Abonim mujor premium",
-  "premiumSubscribePriceLine": "5 € / muaj",
+  "premiumSubscribePriceLine": "{{price}} / muaj, TVSH e përfshirë",
   "premiumSubscribeBackLink": "Kthehu në zonën premium",
   "premiumSubscribePoint1": "Faturimi është vetëm për individë (kërkohet adresa e plotë postare).",
   "premiumSubscribePoint2": "Pagesë e sigurt nëpërmjet Stripe; qarku dhe lokaliteti rumun përdorin lista që përputhen me Oblio.",

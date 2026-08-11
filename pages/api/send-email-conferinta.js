@@ -1,4 +1,15 @@
 const nodemailer = require('nodemailer');
+const { getVatPercentage } = require('../../lib/globalSettings');
+const { calculateFixedVatMajor } = require('../../lib/stripeFixedVat');
+
+/** Conference prices are stored net; the email must show what the client paid. */
+function resolveTotalPriceLabel(pretParticipare, vatPercentage) {
+  try {
+    return `${calculateFixedVatMajor(pretParticipare, vatPercentage)} RON (TVA inclus)`;
+  } catch {
+    return `${pretParticipare} RON`;
+  }
+}
 
 // Configurația Gmail (aceeași ca în functions/index.js)
 const transporter = nodemailer.createTransport({
@@ -10,9 +21,10 @@ const transporter = nodemailer.createTransport({
 });
 
 // Template HTML pentru emailul de confirmare
-const createEmailTemplate = (participantData, conferintaData, accessLink, isTestMode = false) => {
+const createEmailTemplate = (participantData, conferintaData, accessLink, isTestMode = false, totalPriceLabel = '') => {
   const { nume, prenume, email, metodaPlata } = participantData;
   const { titlu, descriere, tipConferinta, dataInceput, dataFinal, oraInceput, oraFinal, pretParticipare } = conferintaData;
+  const priceLabel = totalPriceLabel || `${pretParticipare} RON`;
   
   // Verifică dacă participantul a fost adăugat manual
   const isManuallyAdded = metodaPlata === "MANUAL_ADMIN";
@@ -118,7 +130,7 @@ const createEmailTemplate = (participantData, conferintaData, accessLink, isTest
 
           <div>
             <strong style="color: #495057;">Preț:</strong> 
-            <span style="color: #28a745; font-weight: bold; font-size: 18px;">${pretParticipare} RON</span>
+            <span style="color: #28a745; font-weight: bold; font-size: 18px;">${priceLabel}</span>
             ${isTestMode ? ' <span style="color: #856404; font-size: 14px;">(SIMULAT)</span>' : ''}
             </div>
             </div>
@@ -229,8 +241,14 @@ export default async function handler(req, res) {
     // Determină URL-ul de bază pentru site (producție vs dezvoltare)
     const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.cristinazurba.com' : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cristinazurba.com');
 
+    const vatPercentage = await getVatPercentage();
+    const totalPriceLabel = resolveTotalPriceLabel(
+      conferintaData.pretParticipare,
+      vatPercentage
+    );
+
     // Generez template-ul HTML
-    const htmlContent = createEmailTemplate(participantData, conferintaData, accessLink, isTestMode);
+    const htmlContent = createEmailTemplate(participantData, conferintaData, accessLink, isTestMode, totalPriceLabel);
     console.log("✅ [EMAIL API] Template HTML generat");
 
     // Configurez emailul
@@ -254,7 +272,7 @@ export default async function handler(req, res) {
         - Data: ${conferintaData.dataInceput}
         - Ora: ${conferintaData.oraInceput}
         - Participant: ${participantData.nume} ${participantData.prenume}
-        - Preț: ${conferintaData.pretParticipare} RON ${isTestMode ? '(SIMULAT)' : ''}
+        - Preț: ${totalPriceLabel} ${isTestMode ? '(SIMULAT)' : ''}
         
         Link de acces: ${baseUrl}/conferinta-grup/${accessLink}
         

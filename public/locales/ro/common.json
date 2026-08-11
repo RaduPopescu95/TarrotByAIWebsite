@@ -365,7 +365,7 @@
   "premiumVideoPlaceholder": "Videoclipuri premium (Bunny Stream) — în curând.",
   "premiumSubscribePageTitle": "Abonament premium",
   "premiumSubscribeHeading": "Abonament lunar premium",
-  "premiumSubscribePriceLine": "5 EUR / lună",
+  "premiumSubscribePriceLine": "{{price}} / lună, TVA inclus",
   "premiumSubscribeBackLink": "Înapoi la zona premium",
   "premiumSubscribePoint1": "Facturare doar pentru persoană fizică, cu adresă completă.",
   "premiumSubscribePoint2": "Plată securizată prin Stripe",

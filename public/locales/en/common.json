@@ -365,7 +365,7 @@
   "premiumVideoPlaceholder": "Premium videos (Bunny Stream) — coming soon.",
   "premiumSubscribePageTitle": "Premium subscription",
   "premiumSubscribeHeading": "Monthly premium subscription",
-  "premiumSubscribePriceLine": "€5 / month",
+  "premiumSubscribePriceLine": "{{price}} / month, VAT included",
   "premiumSubscribeBackLink": "Back to premium area",
   "premiumSubscribePoint1": "Billing is for individuals only (full postal address required).",
   "premiumSubscribePoint2": "Secure payment via Stripe; Romanian county and locality use Oblio-compliant lists.",

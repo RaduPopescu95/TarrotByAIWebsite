@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "प्रीमियम वीडियो (बनी स्ट्रीम) — जल्द ही उपलब्ध होंगे।",
   "premiumSubscribePageTitle": "प्रीमियम सदस्यता",
   "premiumSubscribeHeading": "मासिक प्रीमियम सदस्यता",
-  "premiumSubscribePriceLine": "€5 प्रति माह",
+  "premiumSubscribePriceLine": "{{price}} प्रति माह, वैट सहित",
   "premiumSubscribeBackLink": "प्रीमियम क्षेत्र में वापस जाएँ",
   "premiumSubscribePoint1": "बिलिंग केवल व्यक्तियों के लिए है (पूरा डाक पता आवश्यक है)।",
   "premiumSubscribePoint2": "स्ट्राइप के माध्यम से सुरक्षित भुगतान; रोमानियाई काउंटी और स्थानीयता ओब्लियो-अनुरूप सूचियों का उपयोग करते हैं।",

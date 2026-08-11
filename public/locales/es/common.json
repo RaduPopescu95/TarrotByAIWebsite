@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Vídeos premium (Bunny Stream): próximamente.",
   "premiumSubscribePageTitle": "Suscripción Premium",
   "premiumSubscribeHeading": "Suscripción premium mensual",
-  "premiumSubscribePriceLine": "5 € al mes",
+  "premiumSubscribePriceLine": "{{price}} al mes, IVA incluido",
   "premiumSubscribeBackLink": "Volver a la zona premium",
   "premiumSubscribePoint1": "La facturación es solo para particulares (se requiere la dirección postal completa).",
   "premiumSubscribePoint2": "Pago seguro mediante Stripe; el condado y la localidad de Rumanía utilizan listas compatibles con Oblio.\n",

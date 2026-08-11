@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Video premium (Bunny Stream) — segera hadir.\n",
   "premiumSubscribePageTitle": "Langganan premium",
   "premiumSubscribeHeading": "Langganan premium bulanan",
-  "premiumSubscribePriceLine": "€5 / bulan",
+  "premiumSubscribePriceLine": "{{price}} / bulan, termasuk PPN",
   "premiumSubscribeBackLink": "Kembali ke area premium",
   "premiumSubscribePoint1": "Penagihan hanya untuk individu (alamat pos lengkap diperlukan).",
   "premiumSubscribePoint2": "Pembayaran aman melalui Stripe; Kabupaten dan wilayah Rumania menggunakan daftar yang sesuai dengan Oblio.",

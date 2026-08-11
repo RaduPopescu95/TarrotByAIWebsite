@@ -32,6 +32,7 @@ import {
 } from "../../../../utils/billingAddressData.mjs";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import { formatGross, useVatPercentage } from "../../../../utils/vatDisplay";
 import {
   isValidPhoneNumber,
   parsePhoneNumberFromString,
@@ -41,6 +42,7 @@ import {
 const Checkout = (props) => {
   const config = "/react/template";
   const { currentUser, userData, selectedSlot } = useAuth();
+  const vatPercentage = useVatPercentage();
 
   const [categorii, setCategorii] = useState([]);
   const [categorie, setCategorie] = useState({});
@@ -786,10 +788,13 @@ const Checkout = (props) => {
                         <div className="booking-total">
                           <ul className="boosking-total-list">
                             <li>
-                              <span>Taxa consultatie</span>
+                              <span>Taxa consultatie (TVA inclus)</span>
                               <span className="total-cost">
                                 {categorie.price
-                                  ? `${categorie.price} RON`
+                                  ? formatGross(categorie.price, {
+                                      vatPercentage,
+                                      currency: "RON",
+                                    })
                                   : "Alege categorie consultatie"}{" "}
                               </span>
                             </li>

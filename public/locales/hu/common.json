@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Prémium videók (Bunny Stream) — hamarosan.",
   "premiumSubscribePageTitle": "Prémium előfizetés",
   "premiumSubscribeHeading": "Havi prémium előfizetés",
-  "premiumSubscribePriceLine": "5 € / hó",
+  "premiumSubscribePriceLine": "{{price}} / hó, áfával",
   "premiumSubscribeBackLink": "Vissza a prémium részleghez",
   "premiumSubscribePoint1": "A számlázás csak magánszemélyeknek lehetséges (a teljes postai cím megadása szükséges).",
   "premiumSubscribePoint2": "Biztonságos fizetés Stripe-on keresztül; A román megyék és települések Oblio-kompatibilis listákat használnak.",

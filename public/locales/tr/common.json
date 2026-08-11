@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Premium videolar (Bunny Stream) — yakında.\n",
   "premiumSubscribePageTitle": "Premium abonelik",
   "premiumSubscribeHeading": "Aylık premium abonelik",
-  "premiumSubscribePriceLine": "5 € / ay",
+  "premiumSubscribePriceLine": "{{price}} / ay, KDV dahil",
   "premiumSubscribeBackLink": "Premium alana geri dön",
   "premiumSubscribePoint1": "Faturalandırma yalnızca bireyler içindir (tam posta adresi gereklidir).\n",
   "premiumSubscribePoint2": "Stripe üzerinden güvenli ödeme; Romanya il ve yerel yönetimleri Oblio uyumlu listeler kullanmaktadır.\n",

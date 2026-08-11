@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Premium-Videos (Bunny Stream) – demnächst verfügbar.",
   "premiumSubscribePageTitle": "Premium-Abonnement",
   "premiumSubscribeHeading": "Monatliches Premium-Abonnement",
-  "premiumSubscribePriceLine": "5 € / Monat",
+  "premiumSubscribePriceLine": "{{price}} / Monat, inkl. MwSt.",
   "premiumSubscribeBackLink": "Zurück zum Premiumbereich",
   "premiumSubscribePoint1": "Die Rechnungsstellung erfolgt nur für Privatpersonen (vollständige Postanschrift erforderlich).",
   "premiumSubscribePoint2": "Sichere Zahlung über Stripe; Rumänische Landkreise und Gemeinden verwenden Oblio-kompatible Listen.",

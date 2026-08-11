@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Prémiová videa (Bunny Stream) – brzy.",
   "premiumSubscribePageTitle": "Prémiové předplatné",
   "premiumSubscribeHeading": "Měsíční prémiové předplatné",
-  "premiumSubscribePriceLine": "5 € / měsíc",
+  "premiumSubscribePriceLine": "{{price}} / měsíc, včetně DPH",
   "premiumSubscribeBackLink": "Zpět do prémiové sekce",
   "premiumSubscribePoint1": "Fakturace je pouze pro jednotlivce (vyžadována celá poštovní adresa).",
   "premiumSubscribePoint2": "Bezpečná platba přes Stripe; rumunské okresy a obce používají seznamy kompatibilní s Oblio.",

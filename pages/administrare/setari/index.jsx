@@ -18,6 +18,7 @@ function SettingsScreen() {
     mobileForceUpdateEnabled: false,
     mobileMinAppVersionIos: "",
     mobileMinAppVersionAndroid: "",
+    vatPercentage: 21,
   });
   const [pendingToggle, setPendingToggle] = useState(null);
   const [pendingMobileToggle, setPendingMobileToggle] = useState(null);
@@ -40,6 +41,7 @@ function SettingsScreen() {
           mobileForceUpdateEnabled: false,
           mobileMinAppVersionIos: "",
           mobileMinAppVersionAndroid: "",
+          vatPercentage: 21,
         }
       );
     } catch (e) {
@@ -238,6 +240,31 @@ function SettingsScreen() {
     }
   };
 
+  const saveVatPercentage = async () => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ vatPercentage: settings.vatPercentage }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess(
+        `TVA-ul afișat a fost setat la ${data.settings?.vatPercentage}%. Prețurile publice de pe site și din aplicație se actualizează în câteva minute.`
+      );
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const canEnableForceUpdate = () => {
     const ios = String(settings.mobileMinAppVersionIos || "").trim();
     const android = String(settings.mobileMinAppVersionAndroid || "").trim();
@@ -410,6 +437,54 @@ function SettingsScreen() {
                 {new Date(settings.updatedAt).toLocaleString("ro-RO")}
               </p>
             )}
+          </div>
+
+          <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">TVA afișat</h2>
+            <p className="mb-4 text-sm text-slate-600">
+              Procentul folosit pentru prețurile afișate clienților pe site și în
+              aplicație. Prețurile din administrare rămân fără TVA, iar acesta se
+              adaugă la afișare și la plată. Procentul poate fi salvat numai dacă
+              este identic cu cota configurată în Stripe, ca să nu apară diferențe
+              între ce vede clientul și ce se încasează.
+            </p>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <label className="block max-w-xs text-sm text-slate-700">
+                <span className="mb-1 block font-medium">Procent TVA (%)</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="21"
+                  value={settings.vatPercentage ?? ""}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      vatPercentage: event.target.value,
+                    }))
+                  }
+                  disabled={saving}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={saveVatPercentage}
+                disabled={saving}
+                className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Salvează TVA
+              </button>
+              <p className="mt-3 text-xs text-slate-500">
+                Pentru a schimba procentul, creează mai întâi cota nouă în Stripe și
+                pune-o în{" "}
+                <code className="rounded bg-slate-100 px-1">
+                  STRIPE_FIXED_VAT_TAX_RATE_ID
+                </code>
+                . Plățile prin Google Play și App Store nu sunt afectate, pentru că
+                acolo taxele sunt gestionate de magazin.
+              </p>
+            </div>
           </div>
 
           <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

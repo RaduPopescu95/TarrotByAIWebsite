@@ -13,8 +13,14 @@ import Home1Header from "../../home/home-1/header";
 import { useRouter } from "next/router";
 import { handleQueryFirestore, handleUpdateFirestore } from "../../../../utils/firestoreUtils";
 import { formatSelectedSlot } from "../../../../utils/commonUtils";
+import {
+  formatCurrencyAmount,
+  formatGross,
+  useVatPercentage,
+} from "../../../../utils/vatDisplay";
 const DoctorUpcomingAppointment = (props) => {
   const router = useRouter();
+  const vatPercentage = useVatPercentage();
   const { meetingId } = router.query;
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -232,8 +238,18 @@ const DoctorUpcomingAppointment = (props) => {
                       <span> {appointmentDetails?.categorie?.about}</span>
                     </li>
                     <li>
-                      <h6>Pret</h6>
-                      <span> {appointmentDetails?.categorie?.price} RON</span>
+                      <h6>Pret (TVA inclus)</h6>
+                      <span>
+                        {" "}
+                        {appointmentDetails?.costConsultatie
+                          ? formatCurrencyAmount(appointmentDetails.costConsultatie, {
+                              currency: "RON",
+                            })
+                          : formatGross(appointmentDetails?.categorie?.price, {
+                              vatPercentage,
+                              currency: "RON",
+                            })}
+                      </span>
                     </li>
                     <li>
                       <div className="start-btn" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

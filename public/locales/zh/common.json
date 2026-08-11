@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "高級影片（Bunny Stream）—即將推出。\n",
   "premiumSubscribePageTitle": "\n高級訂閱\n",
   "premiumSubscribeHeading": "\n每月高級訂閱\n",
-  "premiumSubscribePriceLine": "\n5 歐元/月\n",
+  "premiumSubscribePriceLine": "{{price}}/月（含税）",
   "premiumSubscribeBackLink": "\n返回高級專區\n",
   "premiumSubscribePoint1": "\n僅限個人使用者（需提供完整郵寄地址）。\n",
   "premiumSubscribePoint2": "\n透過 Stripe 安全支付；羅馬尼亞各縣和地區使用符合 Oblio 標準的清單。\n",

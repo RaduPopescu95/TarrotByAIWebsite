@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "プレミアム動画（バニーストリーム）—近日公開予定。\n",
   "premiumSubscribePageTitle": "プレミアム購読",
   "premiumSubscribeHeading": "月額プレミアム購読",
-  "premiumSubscribePriceLine": "月額5ユーロ",
+  "premiumSubscribePriceLine": "月額 {{price}}（税込）",
   "premiumSubscribeBackLink": "プレミアムエリアに戻る",
   "premiumSubscribePoint1": "請求は個人の方のみ（完全な住所が必要です）。\n",
   "premiumSubscribePoint2": "Stripeによる安全な決済。ルーマニアの郡および地域では、Oblio準拠のリストを使用しています。\n",

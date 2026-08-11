@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Filmy premium (Bunny Stream) — wkrótce.",
   "premiumSubscribePageTitle": "Subskrypcja premium",
   "premiumSubscribeHeading": "Miesięczna subskrypcja premium",
-  "premiumSubscribePriceLine": "5 € / miesiąc",
+  "premiumSubscribePriceLine": "{{price}} / miesiąc, z VAT",
   "premiumSubscribeBackLink": "Powrót do strefy premium",
   "premiumSubscribePoint1": "Rozliczenie możliwe jest wyłącznie dla osób fizycznych (wymagany jest pełny adres pocztowy).",
   "premiumSubscribePoint2": "Bezpieczna płatność za pośrednictwem Stripe; rumuńskie powiaty i miejscowości korzystają z list zgodnych ze standardem Oblio.",

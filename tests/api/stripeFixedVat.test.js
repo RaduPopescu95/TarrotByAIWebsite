@@ -1,10 +1,12 @@
 const {
   STRIPE_FIXED_VAT_PERCENTAGE,
   __resetFixedVatTaxRateCacheForTests,
+  assertVatPercentageMatchesStripe,
   assessFixedVatTaxRate,
   calculateFixedVatMajor,
   calculateFixedVatMinor,
   getFixedVatTaxRateId,
+  normalizeVatPercentage,
   resolveFixedVatTaxRateId,
 } = require("../../lib/stripeFixedVat");
 
@@ -55,6 +57,53 @@ describe("stripeFixedVat", () => {
         percentage: 19,
       }).ok
     ).toBe(false);
+  });
+
+  it("normalizes dashboard VAT input and rejects impossible rates", () => {
+    expect(normalizeVatPercentage("21")).toBe(21);
+    expect(normalizeVatPercentage(" 19,5 ")).toBe(19.5);
+    expect(normalizeVatPercentage(0)).toBe(0);
+    expect(normalizeVatPercentage(-1)).toBeNull();
+    expect(normalizeVatPercentage(101)).toBeNull();
+    expect(normalizeVatPercentage("abc")).toBeNull();
+  });
+
+  it("applies a configured rate to display prices", () => {
+    expect(calculateFixedVatMajor(5, 19)).toBe(5.95);
+    expect(calculateFixedVatMinor(1000, 19)).toEqual({
+      net: 1000,
+      tax: 190,
+      total: 1190,
+      percentage: 19,
+    });
+  });
+
+  it("refuses a dashboard rate Stripe would not charge", async () => {
+    const stripe = {
+      taxRates: {
+        retrieve: jest.fn().mockResolvedValue({
+          id: "txr_fixed",
+          active: true,
+          inclusive: false,
+          percentage: 21,
+        }),
+      },
+    };
+    const env = { NODE_ENV: "production", STRIPE_FIXED_VAT_TAX_RATE_ID: "txr_fixed" };
+
+    await expect(assertVatPercentageMatchesStripe(stripe, 21, env)).resolves.toEqual({
+      taxRateId: "txr_fixed",
+      percentage: 21,
+    });
+    await expect(
+      assertVatPercentageMatchesStripe(stripe, 19, env)
+    ).rejects.toMatchObject({
+      message: "vat_percentage_stripe_mismatch",
+      stripePercentage: 21,
+    });
+    await expect(
+      assertVatPercentageMatchesStripe(stripe, 21, { NODE_ENV: "production" })
+    ).rejects.toThrow("vat_tax_rate_not_configured");
   });
 
   it("retrieves and caches a validated Tax Rate", async () => {

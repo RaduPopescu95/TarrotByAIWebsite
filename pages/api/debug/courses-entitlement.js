@@ -195,11 +195,11 @@ export default async function handler(req, res) {
       course: {
         exists: courseSnap.exists,
         status: courseSnap.exists ? (courseSnap.data()?.status || null) : null,
-        price: courseSnap.exists ? courseSnap.data()?.price ?? null : null,
         currency: courseSnap.exists ? courseSnap.data()?.currency || null : null,
         sitePremiumAccess: courseSnap.exists ? courseData.sitePremiumAccess !== false : null,
         courseVisible,
-        price: courseSnap.exists ? courseData.price ?? null : null,
+        // Stored catalog price, before VAT. Public catalog APIs return it with VAT added.
+        netPrice: courseSnap.exists ? courseData.price ?? null : null,
       },
       purchase,
       derived: {

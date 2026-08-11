@@ -338,7 +338,7 @@
   "premiumVideoPlaceholder": "Βίντεο premium (Bunny Stream) — σύντομα διαθέσιμα.",
   "premiumSubscribePageTitle": "Premium συνδρομή",
   "premiumSubscribeHeading": "Μηνιαία premium συνδρομή",
-  "premiumSubscribePriceLine": "€5 / μήνα",
+  "premiumSubscribePriceLine": "{{price}} / μήνα, με ΦΠΑ",
   "premiumSubscribeBackLink": "Επιστροφή στην premium περιοχή",
   "premiumSubscribePoint1": "Η χρέωση αφορά μόνο ιδιώτες (απαιτείται πλήρης ταχυδρομική διεύθυνση).",
   "premiumSubscribePoint2": "Ασφαλής πληρωμή μέσω Stripe. Η ρουμανική κομητεία και η περιοχή χρησιμοποιούν λίστες συμβατές με το Oblio.",

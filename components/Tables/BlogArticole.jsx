@@ -9,7 +9,7 @@ import { useStyles } from "../../styles/ProcessTableStyles";
 import { editData, getData, writeData } from "../../utils/realtimeUtils";
 import { getCurrentDateTime } from "../../utils/timeUtils";
 import { uploadImage } from "../../utils/storageUtils";
-import { authentication, db, storage } from "../../firebase";
+import { authentication, db as firestoreDb, storage } from "../../firebase";
 import { deleteDoc, doc } from "firebase/firestore";
 import { getDatabase, ref, remove, child, set } from "firebase/database";
 import { deleteObject, ref as storageRef } from "firebase/storage";
@@ -211,7 +211,7 @@ export default function BlogArticole({
     }
 
     try {
-      await deleteDoc(doc(db, "BlogArticole", documentId));
+      await deleteDoc(doc(firestoreDb, "BlogArticole", documentId));
       logBlogArticoleUpload("delete:firestore:success", { documentId });
 
       const currentUser = authentication.currentUser;
