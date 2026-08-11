@@ -5,7 +5,7 @@ import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { PREMIUM_FLOW_METADATA } from "../../../../lib/premiumAccess";
 import { emitPremiumSubscriptionOblioInvoice } from "../../../../lib/premiumSubscriptionOblio";
 import { resolvePremiumAbonamentWebhookSecret } from "../../../../lib/stripePremiumEnv";
-import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVatServer";
 import {
   syncPremiumSubscription,
   syncPremiumSubscriptionById,

@@ -17,7 +17,7 @@ import {
   resolvePremiumStripePriceId,
 } from "../../../../../lib/stripePremiumEnv";
 import { getStripePriceTaxBehavior } from "../../../../../utils/oblioTax";
-import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVatServer";
 import { assertCanStartPremiumSubscription } from "../../../../../lib/premiumSubscriptionGuard";
 import { resolvePremiumPublicBaseUrl } from "../../../../../lib/premiumServerUtils";
 import { buildUserIdentityPatch } from "../../../../../lib/userIdentitySync";

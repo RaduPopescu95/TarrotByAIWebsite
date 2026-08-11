@@ -5,7 +5,7 @@ import { requireAuth } from "../../../../../lib/requireAuth";
 import { PREMIUM_FLOW_METADATA, hasPremiumAccess } from "../../../../../lib/premiumAccess";
 import { syncPremiumSubscription } from "../../../../../lib/stripePremiumSubscriptionSync";
 import { resolvePremiumStripePriceId } from "../../../../../lib/stripePremiumEnv";
-import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../../../../lib/stripeFixedVatServer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2026-02-25.clover",

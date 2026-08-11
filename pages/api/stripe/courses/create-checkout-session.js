@@ -20,7 +20,7 @@ import {
   buildBillingContextInput,
 } from "../../../../lib/stripeBillingDetails";
 import { resolveCourseCheckoutTaxCustomerFields } from "../../../../lib/stripeCourseCheckoutTax";
-import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVatServer";
 import {
   COURSE_BUNDLE_COLLECTION,
   isCourseBundleVisibleOnChannel,

@@ -20,7 +20,7 @@ import {
   subscriptionPrimaryPriceId,
   subscriptionTaxMigrationMeta,
 } from "../../../../lib/premiumPriceChangeConsent";
-import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../../../lib/stripeFixedVatServer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 

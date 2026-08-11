@@ -7,7 +7,7 @@ import {
   logBillingAudit,
   normalizeBillingContext,
 } from "../../utils/billingAudit.mjs";
-import { getFixedVatTaxRateId } from "../../lib/stripeFixedVat";
+import { getFixedVatTaxRateId } from "../../lib/stripeFixedVatServer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
