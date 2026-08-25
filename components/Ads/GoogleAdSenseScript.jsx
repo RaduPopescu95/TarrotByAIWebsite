@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isAdsenseEnabled } from "../../lib/ads/config";
 
 const ADS_DEBUG =
   process.env.NODE_ENV === "development" ||
@@ -9,11 +10,13 @@ function adsLog(...args) {
 }
 
 export default function GoogleAdSenseScript({ clientId, shouldLoad }) {
+  const adsenseEnabled = isAdsenseEnabled();
+
   useEffect(() => {
     if (typeof document === "undefined") return;
 
     const existingScript = document.getElementById("google-adsense");
-    if (!clientId || !shouldLoad) {
+    if (!adsenseEnabled || !clientId || !shouldLoad) {
       if (existingScript) existingScript.remove();
       adsLog("script removed (clientId/shouldLoad missing)", {
         hasClientId: Boolean(clientId),
@@ -42,7 +45,7 @@ export default function GoogleAdSenseScript({ clientId, shouldLoad }) {
     };
     document.head.appendChild(script);
     adsLog("adsbygoogle.js injected", { clientId });
-  }, [clientId, shouldLoad]);
+  }, [adsenseEnabled, clientId, shouldLoad]);
 
   return null;
 }

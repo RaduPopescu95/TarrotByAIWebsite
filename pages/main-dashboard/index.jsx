@@ -14,6 +14,7 @@ import { db } from "../../firebase";
 import Footer from "../../components/Footer";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
+import { isAdsenseEnabled } from "../../lib/ads/config";
 
 
 export async function getServerSideProps({ locale }) {
@@ -78,7 +79,9 @@ function MainDashboardTopAd() {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
   const slotId =
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID || "";
-  const canRequestAd = Boolean(clientId && slotId);
+  const canRequestAd = isAdsenseEnabled() && Boolean(clientId && slotId);
+
+  if (!canRequestAd) return null;
 
   return (
     <>

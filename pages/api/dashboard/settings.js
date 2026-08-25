@@ -63,6 +63,11 @@ export default async function handler(req, res) {
           billingProviderUpdates[key] = body[key];
         }
       });
+      ["iosBillingPremiumProvider", "iosBillingAnalysesProvider"].forEach((key) => {
+        if (body[key] === "disabled" || body[key] === "revenuecat") {
+          billingProviderUpdates[key] = body[key];
+        }
+      });
       const mobilePromptUpdate =
         typeof body.mobileUpdatePromptEnabled === "boolean"
           ? body.mobileUpdatePromptEnabled

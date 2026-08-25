@@ -12,6 +12,8 @@ function SettingsScreen() {
   const [settings, setSettings] = useState({
     iosPremiumSubscriptionsEnabled: true,
     subscriptionSystemEnabled: true,
+    iosBillingPremiumProvider: "disabled",
+    iosBillingAnalysesProvider: "disabled",
     androidBillingPremiumProvider: "revenuecat",
     androidBillingAnalysesProvider: "stripe",
     mobileUpdatePromptEnabled: false,
@@ -35,6 +37,8 @@ function SettingsScreen() {
         data.settings || {
           iosPremiumSubscriptionsEnabled: true,
           subscriptionSystemEnabled: true,
+          iosBillingPremiumProvider: "disabled",
+          iosBillingAnalysesProvider: "disabled",
           androidBillingPremiumProvider: "revenuecat",
           androidBillingAnalysesProvider: "stripe",
           mobileUpdatePromptEnabled: false,
@@ -71,7 +75,7 @@ function SettingsScreen() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          iosPremiumSubscriptionsEnabled: pendingToggle,
+          iosBillingPremiumProvider: pendingToggle ? "revenuecat" : "disabled",
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -79,8 +83,8 @@ function SettingsScreen() {
       setSettings(data.settings);
       setSuccess(
         pendingToggle
-          ? "Abonamentul premium Stripe a fost activat pentru aplicația iOS. Android rămâne pe Google Play Billing."
-          : "Abonamentul premium Stripe a fost dezactivat pe iOS, iar videourile premium sunt libere doar acolo. Android rămâne pe Google Play Billing."
+          ? "Abonamentul App Store / RevenueCat a fost activat pe iOS."
+          : "Achiziția Premium pe iOS a fost oprită. Conținutul rămâne blocat fără entitlement."
       );
       setPendingToggle(null);
     } catch (e) {
@@ -110,9 +114,13 @@ function SettingsScreen() {
       if (!res.ok) throw new Error(data?.error || "save_failed");
       setSettings(data.settings);
       setSuccess(
-        provider === "revenuecat"
-          ? "Google Play Billing a fost activat pentru fluxul Android selectat."
-          : "Fluxul Android selectat a revenit la Stripe."
+        field.startsWith("ios")
+          ? provider === "revenuecat"
+            ? "App Store / RevenueCat a fost activat pentru fluxul iOS selectat."
+            : "Fluxul iOS a fost oprit; nu va reveni la Stripe."
+          : provider === "revenuecat"
+            ? "Google Play Billing a fost activat pentru fluxul Android selectat."
+            : "Fluxul Android selectat a revenit la Stripe."
       );
     } catch (e) {
       setError(e?.message || "Eroare la salvare");
@@ -338,7 +346,7 @@ function SettingsScreen() {
           <>
           <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Abonament premium iOS — Stripe
+              Plăți iOS — App Store / RevenueCat
             </h2>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -348,27 +356,27 @@ function SettingsScreen() {
                     Sistemul de abonament este{" "}
                     <span
                       className={
-                        settings.iosPremiumSubscriptionsEnabled
+                        settings.iosBillingPremiumProvider === "revenuecat"
                           ? "text-emerald-600"
                           : "text-amber-600"
                       }
                     >
-                      {settings.iosPremiumSubscriptionsEnabled
+                      {settings.iosBillingPremiumProvider === "revenuecat"
                         ? "ACTIVAT"
                         : "DEZACTIVAT"}
                     </span>
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
-                    {settings.iosPremiumSubscriptionsEnabled
-                      ? "Pe iPhone și iPad, videourile premium necesită un abonament Stripe activ. Android rămâne permanent pe Google Play Billing."
-                      : "Pe iPhone și iPad, videourile premium sunt deblocate și nu se mai pot porni abonamente Stripe noi. Android rămâne permanent pe Google Play Billing."}
+                    {settings.iosBillingPremiumProvider === "revenuecat"
+                      ? "Abonamentele noi sunt cumpărate nativ din App Store și sincronizate prin RevenueCat."
+                      : "Achizițiile Premium noi sunt indisponibile pe iOS. Conținutul nu devine gratuit și Stripe nu este folosit ca fallback."}
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    handleToggleClick(!settings.iosPremiumSubscriptionsEnabled)
+                    handleToggleClick(settings.iosBillingPremiumProvider !== "revenuecat")
                   }
                   disabled={
                     saving ||
@@ -376,16 +384,16 @@ function SettingsScreen() {
                     pendingMobileToggle !== null
                   }
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
-                    settings.iosPremiumSubscriptionsEnabled
+                    settings.iosBillingPremiumProvider === "revenuecat"
                       ? "bg-emerald-500"
                       : "bg-slate-300"
                   }`}
                   role="switch"
-                  aria-checked={settings.iosPremiumSubscriptionsEnabled}
+                  aria-checked={settings.iosBillingPremiumProvider === "revenuecat"}
                 >
                   <span
                     className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      settings.iosPremiumSubscriptionsEnabled
+                      settings.iosBillingPremiumProvider === "revenuecat"
                         ? "translate-x-7"
                         : "translate-x-0"
                     }`}
@@ -397,7 +405,7 @@ function SettingsScreen() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div
                   className={`rounded-lg border p-3 ${
-                    settings.iosPremiumSubscriptionsEnabled
+                    settings.iosBillingPremiumProvider === "revenuecat"
                       ? "border-emerald-200 bg-emerald-50"
                       : "border-slate-200 bg-white"
                   }`}
@@ -406,7 +414,7 @@ function SettingsScreen() {
                     Când este activat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• iOS verifică abonamentul premium Stripe</li>
+                    <li>• iOS cumpără abonamentul prin App Store</li>
                     <li>• Videourile premium sunt blocate fără abonament pe iOS</li>
                     <li>• Android și site-ul rămân neschimbate</li>
                   </ul>
@@ -414,7 +422,7 @@ function SettingsScreen() {
 
                 <div
                   className={`rounded-lg border p-3 ${
-                    !settings.iosPremiumSubscriptionsEnabled
+                    settings.iosBillingPremiumProvider !== "revenuecat"
                       ? "border-amber-200 bg-amber-50"
                       : "border-slate-200 bg-white"
                   }`}
@@ -423,11 +431,49 @@ function SettingsScreen() {
                     Când este dezactivat
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    <li>• Numai iOS primește acces liber la video-uri premium</li>
-                    <li>• Android verifică în continuare RevenueCat</li>
-                    <li>• Portalul Stripe și plățile pentru analize/cursuri rămân active</li>
+                    <li>• Plata Premium este afișată ca indisponibilă</li>
+                    <li>• Conținutul Premium rămâne blocat fără entitlement</li>
+                    <li>• Abonamentele Stripe existente rămân valabile</li>
                   </ul>
                 </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
+                <div>
+                  <p className="font-medium text-slate-900">Analize astrale</p>
+                  <p className="text-sm text-slate-600">
+                    {settings.iosBillingAnalysesProvider === "revenuecat"
+                      ? "Produse consumabile App Store / RevenueCat"
+                      : "Indisponibile pe iOS; fără fallback Stripe"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    saveAndroidBillingProvider(
+                      "iosBillingAnalysesProvider",
+                      settings.iosBillingAnalysesProvider === "revenuecat"
+                        ? "disabled"
+                        : "revenuecat"
+                    )
+                  }
+                  disabled={saving}
+                  className={`relative inline-flex h-7 w-14 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
+                    settings.iosBillingAnalysesProvider === "revenuecat"
+                      ? "bg-emerald-500"
+                      : "bg-slate-300"
+                  }`}
+                  role="switch"
+                  aria-checked={settings.iosBillingAnalysesProvider === "revenuecat"}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+                      settings.iosBillingAnalysesProvider === "revenuecat"
+                        ? "translate-x-7"
+                        : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 
@@ -764,23 +810,22 @@ function SettingsScreen() {
               {pendingToggle ? (
                 <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                   <p className="font-medium text-emerald-900">
-                    Activezi sistemul de abonament
+                    Activezi abonamentul App Store
                   </p>
                   <p className="mt-2 text-sm text-emerald-800">
-                    Videourile marcate ca premium vor necesita un abonament
-                    activ. Utilizatorii fără abonament nu vor putea vizualiza
-                    conținutul premium.
+                    Utilizatorii iOS vor putea cumpăra abonamentul nativ prin
+                    RevenueCat. Activează numai după configurarea și testarea
+                    produsului în App Store Connect.
                   </p>
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <p className="font-medium text-amber-900">
-                    Dezactivezi sistemul de abonament
+                    Oprești achizițiile Premium pe iOS
                   </p>
                   <p className="mt-2 text-sm text-amber-800">
-                    Toate videourile vor deveni gratuite. Utilizatorii vor putea
-                    vizualiza orice conținut fără restricții, inclusiv pe
-                    aplicația mobilă.
+                    Nu se va folosi Stripe ca fallback și conținutul nu devine
+                    gratuit. Accesul existent rămâne determinat de entitlement-uri.
                   </p>
                 </div>
               )}

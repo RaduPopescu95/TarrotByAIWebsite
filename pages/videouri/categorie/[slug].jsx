@@ -15,6 +15,7 @@ import { resolveUiLocale } from "../../../lib/siteLocales";
 import { getFirebaseBearerHeader } from "../../../utils/firebaseAuthHeaders";
 import GoogleAdSenseScript from "../../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../../components/Ads/GoogleAdSenseBanner";
+import { isAdsenseEnabled } from "../../../lib/ads/config";
 import VideoLibraryFiltersToolbar from "../../../components/VideoLibrary/VideoLibraryFiltersToolbar";
 import { buildVideoLibraryCategoryNavItems } from "../../../lib/videoLibraryCategoryNav";
 import { loadVideoCategories } from "../../../lib/mobilePublicData";
@@ -109,7 +110,9 @@ function CategoryAdBanner() {
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_VIDEOTECA_SLOT_ID ||
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID ||
     "";
-  const canRequestAd = Boolean(clientId && slotId);
+  const canRequestAd = isAdsenseEnabled() && Boolean(clientId && slotId);
+
+  if (!canRequestAd) return null;
 
   return (
     <div className="my-6 flex justify-center">
@@ -374,6 +377,7 @@ export default function VideoCategoryPage({ category }) {
 
   const channelName = t("videoLibraryChannelName");
   const adsenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const canLoadAdsense = isAdsenseEnabled() && Boolean(adsenseClientId);
 
   const filtersToolbar = (
     <VideoLibraryFiltersToolbar
@@ -391,7 +395,7 @@ export default function VideoCategoryPage({ category }) {
 
   return (
     <>
-      <GoogleAdSenseScript clientId={adsenseClientId} shouldLoad={Boolean(adsenseClientId)} />
+      <GoogleAdSenseScript clientId={adsenseClientId} shouldLoad={canLoadAdsense} />
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc} />

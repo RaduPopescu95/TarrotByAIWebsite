@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { isAdsenseEnabled } from "../../lib/ads/config";
 
 const ADS_DEBUG =
   process.env.NODE_ENV === "development" ||
@@ -20,9 +21,11 @@ export default function GoogleAdSenseBanner({
   const hasRequestedAd = useRef(false);
   const insRef = useRef(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const adsenseEnabled = isAdsenseEnabled();
 
   useEffect(() => {
     if (
+      !adsenseEnabled ||
       !clientId ||
       !slot ||
       !shouldRequest ||
@@ -118,7 +121,9 @@ export default function GoogleAdSenseBanner({
         window.removeEventListener("adsense-script-loaded", onScriptLoaded);
       }
     };
-  }, [clientId, requestStorageKey, shouldRequest, slot]);
+  }, [adsenseEnabled, clientId, requestStorageKey, shouldRequest, slot]);
+
+  if (!adsenseEnabled) return null;
 
   if (!clientId || !slot) {
     return (

@@ -15,6 +15,7 @@ import { resolveUiLocale } from "../../lib/siteLocales";
 import { getFirebaseBearerHeader } from "../../utils/firebaseAuthHeaders";
 import GoogleAdSenseScript from "../../components/Ads/GoogleAdSenseScript";
 import GoogleAdSenseBanner from "../../components/Ads/GoogleAdSenseBanner";
+import { isAdsenseEnabled } from "../../lib/ads/config";
 import {
   buildVideoLibraryCategoryNavItems,
   collectVideoCategoryNames,
@@ -72,7 +73,9 @@ function VideotecaAdBanner() {
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_VIDEOTECA_SLOT_ID ||
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_MAIN_DASHBOARD_SLOT_ID ||
     "";
-  const canRequestAd = Boolean(clientId && slotId);
+  const canRequestAd = isAdsenseEnabled() && Boolean(clientId && slotId);
+
+  if (!canRequestAd) return null;
 
   return (
     <div className="my-6 flex justify-center">
@@ -266,12 +269,13 @@ export default function VideoLibraryPage() {
   );
 
   const adsenseClientId = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "";
+  const canLoadAdsense = isAdsenseEnabled() && Boolean(adsenseClientId);
 
   return (
     <>
       <GoogleAdSenseScript
         clientId={adsenseClientId}
-        shouldLoad={Boolean(adsenseClientId)}
+        shouldLoad={canLoadAdsense}
       />
       <Head>
         <title>{t("videoLibrarySeoTitle")}</title>

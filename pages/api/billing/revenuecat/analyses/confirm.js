@@ -27,7 +27,11 @@ export default async function handler(req, res) {
     });
     return res.status(405).json({ error: "Method not allowed", requestId });
   }
-  if (!isRevenueCatFlowEnabled("analyses")) {
+  const requestedPlatform =
+    req.body?.platform === "ios" || req.body?.platform === "android"
+      ? req.body.platform
+      : null;
+  if (!isRevenueCatFlowEnabled("analyses", requestedPlatform || undefined)) {
     logBillingObs({
       level: "warn",
       scope: "revenuecat_analysis_confirm",
@@ -37,7 +41,7 @@ export default async function handler(req, res) {
       config: getSafeBillingConfigSnapshot(),
       error: { code: BILLING_ERROR_CODES.FLOW_DISABLED },
     });
-    return res.status(503).json({ error: "Google Play analyses are disabled", requestId });
+    return res.status(503).json({ error: "Native store analyses are disabled", requestId });
   }
 
   let decoded;
@@ -64,13 +68,18 @@ export default async function handler(req, res) {
       productCode: req.body?.productCode,
       productId: req.body?.productId,
       transactionId: req.body?.transactionId,
+      platform: requestedPlatform,
     });
     logBillingObs({
       scope: "revenuecat_analysis_confirm",
       stage: "processed",
       requestId,
       actor: { uid: decoded.uid },
-      routing: { productCode: req.body?.productCode || null, productId: req.body?.productId || null },
+      routing: {
+        platform: requestedPlatform,
+        productCode: req.body?.productCode || null,
+        productId: req.body?.productId || null,
+      },
       correlation: { transactionId: result.transactionId },
       result: {
         httpStatus: 200,
@@ -88,7 +97,11 @@ export default async function handler(req, res) {
       stage: "failed",
       requestId,
       actor: { uid: decoded.uid },
-      routing: { productCode: req.body?.productCode || null, productId: req.body?.productId || null },
+      routing: {
+        platform: requestedPlatform,
+        productCode: req.body?.productCode || null,
+        productId: req.body?.productId || null,
+      },
       correlation: { transactionId: req.body?.transactionId || null },
       result: { httpStatus: status, durationMs: Date.now() - startedAt },
       error: {
