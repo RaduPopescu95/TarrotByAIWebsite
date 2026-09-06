@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import COMPANY_LEGAL from "../../data/companyLegal";
 import {
   createPrivacyRequestRateLimiter,
   privacyRequestLabels,
@@ -56,7 +55,9 @@ export default async function handler(req, res) {
 
   const { email, requestType, message } = validation.value;
   const requestLabel = privacyRequestLabels[requestType];
-  const recipient = process.env.PRIVACY_REQUEST_EMAIL || COMPANY_LEGAL.supportEmail;
+  // Keep the public contact address separate from the operational inbox that
+  // handles incoming requests. Vercel can override this without a code change.
+  const recipient = process.env.PRIVACY_REQUEST_EMAIL || "webdynamicx@gmail.com";
   const transporter = createTransporter();
   const safeMessage = message ? escapeHtml(message).replace(/\n/g, "<br />") : "No additional details.";
   const from = `"Cristina Zurba Privacy" <${process.env.EMAIL_USER}>`;
