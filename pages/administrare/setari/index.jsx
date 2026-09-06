@@ -16,6 +16,7 @@ function SettingsScreen() {
     iosBillingAnalysesProvider: "disabled",
     androidBillingPremiumProvider: "revenuecat",
     androidBillingAnalysesProvider: "stripe",
+    iosCoursesHidden: true,
     mobileUpdatePromptEnabled: false,
     mobileForceUpdateEnabled: false,
     mobileMinAppVersionIos: "",
@@ -23,6 +24,7 @@ function SettingsScreen() {
     vatPercentage: 21,
   });
   const [pendingToggle, setPendingToggle] = useState(null);
+  const [pendingIosCoursesToggle, setPendingIosCoursesToggle] = useState(null);
   const [pendingMobileToggle, setPendingMobileToggle] = useState(null);
   const [pendingMobileForceToggle, setPendingMobileForceToggle] = useState(null);
 
@@ -41,6 +43,7 @@ function SettingsScreen() {
           iosBillingAnalysesProvider: "disabled",
           androidBillingPremiumProvider: "revenuecat",
           androidBillingAnalysesProvider: "stripe",
+          iosCoursesHidden: true,
           mobileUpdatePromptEnabled: false,
           mobileForceUpdateEnabled: false,
           mobileMinAppVersionIos: "",
@@ -96,6 +99,45 @@ function SettingsScreen() {
 
   const cancelToggle = () => {
     setPendingToggle(null);
+  };
+
+  const handleIosCoursesToggleClick = (newValue) => {
+    setPendingIosCoursesToggle(newValue);
+  };
+
+  const confirmIosCoursesToggle = async () => {
+    if (pendingIosCoursesToggle === null) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          iosCoursesHidden: pendingIosCoursesToggle,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "save_failed");
+      setSettings(data.settings);
+      setSuccess(
+        pendingIosCoursesToggle
+          ? "Cursurile sunt ascunse în aplicația iOS. Catalogul și plata Stripe nu mai apar."
+          : "Cursurile sunt din nou vizibile în aplicația iOS."
+      );
+      setPendingIosCoursesToggle(null);
+    } catch (e) {
+      setError(e?.message || "Eroare la salvare");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelIosCoursesToggle = () => {
+    setPendingIosCoursesToggle(null);
   };
 
   const saveAndroidBillingProvider = async (field, provider) => {
@@ -381,6 +423,7 @@ function SettingsScreen() {
                   disabled={
                     saving ||
                     pendingToggle !== null ||
+                    pendingIosCoursesToggle !== null ||
                     pendingMobileToggle !== null
                   }
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
@@ -483,6 +526,72 @@ function SettingsScreen() {
                 {new Date(settings.updatedAt).toLocaleString("ro-RO")}
               </p>
             )}
+          </div>
+
+          <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">
+              Cursuri în aplicația iOS
+            </h2>
+            <p className="mb-4 text-sm text-slate-600">
+              Când ascunderea este activată, secțiunile de cursuri dispar din
+              aplicația iOS pentru toți utilizatorii, iar checkout-ul Stripe este
+              blocat. Android și site-ul rămân neschimbate. Reactivează cursurile
+              pe iOS doar după ce plata se face prin In-App Purchase.
+            </p>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">
+                    Ascunderea cursurilor iOS este{" "}
+                    <span
+                      className={
+                        settings.iosCoursesHidden === true
+                          ? "text-amber-600"
+                          : "text-emerald-600"
+                      }
+                    >
+                      {settings.iosCoursesHidden === true
+                        ? "ACTIVATĂ"
+                        : "DEZACTIVATĂ"}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {settings.iosCoursesHidden === true
+                      ? "Catalogul, prețurile și butoanele de cumpărare nu apar pe iOS."
+                      : "Cursurile apar normal în Dashboard și în catalogul iOS."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleIosCoursesToggleClick(!(settings.iosCoursesHidden === true))
+                  }
+                  disabled={
+                    saving ||
+                    pendingToggle !== null ||
+                    pendingIosCoursesToggle !== null ||
+                    pendingMobileToggle !== null
+                  }
+                  className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 ${
+                    settings.iosCoursesHidden === true
+                      ? "bg-amber-500"
+                      : "bg-slate-300"
+                  }`}
+                  role="switch"
+                  aria-checked={settings.iosCoursesHidden === true}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      settings.iosCoursesHidden === true
+                        ? "translate-x-7"
+                        : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -639,6 +748,7 @@ function SettingsScreen() {
                   disabled={
                     saving ||
                     pendingToggle !== null ||
+                    pendingIosCoursesToggle !== null ||
                     pendingMobileToggle !== null ||
                     pendingMobileForceToggle !== null
                   }
@@ -695,6 +805,7 @@ function SettingsScreen() {
                   disabled={
                     saving ||
                     pendingToggle !== null ||
+                    pendingIosCoursesToggle !== null ||
                     pendingMobileToggle !== null ||
                     pendingMobileForceToggle !== null
                   }
@@ -854,6 +965,77 @@ function SettingsScreen() {
                     : pendingToggle
                     ? "Activează"
                     : "Dezactivează"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingIosCoursesToggle !== null && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+              onClick={cancelIosCoursesToggle}
+              aria-label="Închide"
+            />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Confirmare — cursuri iOS
+              </h2>
+
+              {pendingIosCoursesToggle ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="font-medium text-amber-900">
+                    Ascunzi cursurile în aplicația iOS
+                  </p>
+                  <p className="mt-2 text-sm text-amber-800">
+                    Secțiunile de cursuri dispar pentru toți utilizatorii iOS, nu
+                    doar pentru App Review. Checkout-ul Stripe pe iOS este blocat.
+                    Site-ul și Android rămân neschimbate.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="font-medium text-emerald-900">
+                    Afișezi din nou cursurile pe iOS
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-800">
+                    Catalogul și plata revin în aplicație. Nu face asta cât timp
+                    plata se face prin Stripe — Apple poate respinge din nou
+                    aplicația.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={cancelIosCoursesToggle}
+                  disabled={saving}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmIosCoursesToggle}
+                  disabled={saving}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 ${
+                    pendingIosCoursesToggle
+                      ? "bg-amber-600 hover:bg-amber-500"
+                      : "bg-emerald-600 hover:bg-emerald-500"
+                  }`}
+                >
+                  {saving
+                    ? "Se salvează…"
+                    : pendingIosCoursesToggle
+                    ? "Ascunde cursurile"
+                    : "Afișează cursurile"}
                 </button>
               </div>
             </div>

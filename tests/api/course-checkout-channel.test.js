@@ -21,6 +21,10 @@ jest.mock("../../lib/requireAuth", () => ({
   requireAuth: jest.fn().mockResolvedValue({ uid: "user-1", email: "user@example.com" }),
 }));
 
+jest.mock("../../lib/globalSettings", () => ({
+  getGlobalSettings: jest.fn(async () => ({ iosCoursesHidden: false })),
+}));
+
 jest.mock("../../lib/courseSubscriptionAccess", () => ({
   isCourseFreeFullAccess: jest.fn(() => false),
   resolveCourseEntitlement: jest.fn().mockResolvedValue({
@@ -57,6 +61,7 @@ jest.mock("../../lib/stripeBillingDetails", () => ({
 }));
 
 import { getAdminDb } from "../../lib/firebaseAdmin";
+import { getGlobalSettings } from "../../lib/globalSettings";
 import Stripe from "stripe";
 import checkoutHandler from "../../pages/api/stripe/courses/create-checkout-session";
 
@@ -212,6 +217,7 @@ describe("course checkout channel enforcement", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getGlobalSettings.mockResolvedValue({ iosCoursesHidden: false });
     delete process.env.NEXT_PUBLIC_SITE_URL;
     process.env.STRIPE_FIXED_VAT_TAX_RATE_ID = "txr_fixed_21";
     mockTaxRateRetrieve.mockResolvedValue({
@@ -381,6 +387,30 @@ describe("course checkout channel enforcement", () => {
     await checkoutHandler(bundleRequestFor("web"), res);
 
     expect(res.statusCode).toBe(400);
+    expect(mockStripeCreate).not.toHaveBeenCalled();
+  });
+
+  test("blocks iOS checkout when course catalog hiding is enabled", async () => {
+    getGlobalSettings.mockResolvedValue({ iosCoursesHidden: true });
+    const res = createResponse();
+
+    await checkoutHandler(requestFor("ios"), res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toBe("ios_courses_unavailable");
+    expect(mockStripeCreate).not.toHaveBeenCalled();
+  });
+
+  test("blocks Expo checkout with an iOS client header when hiding is enabled", async () => {
+    getGlobalSettings.mockResolvedValue({ iosCoursesHidden: true });
+    const req = requestFor("expo");
+    req.headers["x-app-platform"] = "ios";
+    const res = createResponse();
+
+    await checkoutHandler(req, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toBe("ios_courses_unavailable");
     expect(mockStripeCreate).not.toHaveBeenCalled();
   });
 });

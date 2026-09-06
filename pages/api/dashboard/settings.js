@@ -68,6 +68,8 @@ export default async function handler(req, res) {
           billingProviderUpdates[key] = body[key];
         }
       });
+      const iosCoursesHiddenUpdate =
+        typeof body.iosCoursesHidden === "boolean" ? body.iosCoursesHidden : undefined;
       const mobilePromptUpdate =
         typeof body.mobileUpdatePromptEnabled === "boolean"
           ? body.mobileUpdatePromptEnabled
@@ -89,6 +91,7 @@ export default async function handler(req, res) {
       if (
         subscriptionUpdate === undefined &&
         Object.keys(billingProviderUpdates).length === 0 &&
+        iosCoursesHiddenUpdate === undefined &&
         mobilePromptUpdate === undefined &&
         mobileForceUpdate === undefined &&
         !mobileMinIosProvided &&
@@ -161,6 +164,12 @@ export default async function handler(req, res) {
       }
       if (Object.keys(billingProviderUpdates).length > 0) {
         await updateGlobalSettings(billingProviderUpdates, "dashboard");
+      }
+      if (iosCoursesHiddenUpdate !== undefined) {
+        await updateGlobalSettings(
+          { iosCoursesHidden: iosCoursesHiddenUpdate },
+          "dashboard"
+        );
       }
       if (mobileMinIosProvided || mobileMinAndroidProvided) {
         await setMobileMinAppVersions(

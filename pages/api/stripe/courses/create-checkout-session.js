@@ -29,6 +29,8 @@ import {
   resolveBundleAccess,
   resolveBundleThumbnailUrl,
 } from "../../../../lib/courseBundles";
+import { getGlobalSettings } from "../../../../lib/globalSettings";
+import { shouldBlockIosCourseCheckout } from "../../../../lib/iosCoursesVisibility";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const CHECKOUT_SESSION_COLLECTION = "courseCheckoutSessions";
@@ -66,7 +68,13 @@ function sanitizeString(value, maxLength = 255) {
 
 function isMobilePlatform(value) {
   const normalized = sanitizeString(value, 32).toLowerCase();
-  return normalized === "expo" || normalized === "mobile" || normalized === "react-native";
+  return (
+    normalized === "expo" ||
+    normalized === "mobile" ||
+    normalized === "react-native" ||
+    normalized === "ios" ||
+    normalized === "android"
+  );
 }
 
 function resolveMobileCheckoutDeepLinkBase() {
@@ -261,6 +269,7 @@ export default async function handler(req, res) {
       .json({ error: purchaseType === "bundle" ? "Missing bundleId" : "Missing courseId" });
   }
   const sourcePlatform = sanitizeString(rawPlatform, 32).toLowerCase() || "web";
+  const headerPlatform = sanitizeString(req.headers?.["x-app-platform"], 32).toLowerCase();
   const courseChannel = resolveCourseChannelFromPlatform(sourcePlatform);
 
   console.info("[courses.checkout] start", {
@@ -269,11 +278,38 @@ export default async function handler(req, res) {
     bundleId,
     purchaseType,
     sourcePlatform,
+    headerPlatform,
     hasSuccessUrl: Boolean(sanitizeString(rawSuccessUrl, 2048)),
     hasCancelUrl: Boolean(sanitizeString(rawCancelUrl, 2048)),
   });
 
   try {
+    let iosCoursesHidden = true;
+    try {
+      const settings = await getGlobalSettings();
+      iosCoursesHidden = settings.iosCoursesHidden !== false;
+    } catch (settingsError) {
+      console.warn("[courses.checkout] settings_unavailable", {
+        message: settingsError?.message || "unknown_error",
+      });
+    }
+    if (
+      shouldBlockIosCourseCheckout({
+        platform: sourcePlatform,
+        headerPlatform,
+        iosCoursesHidden,
+      })
+    ) {
+      console.info("[courses.checkout] ios_courses_hidden", {
+        uid: maskUid(authUser.uid),
+        courseId,
+        bundleId,
+        purchaseType,
+        sourcePlatform,
+        headerPlatform,
+      });
+      return res.status(403).json({ error: "ios_courses_unavailable" });
+    }
     const db = getAdminDb();
     const billingDetails = normalizeBillingDetails(rawBillingDetails, authUser.email || "");
     const billingAudit = normalizeBillingContext(
